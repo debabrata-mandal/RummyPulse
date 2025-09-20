@@ -4,6 +4,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.ImageView;
+import android.widget.Button;
+import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -14,9 +17,20 @@ import java.util.List;
 
 public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHolder> {
     private List<GameItem> gameItems;
+    private OnGameActionListener actionListener;
+
+    public interface OnGameActionListener {
+        void onApproveGst(GameItem game, int position);
+        void onNotApplicable(GameItem game, int position);
+        void onDeleteGame(GameItem game, int position);
+    }
 
     public TableAdapter(List<GameItem> gameItems) {
         this.gameItems = gameItems;
+    }
+
+    public void setOnGameActionListener(OnGameActionListener listener) {
+        this.actionListener = listener;
     }
 
     @NonNull
@@ -27,21 +41,38 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         return new TableViewHolder(view);
     }
 
-    @Override
-    public void onBindViewHolder(@NonNull TableViewHolder holder, int position) {
-        GameItem item = gameItems.get(position);
-        
-        // Set Game ID
-        holder.gameIdText.setText(item.getGameId());
-        
-        // Set Total Score with formatting
-        holder.totalScoreText.setText(formatNumber(item.getTotalScore()));
+        @Override
+        public void onBindViewHolder(@NonNull TableViewHolder holder, int position) {
+            GameItem item = gameItems.get(position);
+
+            // Set Game ID
+            holder.gameIdText.setText(item.getGameId());
+
+            // Set Game PIN (initially masked)
+            holder.gamePinText.setText("****");
+            holder.gamePinText.setTag(item.getGamePin()); // Store actual PIN in tag
+
+            // Set up PIN visibility toggle
+            holder.iconViewPin.setOnClickListener(v -> {
+                String actualPin = (String) holder.gamePinText.getTag();
+                holder.gamePinText.setText(actualPin);
+                holder.gamePinText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.accent_orange));
+                
+                // Hide PIN after 30 seconds
+                holder.gamePinText.postDelayed(() -> {
+                    holder.gamePinText.setText("****");
+                    holder.gamePinText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.accent_orange));
+                }, 30000);
+            });
+
+            // Set Total Score with formatting
+            holder.totalScoreText.setText(formatNumber(item.getTotalScore()));
         
         // Set Point Value with currency formatting
         holder.pointValueText.setText("₹" + item.getPointValue());
         
-        // Set Creation DateTime
-        holder.creationTimeText.setText(formatDateTime(item.getCreationDateTime()));
+            // Set Creation DateTime
+            holder.creationTimeText.setText(formatDateTime(item.getCreationDateTime()));
         
         // Set Game Status with indicator
         holder.statusText.setText(item.getGameStatus());
@@ -62,9 +93,28 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         // Set GST Percentage
         holder.gstPercentageText.setText(item.getGstPercentage() + "%");
         
-        // Set GST Amount with currency symbol
-        holder.gstAmountText.setText("₹" + item.getGstAmount());
-    }
+            // Set GST Amount with currency symbol
+            holder.gstAmountText.setText("₹" + item.getGstAmount());
+
+            // Set up button click listeners
+            holder.btnApproveGst.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onApproveGst(item, position);
+                }
+            });
+
+            holder.btnNotApplicable.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onNotApplicable(item, position);
+                }
+            });
+
+            holder.btnDeleteGame.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onDeleteGame(item, position);
+                }
+            });
+        }
 
     @Override
     public int getItemCount() {
@@ -102,21 +152,28 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         return dateTime;
     }
 
-    public static class TableViewHolder extends RecyclerView.ViewHolder {
-        TextView gameIdText, totalScoreText, pointValueText, creationTimeText, statusText, playersText, gstPercentageText, gstAmountText;
-        View statusIndicator;
+        public static class TableViewHolder extends RecyclerView.ViewHolder {
+            TextView gameIdText, gamePinText, totalScoreText, pointValueText, creationTimeText, statusText, playersText, gstPercentageText, gstAmountText;
+            View statusIndicator;
+            ImageView iconViewPin;
+            ImageButton btnApproveGst, btnNotApplicable, btnDeleteGame;
 
-        public TableViewHolder(@NonNull View itemView) {
-            super(itemView);
-            gameIdText = itemView.findViewById(R.id.text_game_id);
-            totalScoreText = itemView.findViewById(R.id.text_total_score);
-            pointValueText = itemView.findViewById(R.id.text_point_value);
-            creationTimeText = itemView.findViewById(R.id.text_creation_time);
-            statusText = itemView.findViewById(R.id.text_status);
-            playersText = itemView.findViewById(R.id.text_players);
-            gstPercentageText = itemView.findViewById(R.id.text_gst_percentage);
-            gstAmountText = itemView.findViewById(R.id.text_gst_amount);
-            statusIndicator = itemView.findViewById(R.id.status_indicator);
+            public TableViewHolder(@NonNull View itemView) {
+                super(itemView);
+                gameIdText = itemView.findViewById(R.id.text_game_id);
+                gamePinText = itemView.findViewById(R.id.text_game_pin);
+                totalScoreText = itemView.findViewById(R.id.text_total_score);
+                pointValueText = itemView.findViewById(R.id.text_point_value);
+                creationTimeText = itemView.findViewById(R.id.text_creation_time);
+                statusText = itemView.findViewById(R.id.text_status);
+                playersText = itemView.findViewById(R.id.text_players);
+                gstPercentageText = itemView.findViewById(R.id.text_gst_percentage);
+                gstAmountText = itemView.findViewById(R.id.text_gst_amount);
+                statusIndicator = itemView.findViewById(R.id.status_indicator);
+                iconViewPin = itemView.findViewById(R.id.icon_view_pin);
+                btnApproveGst = itemView.findViewById(R.id.btn_approve_gst);
+                btnNotApplicable = itemView.findViewById(R.id.btn_not_applicable);
+                btnDeleteGame = itemView.findViewById(R.id.btn_delete_game);
+            }
         }
-    }
 }

@@ -12,8 +12,8 @@
     <color name="primary_blue">#FF2196F3</color>
     <color name="primary_blue_dark">#FF1976D2</color>
     <color name="primary_blue_light">#FFBBDEFB</color>
-    <color name="accent_orange">#FFFF9800</color>
-    <color name="accent_orange_dark">#FFF57C00</color>
+    <color name="accent_orange">#FFE65100</color>
+    <color name="accent_orange_dark">#FFBF360C</color>
     
     <!-- Background Colors -->
     <color name="background_light">#FFF8F9FA</color>
@@ -26,10 +26,10 @@
     <color name="text_hint">#FFBDBDBD</color>
     <color name="text_white">#FFFFFFFF</color>
     
-    <!-- Status Colors -->
-    <color name="status_online">#FF4CAF50</color>
-    <color name="status_offline">#FFF44336</color>
-    <color name="status_away">#FFFF9800</color>
+    <!-- Status Colors - Professional Business Colors -->
+    <color name="status_online">#FF2E7D32</color>
+    <color name="status_offline">#FF424242</color>
+    <color name="status_away">#FF1976D2</color>
     
     <!-- Card and Shadow Colors -->
     <color name="card_background">#FFFFFFFF</color>

@@ -2,6 +2,7 @@ package com.example.rummypulse.ui.home;
 
 public class GameItem {
     private String gameId;
+    private String gamePin;
     private String totalScore;
     private String pointValue;
     private String creationDateTime;
@@ -10,9 +11,10 @@ public class GameItem {
     private String gstPercentage;
     private String gstAmount;
 
-    public GameItem(String gameId, String totalScore, String pointValue, String creationDateTime, String gameStatus, 
+    public GameItem(String gameId, String gamePin, String totalScore, String pointValue, String creationDateTime, String gameStatus, 
                    String numberOfPlayers, String gstPercentage, String gstAmount) {
         this.gameId = gameId;
+        this.gamePin = gamePin;
         this.totalScore = totalScore;
         this.pointValue = pointValue;
         this.creationDateTime = creationDateTime;
@@ -24,6 +26,7 @@ public class GameItem {
 
     // Getters
     public String getGameId() { return gameId; }
+    public String getGamePin() { return gamePin; }
     public String getTotalScore() { return totalScore; }
     public String getPointValue() { return pointValue; }
     public String getCreationDateTime() { return creationDateTime; }
@@ -34,6 +37,7 @@ public class GameItem {
 
     // Setters
     public void setGameId(String gameId) { this.gameId = gameId; }
+    public void setGamePin(String gamePin) { this.gamePin = gamePin; }
     public void setTotalScore(String totalScore) { this.totalScore = totalScore; }
     public void setPointValue(String pointValue) { this.pointValue = pointValue; }
     public void setCreationDateTime(String creationDateTime) { this.creationDateTime = creationDateTime; }
