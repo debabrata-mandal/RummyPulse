@@ -10,6 +10,7 @@ public class GameItem {
     private String numberOfPlayers;
     private String gstPercentage;
     private String gstAmount;
+    private String age;
 
     public GameItem() {
         // Default constructor for Firebase
@@ -26,6 +27,7 @@ public class GameItem {
         this.numberOfPlayers = numberOfPlayers;
         this.gstPercentage = gstPercentage;
         this.gstAmount = gstAmount;
+        this.age = calculateAge(creationDateTime);
     }
 
     // Getters
@@ -38,6 +40,7 @@ public class GameItem {
     public String getNumberOfPlayers() { return numberOfPlayers; }
     public String getGstPercentage() { return gstPercentage; }
     public String getGstAmount() { return gstAmount; }
+    public String getAge() { return age; }
 
     // Setters
     public void setGameId(String gameId) { this.gameId = gameId; }
@@ -49,6 +52,7 @@ public class GameItem {
     public void setNumberOfPlayers(String numberOfPlayers) { this.numberOfPlayers = numberOfPlayers; }
     public void setGstPercentage(String gstPercentage) { this.gstPercentage = gstPercentage; }
     public void setGstAmount(String gstAmount) { this.gstAmount = gstAmount; }
+    public void setAge(String age) { this.age = age; }
 
     // Helper methods for better data handling
     public int getTotalScoreAsInt() {
@@ -89,5 +93,32 @@ public class GameItem {
 
     public boolean isActive() {
         return "Active".equals(gameStatus);
+    }
+
+    private String calculateAge(String creationDateTime) {
+        try {
+            // Parse the creation date time (format: "yyyy-MM-dd HH:mm:ss")
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            java.util.Date creationDate = sdf.parse(creationDateTime);
+            long currentTime = System.currentTimeMillis();
+            long timeDiff = currentTime - creationDate.getTime();
+            
+            // Convert to different units
+            long minutes = timeDiff / (1000 * 60);
+            long hours = minutes / 60;
+            long days = hours / 24;
+            
+            if (days > 0) {
+                return days + "d " + (hours % 24) + "h";
+            } else if (hours > 0) {
+                return hours + "h " + (minutes % 60) + "m";
+            } else if (minutes > 0) {
+                return minutes + "m";
+            } else {
+                return "Just now";
+            }
+        } catch (Exception e) {
+            return "Unknown";
+        }
     }
 }

@@ -5,13 +5,13 @@ import java.util.List;
 public class Player {
     private String name;
     private List<Integer> scores;
-    private int randomNumber;
+    private Integer randomNumber;
 
     public Player() {
         // Default constructor required for Firestore
     }
 
-    public Player(String name, List<Integer> scores, int randomNumber) {
+    public Player(String name, List<Integer> scores, Integer randomNumber) {
         this.name = name;
         this.scores = scores;
         this.randomNumber = randomNumber;
@@ -34,11 +34,11 @@ public class Player {
         this.scores = scores;
     }
 
-    public int getRandomNumber() {
+    public Integer getRandomNumber() {
         return randomNumber;
     }
 
-    public void setRandomNumber(int randomNumber) {
+    public void setRandomNumber(Integer randomNumber) {
         this.randomNumber = randomNumber;
     }
 

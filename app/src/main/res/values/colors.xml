@@ -8,12 +8,12 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     
-    <!-- Professional Rummy Pulse Colors -->
-    <color name="primary_blue">#FF2196F3</color>
-    <color name="primary_blue_dark">#FF1976D2</color>
-    <color name="primary_blue_light">#FFBBDEFB</color>
-    <color name="accent_orange">#FFE65100</color>
-    <color name="accent_orange_dark">#FFBF360C</color>
+    <!-- Professional Rummy Pulse Colors - Light Dark Theme -->
+    <color name="primary_blue">#FF2C2C2C</color>
+    <color name="primary_blue_dark">#FF1A1A1A</color>
+    <color name="primary_blue_light">#FF424242</color>
+    <color name="accent_orange">#FF2C2C2C</color>
+    <color name="accent_orange_dark">#FF1A1A1A</color>
     
     <!-- Background Colors -->
     <color name="background_light">#FFF8F9FA</color>
@@ -27,18 +27,18 @@
     <color name="text_hint">#FFBDBDBD</color>
     <color name="text_white">#FFFFFFFF</color>
     
-    <!-- Status Colors - Professional Business Colors -->
-    <color name="status_online">#FF2E7D32</color>
-    <color name="status_offline">#FF424242</color>
-    <color name="status_away">#FF1976D2</color>
+    <!-- Status Colors - Light Dark Theme -->
+    <color name="status_online">#FF4CAF50</color>
+    <color name="status_offline">#FF757575</color>
+    <color name="status_away">#FFFF9800</color>
     
     <!-- Card and Shadow Colors -->
-    <color name="card_background">#FFFFFFFF</color>
+    <color name="card_background">#FFF5F5F5</color>
     <color name="divider_color">#FFE0E0E0</color>
     <color name="shadow_color">#1A000000</color>
     
-    <!-- Header Colors -->
-    <color name="header_background">#FF1976D2</color>
-    <color name="header_gradient_start">#FF2196F3</color>
-    <color name="header_gradient_end">#FF1976D2</color>
+    <!-- Header Colors - Light Dark Theme -->
+    <color name="header_background">#FF2C2C2C</color>
+    <color name="header_gradient_start">#FF2C2C2C</color>
+    <color name="header_gradient_end">#FF1A1A1A</color>
 </resources>

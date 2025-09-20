@@ -79,16 +79,14 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
     @Override
     public void onApproveGst(GameItem game, int position) {
-        Toast.makeText(getContext(), "GST Approved for " + game.getGameId(), Toast.LENGTH_SHORT).show();
-        // Update game status to completed
-        homeViewModel.updateGameStatus(game.getGameId(), "Completed");
+        // Disabled for now - no action
+        Toast.makeText(getContext(), "Approve button disabled", Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onNotApplicable(GameItem game, int position) {
-        Toast.makeText(getContext(), "Marked as Not Applicable: " + game.getGameId(), Toast.LENGTH_SHORT).show();
-        // Update game status to not applicable
-        homeViewModel.updateGameStatus(game.getGameId(), "Not Applicable");
+        // Disabled for now - no action
+        Toast.makeText(getContext(), "NA button disabled", Toast.LENGTH_SHORT).show();
     }
 
     @Override

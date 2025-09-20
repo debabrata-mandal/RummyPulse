@@ -1,5 +1,8 @@
 package com.example.rummypulse.ui.home;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -7,6 +10,7 @@ import android.widget.TextView;
 import android.widget.ImageView;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -68,6 +72,15 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 }, 30000);
             });
 
+            // Set up Game ID click to copy to clipboard
+            holder.gameIdHeaderText.setOnClickListener(v -> {
+                copyToClipboard(holder.itemView.getContext(), item.getGameId(), "Game ID");
+            });
+            
+            holder.gameIdInCreatedText.setOnClickListener(v -> {
+                copyToClipboard(holder.itemView.getContext(), item.getGameId(), "Game ID");
+            });
+
             // Set Point Value with currency formatting
         holder.pointValueText.setText("₹" + item.getPointValue());
         
@@ -82,6 +95,34 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         
             // Set GST Amount with currency symbol
             holder.gstAmountText.setText("₹" + item.getGstAmount());
+
+            // Set Age
+            String age = item.getAge();
+            if (age == null) {
+                age = "Unknown";
+            }
+            holder.ageText.setText(age);
+
+            // Set Status
+            String status = item.getGameStatus();
+            if (status == null) {
+                status = "Unknown";
+            }
+            holder.statusText.setText(status);
+            
+            // Set status color based on status
+            try {
+                if (status.equals("Completed")) {
+                    holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.status_offline));
+                } else if (status.startsWith("R")) {
+                    holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.status_online));
+                } else {
+                    holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.text_secondary));
+                }
+            } catch (Exception e) {
+                // Fallback to default color if there's any issue
+                holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(android.R.color.black));
+            }
 
             // Set up button click listeners
             holder.btnApproveGst.setOnClickListener(v -> {
@@ -139,8 +180,15 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         return dateTime;
     }
 
+    private void copyToClipboard(Context context, String text, String label) {
+        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText(label, text);
+        clipboard.setPrimaryClip(clip);
+        Toast.makeText(context, label + " copied to clipboard", Toast.LENGTH_SHORT).show();
+    }
+
         public static class TableViewHolder extends RecyclerView.ViewHolder {
-            TextView gameIdHeaderText, gameIdInCreatedText, gamePinText, pointValueText, creationDateText, playersText, gstPercentageText, gstAmountText;
+            TextView gameIdHeaderText, gameIdInCreatedText, gamePinText, pointValueText, creationDateText, playersText, gstPercentageText, gstAmountText, ageText, statusText;
             ImageView iconViewPin;
             View btnApproveGst, btnNotApplicable, btnDeleteGame;
 
@@ -154,6 +202,8 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 playersText = itemView.findViewById(R.id.text_players);
                 gstPercentageText = itemView.findViewById(R.id.text_gst_percentage);
                 gstAmountText = itemView.findViewById(R.id.text_gst_amount);
+                ageText = itemView.findViewById(R.id.text_age);
+                statusText = itemView.findViewById(R.id.text_status);
                 iconViewPin = itemView.findViewById(R.id.icon_view_pin);
                 btnApproveGst = itemView.findViewById(R.id.btn_approve_gst);
                 btnNotApplicable = itemView.findViewById(R.id.btn_not_applicable);

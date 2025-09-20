@@ -104,15 +104,43 @@ public class GameData {
     }
 
     public String getGameStatus() {
-        // Determine game status based on some logic
-        // For now, we'll consider it "Active" if there are players with scores
         if (players == null || players.isEmpty()) {
             return "Not Started";
         }
         
-        boolean hasScores = players.stream().anyMatch(player -> 
-            player.getScores() != null && !player.getScores().isEmpty());
+        // Calculate current round based on completed entries (similar to web app logic)
+        return calculateCurrentRound();
+    }
+    
+    private String calculateCurrentRound() {
+        if (players == null || players.isEmpty()) {
+            return "Not Started";
+        }
         
-        return hasScores ? "Active" : "Completed";
+        int numPlayers = players.size();
+        
+        // Check rounds 1-10 (exactly like web app logic)
+        for (int round = 1; round <= 10; round++) {
+            int completedPlayers = 0;
+            
+            // Check if all players have entered scores for this round
+            for (Player player : players) {
+                if (player.getScores() != null && player.getScores().size() >= round) {
+                    // Check if this player has a valid score for this round (not null, not -1)
+                    Integer score = player.getScores().get(round - 1);
+                    if (score != null && score != -1) {
+                        completedPlayers++;
+                    }
+                }
+            }
+            
+            // If not all players completed this round, this is the current round
+            if (completedPlayers < numPlayers) {
+                return "R" + round;
+            }
+        }
+        
+        // All rounds completed by all players
+        return "Completed";
     }
 }

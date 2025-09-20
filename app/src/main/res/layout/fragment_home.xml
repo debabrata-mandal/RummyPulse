@@ -30,10 +30,11 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Game Dashboard"
-                android:textSize="20sp"
+                android:text="Games Dashboard"
+                android:textSize="24sp"
                 android:textStyle="bold"
-                android:textColor="@color/text_primary" />
+                android:textColor="@color/primary_blue"
+                android:fontFamily="sans-serif-medium" />
 
             <Button
                 android:id="@+id/btn_refresh"

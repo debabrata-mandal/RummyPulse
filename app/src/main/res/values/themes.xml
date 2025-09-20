@@ -22,7 +22,15 @@
 
     <style name="Theme.RummyPulse.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
-    <style name="Theme.RummyPulse.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+    <style name="Theme.RummyPulse.PopupOverlay" parent="ThemeOverlay.AppCompat.Dark" />
+
+    <!-- Navigation Drawer Styles -->
+    <style name="NavigationViewStyle" parent="Widget.MaterialComponents.NavigationView">
+        <item name="android:background">@color/primary_blue</item>
+        <item name="itemTextColor">@color/text_white</item>
+        <item name="itemIconTint">@color/text_white</item>
+        <item name="android:theme">@style/ThemeOverlay.AppCompat.Dark</item>
+    </style>
 
     <!-- Professional Table Styles -->
     <style name="TableHeaderText">

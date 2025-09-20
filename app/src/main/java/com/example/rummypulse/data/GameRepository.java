@@ -73,8 +73,9 @@ public class GameRepository {
                     .get()
                     .addOnSuccessListener(documentSnapshot -> {
                         if (documentSnapshot.exists()) {
-                            GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
-                            if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
+                            try {
+                                GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
+                                if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
                                 GameData gameData = gameDataWrapper.getData();
                                 // Also get the auth data for PIN
                                 db.collection(GAMES_COLLECTION)
@@ -101,6 +102,21 @@ public class GameRepository {
                                             }
                                         });
                             } else {
+                                completedFlags[index] = true;
+                                completedCount[0]++;
+                                if (completedCount[0] == gameIds.size()) {
+                                    List<GameItem> gameItems = new ArrayList<>();
+                                    for (GameItem item : gameItemsArray) {
+                                        if (item != null) {
+                                            gameItems.add(item);
+                                        }
+                                    }
+                                    gameItemsLiveData.setValue(gameItems);
+                                }
+                            }
+                            } catch (Exception e) {
+                                System.out.println("Error deserializing game data for " + gameId + ": " + e.getMessage());
+                                e.printStackTrace();
                                 completedFlags[index] = true;
                                 completedCount[0]++;
                                 if (completedCount[0] == gameIds.size()) {
