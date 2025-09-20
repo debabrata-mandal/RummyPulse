@@ -17,12 +17,43 @@
             android:layout_width="match_parent"
             android:layout_height="16dp" />
 
+        <!-- Header with Refresh Button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_margin="16dp"
+            android:layout_marginBottom="8dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Game Dashboard"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary" />
+
+            <Button
+                android:id="@+id/btn_refresh"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Refresh"
+                android:textSize="12sp"
+                android:padding="8dp"
+                android:background="@drawable/button_primary"
+                android:textColor="@android:color/white" />
+
+        </LinearLayout>
+
         <!-- Professional Metric Tiles -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_margin="16dp">
+            android:layout_margin="16dp"
+            android:layout_marginTop="0dp">
 
             <!-- Total Games Tile -->
             <androidx.cardview.widget.CardView

@@ -11,6 +11,10 @@ public class GameItem {
     private String gstPercentage;
     private String gstAmount;
 
+    public GameItem() {
+        // Default constructor for Firebase
+    }
+
     public GameItem(String gameId, String gamePin, String totalScore, String pointValue, String creationDateTime, String gameStatus, 
                    String numberOfPlayers, String gstPercentage, String gstAmount) {
         this.gameId = gameId;
@@ -45,4 +49,45 @@ public class GameItem {
     public void setNumberOfPlayers(String numberOfPlayers) { this.numberOfPlayers = numberOfPlayers; }
     public void setGstPercentage(String gstPercentage) { this.gstPercentage = gstPercentage; }
     public void setGstAmount(String gstAmount) { this.gstAmount = gstAmount; }
+
+    // Helper methods for better data handling
+    public int getTotalScoreAsInt() {
+        try {
+            return Integer.parseInt(totalScore);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    public double getPointValueAsDouble() {
+        try {
+            return Double.parseDouble(pointValue);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
+    }
+
+    public double getGstAmountAsDouble() {
+        try {
+            return Double.parseDouble(gstAmount);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
+    }
+
+    public int getNumberOfPlayersAsInt() {
+        try {
+            return Integer.parseInt(numberOfPlayers);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    public boolean isCompleted() {
+        return "Completed".equals(gameStatus);
+    }
+
+    public boolean isActive() {
+        return "Active".equals(gameStatus);
+    }
 }

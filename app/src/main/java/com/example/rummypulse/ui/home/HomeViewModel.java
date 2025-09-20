@@ -4,6 +4,8 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.example.rummypulse.data.GameRepository;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,21 +16,25 @@ public class HomeViewModel extends ViewModel {
     private final MutableLiveData<Integer> mTotalGames;
     private final MutableLiveData<Integer> mGstApproved;
     private final MutableLiveData<Integer> mGstPending;
+    private final MutableLiveData<String> mError;
+    
+    private GameRepository gameRepository;
 
     public HomeViewModel() {
         mText = new MutableLiveData<>();
         mText.setValue("");
         
         mGameItems = new MutableLiveData<>();
-        List<GameItem> games = createMockGameData();
-        mGameItems.setValue(games);
-        
-        // Calculate metrics
         mTotalGames = new MutableLiveData<>();
         mGstApproved = new MutableLiveData<>();
         mGstPending = new MutableLiveData<>();
+        mError = new MutableLiveData<>();
         
-        calculateMetrics(games);
+        // Initialize repository
+        gameRepository = new GameRepository();
+        
+        // Load data from Firebase
+        loadGamesFromFirebase();
     }
 
     public LiveData<String> getText() {
@@ -51,13 +57,37 @@ public class HomeViewModel extends ViewModel {
         return mGstPending;
     }
 
+    public LiveData<String> getError() {
+        return mError;
+    }
+
+    private void loadGamesFromFirebase() {
+        // Observe game items from repository
+        gameRepository.getGameItems().observeForever(gameItems -> {
+            mGameItems.setValue(gameItems);
+            calculateMetrics(gameItems);
+        });
+        
+        // Observe errors from repository
+        gameRepository.getError().observeForever(error -> {
+            mError.setValue(error);
+        });
+        
+        // Load games from Firebase
+        gameRepository.loadAllGames();
+    }
+
     private void calculateMetrics(List<GameItem> games) {
+        if (games == null) {
+            games = new ArrayList<>();
+        }
+        
         int total = games.size();
         int approved = 0;
         int pending = 0;
         
         for (GameItem game : games) {
-            if (game.getGameStatus().equals("Completed")) {
+            if (game.isCompleted()) {
                 approved++;
             } else {
                 pending++;
@@ -69,23 +99,15 @@ public class HomeViewModel extends ViewModel {
         mGstPending.setValue(pending);
     }
 
-        private List<GameItem> createMockGameData() {
-            List<GameItem> mockData = new ArrayList<>();
+    public void refreshGames() {
+        gameRepository.loadAllGames();
+    }
 
-            // Add mock game data with point values and game PINs
-            mockData.add(new GameItem("GAME001", "1234", "2450", "25", "2024-01-15 14:30:00", "Active", "4", "18", "441"));
-            mockData.add(new GameItem("GAME002", "5678", "1890", "20", "2024-01-15 12:15:00", "Completed", "3", "18", "340"));
-            mockData.add(new GameItem("GAME003", "9012", "3200", "30", "2024-01-15 10:45:00", "Active", "5", "18", "576"));
-            mockData.add(new GameItem("GAME004", "3456", "1560", "15", "2024-01-14 18:20:00", "Completed", "2", "18", "281"));
-            mockData.add(new GameItem("GAME005", "7890", "2780", "28", "2024-01-14 16:10:00", "Active", "4", "18", "500"));
-            mockData.add(new GameItem("GAME006", "2468", "2100", "22", "2024-01-14 14:30:00", "Completed", "3", "18", "378"));
-            mockData.add(new GameItem("GAME007", "1357", "3450", "35", "2024-01-14 11:45:00", "Active", "6", "18", "621"));
-            mockData.add(new GameItem("GAME008", "9753", "1720", "18", "2024-01-13 19:15:00", "Completed", "2", "18", "310"));
-            mockData.add(new GameItem("GAME009", "8642", "2890", "29", "2024-01-13 17:30:00", "Active", "4", "18", "520"));
-            mockData.add(new GameItem("GAME010", "7531", "1980", "20", "2024-01-13 15:20:00", "Completed", "3", "18", "356"));
-            mockData.add(new GameItem("GAME011", "6420", "2650", "26", "2024-01-13 13:10:00", "Active", "5", "18", "477"));
-            mockData.add(new GameItem("GAME012", "5319", "1420", "14", "2024-01-12 20:45:00", "Completed", "2", "18", "256"));
+    public void deleteGame(String gameId) {
+        gameRepository.deleteGame(gameId);
+    }
 
-            return mockData;
-        }
+    public void updateGameStatus(String gameId, String newStatus) {
+        gameRepository.updateGameStatus(gameId, newStatus);
+    }
 }

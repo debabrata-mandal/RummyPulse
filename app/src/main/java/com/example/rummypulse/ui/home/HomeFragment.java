@@ -21,10 +21,11 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
     private FragmentHomeBinding binding;
     private TableAdapter tableAdapter;
+    private HomeViewModel homeViewModel;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        HomeViewModel homeViewModel =
+        homeViewModel =
                 new ViewModelProvider(this).get(HomeViewModel.class);
 
         binding = FragmentHomeBinding.inflate(inflater, container, false);
@@ -54,6 +55,19 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             binding.textGstPending.setText(String.valueOf(gstPending));
         });
 
+        // Observe errors
+        homeViewModel.getError().observe(getViewLifecycleOwner(), error -> {
+            if (error != null && !error.isEmpty()) {
+                Toast.makeText(getContext(), error, Toast.LENGTH_LONG).show();
+            }
+        });
+
+        // Setup refresh button
+        binding.btnRefresh.setOnClickListener(v -> {
+            Toast.makeText(getContext(), "Refreshing data...", Toast.LENGTH_SHORT).show();
+            homeViewModel.refreshGames();
+        });
+
         return root;
     }
 
@@ -66,21 +80,21 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
     @Override
     public void onApproveGst(GameItem game, int position) {
         Toast.makeText(getContext(), "GST Approved for " + game.getGameId(), Toast.LENGTH_SHORT).show();
-        // TODO: Implement actual GST approval logic
-        // Update game status, refresh data, etc.
+        // Update game status to completed
+        homeViewModel.updateGameStatus(game.getGameId(), "Completed");
     }
 
     @Override
     public void onNotApplicable(GameItem game, int position) {
         Toast.makeText(getContext(), "Marked as Not Applicable: " + game.getGameId(), Toast.LENGTH_SHORT).show();
-        // TODO: Implement not applicable logic
-        // Update game status, refresh data, etc.
+        // Update game status to not applicable
+        homeViewModel.updateGameStatus(game.getGameId(), "Not Applicable");
     }
 
     @Override
     public void onDeleteGame(GameItem game, int position) {
-        Toast.makeText(getContext(), "Delete Game: " + game.getGameId(), Toast.LENGTH_SHORT).show();
-        // TODO: Implement delete game logic
-        // Remove from list, refresh data, etc.
+        Toast.makeText(getContext(), "Deleting Game: " + game.getGameId(), Toast.LENGTH_SHORT).show();
+        // Delete game from Firebase
+        homeViewModel.deleteGame(game.getGameId());
     }
 }
