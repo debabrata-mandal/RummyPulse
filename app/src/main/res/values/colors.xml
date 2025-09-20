@@ -17,6 +17,7 @@
     
     <!-- Background Colors -->
     <color name="background_light">#FFF8F9FA</color>
+    <color name="background_very_light">#FFFCFCFC</color>
     <color name="background_white">#FFFFFFFF</color>
     <color name="surface_color">#FFFFFFFF</color>
     

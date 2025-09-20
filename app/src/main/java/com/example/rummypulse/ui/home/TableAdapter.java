@@ -45,8 +45,11 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         public void onBindViewHolder(@NonNull TableViewHolder holder, int position) {
             GameItem item = gameItems.get(position);
 
-            // Set Game ID
-            holder.gameIdText.setText(item.getGameId());
+            // Set Game ID Header
+            holder.gameIdHeaderText.setText(item.getGameId());
+            
+            // Set Game ID in created text
+            holder.gameIdInCreatedText.setText(item.getGameId());
 
             // Set Game PIN (initially masked)
             holder.gamePinText.setText("****");
@@ -65,27 +68,11 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 }, 30000);
             });
 
-            // Set Total Score with formatting
-            holder.totalScoreText.setText(formatNumber(item.getTotalScore()));
-        
-        // Set Point Value with currency formatting
+            // Set Point Value with currency formatting
         holder.pointValueText.setText("₹" + item.getPointValue());
         
             // Set Creation DateTime
-            holder.creationTimeText.setText(formatDateTime(item.getCreationDateTime()));
-        
-        // Set Game Status with indicator
-        holder.statusText.setText(item.getGameStatus());
-        if (item.getGameStatus().equals("Active")) {
-            holder.statusIndicator.setBackgroundResource(R.drawable.status_indicator_online);
-            holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.status_online));
-        } else if (item.getGameStatus().equals("Completed")) {
-            holder.statusIndicator.setBackgroundResource(R.drawable.status_indicator_offline);
-            holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.status_offline));
-        } else {
-            holder.statusIndicator.setBackgroundResource(R.drawable.status_indicator_offline);
-            holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.text_secondary));
-        }
+            holder.creationDateText.setText(formatDateTime(item.getCreationDateTime()));
         
         // Set Number of Players
         holder.playersText.setText(item.getNumberOfPlayers());
@@ -131,7 +118,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     }
 
     private String formatDateTime(String dateTime) {
-        // Convert from "2024-01-15 14:30:00" to "15 Jan 2024\n14:30"
+        // Convert from "2024-01-15 14:30:00" to "15 Jan 2024 at 14:30"
         if (dateTime.length() >= 19) {
             String date = dateTime.substring(0, 10);
             String time = dateTime.substring(11, 16);
@@ -146,30 +133,27 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
                 int monthIndex = Integer.parseInt(month) - 1;
                 
-                return day + " " + months[monthIndex] + " " + year + "\n" + time;
+                return day + " " + months[monthIndex] + " " + year + " at " + time;
             }
         }
         return dateTime;
     }
 
         public static class TableViewHolder extends RecyclerView.ViewHolder {
-            TextView gameIdText, gamePinText, totalScoreText, pointValueText, creationTimeText, statusText, playersText, gstPercentageText, gstAmountText;
-            View statusIndicator;
+            TextView gameIdHeaderText, gameIdInCreatedText, gamePinText, pointValueText, creationDateText, playersText, gstPercentageText, gstAmountText;
             ImageView iconViewPin;
-            ImageButton btnApproveGst, btnNotApplicable, btnDeleteGame;
+            View btnApproveGst, btnNotApplicable, btnDeleteGame;
 
             public TableViewHolder(@NonNull View itemView) {
                 super(itemView);
-                gameIdText = itemView.findViewById(R.id.text_game_id);
+                gameIdHeaderText = itemView.findViewById(R.id.text_game_id_header);
+                gameIdInCreatedText = itemView.findViewById(R.id.text_game_id_in_created);
                 gamePinText = itemView.findViewById(R.id.text_game_pin);
-                totalScoreText = itemView.findViewById(R.id.text_total_score);
                 pointValueText = itemView.findViewById(R.id.text_point_value);
-                creationTimeText = itemView.findViewById(R.id.text_creation_time);
-                statusText = itemView.findViewById(R.id.text_status);
+                creationDateText = itemView.findViewById(R.id.text_creation_date);
                 playersText = itemView.findViewById(R.id.text_players);
                 gstPercentageText = itemView.findViewById(R.id.text_gst_percentage);
                 gstAmountText = itemView.findViewById(R.id.text_gst_amount);
-                statusIndicator = itemView.findViewById(R.id.status_indicator);
                 iconViewPin = itemView.findViewById(R.id.icon_view_pin);
                 btnApproveGst = itemView.findViewById(R.id.btn_approve_gst);
                 btnNotApplicable = itemView.findViewById(R.id.btn_not_applicable);
