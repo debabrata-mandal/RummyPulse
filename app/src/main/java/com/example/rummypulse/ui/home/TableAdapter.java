@@ -11,11 +11,14 @@ import android.widget.ImageView;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.Toast;
+import android.widget.LinearLayout;
+import androidx.appcompat.app.AlertDialog;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
+import com.example.rummypulse.data.Player;
 
 import java.util.List;
 
@@ -80,14 +83,26 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 copyToClipboard(holder.itemView.getContext(), item.getGameId(), "Game ID");
             });
 
-            // Set Point Value with currency formatting
-        holder.pointValueText.setText("₹" + item.getPointValue());
+            // Set Point Value with currency formatting and null checking
+            String pointValue = item.getPointValue();
+            if (pointValue == null || pointValue.isEmpty()) {
+                holder.pointValueText.setText("₹0.00");
+                System.out.println("Point value is null/empty for game " + item.getGameId() + ", setting to ₹0.00");
+            } else {
+                holder.pointValueText.setText("₹" + pointValue);
+                System.out.println("Setting point value for game " + item.getGameId() + ": ₹" + pointValue);
+            }
         
             // Set Creation DateTime
             holder.creationDateText.setText(formatDateTime(item.getCreationDateTime()));
         
         // Set Number of Players
         holder.playersText.setText(item.getNumberOfPlayers());
+        
+        // Make players text clickable to show players dialog
+        holder.playersText.setOnClickListener(v -> {
+            showPlayersDialog(holder.itemView.getContext(), item);
+        });
         
         // Set GST Percentage
         holder.gstPercentageText.setText(item.getGstPercentage() + "%");
@@ -102,12 +117,15 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             }
             holder.ageText.setText(age);
 
-            // Set Status
+            // Set Status with null checking and debug logging
             String status = item.getGameStatus();
-            if (status == null) {
+            if (status == null || status.isEmpty()) {
                 status = "Unknown";
             }
             holder.statusText.setText(status);
+            
+            // Debug logging for status
+            System.out.println("Setting status for game " + item.getGameId() + ": '" + status + "'");
             
             // Set status color based on status
             try {
@@ -189,6 +207,71 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         ClipData clip = ClipData.newPlainText(label, text);
         clipboard.setPrimaryClip(clip);
         Toast.makeText(context, label + " copied to clipboard", Toast.LENGTH_SHORT).show();
+    }
+
+    private void showPlayersDialog(Context context, GameItem gameItem) {
+        // Create dialog view
+        View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_players_list, null);
+        
+        // Set game ID
+        TextView gameIdText = dialogView.findViewById(R.id.text_dialog_game_id);
+        gameIdText.setText(gameItem.getGameId());
+        
+        // Get players container
+        LinearLayout playersContainer = dialogView.findViewById(R.id.players_container);
+        
+        // Clear existing views
+        playersContainer.removeAllViews();
+        
+        // Add players to the dialog
+        List<Player> players = gameItem.getPlayers();
+        int totalScore = 0;
+        
+        if (players != null && !players.isEmpty()) {
+            for (Player player : players) {
+                View playerView = LayoutInflater.from(context).inflate(R.layout.item_player_score, null);
+                
+                TextView playerNameText = playerView.findViewById(R.id.text_player_name);
+                TextView playerScoreText = playerView.findViewById(R.id.text_player_score);
+                
+                String playerName = player.getName();
+                if (playerName == null || playerName.isEmpty()) {
+                    playerName = "Unknown Player";
+                }
+                
+                int playerScore = player.getTotalScore();
+                totalScore += playerScore;
+                
+                playerNameText.setText(playerName);
+                playerScoreText.setText(String.valueOf(playerScore));
+                
+                playersContainer.addView(playerView);
+            }
+        } else {
+            // Show message if no players
+            TextView noPlayersText = new TextView(context);
+            noPlayersText.setText("No players data available");
+            noPlayersText.setTextSize(16);
+            noPlayersText.setTextColor(context.getResources().getColor(R.color.text_secondary));
+            noPlayersText.setPadding(32, 32, 32, 32);
+            noPlayersText.setGravity(android.view.Gravity.CENTER);
+            playersContainer.addView(noPlayersText);
+        }
+        
+        // Set total score
+        TextView totalScoreText = dialogView.findViewById(R.id.text_total_score);
+        totalScoreText.setText(String.valueOf(totalScore));
+        
+        // Create and show dialog
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setView(dialogView);
+        AlertDialog dialog = builder.create();
+        
+        // Set close button listener
+        ImageView closeButton = dialogView.findViewById(R.id.btn_close);
+        closeButton.setOnClickListener(v -> dialog.dismiss());
+        
+        dialog.show();
     }
 
         public static class TableViewHolder extends RecyclerView.ViewHolder {

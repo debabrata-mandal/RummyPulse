@@ -1,5 +1,8 @@
 package com.example.rummypulse.ui.home;
 
+import com.example.rummypulse.data.Player;
+import java.util.List;
+
 public class GameItem {
     private String gameId;
     private String gamePin;
@@ -11,6 +14,7 @@ public class GameItem {
     private String gstPercentage;
     private String gstAmount;
     private String age;
+    private List<Player> players;
 
     public GameItem() {
         // Default constructor for Firebase
@@ -30,6 +34,21 @@ public class GameItem {
         this.age = calculateAge(creationDateTime);
     }
 
+    public GameItem(String gameId, String gamePin, String totalScore, String pointValue, String creationDateTime, String gameStatus, 
+                   String numberOfPlayers, String gstPercentage, String gstAmount, List<Player> players) {
+        this.gameId = gameId;
+        this.gamePin = gamePin;
+        this.totalScore = totalScore;
+        this.pointValue = pointValue;
+        this.creationDateTime = creationDateTime;
+        this.gameStatus = gameStatus;
+        this.numberOfPlayers = numberOfPlayers;
+        this.gstPercentage = gstPercentage;
+        this.gstAmount = gstAmount;
+        this.players = players;
+        this.age = calculateAge(creationDateTime);
+    }
+
     // Getters
     public String getGameId() { return gameId; }
     public String getGamePin() { return gamePin; }
@@ -41,6 +60,7 @@ public class GameItem {
     public String getGstPercentage() { return gstPercentage; }
     public String getGstAmount() { return gstAmount; }
     public String getAge() { return age; }
+    public List<Player> getPlayers() { return players; }
 
     // Setters
     public void setGameId(String gameId) { this.gameId = gameId; }
@@ -53,6 +73,7 @@ public class GameItem {
     public void setGstPercentage(String gstPercentage) { this.gstPercentage = gstPercentage; }
     public void setGstAmount(String gstAmount) { this.gstAmount = gstAmount; }
     public void setAge(String age) { this.age = age; }
+    public void setPlayers(List<Player> players) { this.players = players; }
 
     // Helper methods for better data handling
     public int getTotalScoreAsInt() {

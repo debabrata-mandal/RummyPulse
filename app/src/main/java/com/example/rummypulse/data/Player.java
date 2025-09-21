@@ -45,6 +45,8 @@ public class Player {
     // Helper method to calculate total score
     public int getTotalScore() {
         if (scores == null) return 0;
-        return scores.stream().mapToInt(Integer::intValue).sum();
+        return scores.stream()
+                .mapToInt(score -> score != null && score > 0 ? score : 0)
+                .sum();
     }
 }

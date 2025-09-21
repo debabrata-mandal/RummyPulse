@@ -85,11 +85,12 @@ public class GameData {
         
         // Calculate total score as sum of all individual player scores
         // This represents the total points scored across all players in all rounds
+        // Note: -1 values are treated as 0 (not counted in total)
         int totalScore = 0;
         for (Player player : players) {
             if (player.getScores() != null) {
                 for (Integer score : player.getScores()) {
-                    if (score != null && score > 0) { // Only count positive scores
+                    if (score != null && score > 0) { // Only count positive scores, -1 treated as 0
                         totalScore += score;
                     }
                 }

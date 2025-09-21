@@ -213,7 +213,8 @@ public class GameRepository {
                 gameStatus,
                 numberOfPlayers,
                 gstPercentageStr,
-                gstAmountStr
+                gstAmountStr,
+                gameData.getPlayers()
         );
     }
 

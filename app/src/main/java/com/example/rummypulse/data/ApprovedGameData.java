@@ -120,7 +120,9 @@ public class ApprovedGameData {
     // Helper methods
     public int getTotalGameScore() {
         if (playerScores == null) return 0;
-        return playerScores.values().stream().mapToInt(Integer::intValue).sum();
+        return playerScores.values().stream()
+                .mapToInt(score -> score != null && score > 0 ? score : 0)
+                .sum();
     }
 
     public double getGstAmountAsDouble() {
