@@ -164,153 +164,153 @@
 
             </LinearLayout>
 
-            <!-- Third Row: Age and Status -->
+            <!-- Third Row: Age, Status, Point Value, and Players in 2x2 grid -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:orientation="vertical"
                 android:padding="16dp"
                 android:background="@drawable/professional_row_background"
                 android:layout_marginBottom="8dp">
 
-                <!-- Age Section -->
+                <!-- First Row: Age and Status -->
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginEnd="8dp">
+                    android:layout_marginBottom="12dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Age:"
-                        android:textSize="14sp"
-                        android:textColor="@color/text_secondary"
-                        android:textStyle="bold"
-                        android:layout_marginEnd="8dp" />
-
-                    <TextView
-                        android:id="@+id/text_age"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="2h 30m"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/status_online"
-                        android:maxLines="1"
-                        android:ellipsize="end" />
-
-                </LinearLayout>
-
-                <!-- Status Section -->
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginStart="8dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Status:"
-                        android:textSize="14sp"
-                        android:textColor="@color/text_secondary"
-                        android:textStyle="bold"
-                        android:layout_marginEnd="8dp" />
-
-                    <TextView
-                        android:id="@+id/text_status"
+                    <!-- Age Section -->
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="R3"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/status_online"
-                        android:maxLines="2"
-                        android:ellipsize="end"
-                        android:gravity="start" />
+                        android:orientation="vertical"
+                        android:layout_marginEnd="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Age"
+                            android:textSize="14sp"
+                            android:textColor="@color/text_secondary"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:id="@+id/text_age"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="2h 30m"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/status_online"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
+
+                    </LinearLayout>
+
+                    <!-- Status Section -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Status"
+                            android:textSize="14sp"
+                            android:textColor="@color/text_secondary"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:id="@+id/text_status"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="R3"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/status_online"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
+
+                    </LinearLayout>
 
                 </LinearLayout>
 
-            </LinearLayout>
-
-            <!-- Fourth Row: Point Value and Players -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:background="@drawable/professional_row_background"
-                android:layout_marginBottom="8dp">
-
-                <!-- Point Value Section -->
+                <!-- Second Row: Point Value and Players -->
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginEnd="8dp">
+                    android:orientation="horizontal">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <!-- Point Value Section -->
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="Point Value:"
-                        android:textSize="14sp"
-                        android:textColor="@color/text_secondary"
-                        android:textStyle="bold"
-                        android:layout_marginEnd="8dp" />
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginEnd="8dp">
 
-                    <TextView
-                        android:id="@+id/text_point_value"
-                        android:layout_width="wrap_content"
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Point Value"
+                            android:textSize="14sp"
+                            android:textColor="@color/text_secondary"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:id="@+id/text_point_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="₹25"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/accent_blue"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
+
+                    </LinearLayout>
+
+                    <!-- Players Section -->
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="₹25"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/accent_blue"
-                        android:maxLines="1"
-                        android:ellipsize="end" />
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="8dp">
 
-                </LinearLayout>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Players"
+                            android:textSize="14sp"
+                            android:textColor="@color/text_secondary"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="4dp" />
 
-                <!-- Players Section -->
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginStart="8dp">
+                        <TextView
+                            android:id="@+id/text_players"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="5"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/accent_blue"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:background="@drawable/clickable_text_background"
+                            android:padding="8dp"
+                            android:clickable="true"
+                            android:focusable="true" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Players:"
-                        android:textSize="14sp"
-                        android:textColor="@color/text_secondary"
-                        android:textStyle="bold"
-                        android:layout_marginEnd="8dp" />
-
-                    <TextView
-                        android:id="@+id/text_players"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="5"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/accent_blue"
-                        android:maxLines="1"
-                        android:ellipsize="end"
-                        android:background="@drawable/clickable_text_background"
-                        android:padding="8dp"
-                        android:clickable="true"
-                        android:focusable="true" />
+                    </LinearLayout>
 
                 </LinearLayout>
 
