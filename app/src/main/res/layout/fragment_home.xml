@@ -48,10 +48,10 @@
                     android:gravity="center">
 
                     <TextView
-                        android:id="@+id/text_total_games"
+                        android:id="@+id/text_approved_games"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="12"
+                        android:text="0"
                         android:textSize="28sp"
                         android:textStyle="bold"
                         android:textColor="@color/accent_blue"
@@ -60,7 +60,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Total Games"
+                        android:text="Approved Games"
                         android:textSize="11sp"
                         android:textColor="@color/text_secondary"
                         android:textStyle="bold"
@@ -90,10 +90,10 @@
                     android:gravity="center">
 
                     <TextView
-                        android:id="@+id/text_gst_approved"
+                        android:id="@+id/text_completed_games"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="8"
+                        android:text="0"
                         android:textSize="28sp"
                         android:textStyle="bold"
                         android:textColor="@color/profit_green"
@@ -102,7 +102,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="GST Approved"
+                        android:text="Completed Games"
                         android:textSize="11sp"
                         android:textColor="@color/text_secondary"
                         android:textStyle="bold"
@@ -132,10 +132,10 @@
                     android:gravity="center">
 
                     <TextView
-                        android:id="@+id/text_gst_pending"
+                        android:id="@+id/text_in_progress_games"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="4"
+                        android:text="0"
                         android:textSize="28sp"
                         android:textStyle="bold"
                         android:textColor="@color/loss_red"
@@ -144,7 +144,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="GST Pending"
+                        android:text="In Progress Games"
                         android:textSize="11sp"
                         android:textColor="@color/text_secondary"
                         android:textStyle="bold"
@@ -197,9 +197,10 @@
                     android:gravity="center" />
 
                 <TextView
+                    android:id="@+id/text_approved_games_count"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="From 8 approved games"
+                    android:text="From 0 approved games"
                     android:textSize="12sp"
                     android:textColor="@color/text_hint"
                     android:layout_marginTop="4dp"

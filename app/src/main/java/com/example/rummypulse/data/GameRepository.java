@@ -11,19 +11,25 @@ import com.example.rummypulse.ui.home.GameItem;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class GameRepository {
     private static final String GAMES_COLLECTION = "games";
     private static final String GAME_DATA_COLLECTION = "gameData";
+    private static final String APPROVED_GAMES_COLLECTION = "approvedGames";
     
     private FirebaseFirestore db;
     private MutableLiveData<List<GameItem>> gameItemsLiveData;
     private MutableLiveData<String> errorLiveData;
+    private MutableLiveData<Double> totalApprovedGstLiveData;
+    private MutableLiveData<Integer> approvedGamesCountLiveData;
 
     public GameRepository() {
         db = FirebaseFirestore.getInstance();
         gameItemsLiveData = new MutableLiveData<>();
         errorLiveData = new MutableLiveData<>();
+        totalApprovedGstLiveData = new MutableLiveData<>();
+        approvedGamesCountLiveData = new MutableLiveData<>();
     }
 
     public LiveData<List<GameItem>> getGameItems() {
@@ -32,6 +38,14 @@ public class GameRepository {
 
     public LiveData<String> getError() {
         return errorLiveData;
+    }
+
+    public LiveData<Double> getTotalApprovedGst() {
+        return totalApprovedGstLiveData;
+    }
+
+    public LiveData<Integer> getApprovedGamesCount() {
+        return approvedGamesCountLiveData;
     }
 
     public void loadAllGames() {
@@ -86,7 +100,9 @@ public class GameRepository {
                                             String pin = gameAuth != null ? gameAuth.getPin() : "0000";
                                             
                                             GameItem gameItem = convertToGameItem(gameId, pin, gameData, gameDataWrapper.getLastUpdated());
-                                            gameItemsArray[index] = gameItem;
+                                            if (gameItem != null) {
+                                                gameItemsArray[index] = gameItem;
+                                            }
                                             completedFlags[index] = true;
                                             
                                             completedCount[0]++;
@@ -179,6 +195,12 @@ public class GameRepository {
         // Get game status
         String gameStatus = gameData.getGameStatus();
         
+        // Skip approved games - they should not appear in active games list
+        if ("Approved".equals(gameStatus)) {
+            System.out.println("Skipping approved game: " + gameId);
+            return null;
+        }
+        
         // Get number of players
         String numberOfPlayers = String.valueOf(gameData.getNumPlayers());
 
@@ -224,8 +246,184 @@ public class GameRepository {
     }
 
     public void updateGameStatus(String gameId, String newStatus) {
-        // This would update a status field in the gameData collection
-        // For now, we'll just reload the data
-        loadAllGames();
+        // Update the game status in the original gameData collection
+        db.collection(GAME_DATA_COLLECTION)
+                .document(gameId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
+                        if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
+                            GameData gameData = gameDataWrapper.getData();
+                            gameData.setGameStatus(newStatus);
+                            
+                            // Update the wrapper with new timestamp
+                            gameDataWrapper.setLastUpdated(com.google.firebase.Timestamp.now());
+                            gameDataWrapper.setData(gameData);
+                            
+                            // Save back to Firestore
+                            db.collection(GAME_DATA_COLLECTION)
+                                    .document(gameId)
+                                    .set(gameDataWrapper)
+                                    .addOnSuccessListener(aVoid -> {
+                                        // Reload the games list to reflect the change
+                                        loadAllGames();
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        errorLiveData.setValue("Failed to update game status: " + e.getMessage());
+                                    });
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    errorLiveData.setValue("Failed to update game status: " + e.getMessage());
+                });
+    }
+
+    public void approveGame(GameItem gameItem) {
+        // Get the original game data to extract player information
+        db.collection(GAME_DATA_COLLECTION)
+                .document(gameItem.getGameId())
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        try {
+                            GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
+                            if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
+                                GameData gameData = gameDataWrapper.getData();
+                                
+                                // Create simplified player scores map (name -> total score)
+                                Map<String, Integer> playerScores = new java.util.HashMap<>();
+                                if (gameData.getPlayers() != null) {
+                                    for (Player player : gameData.getPlayers()) {
+                                        playerScores.put(player.getName(), player.getTotalScore());
+                                    }
+                                }
+                                
+                                // Create approved game data without PIN
+                                ApprovedGameData approvedGameData = new ApprovedGameData(
+                                        gameItem.getGameId(),
+                                        gameData.getNumPlayers(),
+                                        gameData.getPointValue(),
+                                        gameData.getGstPercent(),
+                                        playerScores,
+                                        com.google.firebase.Timestamp.now(),
+                                        gameDataWrapper.getVersion(),
+                                        gameItem.getGstAmount(),
+                                        gameItem.getGameStatus(),
+                                        gameItem.getCreationDateTime()
+                                );
+                                
+                                // Save to approved games collection
+                                db.collection(APPROVED_GAMES_COLLECTION)
+                                        .document(gameItem.getGameId())
+                                        .set(approvedGameData)
+                                        .addOnSuccessListener(aVoid -> {
+                                            // Delete from both original collections after successful approval
+                                            deleteApprovedGame(gameItem.getGameId());
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            errorLiveData.setValue("Failed to approve game: " + e.getMessage());
+                                        });
+                            } else {
+                                errorLiveData.setValue("Failed to load game data for approval");
+                            }
+                        } catch (Exception e) {
+                            errorLiveData.setValue("Error processing game data: " + e.getMessage());
+                        }
+                    } else {
+                        errorLiveData.setValue("Game data not found for approval");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    errorLiveData.setValue("Failed to load game data: " + e.getMessage());
+                });
+    }
+
+    private void deleteApprovedGame(String gameId) {
+        // Delete from both collections after successful approval
+        db.collection(GAMES_COLLECTION).document(gameId).delete()
+                .addOnSuccessListener(aVoid -> {
+                    // After deleting from games collection, delete from gameData collection
+                    db.collection(GAME_DATA_COLLECTION).document(gameId).delete()
+                            .addOnSuccessListener(aVoid1 -> {
+                                // Reload the list after deletion
+                                loadAllGames();
+                                // Reload approved games to update total GST
+                                loadApprovedGames();
+                                System.out.println("Successfully approved and deleted game: " + gameId);
+                            })
+                            .addOnFailureListener(e -> {
+                                errorLiveData.setValue("Failed to delete approved game data: " + e.getMessage());
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    errorLiveData.setValue("Failed to delete approved game: " + e.getMessage());
+                });
+    }
+
+    private void updateGameStatusInOriginal(String gameId, String newStatus) {
+        // Update the game status in the original gameData collection
+        db.collection(GAME_DATA_COLLECTION)
+                .document(gameId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
+                        if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
+                            GameData gameData = gameDataWrapper.getData();
+                            gameData.setGameStatus(newStatus);
+                            
+                            // Update the wrapper with new timestamp
+                            gameDataWrapper.setLastUpdated(com.google.firebase.Timestamp.now());
+                            gameDataWrapper.setData(gameData);
+                            
+                            // Save back to Firestore
+                            db.collection(GAME_DATA_COLLECTION)
+                                    .document(gameId)
+                                    .set(gameDataWrapper)
+                                    .addOnSuccessListener(aVoid -> {
+                                        // Reload the games list to reflect the change
+                                        loadAllGames();
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        errorLiveData.setValue("Failed to update game status: " + e.getMessage());
+                                    });
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    errorLiveData.setValue("Failed to update game status: " + e.getMessage());
+                });
+    }
+
+    public void loadApprovedGames() {
+        // Load all approved games and calculate total GST amount
+        db.collection(APPROVED_GAMES_COLLECTION)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    double totalGst = 0.0;
+                    int approvedCount = 0;
+                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                        try {
+                            ApprovedGameData approvedGame = document.toObject(ApprovedGameData.class);
+                            if (approvedGame != null) {
+                                totalGst += approvedGame.getGstAmountAsDouble();
+                                approvedCount++;
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Error parsing approved game: " + e.getMessage());
+                        }
+                    }
+                    totalApprovedGstLiveData.setValue(totalGst);
+                    approvedGamesCountLiveData.setValue(approvedCount);
+                    System.out.println("Total approved GST amount: ₹" + String.format("%.0f", totalGst));
+                    System.out.println("Total approved games count: " + approvedCount);
+                })
+                .addOnFailureListener(e -> {
+                    errorLiveData.setValue("Failed to load approved games: " + e.getMessage());
+                    totalApprovedGstLiveData.setValue(0.0);
+                    approvedGamesCountLiveData.setValue(0);
+                });
     }
 }

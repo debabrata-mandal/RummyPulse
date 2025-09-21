@@ -25,7 +25,6 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
 
     public interface OnGameActionListener {
         void onApproveGst(GameItem game, int position);
-        void onNotApplicable(GameItem game, int position);
         void onDeleteGame(GameItem game, int position);
     }
 
@@ -124,18 +123,23 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(android.R.color.black));
             }
 
+            // Enable/disable approve button based on game status
+            String gameStatus = item.getGameStatus();
+            boolean isGameCompleted = "Completed".equals(gameStatus);
+            
+            // Debug logging
+            System.out.println("Game ID: " + item.getGameId() + ", Status: '" + gameStatus + "', Completed: " + isGameCompleted);
+            
+            holder.btnApproveGst.setEnabled(isGameCompleted);
+            holder.btnApproveGst.setAlpha(isGameCompleted ? 1.0f : 0.5f);
+            
             // Set up button click listeners
             holder.btnApproveGst.setOnClickListener(v -> {
-                if (actionListener != null) {
+                if (actionListener != null && isGameCompleted) {
                     actionListener.onApproveGst(item, position);
                 }
             });
 
-            holder.btnNotApplicable.setOnClickListener(v -> {
-                if (actionListener != null) {
-                    actionListener.onNotApplicable(item, position);
-                }
-            });
 
             holder.btnDeleteGame.setOnClickListener(v -> {
                 if (actionListener != null) {
@@ -190,7 +194,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         public static class TableViewHolder extends RecyclerView.ViewHolder {
             TextView gameIdHeaderText, gameIdInCreatedText, gamePinText, pointValueText, creationDateText, playersText, gstPercentageText, gstAmountText, ageText, statusText;
             ImageView iconViewPin;
-            View btnApproveGst, btnNotApplicable, btnDeleteGame;
+            View btnApproveGst, btnDeleteGame;
 
             public TableViewHolder(@NonNull View itemView) {
                 super(itemView);
@@ -206,7 +210,6 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 statusText = itemView.findViewById(R.id.text_status);
                 iconViewPin = itemView.findViewById(R.id.icon_view_pin);
                 btnApproveGst = itemView.findViewById(R.id.btn_approve_gst);
-                btnNotApplicable = itemView.findViewById(R.id.btn_not_applicable);
                 btnDeleteGame = itemView.findViewById(R.id.btn_delete_game);
             }
         }

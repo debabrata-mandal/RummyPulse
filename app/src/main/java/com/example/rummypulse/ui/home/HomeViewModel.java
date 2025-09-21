@@ -14,8 +14,10 @@ public class HomeViewModel extends ViewModel {
     private final MutableLiveData<String> mText;
     private final MutableLiveData<List<GameItem>> mGameItems;
     private final MutableLiveData<Integer> mTotalGames;
-    private final MutableLiveData<Integer> mGstApproved;
-    private final MutableLiveData<Integer> mGstPending;
+    private final MutableLiveData<Integer> mApprovedGames;
+    private final MutableLiveData<Integer> mCompletedGames;
+    private final MutableLiveData<Integer> mInProgressGames;
+    private final MutableLiveData<Double> mTotalGstAmount;
     private final MutableLiveData<String> mError;
     
     private GameRepository gameRepository;
@@ -26,8 +28,10 @@ public class HomeViewModel extends ViewModel {
         
         mGameItems = new MutableLiveData<>();
         mTotalGames = new MutableLiveData<>();
-        mGstApproved = new MutableLiveData<>();
-        mGstPending = new MutableLiveData<>();
+        mApprovedGames = new MutableLiveData<>();
+        mCompletedGames = new MutableLiveData<>();
+        mInProgressGames = new MutableLiveData<>();
+        mTotalGstAmount = new MutableLiveData<>();
         mError = new MutableLiveData<>();
         
         // Initialize repository
@@ -49,12 +53,20 @@ public class HomeViewModel extends ViewModel {
         return mTotalGames;
     }
 
-    public LiveData<Integer> getGstApproved() {
-        return mGstApproved;
+    public LiveData<Integer> getCompletedGames() {
+        return mCompletedGames;
     }
 
-    public LiveData<Integer> getGstPending() {
-        return mGstPending;
+    public LiveData<Integer> getInProgressGames() {
+        return mInProgressGames;
+    }
+
+    public LiveData<Double> getTotalGstAmount() {
+        return mTotalGstAmount;
+    }
+
+    public LiveData<Integer> getApprovedGamesCount() {
+        return mApprovedGames;
     }
 
     public LiveData<String> getError() {
@@ -73,8 +85,22 @@ public class HomeViewModel extends ViewModel {
             mError.setValue(error);
         });
         
+        // Observe total approved GST amount
+        gameRepository.getTotalApprovedGst().observeForever(totalGst -> {
+            mTotalGstAmount.setValue(totalGst);
+        });
+        
+        // Observe approved games count
+        gameRepository.getApprovedGamesCount().observeForever(approvedCount -> {
+            mApprovedGames.setValue(approvedCount);
+        });
+        
+        
         // Load games from Firebase
         gameRepository.loadAllGames();
+        
+        // Load approved games and calculate total GST
+        gameRepository.loadApprovedGames();
     }
 
     private void calculateMetrics(List<GameItem> games) {
@@ -83,20 +109,20 @@ public class HomeViewModel extends ViewModel {
         }
         
         int total = games.size();
-        int approved = 0;
-        int pending = 0;
+        int completed = 0;
+        int inProgress = 0;
         
         for (GameItem game : games) {
             if (game.isCompleted()) {
-                approved++;
+                completed++;
             } else {
-                pending++;
+                inProgress++;
             }
         }
         
         mTotalGames.setValue(total);
-        mGstApproved.setValue(approved);
-        mGstPending.setValue(pending);
+        mCompletedGames.setValue(completed);
+        mInProgressGames.setValue(inProgress);
     }
 
     public void refreshGames() {
@@ -109,5 +135,18 @@ public class HomeViewModel extends ViewModel {
 
     public void updateGameStatus(String gameId, String newStatus) {
         gameRepository.updateGameStatus(gameId, newStatus);
+    }
+
+    public void approveGame(GameItem gameItem) {
+        gameRepository.approveGame(gameItem);
+    }
+
+    // Temporary test method to set first game to completed status
+    public void setTestGameCompleted() {
+        List<GameItem> currentGames = mGameItems.getValue();
+        if (currentGames != null && !currentGames.isEmpty()) {
+            GameItem firstGame = currentGames.get(0);
+            gameRepository.updateGameStatus(firstGame.getGameId(), "Completed");
+        }
     }
 }

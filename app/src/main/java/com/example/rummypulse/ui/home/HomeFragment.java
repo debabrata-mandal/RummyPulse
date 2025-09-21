@@ -43,20 +43,35 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             });
 
         // Observe and update metric tiles
-        homeViewModel.getTotalGames().observe(getViewLifecycleOwner(), totalGames -> {
-            binding.textTotalGames.setText(String.valueOf(totalGames));
+        homeViewModel.getApprovedGamesCount().observe(getViewLifecycleOwner(), approvedGames -> {
+            binding.textApprovedGames.setText(String.valueOf(approvedGames));
         });
 
-        homeViewModel.getGstApproved().observe(getViewLifecycleOwner(), gstApproved -> {
-            binding.textGstApproved.setText(String.valueOf(gstApproved));
+        homeViewModel.getCompletedGames().observe(getViewLifecycleOwner(), completedGames -> {
+            binding.textCompletedGames.setText(String.valueOf(completedGames));
         });
 
-        homeViewModel.getGstPending().observe(getViewLifecycleOwner(), gstPending -> {
-            binding.textGstPending.setText(String.valueOf(gstPending));
+        homeViewModel.getInProgressGames().observe(getViewLifecycleOwner(), inProgressGames -> {
+            binding.textInProgressGames.setText(String.valueOf(inProgressGames));
         });
 
-        // Set total GST amount (static for now)
-        binding.textTotalGstAmount.setText("₹45,280");
+        // Observe total GST amount from approved games
+        homeViewModel.getTotalGstAmount().observe(getViewLifecycleOwner(), totalGst -> {
+            if (totalGst != null) {
+                binding.textTotalGstAmount.setText("₹" + String.format("%.0f", totalGst));
+            } else {
+                binding.textTotalGstAmount.setText("₹0");
+            }
+        });
+
+        // Observe approved games count for the "From X approved games" text
+        homeViewModel.getApprovedGamesCount().observe(getViewLifecycleOwner(), approvedCount -> {
+            if (approvedCount != null) {
+                binding.textApprovedGamesCount.setText("From " + approvedCount + " approved games");
+            } else {
+                binding.textApprovedGamesCount.setText("From 0 approved games");
+            }
+        });
 
         // Observe errors
         homeViewModel.getError().observe(getViewLifecycleOwner(), error -> {
@@ -70,6 +85,13 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             Toast.makeText(getContext(), "Refreshing data...", Toast.LENGTH_SHORT).show();
             homeViewModel.refreshGames();
         });
+        
+        // Temporary test button to force a game to completed status
+        binding.btnRefresh.setOnLongClickListener(v -> {
+            Toast.makeText(getContext(), "Test: Setting first game to Completed status", Toast.LENGTH_SHORT).show();
+            homeViewModel.setTestGameCompleted();
+            return true;
+        });
 
         return root;
     }
@@ -82,15 +104,27 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
     @Override
     public void onApproveGst(GameItem game, int position) {
-        // Disabled for now - no action
-        Toast.makeText(getContext(), "Approve button disabled", Toast.LENGTH_SHORT).show();
+        // Check if game is completed
+        if (!"Completed".equals(game.getGameStatus())) {
+            Toast.makeText(getContext(), "Game must be completed before approval", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Show confirmation dialog
+        new androidx.appcompat.app.AlertDialog.Builder(getContext())
+                .setTitle("Approve Game")
+                .setMessage("Are you sure you want to approve this completed game? This will finalize the game and move it to the approved games list.")
+                .setPositiveButton("Approve", (dialog, which) -> {
+                    // Call the approve method
+                    homeViewModel.approveGame(game);
+                    Toast.makeText(getContext(), "Game approved successfully!", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                    // Do nothing
+                })
+                .show();
     }
 
-    @Override
-    public void onNotApplicable(GameItem game, int position) {
-        // Disabled for now - no action
-        Toast.makeText(getContext(), "NA button disabled", Toast.LENGTH_SHORT).show();
-    }
 
     @Override
     public void onDeleteGame(GameItem game, int position) {

@@ -42,7 +42,7 @@
                 android:layout_height="wrap_content"
                 android:text="GAME001"
                 android:textSize="16sp"
-                android:textColor="@color/primary_blue"
+                android:textColor="@android:color/white"
                 android:textStyle="bold" />
 
             <View
@@ -97,7 +97,7 @@
                             android:layout_height="wrap_content"
                             android:text="GAME001"
                             android:textSize="14sp"
-                            android:textColor="@color/primary_blue"
+                            android:textColor="@android:color/white"
                             android:textStyle="bold" />
 
                         <TextView
@@ -431,36 +431,6 @@
 
             </LinearLayout>
 
-            <!-- Not Applicable Button -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_margin="6dp"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:background="@drawable/not_applicable_button_background"
-                android:padding="16dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:id="@+id/btn_not_applicable">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_not_applicable"
-                    android:layout_marginBottom="6dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="N/A"
-                    android:textSize="9sp"
-                    android:textColor="@color/white"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1" />
-
-            </LinearLayout>
 
             <!-- Delete Game Button -->
             <LinearLayout

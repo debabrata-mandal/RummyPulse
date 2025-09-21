@@ -10,6 +10,7 @@ public class GameData {
     private List<Player> players;
     private Timestamp lastUpdated;
     private String version;
+    private String gameStatus;
 
     public GameData() {
         // Default constructor required for Firestore
@@ -22,6 +23,7 @@ public class GameData {
         this.players = players;
         this.lastUpdated = lastUpdated;
         this.version = version;
+        this.gameStatus = calculateCurrentRound();
     }
 
     // Getters and setters
@@ -73,10 +75,27 @@ public class GameData {
         this.version = version;
     }
 
+    public void setGameStatus(String gameStatus) {
+        this.gameStatus = gameStatus;
+    }
+
     // Helper methods
     public int getTotalScore() {
-        if (players == null) return 0;
-        return players.stream().mapToInt(Player::getTotalScore).sum();
+        if (players == null || players.isEmpty()) return 0;
+        
+        // Calculate total score as sum of all individual player scores
+        // This represents the total points scored across all players in all rounds
+        int totalScore = 0;
+        for (Player player : players) {
+            if (player.getScores() != null) {
+                for (Integer score : player.getScores()) {
+                    if (score != null && score > 0) { // Only count positive scores
+                        totalScore += score;
+                    }
+                }
+            }
+        }
+        return totalScore;
     }
 
     public double getGstAmount() {
@@ -104,12 +123,21 @@ public class GameData {
     }
 
     public String getGameStatus() {
+        // Return stored status if available, otherwise calculate it
+        if (gameStatus != null && !gameStatus.isEmpty()) {
+            System.out.println("Using stored gameStatus: " + gameStatus);
+            return gameStatus;
+        }
+        
         if (players == null || players.isEmpty()) {
+            System.out.println("No players, returning Not Started");
             return "Not Started";
         }
         
         // Calculate current round based on completed entries (similar to web app logic)
-        return calculateCurrentRound();
+        String calculatedStatus = calculateCurrentRound();
+        System.out.println("Calculated gameStatus: " + calculatedStatus + " for " + players.size() + " players");
+        return calculatedStatus;
     }
     
     private String calculateCurrentRound() {
@@ -118,6 +146,7 @@ public class GameData {
         }
         
         int numPlayers = players.size();
+        System.out.println("Calculating round for " + numPlayers + " players");
         
         // Check rounds 1-10 (exactly like web app logic)
         for (int round = 1; round <= 10; round++) {
@@ -134,13 +163,17 @@ public class GameData {
                 }
             }
             
+            System.out.println("Round " + round + ": " + completedPlayers + "/" + numPlayers + " players completed");
+            
             // If not all players completed this round, this is the current round
             if (completedPlayers < numPlayers) {
+                System.out.println("Returning R" + round);
                 return "R" + round;
             }
         }
         
         // All rounds completed by all players
+        System.out.println("All rounds completed, returning Completed");
         return "Completed";
     }
 }
