@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Material Design Colors -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -8,37 +9,65 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     
-    <!-- Professional Rummy Pulse Colors - Light Dark Theme -->
-    <color name="primary_blue">#FF2C2C2C</color>
-    <color name="primary_blue_dark">#FF1A1A1A</color>
-    <color name="primary_blue_light">#FF424242</color>
-    <color name="accent_orange">#FF2C2C2C</color>
-    <color name="accent_orange_dark">#FF1A1A1A</color>
+    <!-- Dark Financial App Theme Colors -->
+    <color name="primary_blue">#FF1A1A1A</color>
+    <color name="primary_blue_dark">#FF0F0F0F</color>
+    <color name="primary_blue_light">#FF2A2A2A</color>
+    <color name="accent_blue">#FF2196F3</color>
+    <color name="accent_blue_dark">#FF1976D2</color>
+    <color name="accent_blue_light">#FF64B5F6</color>
     
-    <!-- Background Colors -->
-    <color name="background_light">#FFF8F9FA</color>
-    <color name="background_very_light">#FFFCFCFC</color>
-    <color name="background_white">#FFFFFFFF</color>
-    <color name="surface_color">#FFFFFFFF</color>
+    <!-- Background Colors - Dark Theme -->
+    <color name="background_dark">#FF121212</color>
+    <color name="background_secondary">#FF1E1E1E</color>
+    <color name="background_tertiary">#FF2A2A2A</color>
+    <color name="surface_color">#FF1E1E1E</color>
+    <color name="surface_variant">#FF2A2A2A</color>
     
-    <!-- Text Colors -->
-    <color name="text_primary">#FF212121</color>
-    <color name="text_secondary">#FF757575</color>
-    <color name="text_hint">#FFBDBDBD</color>
+    <!-- Text Colors - Dark Theme -->
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FFB3B3B3</color>
+    <color name="text_hint">#FF808080</color>
     <color name="text_white">#FFFFFFFF</color>
+    <color name="text_dark">#FF000000</color>
     
-    <!-- Status Colors - Light Dark Theme -->
+    <!-- Financial Status Colors -->
+    <color name="profit_green">#FF4CAF50</color>
+    <color name="loss_red">#FFF44336</color>
+    <color name="neutral_gray">#FF9E9E9E</color>
+    
+    <!-- Status Colors -->
     <color name="status_online">#FF4CAF50</color>
     <color name="status_offline">#FF757575</color>
     <color name="status_away">#FFFF9800</color>
     
     <!-- Card and Shadow Colors -->
-    <color name="card_background">#FFF5F5F5</color>
-    <color name="divider_color">#FFE0E0E0</color>
-    <color name="shadow_color">#1A000000</color>
+    <color name="card_background">#FF1E1E1E</color>
+    <color name="card_background_elevated">#FF2A2A2A</color>
+    <color name="divider_color">#FF333333</color>
+    <color name="shadow_color">#40000000</color>
     
-    <!-- Header Colors - Light Dark Theme -->
-    <color name="header_background">#FF2C2C2C</color>
-    <color name="header_gradient_start">#FF2C2C2C</color>
-    <color name="header_gradient_end">#FF1A1A1A</color>
+    <!-- Header and Navigation Colors -->
+    <color name="header_background">#FF1A1A1A</color>
+    <color name="header_gradient_start">#FF1A1A1A</color>
+    <color name="header_gradient_end">#FF0F0F0F</color>
+    <color name="navigation_background">#FF1A1A1A</color>
+    <color name="navigation_selected">#FF2196F3</color>
+    
+    <!-- Search and Input Colors -->
+    <color name="search_background">#FF2A2A2A</color>
+    <color name="search_hint">#FF808080</color>
+    <color name="input_background">#FF2A2A2A</color>
+    <color name="input_border">#FF333333</color>
+    
+    <!-- Bottom Navigation Colors -->
+    <color name="bottom_nav_background">#FF1A1A1A</color>
+    <color name="bottom_nav_selected">#FF2196F3</color>
+    <color name="bottom_nav_unselected">#FF808080</color>
+    
+    <!-- Legacy Colors for Existing Drawables -->
+    <color name="background_light">#FF1E1E1E</color>
+    <color name="background_very_light">#FF2A2A2A</color>
+    <color name="accent_orange">#FF2196F3</color>
+    <color name="accent_orange_dark">#FF1976D2</color>
 </resources>

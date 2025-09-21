@@ -55,6 +55,9 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             binding.textGstPending.setText(String.valueOf(gstPending));
         });
 
+        // Set total GST amount (static for now)
+        binding.textTotalGstAmount.setText("₹45,280");
+
         // Observe errors
         homeViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
