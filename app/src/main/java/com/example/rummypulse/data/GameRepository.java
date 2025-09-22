@@ -99,7 +99,9 @@ public class GameRepository {
                                             GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
                                             String pin = gameAuth != null ? gameAuth.getPin() : "0000";
                                             
-                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, gameDataWrapper.getLastUpdated());
+                                            // Use createdAt from games collection instead of lastUpdated from gameData collection
+                                            com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
+                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt);
                                             if (gameItem != null) {
                                                 gameItemsArray[index] = gameItem;
                                             }
@@ -175,7 +177,7 @@ public class GameRepository {
         }
     }
 
-    private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp lastUpdated) {
+    private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt) {
         // Calculate total score
         int totalScore = gameData.getTotalScore();
         
@@ -190,7 +192,7 @@ public class GameRepository {
         String gstAmountStr = String.format("%.0f", gstAmount);
         
         // Format creation date (from timestamp)
-        String creationDateTime = formatTimestamp(lastUpdated);
+        String creationDateTime = formatTimestamp(createdAt);
         
         // Get game status
         String gameStatus = gameData.getGameStatus();
