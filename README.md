@@ -97,6 +97,8 @@ This project uses GitHub Actions for continuous integration and deployment:
 3. Download `google-services.json` and place it in the `app/` directory
 4. Enable Firestore Database in Firebase Console
 
+**Note**: The `google-services.json` file is gitignored for security. For local development, you need to add your own Firebase configuration file. The CI/CD builds will work without Firebase (with limited functionality).
+
 ## 🏗️ Architecture
 
 ### Tech Stack
