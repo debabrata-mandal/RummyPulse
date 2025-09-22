@@ -65,7 +65,7 @@ This project uses GitHub Actions for continuous integration and deployment:
 
 ### Prerequisites
 - Android Studio Arctic Fox or later
-- JDK 11 or higher
+- JDK 17 or higher
 - Android SDK 28+
 - Git
 
