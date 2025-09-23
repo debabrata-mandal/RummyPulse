@@ -36,9 +36,25 @@ This project uses GitHub Actions for continuous integration and deployment:
 ### How It Works
 1. **Push code to main branch**
 2. **GitHub Actions automatically**:
+   - Determines version based on commit message
+   - Updates version in build.gradle.kts
    - Builds the release APK
-   - Creates a GitHub release
+   - Creates a GitHub release with proper versioning
    - Uploads the APK for download
+
+### Versioning System
+The app uses **Semantic Versioning** based on commit messages:
+
+- **Major (X.0.0)**: Breaking changes (`BREAKING CHANGE:` or `!:`)
+- **Minor (X.Y.0)**: New features (`feat:` or `feature:`)
+- **Patch (X.Y.Z)**: Bug fixes (`fix:`, `bugfix:`, `hotfix:`)
+- **Patch (X.Y.Z)**: Chores (`chore:`, `docs:`, `style:`, `refactor:`, `perf:`, `test:`)
+
+**Examples:**
+- `feat: Add user authentication` → v1.1.0
+- `fix: Fix login bug` → v1.1.1
+- `chore: Update dependencies` → v1.1.2
+- `BREAKING CHANGE: Remove old API` → v2.0.0
 
 ## 📱 Installation
 

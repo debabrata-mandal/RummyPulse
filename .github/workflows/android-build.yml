@@ -30,9 +30,9 @@ jobs:
     - name: Setup google-services.json for CI
       run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
 
-    - name: Generate debug keystore for CI
+    - name: Generate release keystore for CI
       run: |
-        keytool -genkey -v -keystore app/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+        keytool -genkey -v -keystore app/release.keystore -alias rummypulse-release -keyalg RSA -keysize 2048 -validity 10000 -storepass rummypulse123 -keypass rummypulse123 -dname "CN=RummyPulse Release,O=RummyPulse,C=US"
 
     - name: Build with Gradle
       run: ./gradlew assembleRelease
@@ -58,14 +58,76 @@ jobs:
         name: app-release
         path: ./apk
 
+    - name: Determine Version
+      id: version
+      run: |
+        # Get the latest tag
+        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "Latest tag: $latest_tag"
+        
+        # Extract version numbers
+        version=$(echo $latest_tag | sed 's/v//')
+        major=$(echo $version | cut -d. -f1)
+        minor=$(echo $version | cut -d. -f2)
+        patch=$(echo $version | cut -d. -f3)
+        
+        # Get commit message
+        commit_msg="${{ github.event.head_commit.message }}"
+        echo "Commit message: $commit_msg"
+        
+        # Determine version bump based on commit message
+        if [[ $commit_msg =~ ^(feat|feature)(\(.+\))?: ]]; then
+          echo "Minor version bump (feature)"
+          minor=$((minor + 1))
+          patch=0
+        elif [[ $commit_msg =~ ^(fix|bugfix|hotfix)(\(.+\))?: ]]; then
+          echo "Patch version bump (fix)"
+          patch=$((patch + 1))
+        elif [[ $commit_msg =~ ^(chore|docs|style|refactor|perf|test)(\(.+\))?: ]]; then
+          echo "Build number bump (chore)"
+          patch=$((patch + 1))
+        elif [[ $commit_msg =~ ^(BREAKING CHANGE|!): ]]; then
+          echo "Major version bump (breaking change)"
+          major=$((major + 1))
+          minor=0
+          patch=0
+        else
+          echo "Default patch version bump"
+          patch=$((patch + 1))
+        fi
+        
+        new_version="$major.$minor.$patch"
+        echo "New version: $new_version"
+        
+        # Set outputs
+        echo "version=$new_version" >> $GITHUB_OUTPUT
+        echo "tag=v$new_version" >> $GITHUB_OUTPUT
+        echo "major=$major" >> $GITHUB_OUTPUT
+        echo "minor=$minor" >> $GITHUB_OUTPUT
+        echo "patch=$patch" >> $GITHUB_OUTPUT
+
+    - name: Update Version in build.gradle.kts
+      run: |
+        # Update versionName in build.gradle.kts
+        sed -i "s/versionName = \".*\"/versionName = \"${{ steps.version.outputs.version }}\"/" app/build.gradle.kts
+        
+        # Update versionCode (increment by 1)
+        current_code=$(grep "versionCode = " app/build.gradle.kts | sed 's/.*versionCode = //')
+        new_code=$((current_code + 1))
+        sed -i "s/versionCode = .*/versionCode = $new_code/" app/build.gradle.kts
+        
+        echo "Updated versionName to ${{ steps.version.outputs.version }}"
+        echo "Updated versionCode to $new_code"
+
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v${{ github.run_number }}
-        name: RummyPulse v${{ github.run_number }}
+        tag_name: ${{ steps.version.outputs.tag }}
+        name: RummyPulse ${{ steps.version.outputs.tag }}
         body: |
           ## RummyPulse Android App
           
+          **Version:** ${{ steps.version.outputs.tag }}
           **Build Number:** ${{ github.run_number }}
           **Commit:** ${{ github.sha }}
           **Date:** ${{ github.event.head_commit.timestamp }}

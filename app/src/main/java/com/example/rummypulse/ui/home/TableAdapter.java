@@ -65,12 +65,12 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             holder.iconViewPin.setOnClickListener(v -> {
                 String actualPin = (String) holder.gamePinText.getTag();
                 holder.gamePinText.setText(actualPin);
-                holder.gamePinText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.accent_orange));
+                holder.gamePinText.setTextColor(holder.itemView.getContext().getColor(R.color.accent_orange));
                 
                 // Hide PIN after 30 seconds
                 holder.gamePinText.postDelayed(() -> {
                     holder.gamePinText.setText("****");
-                    holder.gamePinText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.accent_orange));
+                    holder.gamePinText.setTextColor(holder.itemView.getContext().getColor(R.color.accent_orange));
                 }, 30000);
             });
 
@@ -130,15 +130,15 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             // Set status color based on status
             try {
                 if (status.equals("Completed")) {
-                    holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.status_offline));
+                    holder.statusText.setTextColor(holder.itemView.getContext().getColor(R.color.status_offline));
                 } else if (status.startsWith("R")) {
-                    holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.status_online));
+                    holder.statusText.setTextColor(holder.itemView.getContext().getColor(R.color.status_online));
                 } else {
-                    holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(R.color.text_secondary));
+                    holder.statusText.setTextColor(holder.itemView.getContext().getColor(R.color.text_secondary));
                 }
             } catch (Exception e) {
                 // Fallback to default color if there's any issue
-                holder.statusText.setTextColor(holder.itemView.getContext().getResources().getColor(android.R.color.black));
+                holder.statusText.setTextColor(holder.itemView.getContext().getColor(android.R.color.black));
             }
 
             // Enable/disable approve button based on game status
@@ -252,7 +252,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             TextView noPlayersText = new TextView(context);
             noPlayersText.setText("No players data available");
             noPlayersText.setTextSize(16);
-            noPlayersText.setTextColor(context.getResources().getColor(R.color.text_secondary));
+            noPlayersText.setTextColor(context.getColor(R.color.text_secondary));
             noPlayersText.setPadding(32, 32, 32, 32);
             noPlayersText.setGravity(android.view.Gravity.CENTER);
             playersContainer.addView(noPlayersText);

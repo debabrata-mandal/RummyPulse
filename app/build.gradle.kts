@@ -18,16 +18,24 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
+            // Use release keystore if it exists (CI), otherwise use debug keystore (local dev)
+            if (file("release.keystore").exists()) {
+                storeFile = file("release.keystore")
+                storePassword = "rummypulse123"
+                keyAlias = "rummypulse-release"
+                keyPassword = "rummypulse123"
+            } else {
+                storeFile = file("debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
