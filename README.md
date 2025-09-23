@@ -97,7 +97,26 @@ This project uses GitHub Actions for continuous integration and deployment:
 3. Download `google-services.json` and place it in the `app/` directory
 4. Enable Firestore Database in Firebase Console
 
-**Note**: The `google-services.json` file is gitignored for security. For local development, you need to add your own Firebase configuration file. The CI/CD builds will work without Firebase (with limited functionality).
+**Note**: The `google-services.json` file is gitignored for security. For local development, you need to add your own Firebase configuration file. For CI/CD builds to work with real Firebase, you need to set up a GitHub Secret.
+
+### Setting up GitHub Secret for CI/CD
+
+To make your CI/CD builds work with real Firebase:
+
+1. **Copy your `google-services.json` content**:
+   ```bash
+   cat app/google-services.json
+   ```
+
+2. **Add GitHub Secret**:
+   - Go to your GitHub repository
+   - Click Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `GOOGLE_SERVICES_JSON`
+   - Value: Paste the entire content of your `google-services.json` file
+   - Click "Add secret"
+
+3. **Now your CI/CD builds will use real Firebase** and the released APK will work properly!
 
 ## 🏗️ Architecture
 
