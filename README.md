@@ -27,9 +27,9 @@ A modern Android application for Rummy game management and player tracking. Buil
 
 This project uses GitHub Actions for continuous integration and deployment:
 
-### Debug Builds (Every Push to Main)
+### Release Builds (Every Push to Main)
 - **Trigger**: Every push to the `main` branch
-- **Output**: Debug APK available in GitHub Actions artifacts
+- **Output**: Release APK available in GitHub Actions artifacts
 - **Release**: Automatic release created with download link
 - **Installation**: Download APK from the latest release and install on your Android device
 
@@ -84,11 +84,14 @@ This project uses GitHub Actions for continuous integration and deployment:
 
 3. **Build and run**:
    ```bash
-   # Build debug APK
+   # Build release APK (for production)
+   ./gradlew assembleRelease
+
+   # Build debug APK (for development)
    ./gradlew assembleDebug
 
    # Install on connected device/emulator
-   adb install app/build/outputs/apk/debug/app-debug.apk
+   adb install app/build/outputs/apk/release/app-release.apk
    ```
 
 ### Firebase Setup
@@ -164,9 +167,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👨‍💻 Author
 
-**Your Name**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
+**Debabrata Mandal**
+- GitHub: [@debabrata-mandal](https://github.com/debabrata-mandal)
+- Email: debabrata.developer@gmail.com
 
 ## 🙏 Acknowledgments
 
