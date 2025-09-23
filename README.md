@@ -27,17 +27,18 @@ A modern Android application for Rummy game management and player tracking. Buil
 
 This project uses GitHub Actions for continuous integration and deployment:
 
-### Release Builds (Every Push to Main)
+### Automatic Releases (Every Push to Main)
 - **Trigger**: Every push to the `main` branch
 - **Output**: Release APK available in GitHub Actions artifacts
-- **Release**: Automatic release created with download link
+- **Release**: Automatic release created with download link (v1, v2, v3...)
 - **Installation**: Download APK from the latest release and install on your Android device
 
-### Release Builds (Tagged Releases)
-- **Trigger**: When you create a git tag (e.g., `v1.0.0`)
-- **Output**: Release APK (signed) for production
-- **Release**: GitHub release with the tagged version
-- **Installation**: Download the production APK from the release
+### How It Works
+1. **Push code to main branch**
+2. **GitHub Actions automatically**:
+   - Builds the release APK
+   - Creates a GitHub release
+   - Uploads the APK for download
 
 ## 📱 Installation
 
