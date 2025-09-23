@@ -29,6 +29,10 @@ jobs:
     - name: Setup google-services.json for CI
       run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
 
+    - name: Generate debug keystore for CI
+      run: |
+        keytool -genkey -v -keystore app/debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+
     - name: Build Release APK
       run: ./gradlew assembleRelease
 
