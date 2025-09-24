@@ -65,7 +65,7 @@ The app uses **Semantic Versioning** based on commit messages:
    - Enable installation from unknown sources
 
 2. **Download APK**:
-   - Go to the [Releases](https://github.com/yourusername/RummyPulse/releases) page
+   - Go to the [Releases](https://github.com/debabrata-mandal/RummyPulse/releases) page
    - Download the latest APK file
 
 3. **Install**:
@@ -90,7 +90,7 @@ The app uses **Semantic Versioning** based on commit messages:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/RummyPulse.git
+   git clone https://github.com/debabrata-mandal/RummyPulse.git
    cd RummyPulse
    ```
 
