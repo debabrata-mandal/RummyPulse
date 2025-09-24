@@ -49,25 +49,31 @@ public class GameRepository {
     }
 
     public void loadAllGames() {
+        System.out.println("GameRepository: Starting to load all games from Firebase");
+        
         // First, get all game IDs from the games collection, ordered by newest first
         db.collection(GAMES_COLLECTION)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
+                    System.out.println("GameRepository: Successfully queried games collection, found " + querySnapshot.size() + " documents");
                     List<String> gameIds = new ArrayList<>();
                     for (DocumentSnapshot document : querySnapshot.getDocuments()) {
                         gameIds.add(document.getId());
                     }
                     
                     if (gameIds.isEmpty()) {
+                        System.out.println("GameRepository: No games found in database");
                         gameItemsLiveData.setValue(new ArrayList<>());
                         return;
                     }
                     
+                    System.out.println("GameRepository: Found " + gameIds.size() + " game IDs, loading game data");
                     // Now load game data for each game ID
                     loadGameDataForIds(gameIds);
                 })
                 .addOnFailureListener(e -> {
+                    System.out.println("GameRepository: Failed to load games: " + e.getMessage());
                     errorLiveData.setValue("Failed to load games: " + e.getMessage());
                 });
     }

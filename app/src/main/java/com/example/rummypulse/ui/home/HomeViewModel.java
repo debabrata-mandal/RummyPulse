@@ -74,14 +74,18 @@ public class HomeViewModel extends ViewModel {
     }
 
     private void loadGamesFromFirebase() {
+        System.out.println("HomeViewModel: Starting to load games from Firebase");
+        
         // Observe game items from repository
         gameRepository.getGameItems().observeForever(gameItems -> {
+            System.out.println("HomeViewModel: Received game items: " + (gameItems != null ? gameItems.size() : "null"));
             mGameItems.setValue(gameItems);
             calculateMetrics(gameItems);
         });
         
         // Observe errors from repository
         gameRepository.getError().observeForever(error -> {
+            System.out.println("HomeViewModel: Error occurred: " + error);
             mError.setValue(error);
         });
         
