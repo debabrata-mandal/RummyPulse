@@ -34,32 +34,8 @@ jobs:
       run: |
         echo '${{ secrets.RELEASE_KEYSTORE_BASE64 }}' | base64 -d > app/release.keystore
 
-    - name: Build with Gradle
-      run: ./gradlew assembleRelease
-
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-release
-        path: app/build/outputs/apk/release/app-release.apk
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Download APK artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: app-release
-        path: ./apk
-
-    - name: Determine Version
-      id: version
+    - name: Determine Version for Build
+      id: build_version
       run: |
         # Fetch all tags and get the latest semantic version tag
         git fetch --tags
@@ -115,22 +91,105 @@ jobs:
         # Set outputs
         echo "version=$new_version" >> $GITHUB_OUTPUT
         echo "tag=$new_tag" >> $GITHUB_OUTPUT
-        echo "major=$major" >> $GITHUB_OUTPUT
-        echo "minor=$minor" >> $GITHUB_OUTPUT
-        echo "patch=$patch" >> $GITHUB_OUTPUT
 
     - name: Update Version in build.gradle.kts
       run: |
         # Update versionName in build.gradle.kts
-        sed -i "s/versionName = \".*\"/versionName = \"${{ steps.version.outputs.version }}\"/" app/build.gradle.kts
+        sed -i "s/versionName = \".*\"/versionName = \"${{ steps.build_version.outputs.version }}\"/" app/build.gradle.kts
         
-        # Update versionCode (increment by 1)
-        current_code=$(grep "versionCode = " app/build.gradle.kts | sed 's/.*versionCode = //')
-        new_code=$((current_code + 1))
+        # Update versionCode (increment by build number)
+        new_code=${{ github.run_number }}
         sed -i "s/versionCode = .*/versionCode = $new_code/" app/build.gradle.kts
         
-        echo "Updated versionName to ${{ steps.version.outputs.version }}"
+        echo "Updated versionName to ${{ steps.build_version.outputs.version }}"
         echo "Updated versionCode to $new_code"
+        
+        # Verify the changes
+        grep -E "(versionName|versionCode)" app/build.gradle.kts
+
+    - name: Build with Gradle
+      run: ./gradlew assembleRelease
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release
+        path: app/build/outputs/apk/release/app-release.apk
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download APK artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: app-release
+        path: ./apk
+
+    - name: Get Version from Build Job
+      id: version
+      run: |
+        # Extract version from the APK that was built
+        # We'll reconstruct the version info for the release
+        # Fetch all tags and get the latest semantic version tag
+        git fetch --tags
+        latest_tag=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || echo "v0.0.0")
+        echo "Latest tag: $latest_tag"
+        
+        # Extract version numbers
+        version=$(echo $latest_tag | sed 's/v//')
+        major=$(echo $version | cut -d. -f1)
+        minor=$(echo $version | cut -d. -f2)
+        patch=$(echo $version | cut -d. -f3)
+        
+        # Get commit message (first line only to avoid multiline issues)
+        commit_msg=$(echo "${{ github.event.head_commit.message }}" | head -n1 | tr -d '\n\r')
+        echo "Commit message: $commit_msg"
+        
+        # Determine version bump based on commit message
+        if [[ $commit_msg =~ ^(feat|feature)(\(.+\))?: ]]; then
+          echo "Minor version bump (feature)"
+          minor=$((minor + 1))
+          patch=0
+        elif [[ $commit_msg =~ ^(fix|bugfix|hotfix)(\(.+\))?: ]]; then
+          echo "Patch version bump (fix)"
+          patch=$((patch + 1))
+        elif [[ $commit_msg =~ ^(chore|docs|style|refactor|perf|test)(\(.+\))?: ]]; then
+          echo "Build number bump (chore)"
+          patch=$((patch + 1))
+        elif [[ $commit_msg =~ ^(BREAKING CHANGE|!): ]]; then
+          echo "Major version bump (breaking change)"
+          major=$((major + 1))
+          minor=0
+          patch=0
+        else
+          echo "Default patch version bump"
+          patch=$((patch + 1))
+        fi
+        
+        new_version="$major.$minor.$patch"
+        new_tag="v$new_version"
+        echo "New version: $new_version"
+        echo "New tag: $new_tag"
+        
+        # Check if tag already exists
+        if git tag -l | grep -q "^$new_tag$"; then
+          echo "⚠️  Tag $new_tag already exists! Force incrementing patch version."
+          patch=$((patch + 1))
+          new_version="$major.$minor.$patch"
+          new_tag="v$new_version"
+          echo "Updated version: $new_version"
+          echo "Updated tag: $new_tag"
+        fi
+        
+        # Set outputs
+        echo "version=$new_version" >> $GITHUB_OUTPUT
+        echo "tag=$new_tag" >> $GITHUB_OUTPUT
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
