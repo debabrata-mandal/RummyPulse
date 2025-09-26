@@ -228,7 +228,11 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         int totalScore = 0;
         
         if (players != null && !players.isEmpty()) {
-            for (Player player : players) {
+            // Sort players by total score (lowest to highest)
+            players.sort((p1, p2) -> Integer.compare(p1.getTotalScore(), p2.getTotalScore()));
+            
+            for (int i = 0; i < players.size(); i++) {
+                Player player = players.get(i);
                 View playerView = LayoutInflater.from(context).inflate(R.layout.item_player_score, null);
                 
                 TextView playerNameText = playerView.findViewById(R.id.text_player_name);
@@ -242,7 +246,24 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 int playerScore = player.getTotalScore();
                 totalScore += playerScore;
                 
-                playerNameText.setText(playerName);
+                // Add ranking indicator and winner highlighting
+                int rank = i + 1;
+                String rankIndicator = "";
+                if (rank == 1) {
+                    rankIndicator = "🏆 "; // Winner (lowest score)
+                    playerScoreText.setTextColor(context.getColor(R.color.success_green));
+                } else if (rank == 2) {
+                    rankIndicator = "🥈 ";
+                    playerScoreText.setTextColor(context.getColor(R.color.warning_orange));
+                } else if (rank == 3) {
+                    rankIndicator = "🥉 ";
+                    playerScoreText.setTextColor(context.getColor(R.color.error_red));
+                } else {
+                    rankIndicator = rank + ". ";
+                    playerScoreText.setTextColor(context.getColor(R.color.text_primary));
+                }
+                
+                playerNameText.setText(rankIndicator + playerName);
                 playerScoreText.setText(String.valueOf(playerScore));
                 
                 playersContainer.addView(playerView);
