@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]
 
+# Ensure only one workflow runs at a time for the main branch
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel running builds, queue them instead
+
 permissions:
   contents: write
   packages: write
