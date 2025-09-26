@@ -30,9 +30,9 @@ jobs:
     - name: Setup google-services.json for CI
       run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
 
-    - name: Generate release keystore for CI
+    - name: Setup release keystore from secrets
       run: |
-        keytool -genkey -v -keystore app/release.keystore -alias rummypulse-release -keyalg RSA -keysize 2048 -validity 10000 -storepass rummypulse123 -keypass rummypulse123 -dname "CN=RummyPulse Release,O=RummyPulse,C=US"
+        echo '${{ secrets.RELEASE_KEYSTORE_BASE64 }}' | base64 -d > app/release.keystore
 
     - name: Build with Gradle
       run: ./gradlew assembleRelease
