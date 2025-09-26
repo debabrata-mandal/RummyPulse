@@ -231,12 +231,23 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             // Sort players by total score (lowest to highest)
             players.sort((p1, p2) -> Integer.compare(p1.getTotalScore(), p2.getTotalScore()));
             
+            // Calculate total of all scores for net amount calculation
+            for (Player player : players) {
+                totalScore += player.getTotalScore();
+            }
+            
+            // Get game settings for net amount calculation
+            double pointValue = gameItem.getPointValueAsDouble();
+            double gstPercent = Double.parseDouble(gameItem.getGstPercentage());
+            int numPlayers = gameItem.getNumberOfPlayersAsInt();
+            
             for (int i = 0; i < players.size(); i++) {
                 Player player = players.get(i);
                 View playerView = LayoutInflater.from(context).inflate(R.layout.item_player_score, null);
                 
                 TextView playerNameText = playerView.findViewById(R.id.text_player_name);
                 TextView playerScoreText = playerView.findViewById(R.id.text_player_score);
+                TextView netAmountText = playerView.findViewById(R.id.text_net_amount);
                 
                 String playerName = player.getName();
                 if (playerName == null || playerName.isEmpty()) {
@@ -244,7 +255,19 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 }
                 
                 int playerScore = player.getTotalScore();
-                totalScore += playerScore;
+                
+                // Calculate net amount using the same formula as index.html
+                // Formula: (Total of all scores - Player's score × Number of players) × Point value
+                double grossAmount = Math.round((totalScore - playerScore * numPlayers) * pointValue);
+                
+                double gstPaid = 0;
+                double netAmount = grossAmount;
+                
+                // GST is only paid by winners (those with positive gross amount)
+                if (grossAmount > 0) {
+                    gstPaid = Math.round((grossAmount * gstPercent) / 100.0);
+                    netAmount = grossAmount - gstPaid;
+                }
                 
                 // Add ranking indicator and winner highlighting
                 int rank = i + 1;
@@ -265,6 +288,21 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 
                 playerNameText.setText(rankIndicator + playerName);
                 playerScoreText.setText(String.valueOf(playerScore));
+                
+                // Format and color net amount
+                String netAmountFormatted;
+                if (netAmount > 0) {
+                    netAmountFormatted = "+₹" + Math.round(netAmount);
+                    netAmountText.setTextColor(context.getColor(R.color.success_green)); // Green for winners
+                } else if (netAmount < 0) {
+                    netAmountFormatted = "₹" + Math.round(netAmount);
+                    netAmountText.setTextColor(context.getColor(R.color.error_red)); // Red for losers
+                } else {
+                    netAmountFormatted = "₹0";
+                    netAmountText.setTextColor(context.getColor(R.color.text_secondary)); // Gray for break-even
+                }
+                
+                netAmountText.setText(netAmountFormatted);
                 
                 playersContainer.addView(playerView);
             }
