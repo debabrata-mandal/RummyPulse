@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@drawable/professional_row_background"
+    android:padding="16dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="4dp"
+    android:layout_marginHorizontal="8dp"
+    android:gravity="center_vertical"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Expand/Collapse Icon -->
+    <TextView
+        android:id="@+id/icon_expand_collapse"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:text="▼"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/accent_blue"
+        android:gravity="center"
+        android:layout_marginEnd="12dp" />
+
+    <!-- Month Year -->
+    <TextView
+        android:id="@+id/text_month_year"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="September 2024"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary" />
+
+    <!-- Month Summary Stats -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="end">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/text_monthly_games"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="15 Games"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/rounded_background"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/text_monthly_gst"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="₹1,250"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/success_green" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/text_point_values_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3 Point Values"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginTop="2dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

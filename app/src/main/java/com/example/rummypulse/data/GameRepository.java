@@ -23,6 +23,7 @@ public class GameRepository {
     private MutableLiveData<String> errorLiveData;
     private MutableLiveData<Double> totalApprovedGstLiveData;
     private MutableLiveData<Integer> approvedGamesCountLiveData;
+    private MutableLiveData<List<ApprovedGameData>> approvedGamesForReportsLiveData;
 
     public GameRepository() {
         db = FirebaseFirestore.getInstance();
@@ -30,6 +31,7 @@ public class GameRepository {
         errorLiveData = new MutableLiveData<>();
         totalApprovedGstLiveData = new MutableLiveData<>();
         approvedGamesCountLiveData = new MutableLiveData<>();
+        approvedGamesForReportsLiveData = new MutableLiveData<>();
     }
 
     public LiveData<List<GameItem>> getGameItems() {
@@ -46,6 +48,10 @@ public class GameRepository {
 
     public LiveData<Integer> getApprovedGamesCount() {
         return approvedGamesCountLiveData;
+    }
+
+    public LiveData<List<ApprovedGameData>> getApprovedGamesForReports() {
+        return approvedGamesForReportsLiveData;
     }
 
     public void loadAllGames() {
@@ -433,6 +439,32 @@ public class GameRepository {
                     errorLiveData.setValue("Failed to load approved games: " + e.getMessage());
                     totalApprovedGstLiveData.setValue(0.0);
                     approvedGamesCountLiveData.setValue(0);
+                });
+    }
+
+    public void loadApprovedGamesForReports() {
+        // Load all approved games with full data for reports
+        db.collection(APPROVED_GAMES_COLLECTION)
+                .orderBy("approvedAt", Query.Direction.DESCENDING)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<ApprovedGameData> approvedGames = new ArrayList<>();
+                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                        try {
+                            ApprovedGameData approvedGame = document.toObject(ApprovedGameData.class);
+                            if (approvedGame != null) {
+                                approvedGames.add(approvedGame);
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Error parsing approved game for reports: " + e.getMessage());
+                        }
+                    }
+                    approvedGamesForReportsLiveData.setValue(approvedGames);
+                    System.out.println("Loaded " + approvedGames.size() + " approved games for reports");
+                })
+                .addOnFailureListener(e -> {
+                    errorLiveData.setValue("Failed to load approved games for reports: " + e.getMessage());
+                    approvedGamesForReportsLiveData.setValue(new ArrayList<>());
                 });
     }
 }

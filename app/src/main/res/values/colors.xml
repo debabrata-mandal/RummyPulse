@@ -18,6 +18,7 @@
     <color name="accent_blue_light">#FF64B5F6</color>
     
     <!-- Background Colors - Dark Theme -->
+    <color name="background_primary">#FF121212</color>
     <color name="background_dark">#FF121212</color>
     <color name="background_secondary">#FF1E1E1E</color>
     <color name="background_tertiary">#FF2A2A2A</color>
