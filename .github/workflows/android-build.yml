@@ -61,8 +61,9 @@ jobs:
     - name: Determine Version
       id: version
       run: |
-        # Get the latest tag
-        latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        # Fetch all tags and get the latest semantic version tag
+        git fetch --tags
+        latest_tag=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || echo "v0.0.0")
         echo "Latest tag: $latest_tag"
         
         # Extract version numbers
@@ -97,11 +98,23 @@ jobs:
         fi
         
         new_version="$major.$minor.$patch"
+        new_tag="v$new_version"
         echo "New version: $new_version"
+        echo "New tag: $new_tag"
+        
+        # Check if tag already exists
+        if git tag -l | grep -q "^$new_tag$"; then
+          echo "⚠️  Tag $new_tag already exists! Force incrementing patch version."
+          patch=$((patch + 1))
+          new_version="$major.$minor.$patch"
+          new_tag="v$new_version"
+          echo "Updated version: $new_version"
+          echo "Updated tag: $new_tag"
+        fi
         
         # Set outputs
         echo "version=$new_version" >> $GITHUB_OUTPUT
-        echo "tag=v$new_version" >> $GITHUB_OUTPUT
+        echo "tag=$new_tag" >> $GITHUB_OUTPUT
         echo "major=$major" >> $GITHUB_OUTPUT
         echo "minor=$minor" >> $GITHUB_OUTPUT
         echo "patch=$patch" >> $GITHUB_OUTPUT
@@ -142,4 +155,6 @@ jobs:
         files: ./apk/app-release.apk
         draft: false
         prerelease: false
+        make_latest: true
+        fail_on_unmatched_files: true
         token: ${{ secrets.GITHUB_TOKEN }}
