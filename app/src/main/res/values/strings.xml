@@ -10,4 +10,7 @@
     <string name="menu_home">Games Dashboard</string>
     <string name="menu_gallery">Player Analytics</string>
     <string name="menu_slideshow">Reports</string>
+    
+    <!-- Authentication strings -->
+    <string name="default_web_client_id">740379545501-g1h84gk3d1hrq0egmpp78tulcuk0igbc.apps.googleusercontent.com</string>
 </resources>
