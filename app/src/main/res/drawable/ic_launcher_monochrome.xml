@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Monochrome version optimized for themed icons (Android 13+) -->
+    <!-- Single color design using white for universal compatibility -->
+    
+    <!-- Pulse effect rings (outer to inner) -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,54m-32,0a32,32 0,1 1,64 0a32,32 0,1 1,-64 0"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FFFFFF" />
+    
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,54m-26,0a26,26 0,1 1,52 0a26,26 0,1 1,-52 0"
+        android:strokeWidth="1"
+        android:strokeColor="#FFFFFF" />
+    
+    <!-- Central rummy card stack - simplified for monochrome -->
+    <group android:scaleX="0.9" android:scaleY="0.9" android:pivotX="54" android:pivotY="54">
+        
+        <!-- Card 1 (back card) - slightly rotated -->
+        <group android:rotation="-8" android:pivotX="54" android:pivotY="54">
+            <path
+                android:fillColor="#00000000"
+                android:pathData="M40,44L66,44A4,4 0,0 1,70,48L70,66A4,4 0,0 1,66,70L40,70A4,4 0,0 1,36,66L36,48A4,4 0,0 1,40,44Z"
+                android:strokeWidth="2"
+                android:strokeColor="#FFFFFF" />
+        </group>
+        
+        <!-- Card 2 (middle card) - slightly rotated -->
+        <group android:rotation="4" android:pivotX="54" android:pivotY="54">
+            <path
+                android:fillColor="#00000000"
+                android:pathData="M41,43L67,43A4,4 0,0 1,71,47L71,65A4,4 0,0 1,67,69L41,69A4,4 0,0 1,37,65L37,47A4,4 0,0 1,41,43Z"
+                android:strokeWidth="2"
+                android:strokeColor="#FFFFFF" />
+        </group>
+        
+        <!-- Card 3 (front card) - main focus -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M42,42L68,42A4,4 0,0 1,72,46L72,64A4,4 0,0 1,68,68L42,68A4,4 0,0 1,38,64L38,46A4,4 0,0 1,42,42Z" />
+        
+        <!-- Central "R" for Rummy - bold for visibility -->
+        <path
+            android:fillColor="#000000"
+            android:pathData="M50,49L50,59L52,59L52,54L55,54L57,56L57,59L59,59L59,56L56,53L59,53L59,51L55,51L55,49L50,49Z" />
+    </group>
+    
+    <!-- Pulse bars - simplified for monochrome -->
+    <group android:scaleX="0.7" android:scaleY="0.7" android:pivotX="54" android:pivotY="54">
+        <!-- Left side pulse bars -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M29,74L31,74L31,82L29,82Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M33,70L35,70L35,86L33,86Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M37,72L39,72L39,84L37,84Z" />
+        
+        <!-- Right side pulse bars -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M69,70L71,70L71,86L69,86Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M73,72L75,72L75,84L73,84Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M77,74L79,74L79,82L77,82Z" />
+        
+        <!-- Connecting pulse line -->
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M25,78L83,78"
+            android:strokeWidth="1"
+            android:strokeColor="#FFFFFF" />
+    </group>
+    
+    <!-- Corner accents -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,24L30,24L30,26L24,26Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M78,24L84,24L84,26L78,26Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,82L30,82L30,84L24,84Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M78,82L84,82L84,84L78,84Z" />
+</vector>

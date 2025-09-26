@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    
+    <!-- RummyPulse Internal App Logo -->
+    <!-- Optimized for navigation header and internal use -->
+    
+    <!-- Background circle with gradient effect -->
+    <path
+        android:pathData="M32,32m-30,0a30,30 0,1 1,60 0a30,30 0,1 1,-60 0">
+        <aapt:attr name="android:fillColor" xmlns:aapt="http://schemas.android.com/aapt">
+            <gradient
+                android:type="radial"
+                android:centerX="32"
+                android:centerY="32"
+                android:gradientRadius="30"
+                android:startColor="#FF2196F3"
+                android:endColor="#FF1976D2" />
+        </aapt:attr>
+    </path>
+    
+    <!-- Pulse ring effect -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M32,32m-24,0a24,24 0,1 1,48 0a24,24 0,1 1,-48 0"
+        android:strokeWidth="1"
+        android:strokeColor="#80FFFFFF" />
+    
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M32,32m-18,0a18,18 0,1 1,36 0a18,18 0,1 1,-36 0"
+        android:strokeWidth="0.8"
+        android:strokeColor="#60FFFFFF" />
+    
+    <!-- Central card stack -->
+    <group android:scaleX="1.2" android:scaleY="1.2" android:pivotX="32" android:pivotY="32">
+        
+        <!-- Card 1 (back) - rotated -->
+        <group android:rotation="-10" android:pivotX="32" android:pivotY="32">
+            <path
+                android:fillColor="#FFFFFF"
+                android:pathData="M24,26L40,26A3,3 0,0 1,43,29L43,39A3,3 0,0 1,40,42L24,42A3,3 0,0 1,21,39L21,29A3,3 0,0 1,24,26Z"
+                android:strokeWidth="0.5"
+                android:strokeColor="#E0E0E0" />
+        </group>
+        
+        <!-- Card 2 (middle) - rotated -->
+        <group android:rotation="5" android:pivotX="32" android:pivotY="32">
+            <path
+                android:fillColor="#FFFFFF"
+                android:pathData="M25,25L41,25A3,3 0,0 1,44,28L44,38A3,3 0,0 1,41,41L25,41A3,3 0,0 1,22,38L22,28A3,3 0,0 1,25,25Z"
+                android:strokeWidth="0.5"
+                android:strokeColor="#E0E0E0" />
+        </group>
+        
+        <!-- Card 3 (front) - main focus -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M26,24L42,24A3,3 0,0 1,45,27L45,37A3,3 0,0 1,42,40L26,40A3,3 0,0 1,23,37L23,27A3,3 0,0 1,26,24Z"
+            android:strokeWidth="1"
+            android:strokeColor="#2196F3" />
+        
+        <!-- Stylized "RP" for RummyPulse -->
+        <path
+            android:fillColor="#2196F3"
+            android:pathData="M28,28L28,36L30,36L30,32L32,32L34,34L34,36L36,36L36,34L34,32L36,32L36,30L32,30L32,28L28,28Z" />
+        
+        <!-- P part -->
+        <path
+            android:fillColor="#2196F3"
+            android:pathData="M38,28L38,36L40,36L40,32L42,32L42,30L40,30L40,28L38,28Z" />
+        <path
+            android:fillColor="#2196F3"
+            android:pathData="M40,28L42,28L42,30L40,30Z" />
+    </group>
+    
+    <!-- Pulse effect bars -->
+    <group android:scaleX="0.8" android:scaleY="0.8" android:pivotX="32" android:pivotY="32">
+        <!-- Left pulse bars -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M12,48L14,48L14,52L12,52Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M16,46L18,46L18,54L16,54Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M20,44L22,44L22,56L20,56Z" />
+        
+        <!-- Right pulse bars -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M42,44L44,44L44,56L42,56Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M46,46L48,46L48,54L46,54Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M50,48L52,48L52,52L50,52Z" />
+        
+        <!-- Pulse line -->
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M12,50L52,50"
+            android:strokeWidth="1"
+            android:strokeColor="#80FFFFFF" />
+    </group>
+</vector>
