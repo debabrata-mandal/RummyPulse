@@ -57,7 +57,7 @@
         android:layout_marginTop="48dp"
         android:layout_marginEnd="32dp"
         android:gravity="center"
-        android:text="Welcome to RummyPulse!\n\nSign in with your Google account to access your gaming dashboard and analytics."
+        android:text="Welcome to RummyPulse!\n\nSign in with your Google account to access review and analytics."
         android:textColor="@color/text_secondary"
         android:textSize="16sp"
         android:lineSpacingExtra="4dp"

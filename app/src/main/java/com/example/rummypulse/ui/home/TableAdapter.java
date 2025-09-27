@@ -105,7 +105,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         });
         
         // Set GST Percentage
-        holder.gstPercentageText.setText(item.getGstPercentage() + "%");
+        holder.gstPercentageText.setText(item.getGstPercentage());
         
             // Set GST Amount with currency symbol
             holder.gstAmountText.setText("₹" + item.getGstAmount());

@@ -9,12 +9,13 @@
             android:icon="@drawable/ic_games_dashboard"
             android:title="@string/menu_home" />
         <item
-            android:id="@+id/nav_gallery"
-            android:icon="@drawable/ic_player_analytics"
-            android:title="@string/menu_gallery" />
-        <item
             android:id="@+id/nav_slideshow"
             android:icon="@drawable/ic_reports"
             android:title="@string/menu_slideshow" />
     </group>
+
+    <item
+        android:id="@+id/nav_sign_out"
+        android:icon="@drawable/ic_sign_out"
+        android:title="Sign Out" />
 </menu>

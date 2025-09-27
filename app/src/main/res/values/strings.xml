@@ -9,8 +9,7 @@
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
 
-    <string name="menu_home">Games Dashboard</string>
-    <string name="menu_gallery">Player Analytics</string>
+    <string name="menu_home">Review</string>
     <string name="menu_slideshow">Reports</string>
     
     <!-- Authentication strings -->
