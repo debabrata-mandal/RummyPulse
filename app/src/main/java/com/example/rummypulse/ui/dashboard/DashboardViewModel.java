@@ -71,11 +71,16 @@ public class DashboardViewModel extends ViewModel {
     }
 
     public void joinGame(GameItem game) {
+        joinGame(game, "player"); // Default to player
+    }
+    
+    public void joinGame(GameItem game, String joinType) {
         // TODO: Implement join game functionality
         // This could involve:
-        // 1. Adding current user to the game
+        // 1. Adding current user to the game as specified role (player/moderator)
         // 2. Navigating to game screen
         // 3. Updating game state
+        // joinType can be "player" or "moderator"
     }
 
     public void createNewGame(double pointValue, double gstPercentage) {
@@ -98,19 +103,25 @@ public class DashboardViewModel extends ViewModel {
         initialGameData.put("pointValue", pointValue);
         initialGameData.put("gstPercent", gstPercentage);
         
-        // Create initial players array
+        // Create initial players array with creator as first player
         List<Map<String, Object>> players = new ArrayList<>();
         
-        Map<String, Object> player1 = new HashMap<>();
-        player1.put("name", "Player 1");
-        player1.put("scores", new ArrayList<>(java.util.Collections.nCopies(10, -1)));
-        player1.put("randomNumber", null);
-        players.add(player1);
+        // First player is the creator
+        Map<String, Object> creatorPlayer = new HashMap<>();
+        creatorPlayer.put("name", creatorName != null ? creatorName : "You");
+        creatorPlayer.put("scores", new ArrayList<>(java.util.Collections.nCopies(10, -1)));
+        creatorPlayer.put("randomNumber", null);
+        creatorPlayer.put("isCreator", true); // Mark as creator
+        creatorPlayer.put("userId", creatorUserId); // Store user ID for identification
+        players.add(creatorPlayer);
         
+        // Second player is a placeholder
         Map<String, Object> player2 = new HashMap<>();
         player2.put("name", "Player 2");
         player2.put("scores", new ArrayList<>(java.util.Collections.nCopies(10, -1)));
         player2.put("randomNumber", null);
+        player2.put("isCreator", false);
+        player2.put("userId", null);
         players.add(player2);
         
         initialGameData.put("players", players);
@@ -127,6 +138,9 @@ public class DashboardViewModel extends ViewModel {
         authData.put("creatorName", creatorName);
         authData.put("version", "1.0");
         
+        // Add creation timestamp to game data as well for easy access
+        initialGameData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        
         db.collection("games").document(gameId)
             .set(authData)
             .addOnSuccessListener(aVoid -> {
@@ -141,9 +155,14 @@ public class DashboardViewModel extends ViewModel {
                     .addOnSuccessListener(aVoid2 -> {
                         // Refresh the games list to show the new game
                         loadGames();
+                        
+                        // TODO: Add success callback to notify Fragment
+                        // For now, just log success
+                        android.util.Log.d("GameCreation", "Game created successfully with creator: " + creatorName);
                     })
                     .addOnFailureListener(e -> {
                         // Handle error
+                        android.util.Log.e("GameCreation", "Failed to create game", e);
                     });
             })
             .addOnFailureListener(e -> {

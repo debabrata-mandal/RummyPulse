@@ -3,6 +3,7 @@ package com.example.rummypulse.ui.home;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +14,9 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 import android.widget.LinearLayout;
 import androidx.appcompat.app.AlertDialog;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -164,6 +168,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                     actionListener.onDeleteGame(item, position);
                 }
             });
+            
         }
 
     @Override
@@ -328,6 +333,48 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         
         // Set close button listener
         ImageView closeButton = dialogView.findViewById(R.id.btn_close);
+        closeButton.setOnClickListener(v -> dialog.dismiss());
+        
+        dialog.show();
+    }
+    
+    private void showQrCodeDialog(Context context, GameItem gameItem) {
+        // Create dialog
+        AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.DarkDialogTheme);
+        
+        // Inflate custom layout
+        View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_qr_code, null);
+        
+        // Get views
+        ImageView qrCodeImage = dialogView.findViewById(R.id.qr_code_image);
+        TextView gameIdText = dialogView.findViewById(R.id.text_game_id_qr);
+        ImageView closeButton = dialogView.findViewById(R.id.btn_close);
+        
+        // Set game information
+        gameIdText.setText("Game ID: " + gameItem.getGameId());
+        
+        // Generate QR code
+        try {
+            BarcodeEncoder barcodeEncoder = new BarcodeEncoder();
+            Bitmap bitmap = barcodeEncoder.encodeBitmap(gameItem.getGameId(), BarcodeFormat.QR_CODE, 180, 180);
+            qrCodeImage.setImageBitmap(bitmap);
+        } catch (WriterException e) {
+            e.printStackTrace();
+            Toast.makeText(context, "❌ Failed to generate QR code", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Set up dialog
+        builder.setView(dialogView);
+        AlertDialog dialog = builder.create();
+        
+        // Set QR code click listener to copy Game ID
+        qrCodeImage.setOnClickListener(v -> {
+            copyToClipboard(context, gameItem.getGameId(), "Game ID");
+            Toast.makeText(context, "📋 Game ID copied to clipboard!", Toast.LENGTH_SHORT).show();
+        });
+        
+        // Set close button listener
         closeButton.setOnClickListener(v -> dialog.dismiss());
         
         dialog.show();

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/join_as_moderator"
+        android:title="🛡️ Join as Moderator"
+        android:icon="@drawable/ic_moderator" />
+</menu>

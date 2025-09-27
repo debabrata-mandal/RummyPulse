@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:maxHeight="600dp"
+    android:background="@color/background_dark">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="20dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Game QR Code"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center" />
+
+        <ImageView
+            android:id="@+id/btn_close"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_close"
+            android:background="@drawable/icon_background"
+            android:padding="4dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Close" />
+
+    </LinearLayout>
+
+    <!-- QR Code Container -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@drawable/input_section_background"
+        android:padding="20dp"
+        android:layout_marginBottom="16dp">
+
+        <!-- QR Code ImageView -->
+        <ImageView
+            android:id="@+id/qr_code_image"
+            android:layout_width="180dp"
+            android:layout_height="180dp"
+            android:background="@android:color/white"
+            android:padding="8dp"
+            android:layout_marginBottom="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Tap to copy Game ID" />
+
+        <!-- Game ID Text -->
+        <TextView
+            android:id="@+id/text_game_id_qr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Game ID: GAME001"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="4dp" />
+
+
+    </LinearLayout>
+
+    <!-- Instructions -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/info_background"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="💡 How to Use QR Code"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_blue"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="• Share this QR code with other players\n• They can scan it to join the game instantly\n• Tap QR code to copy Game ID to clipboard"
+            android:textSize="11sp"
+            android:textColor="@color/text_secondary"
+            android:lineSpacingExtra="1dp" />
+
+    </LinearLayout>
+
+</LinearLayout>
+
+</ScrollView>

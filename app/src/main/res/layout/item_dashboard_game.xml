@@ -21,15 +21,36 @@
             android:orientation="horizontal"
             android:layout_marginBottom="12dp">
 
-            <TextView
-                android:id="@+id/text_game_id"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Game #12345"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/text_game_id"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Game #12345"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginEnd="8dp" />
+
+                <ImageView
+                    android:id="@+id/icon_qr_code_dashboard"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_qr_code"
+                    android:background="@drawable/icon_background"
+                    android:padding="3dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Show QR Code"
+                    android:tint="@color/accent_blue" />
+
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/text_game_status"
@@ -141,17 +162,37 @@
             android:textColor="@color/text_secondary"
             android:layout_marginBottom="16dp" />
 
-        <!-- Join Button -->
-        <Button
-            android:id="@+id/btn_join_game"
+        <!-- Join Button with Dropdown -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="🎮 Join Game"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="@color/white"
-            android:background="@drawable/button_primary"
-            android:elevation="4dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <Button
+                android:id="@+id/btn_join_game"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="🎮 JOIN GAME"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                android:background="@drawable/button_primary"
+                android:elevation="4dp" />
+
+            <Button
+                android:id="@+id/btn_join_dropdown"
+                android:layout_width="48dp"
+                android:layout_height="match_parent"
+                android:text="▼"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                android:background="@drawable/button_primary_dropdown"
+                android:elevation="4dp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

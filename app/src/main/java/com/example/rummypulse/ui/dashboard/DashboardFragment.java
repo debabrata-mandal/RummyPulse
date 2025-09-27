@@ -49,7 +49,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
     private void setupSwipeRefresh() {
         binding.swipeRefresh.setOnRefreshListener(() -> {
-            Toast.makeText(getContext(), "Refreshing active games...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "🔄 Refreshing active games...", Toast.LENGTH_SHORT).show();
             dashboardViewModel.loadGames();
         });
         
@@ -82,18 +82,21 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             }
             
             binding.swipeRefresh.setRefreshing(false);
-            Toast.makeText(getContext(), "Games refreshed", Toast.LENGTH_SHORT).show();
+            // Removed automatic "Games refreshed" toast - only show on manual refresh
         });
     }
 
     @Override
-    public void onJoinGame(GameItem game, int position) {
-        Toast.makeText(getContext(), "🎮 Joining game #" + game.getGameId(), Toast.LENGTH_LONG).show();
-        dashboardViewModel.joinGame(game);
+    public void onJoinGame(GameItem game, int position, String joinType) {
+        String roleText = "moderator".equals(joinType) ? "Moderator" : "Player";
+        String emoji = "moderator".equals(joinType) ? "🛡️" : "👤";
+        
+        Toast.makeText(getContext(), emoji + " Joining game #" + game.getGameId() + " as " + roleText, Toast.LENGTH_LONG).show();
+        dashboardViewModel.joinGame(game, joinType);
         
         // TODO: Navigate to game screen or implement join logic
         // For now, just show a toast
-        Toast.makeText(getContext(), "Join game functionality coming soon!", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), "Join as " + roleText + " functionality coming soon!", Toast.LENGTH_SHORT).show();
     }
 
     private void setupCreateGameButton() {
@@ -164,7 +167,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 dashboardViewModel.createNewGame(pointValue, gstPercentage);
                 dialog.dismiss();
                 
-                Toast.makeText(getContext(), "🎮 Creating new game...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "🎮 Creating new game with you as Player 1...", Toast.LENGTH_LONG).show();
 
             } catch (NumberFormatException e) {
                 Toast.makeText(getContext(), "Please enter valid numbers", Toast.LENGTH_SHORT).show();

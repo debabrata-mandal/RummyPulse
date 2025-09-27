@@ -166,4 +166,12 @@
         <item name="colorPrimary">@color/accent_blue</item>
         <item name="android:windowBackground">@color/background_dark</item>
     </style>
+
+    <!-- Dark Popup Menu Theme -->
+    <style name="DarkPopupMenuStyle" parent="Widget.MaterialComponents.PopupMenu">
+        <item name="android:popupBackground">@color/card_background_elevated</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+    </style>
 </resources>
