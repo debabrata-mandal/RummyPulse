@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -59,6 +60,7 @@ public class SlideshowFragment extends Fragment {
 
     private void setupSwipeRefresh() {
         swipeRefreshLayout.setOnRefreshListener(() -> {
+            Toast.makeText(getContext(), "Refreshing reports...", Toast.LENGTH_SHORT).show();
             slideshowViewModel.refreshReports();
         });
         
@@ -91,6 +93,8 @@ public class SlideshowFragment extends Fragment {
                     hideAllStates();
                 } else {
                     progressBar.setVisibility(View.GONE);
+                    // Show completion toast when loading finishes
+                    Toast.makeText(getContext(), "Reports refreshed", Toast.LENGTH_SHORT).show();
                 }
             }
         });

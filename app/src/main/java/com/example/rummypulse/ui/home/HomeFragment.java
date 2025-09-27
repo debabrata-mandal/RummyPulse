@@ -64,6 +64,21 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             }
         });
 
+        // Setup swipe refresh
+        binding.swipeRefresh.setOnRefreshListener(() -> {
+            refreshGames();
+        });
+        
+        // Set swipe refresh colors
+        binding.swipeRefresh.setColorSchemeResources(
+                com.example.rummypulse.R.color.accent_blue,
+                com.example.rummypulse.R.color.accent_blue_dark,
+                com.example.rummypulse.R.color.accent_blue_light
+        );
+
+        // Setup floating action button for refresh
+        binding.btnRefresh.setOnClickListener(v -> refreshGames());
+
         // Observe approved games count for the "From X approved games" text
         homeViewModel.getApprovedGamesCount().observe(getViewLifecycleOwner(), approvedCount -> {
             if (approvedCount != null) {
@@ -117,7 +132,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 .setPositiveButton("Approve", (dialog, which) -> {
                     // Call the approve method
                     homeViewModel.approveGame(game);
-                    Toast.makeText(getContext(), "Game approved successfully!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "✅ Game approved successfully!", Toast.LENGTH_LONG).show();
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> {
                     // Do nothing
@@ -128,8 +143,29 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
     @Override
     public void onDeleteGame(GameItem game, int position) {
-        Toast.makeText(getContext(), "Deleting Game: " + game.getGameId(), Toast.LENGTH_SHORT).show();
-        // Delete game from Firebase
-        homeViewModel.deleteGame(game.getGameId());
+        // Show confirmation dialog
+        new androidx.appcompat.app.AlertDialog.Builder(getContext())
+                .setTitle("Delete Game")
+                .setMessage("Are you sure you want to delete this game? This action cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    // Delete game from Firebase
+                    homeViewModel.deleteGame(game.getGameId());
+                    Toast.makeText(getContext(), "🗑️ Game deleted successfully!", Toast.LENGTH_LONG).show();
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                    // Do nothing
+                })
+                .show();
+    }
+
+    private void refreshGames() {
+        Toast.makeText(getContext(), "Refreshing games...", Toast.LENGTH_LONG).show();
+        homeViewModel.refreshGames();
+        
+        // Stop the refresh animation after a short delay
+        binding.swipeRefresh.postDelayed(() -> {
+            binding.swipeRefresh.setRefreshing(false);
+            Toast.makeText(getContext(), "Games refreshed successfully!", Toast.LENGTH_LONG).show();
+        }, 2000);
     }
 }
