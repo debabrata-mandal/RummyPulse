@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.databinding.FragmentHomeBinding;
+import com.example.rummypulse.data.AppUserManager;
 
 import java.util.List;
 
@@ -31,16 +32,32 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
+        // Check if user is admin before setting up the screen
+        AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
+            @Override
+            public void onResult(boolean isAdmin) {
+                if (isAdmin) {
+                    setupAdminView();
+                } else {
+                    setupLockedView();
+                }
+            }
+        });
+
+        return root;
+    }
+
+    private void setupAdminView() {
         // Setup RecyclerView for the table
         RecyclerView recyclerView = binding.recyclerViewTable;
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         
-            // Observe game data and update adapter
-            homeViewModel.getGameItems().observe(getViewLifecycleOwner(), gameItems -> {
-                tableAdapter = new TableAdapter(gameItems);
-                tableAdapter.setOnGameActionListener(this);
-                recyclerView.setAdapter(tableAdapter);
-            });
+        // Observe game data and update adapter
+        homeViewModel.getGameItems().observe(getViewLifecycleOwner(), gameItems -> {
+            tableAdapter = new TableAdapter(gameItems);
+            tableAdapter.setOnGameActionListener(this);
+            recyclerView.setAdapter(tableAdapter);
+        });
 
         // Observe and update metric tiles
         homeViewModel.getApprovedGamesCount().observe(getViewLifecycleOwner(), approvedGames -> {
@@ -107,8 +124,26 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             homeViewModel.setTestGameCompleted();
             return true;
         });
+    }
 
-        return root;
+    private void setupLockedView() {
+        // Hide all admin-only content
+        binding.recyclerViewTable.setVisibility(View.GONE);
+        binding.swipeRefresh.setVisibility(View.GONE);
+        binding.btnRefresh.setVisibility(View.GONE);
+        
+        // Show locked message
+        TextView lockedMessage = new TextView(getContext());
+        lockedMessage.setText("🔒 Access Restricted\n\nThis screen requires administrator privileges.\nPlease contact an admin for access.");
+        lockedMessage.setTextSize(18);
+        lockedMessage.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        lockedMessage.setPadding(32, 100, 32, 32);
+        lockedMessage.setTextColor(getResources().getColor(com.example.rummypulse.R.color.text_secondary, null));
+        
+        // Add the locked message to the root layout
+        if (binding.getRoot() instanceof ViewGroup) {
+            ((ViewGroup) binding.getRoot()).addView(lockedMessage);
+        }
     }
 
     @Override

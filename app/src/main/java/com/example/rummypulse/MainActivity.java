@@ -10,6 +10,8 @@ import android.widget.ImageView;
 import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.example.rummypulse.data.AppUser;
+import com.example.rummypulse.data.AppUserManager;
 
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
@@ -64,6 +66,27 @@ public class MainActivity extends AppCompatActivity {
             if (item.getItemId() == R.id.nav_sign_out) {
                 signOut();
                 return true;
+            } else if (item.getItemId() == R.id.nav_home) {
+                // Check admin status before allowing access to Review screen
+                AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
+                    @Override
+                    public void onResult(boolean isAdmin) {
+                        if (isAdmin) {
+                            // Admin user - allow access
+                            boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
+                            if (handled) {
+                                drawer.closeDrawers();
+                            }
+                        } else {
+                            // Non-admin user - show access denied message
+                            drawer.closeDrawers();
+                            android.widget.Toast.makeText(MainActivity.this, 
+                                "🔒 Access Denied: Admin privileges required for Review screen", 
+                                android.widget.Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+                return true;
             } else {
                 // Handle other navigation items with default behavior
                 boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
@@ -76,6 +99,9 @@ public class MainActivity extends AppCompatActivity {
         
         // Update navigation header with user info
         updateNavigationHeader(navigationView, currentUser);
+        
+        // Update menu icons based on admin status
+        updateMenuIcons(navigationView);
     }
 
 
@@ -95,9 +121,43 @@ public class MainActivity extends AppCompatActivity {
             String displayName = user.getDisplayName();
             String email = user.getEmail();
             
-            nameTextView.setText(displayName != null ? displayName : "User");
+            // Set email first
             emailTextView.setText(email != null ? email : "");
+            
+            // Check if user is admin and update name accordingly
+            AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
+                @Override
+                public void onResult(boolean isAdmin) {
+                    String finalDisplayName = displayName != null ? displayName : "User";
+                    if (isAdmin) {
+                        finalDisplayName += " (Admin)";
+                    }
+                    nameTextView.setText(finalDisplayName);
+                }
+            });
         }
+    }
+    
+    private void updateMenuIcons(NavigationView navigationView) {
+        AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
+            @Override
+            public void onResult(boolean isAdmin) {
+                android.view.Menu menu = navigationView.getMenu();
+                android.view.MenuItem reviewMenuItem = menu.findItem(R.id.nav_home);
+                
+                if (reviewMenuItem != null) {
+                    if (isAdmin) {
+                        // Admin user - show normal games dashboard icon
+                        reviewMenuItem.setIcon(R.drawable.ic_games_dashboard);
+                        reviewMenuItem.setTitle("Review");
+                    } else {
+                        // Non-admin user - show lock icon
+                        reviewMenuItem.setIcon(R.drawable.ic_lock);
+                        reviewMenuItem.setTitle("Review 🔒");
+                    }
+                }
+            }
+        });
     }
 
     private void signOut() {

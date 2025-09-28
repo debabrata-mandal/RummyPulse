@@ -22,6 +22,8 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.example.rummypulse.data.AppUser;
+import com.example.rummypulse.data.AppUserRepository;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -31,6 +33,7 @@ public class LoginActivity extends AppCompatActivity {
     private ActivityLoginBinding binding;
     private FirebaseAuth mAuth;
     private GoogleSignInClient mGoogleSignInClient;
+    private AppUserRepository appUserRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,6 +44,9 @@ public class LoginActivity extends AppCompatActivity {
 
         // Initialize Firebase Auth
         mAuth = FirebaseAuth.getInstance();
+        
+        // Initialize AppUser Repository
+        appUserRepository = new AppUserRepository();
 
         // Configure Google Sign In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -61,8 +67,22 @@ public class LoginActivity extends AppCompatActivity {
         // Check if user is already signed in
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
-            // User is already signed in, go to main activity
-            startMainActivity();
+            // User is already signed in, update appUser and go to main activity
+            String provider = AppUserRepository.getProviderName(currentUser);
+            appUserRepository.createOrUpdateUser(currentUser, provider, new AppUserRepository.AppUserCallback() {
+                @Override
+                public void onSuccess(AppUser appUser) {
+                    Log.d(TAG, "AppUser updated on app startup: " + appUser.toString());
+                    startMainActivity();
+                }
+                
+                @Override
+                public void onFailure(Exception exception) {
+                    Log.e(TAG, "Failed to update AppUser on app startup", exception);
+                    // Still proceed to main activity
+                    startMainActivity();
+                }
+            });
         }
     }
 
@@ -107,15 +127,41 @@ public class LoginActivity extends AppCompatActivity {
                             Log.d(TAG, "signInWithCredential:success");
                             FirebaseUser user = mAuth.getCurrentUser();
                             
-                            // Welcome message
                             if (user != null) {
-                                Toast.makeText(LoginActivity.this, 
-                                    "Welcome, " + user.getDisplayName() + "!", 
-                                    Toast.LENGTH_SHORT).show();
+                                // Create or update user in appUser collection
+                                String provider = AppUserRepository.getProviderName(user);
+                                appUserRepository.createOrUpdateUser(user, provider, new AppUserRepository.AppUserCallback() {
+                                    @Override
+                                    public void onSuccess(AppUser appUser) {
+                                        Log.d(TAG, "AppUser created/updated successfully: " + appUser.toString());
+                                        
+                                        // Welcome message
+                                        Toast.makeText(LoginActivity.this, 
+                                            "Welcome, " + user.getDisplayName() + "!", 
+                                            Toast.LENGTH_SHORT).show();
+                                        
+                                        // Go to main activity
+                                        startMainActivity();
+                                    }
+                                    
+                                    @Override
+                                    public void onFailure(Exception exception) {
+                                        Log.e(TAG, "Failed to create/update AppUser", exception);
+                                        
+                                        // Still proceed to main activity even if appUser creation fails
+                                        // Welcome message
+                                        Toast.makeText(LoginActivity.this, 
+                                            "Welcome, " + user.getDisplayName() + "!", 
+                                            Toast.LENGTH_SHORT).show();
+                                        
+                                        // Go to main activity
+                                        startMainActivity();
+                                    }
+                                });
+                            } else {
+                                // Go to main activity even if user is null (shouldn't happen)
+                                startMainActivity();
                             }
-                            
-                            // Go to main activity
-                            startMainActivity();
                         } else {
                             // If sign in fails, display a message to the user.
                             Log.w(TAG, "signInWithCredential:failure", task.getException());
