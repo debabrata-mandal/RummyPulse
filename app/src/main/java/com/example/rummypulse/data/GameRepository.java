@@ -110,10 +110,11 @@ public class GameRepository {
                                         .addOnSuccessListener(authSnapshot -> {
                                             GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
                                             String pin = gameAuth != null ? gameAuth.getPin() : "0000";
+                                            String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
                                             
                                             // Use createdAt from games collection instead of lastUpdated from gameData collection
                                             com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
-                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt);
+                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName);
                                             if (gameItem != null) {
                                                 gameItemsArray[index] = gameItem;
                                             }
@@ -189,7 +190,7 @@ public class GameRepository {
         }
     }
 
-    private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt) {
+    private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt, String creatorName) {
         // Calculate total score
         int totalScore = gameData.getTotalScore();
         
@@ -228,6 +229,7 @@ public class GameRepository {
                 numberOfPlayers,
                 gstPercentageStr,
                 gstAmountStr,
+                creatorName,
                 gameData.getPlayers()
         );
     }

@@ -93,6 +93,14 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         // Set created time
         holder.createdTimeText.setText("Started " + formatDateTime(item.getCreationDateTime()));
         
+        // Set creator name if available
+        if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
+            holder.creatorNameText.setText("Created by: " + item.getCreatorName());
+            holder.creatorNameText.setVisibility(View.VISIBLE);
+        } else {
+            holder.creatorNameText.setVisibility(View.GONE);
+        }
+        
         // Set join button click listener (default join as player)
         holder.joinButton.setOnClickListener(v -> {
             if (joinListener != null) {
@@ -254,7 +262,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
     }
 
     static class GameViewHolder extends RecyclerView.ViewHolder {
-        TextView gameIdText, gameStatusText, playersText, pointValueText, gstText, createdTimeText;
+        TextView gameIdText, gameStatusText, playersText, pointValueText, gstText, createdTimeText, creatorNameText;
         Button joinButton, dropdownButton;
         ImageView qrCodeIcon;
 
@@ -266,6 +274,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             pointValueText = itemView.findViewById(R.id.text_point_value);
             gstText = itemView.findViewById(R.id.text_gst);
             createdTimeText = itemView.findViewById(R.id.text_created_time);
+            creatorNameText = itemView.findViewById(R.id.text_creator_name);
             qrCodeIcon = itemView.findViewById(R.id.icon_qr_code_dashboard);
             joinButton = itemView.findViewById(R.id.btn_join_game);
             dropdownButton = itemView.findViewById(R.id.btn_join_dropdown);

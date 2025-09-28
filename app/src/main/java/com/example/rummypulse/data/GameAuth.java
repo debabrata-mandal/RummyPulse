@@ -7,6 +7,7 @@ public class GameAuth {
     private String pin;
     private Timestamp createdAt;
     private String version;
+    private String creatorName;
 
     public GameAuth() {
         // Default constructor required for Firestore
@@ -50,5 +51,13 @@ public class GameAuth {
 
     public void setVersion(String version) {
         this.version = version;
+    }
+
+    public String getCreatorName() {
+        return creatorName;
+    }
+
+    public void setCreatorName(String creatorName) {
+        this.creatorName = creatorName;
     }
 }

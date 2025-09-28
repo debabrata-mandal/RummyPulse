@@ -14,6 +14,7 @@ public class GameItem {
     private String gstPercentage;
     private String gstAmount;
     private String age;
+    private String creatorName;
     private List<Player> players;
 
     public GameItem() {
@@ -35,6 +36,21 @@ public class GameItem {
     }
 
     public GameItem(String gameId, String gamePin, String totalScore, String pointValue, String creationDateTime, String gameStatus, 
+                   String numberOfPlayers, String gstPercentage, String gstAmount, String creatorName) {
+        this.gameId = gameId;
+        this.gamePin = gamePin;
+        this.totalScore = totalScore;
+        this.pointValue = pointValue;
+        this.creationDateTime = creationDateTime;
+        this.gameStatus = gameStatus;
+        this.numberOfPlayers = numberOfPlayers;
+        this.gstPercentage = gstPercentage;
+        this.gstAmount = gstAmount;
+        this.creatorName = creatorName;
+        this.age = calculateAge(creationDateTime);
+    }
+
+    public GameItem(String gameId, String gamePin, String totalScore, String pointValue, String creationDateTime, String gameStatus, 
                    String numberOfPlayers, String gstPercentage, String gstAmount, List<Player> players) {
         this.gameId = gameId;
         this.gamePin = gamePin;
@@ -45,6 +61,22 @@ public class GameItem {
         this.numberOfPlayers = numberOfPlayers;
         this.gstPercentage = gstPercentage;
         this.gstAmount = gstAmount;
+        this.players = players;
+        this.age = calculateAge(creationDateTime);
+    }
+
+    public GameItem(String gameId, String gamePin, String totalScore, String pointValue, String creationDateTime, String gameStatus, 
+                   String numberOfPlayers, String gstPercentage, String gstAmount, String creatorName, List<Player> players) {
+        this.gameId = gameId;
+        this.gamePin = gamePin;
+        this.totalScore = totalScore;
+        this.pointValue = pointValue;
+        this.creationDateTime = creationDateTime;
+        this.gameStatus = gameStatus;
+        this.numberOfPlayers = numberOfPlayers;
+        this.gstPercentage = gstPercentage;
+        this.gstAmount = gstAmount;
+        this.creatorName = creatorName;
         this.players = players;
         this.age = calculateAge(creationDateTime);
     }
@@ -60,6 +92,7 @@ public class GameItem {
     public String getGstPercentage() { return gstPercentage; }
     public String getGstAmount() { return gstAmount; }
     public String getAge() { return age; }
+    public String getCreatorName() { return creatorName; }
     public List<Player> getPlayers() { return players; }
 
     // Setters
@@ -73,6 +106,7 @@ public class GameItem {
     public void setGstPercentage(String gstPercentage) { this.gstPercentage = gstPercentage; }
     public void setGstAmount(String gstAmount) { this.gstAmount = gstAmount; }
     public void setAge(String age) { this.age = age; }
+    public void setCreatorName(String creatorName) { this.creatorName = creatorName; }
     public void setPlayers(List<Player> players) { this.players = players; }
 
     // Helper methods for better data handling

@@ -122,6 +122,19 @@
                         android:maxLines="2"
                         android:ellipsize="end" />
 
+                    <TextView
+                        android:id="@+id/text_creator_name_table"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Created by: John Doe"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"
+                        android:textStyle="italic"
+                        android:layout_marginTop="4dp"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:visibility="gone" />
+
                 </LinearLayout>
 
                 <!-- Game PIN Section -->

@@ -99,6 +99,14 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         
             // Set Creation DateTime
             holder.creationDateText.setText(formatDateTime(item.getCreationDateTime()));
+            
+            // Set creator name if available
+            if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
+                holder.creatorNameText.setText("Created by: " + item.getCreatorName());
+                holder.creatorNameText.setVisibility(View.VISIBLE);
+            } else {
+                holder.creatorNameText.setVisibility(View.GONE);
+            }
         
         // Set Number of Players
         holder.playersText.setText(item.getNumberOfPlayers());
@@ -381,7 +389,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     }
 
         public static class TableViewHolder extends RecyclerView.ViewHolder {
-            TextView gameIdHeaderText, gameIdInCreatedText, gamePinText, pointValueText, creationDateText, playersText, gstPercentageText, gstAmountText, ageText, statusText;
+            TextView gameIdHeaderText, gameIdInCreatedText, gamePinText, pointValueText, creationDateText, creatorNameText, playersText, gstPercentageText, gstAmountText, ageText, statusText;
             ImageView iconViewPin;
             View btnApproveGst, btnDeleteGame;
 
@@ -392,6 +400,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 gamePinText = itemView.findViewById(R.id.text_game_pin);
                 pointValueText = itemView.findViewById(R.id.text_point_value);
                 creationDateText = itemView.findViewById(R.id.text_creation_date);
+                creatorNameText = itemView.findViewById(R.id.text_creator_name_table);
                 playersText = itemView.findViewById(R.id.text_players);
                 gstPercentageText = itemView.findViewById(R.id.text_gst_percentage);
                 gstAmountText = itemView.findViewById(R.id.text_gst_amount);
