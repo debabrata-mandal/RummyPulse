@@ -356,7 +356,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         // Generate QR code
         try {
             BarcodeEncoder barcodeEncoder = new BarcodeEncoder();
-            Bitmap bitmap = barcodeEncoder.encodeBitmap(gameItem.getGameId(), BarcodeFormat.QR_CODE, 180, 180);
+            Bitmap bitmap = barcodeEncoder.encodeBitmap(gameItem.getGameId(), BarcodeFormat.QR_CODE, 300, 300);
             qrCodeImage.setImageBitmap(bitmap);
         } catch (WriterException e) {
             e.printStackTrace();

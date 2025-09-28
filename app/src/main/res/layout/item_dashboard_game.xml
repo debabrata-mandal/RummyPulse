@@ -47,8 +47,7 @@
                     android:padding="3dp"
                     android:clickable="true"
                     android:focusable="true"
-                    android:contentDescription="Show QR Code"
-                    android:tint="@color/accent_blue" />
+                    android:contentDescription="Show QR Code" />
 
             </LinearLayout>
 
