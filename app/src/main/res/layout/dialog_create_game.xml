@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="24dp"
-    android:background="@color/background_dark">
+    android:background="@drawable/dialog_background">
 
     <TextView
         android:layout_width="match_parent"
@@ -21,7 +21,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/input_section_background"
+        android:background="@drawable/professional_row_background"
         android:padding="16dp"
         android:layout_marginBottom="16dp">
 
@@ -69,7 +69,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/input_section_background"
+        android:background="@drawable/professional_row_background"
         android:padding="16dp"
         android:layout_marginBottom="24dp">
 
