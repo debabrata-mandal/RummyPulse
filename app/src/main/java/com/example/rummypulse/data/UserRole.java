@@ -16,6 +16,21 @@ public enum UserRole {
     public String getValue() {
         return value;
     }
+    
+    /**
+     * Get human-readable display name for the role
+     * @return Display name for the role
+     */
+    public String getDisplayName() {
+        switch (this) {
+            case ADMIN_USER:
+                return "Admin User";
+            case REGULAR_USER:
+                return "Regular User";
+            default:
+                return "Unknown Role";
+        }
+    }
 
     /**
      * Get UserRole from string value

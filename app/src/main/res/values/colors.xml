@@ -76,4 +76,13 @@
     <color name="background_very_light">#FF2A2A2A</color>
     <color name="accent_orange">#FF2196F3</color>
     <color name="accent_orange_dark">#FF1976D2</color>
+    
+    <!-- User Management Colors -->
+    <color name="primary_text_color">@color/text_primary</color>
+    <color name="secondary_text_color">@color/text_secondary</color>
+    <color name="admin_role_color">#FFFF6B35</color>
+    <color name="regular_role_color">#FF64B5F6</color>
+    <color name="role_badge_background">@color/surface_variant</color>
+    <color name="promote_button_color">@color/success_green</color>
+    <color name="demote_button_color">@color/warning_orange</color>
 </resources>

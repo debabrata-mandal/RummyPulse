@@ -262,10 +262,63 @@ public class AppUserRepository {
     }
     
     /**
+     * Get all users from appUser collection (Admin functionality)
+     */
+    public void getAllUsers(AllUsersCallback callback) {
+        Log.d(TAG, "Fetching all users from appUser collection");
+        
+        db.collection(COLLECTION_NAME)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<com.google.firebase.firestore.QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<com.google.firebase.firestore.QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            com.google.firebase.firestore.QuerySnapshot querySnapshot = task.getResult();
+                            if (querySnapshot != null) {
+                                java.util.List<AppUser> users = new java.util.ArrayList<>();
+                                
+                                for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                                    try {
+                                        AppUser appUser = documentToAppUser(document);
+                                        users.add(appUser);
+                                    } catch (Exception e) {
+                                        Log.e(TAG, "Error converting document to AppUser: " + document.getId(), e);
+                                    }
+                                }
+                                
+                                Log.d(TAG, "Successfully loaded " + users.size() + " users");
+                                if (callback != null) {
+                                    callback.onSuccess(users);
+                                }
+                            } else {
+                                Log.w(TAG, "QuerySnapshot is null");
+                                if (callback != null) {
+                                    callback.onFailure(new Exception("No data received"));
+                                }
+                            }
+                        } else {
+                            Log.e(TAG, "Error getting all users", task.getException());
+                            if (callback != null) {
+                                callback.onFailure(task.getException());
+                            }
+                        }
+                    }
+                });
+    }
+    
+    /**
      * Callback interface for AppUser operations
      */
     public interface AppUserCallback {
         void onSuccess(AppUser appUser);
+        void onFailure(Exception exception);
+    }
+    
+    /**
+     * Callback interface for multiple AppUser operations
+     */
+    public interface AllUsersCallback {
+        void onSuccess(java.util.List<AppUser> users);
         void onFailure(Exception exception);
     }
 }

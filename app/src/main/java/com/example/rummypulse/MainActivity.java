@@ -123,6 +123,27 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
                 return true;
+            } else if (item.getItemId() == R.id.nav_user_management) {
+                // Check admin status before allowing access to User Management screen
+                AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
+                    @Override
+                    public void onResult(boolean isAdmin) {
+                        if (isAdmin) {
+                            // Admin user - allow access
+                            boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
+                            if (handled) {
+                                drawer.closeDrawers();
+                            }
+                        } else {
+                            // Non-admin user - show access denied message
+                            drawer.closeDrawers();
+                            android.widget.Toast.makeText(MainActivity.this, 
+                                "🔒 Access Denied: Admin privileges required for Users", 
+                                android.widget.Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+                return true;
             } else {
                 // Handle other navigation items with default behavior
                 boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
@@ -198,6 +219,7 @@ public class MainActivity extends AppCompatActivity {
             public void onResult(boolean isAdmin) {
                 android.view.Menu menu = navigationView.getMenu();
                 android.view.MenuItem reviewMenuItem = menu.findItem(R.id.nav_home);
+                android.view.MenuItem userManagementMenuItem = menu.findItem(R.id.nav_user_management);
                 
                 if (reviewMenuItem != null) {
                     if (isAdmin) {
@@ -208,6 +230,18 @@ public class MainActivity extends AppCompatActivity {
                         // Non-admin user - show lock icon
                         reviewMenuItem.setIcon(R.drawable.ic_lock);
                         reviewMenuItem.setTitle("Review 🔒");
+                    }
+                }
+                
+                if (userManagementMenuItem != null) {
+                    if (isAdmin) {
+                        // Admin user - show normal users icon
+                        userManagementMenuItem.setIcon(R.drawable.ic_people);
+                        userManagementMenuItem.setTitle("Users");
+                    } else {
+                        // Non-admin user - show lock icon
+                        userManagementMenuItem.setIcon(R.drawable.ic_lock);
+                        userManagementMenuItem.setTitle("Users 🔒");
                     }
                 }
             }
