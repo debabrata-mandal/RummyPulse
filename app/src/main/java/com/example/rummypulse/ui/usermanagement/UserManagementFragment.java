@@ -19,6 +19,8 @@ import com.example.rummypulse.R;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.UserRole;
 import com.example.rummypulse.databinding.FragmentUserManagementBinding;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -100,6 +102,15 @@ public class UserManagementFragment extends Fragment {
     }
 
     private void onRoleChangeClicked(AppUser user) {
+        // Safety check: Prevent current user from changing their own role
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getUid().equals(user.getUserId())) {
+            Toast.makeText(getContext(), 
+                "⚠️ You cannot change your own role for security reasons", 
+                Toast.LENGTH_LONG).show();
+            return;
+        }
+        
         // Show confirmation dialog for role change
         String currentRole = user.getRole().getDisplayName();
         String newRole = user.getRole() == UserRole.ADMIN_USER ? 
