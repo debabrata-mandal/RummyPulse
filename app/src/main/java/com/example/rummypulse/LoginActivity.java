@@ -24,6 +24,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
+import com.example.rummypulse.utils.AuthStateManager;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -64,9 +65,15 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
 
-        // Check if user is already signed in
+        // Check if user is already signed in with better logging
         FirebaseUser currentUser = mAuth.getCurrentUser();
+        AuthStateManager authStateManager = AuthStateManager.getInstance(this);
+        
         if (currentUser != null) {
+            Log.d(TAG, "User already signed in: " + currentUser.getEmail());
+            // Save current auth state
+            authStateManager.saveAuthState(currentUser);
+            
             // User is already signed in, update appUser and go to main activity
             String provider = AppUserRepository.getProviderName(currentUser);
             appUserRepository.createOrUpdateUser(currentUser, provider, new AppUserRepository.AppUserCallback() {
@@ -83,6 +90,19 @@ public class LoginActivity extends AppCompatActivity {
                     startMainActivity();
                 }
             });
+        } else {
+            Log.d(TAG, "No user currently signed in");
+            
+            // Check if user should be authenticated (might be force stop issue)
+            if (authStateManager.shouldBeAuthenticated()) {
+                Log.w(TAG, "User should be authenticated but isn't - possible force stop issue");
+                Log.w(TAG, "Expected user: " + authStateManager.getBackedUpUserEmail());
+                
+                // Show message about session interruption
+                Toast.makeText(this, 
+                    "Your session was interrupted. Please sign in again.", 
+                    Toast.LENGTH_LONG).show();
+            }
         }
     }
 
@@ -128,12 +148,17 @@ public class LoginActivity extends AppCompatActivity {
                             FirebaseUser user = mAuth.getCurrentUser();
                             
                             if (user != null) {
+                                Log.d(TAG, "Firebase Auth successful for user: " + user.getEmail());
                                 // Create or update user in appUser collection
                                 String provider = AppUserRepository.getProviderName(user);
                                 appUserRepository.createOrUpdateUser(user, provider, new AppUserRepository.AppUserCallback() {
                                     @Override
                                     public void onSuccess(AppUser appUser) {
                                         Log.d(TAG, "AppUser created/updated successfully: " + appUser.toString());
+                                        Log.d(TAG, "Authentication state should now persist");
+                                        
+                                        // Save authentication state backup
+                                        AuthStateManager.getInstance(LoginActivity.this).saveAuthState(user);
                                         
                                         // Welcome message
                                         Toast.makeText(LoginActivity.this, 

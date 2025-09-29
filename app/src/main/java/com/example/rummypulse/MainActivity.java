@@ -12,7 +12,9 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserManager;
+import com.example.rummypulse.utils.AuthStateManager;
 
+import androidx.annotation.NonNull;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -27,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration mAppBarConfiguration;
     private ActivityMainBinding binding;
     private FirebaseAuth mAuth;
+    private FirebaseAuth.AuthStateListener mAuthListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,14 +37,47 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize Firebase Auth
         mAuth = FirebaseAuth.getInstance();
+        
+        // Create auth state listener
+        mAuthListener = new FirebaseAuth.AuthStateListener() {
+            @Override
+            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
+                FirebaseUser user = firebaseAuth.getCurrentUser();
+                if (user == null) {
+                    // User is signed out, redirect to login
+                    android.util.Log.d("MainActivity", "User signed out, redirecting to login");
+                    startActivity(new Intent(MainActivity.this, LoginActivity.class));
+                    finish();
+                }
+            }
+        };
 
-        // Check if user is authenticated
+        // Check if user is authenticated with force stop detection
         FirebaseUser currentUser = mAuth.getCurrentUser();
+        AuthStateManager authStateManager = AuthStateManager.getInstance(this);
+        
         if (currentUser == null) {
-            // User is not signed in, redirect to login
+            // Check if this might be due to force stop
+            if (authStateManager.shouldBeAuthenticated()) {
+                android.util.Log.w("MainActivity", "User should be authenticated but Firebase Auth shows null");
+                android.util.Log.w("MainActivity", "This might be due to force stop - expected user: " + 
+                    authStateManager.getBackedUpUserEmail());
+                
+                // Show a toast to inform user about session restoration
+                android.widget.Toast.makeText(this, 
+                    "Session was interrupted. Please sign in again.", 
+                    android.widget.Toast.LENGTH_LONG).show();
+            } else {
+                android.util.Log.d("MainActivity", "No current user found, redirecting to login");
+            }
+            
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
+        } else {
+            // User is authenticated, ensure backup state is updated
+            android.util.Log.d("MainActivity", "User authenticated: " + currentUser.getEmail());
+            authStateManager.saveAuthState(currentUser);
         }
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
@@ -106,6 +142,24 @@ public class MainActivity extends AppCompatActivity {
 
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        // Add auth listener when activity starts
+        if (mAuth != null && mAuthListener != null) {
+            mAuth.addAuthStateListener(mAuthListener);
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // Remove auth listener when activity stops to prevent memory leaks
+        if (mAuth != null && mAuthListener != null) {
+            mAuth.removeAuthStateListener(mAuthListener);
+        }
+    }
+
+    @Override
     public boolean onSupportNavigateUp() {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
@@ -161,7 +215,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void signOut() {
+        // Clear authentication backup state
+        AuthStateManager.getInstance(this).clearAuthState();
+        
         mAuth.signOut();
+        
+        android.util.Log.d("MainActivity", "User signed out manually");
+        
         // Redirect to login activity
         Intent intent = new Intent(this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
