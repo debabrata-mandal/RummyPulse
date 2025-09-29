@@ -1,6 +1,9 @@
 package com.example.rummypulse;
 
+import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -13,6 +16,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.utils.AuthStateManager;
+import com.example.rummypulse.utils.ModernUpdateChecker;
 
 import androidx.annotation.NonNull;
 import androidx.navigation.NavController;
@@ -30,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
     private FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener mAuthListener;
+    private ModernUpdateChecker updateChecker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,6 +107,10 @@ public class MainActivity extends AppCompatActivity {
             if (item.getItemId() == R.id.nav_sign_out) {
                 signOut();
                 return true;
+            } else if (item.getItemId() == R.id.nav_app_info) {
+                showAppInfoDialog();
+                drawer.closeDrawers();
+                return true;
             } else if (item.getItemId() == R.id.nav_home) {
                 // Check admin status before allowing access to Review screen
                 AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
@@ -159,6 +168,9 @@ public class MainActivity extends AppCompatActivity {
         
         // Update menu icons based on admin status
         updateMenuIcons(navigationView);
+        
+        // Initialize and check for app updates
+        initializeUpdateChecker();
     }
 
 
@@ -177,6 +189,15 @@ public class MainActivity extends AppCompatActivity {
         // Remove auth listener when activity stops to prevent memory leaks
         if (mAuth != null && mAuthListener != null) {
             mAuth.removeAuthStateListener(mAuthListener);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Clean up update checker resources
+        if (updateChecker != null) {
+            updateChecker.cleanup();
         }
     }
 
@@ -248,6 +269,19 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Initialize update checker and check for new versions
+     */
+    private void initializeUpdateChecker() {
+        updateChecker = new ModernUpdateChecker(this);
+        
+        // Check for updates with a slight delay to not interfere with app startup
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            android.util.Log.d("MainActivity", "Checking for app updates...");
+            updateChecker.checkForUpdates();
+        }, 2000); // 2 second delay
+    }
+
     private void signOut() {
         // Clear authentication backup state
         AuthStateManager.getInstance(this).clearAuthState();
@@ -261,5 +295,73 @@ public class MainActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    /**
+     * Show app information dialog
+     */
+    private void showAppInfoDialog() {
+        try {
+            PackageInfo packageInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            String versionName = packageInfo.versionName;
+            long versionCode = packageInfo.getLongVersionCode();
+            
+            FirebaseUser currentUser = mAuth.getCurrentUser();
+            String userEmail = currentUser != null ? currentUser.getEmail() : "Not signed in";
+            
+            String appInfo = "📱 RummyPulse\n\n" +
+                           "🏷️ Version: " + versionName + "\n" +
+                           "🔢 Build: " + versionCode + "\n" +
+                           "👤 User: " + userEmail + "\n" +
+                           "🔧 Auto-Update: Enabled\n\n" +
+                           "🚀 Built with Firebase & Android\n" +
+                           "💡 Developed by Debabrata Mandal\n\n" +
+                           "📅 " + new java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+                                   .format(new java.util.Date());
+            
+            // Create dialog with dark theme
+            AlertDialog dialog = new AlertDialog.Builder(this, R.style.DarkAlertDialog)
+                .setTitle("ℹ️ App Information")
+                .setMessage(appInfo)
+                .setPositiveButton("Check for Updates", (dialogInterface, which) -> {
+                    if (updateChecker != null) {
+                        android.widget.Toast.makeText(this, "Checking for updates...", 
+                                                    android.widget.Toast.LENGTH_SHORT).show();
+                        updateChecker.checkForUpdates();
+                    }
+                })
+                .setNegativeButton("OK", null)
+                .create();
+                
+            // Apply dark theme styling
+            dialog.show();
+            
+            // Style the buttons to match app theme
+            if (dialog.getButton(AlertDialog.BUTTON_POSITIVE) != null) {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(getColor(R.color.accent_blue));
+            }
+            if (dialog.getButton(AlertDialog.BUTTON_NEGATIVE) != null) {
+                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(getColor(R.color.text_secondary));
+            }
+                
+        } catch (PackageManager.NameNotFoundException e) {
+            android.util.Log.e("MainActivity", "Error getting package info", e);
+            
+            AlertDialog errorDialog = new AlertDialog.Builder(this, R.style.DarkAlertDialog)
+                .setTitle("ℹ️ App Information")
+                .setMessage("📱 RummyPulse\n\n" +
+                           "🏷️ Version: Unknown\n" +
+                           "👤 User: " + (mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getEmail() : "Not signed in") + "\n" +
+                           "🔧 Auto-Update: Enabled")
+                .setPositiveButton("OK", null)
+                .create();
+                
+            errorDialog.show();
+            
+            // Style the button
+            if (errorDialog.getButton(AlertDialog.BUTTON_POSITIVE) != null) {
+                errorDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(getColor(R.color.accent_blue));
+            }
+        }
     }
 }
