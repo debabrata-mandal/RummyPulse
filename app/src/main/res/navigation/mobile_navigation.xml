@@ -18,10 +18,10 @@
         tools:layout="@layout/fragment_dashboard" />
 
     <fragment
-        android:id="@+id/nav_slideshow"
-        android:name="com.example.rummypulse.ui.slideshow.SlideshowFragment"
-        android:label="@string/menu_slideshow"
-        tools:layout="@layout/fragment_slideshow" />
+        android:id="@+id/nav_reports"
+        android:name="com.example.rummypulse.ui.reports.ReportsFragment"
+        android:label="@string/menu_reports"
+        tools:layout="@layout/fragment_reports" />
 
     <fragment
         android:id="@+id/nav_user_management"

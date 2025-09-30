@@ -13,9 +13,9 @@
             android:icon="@drawable/ic_games_dashboard"
             android:title="@string/menu_home" />
         <item
-            android:id="@+id/nav_slideshow"
+            android:id="@+id/nav_reports"
             android:icon="@drawable/ic_reports"
-            android:title="@string/menu_slideshow" />
+            android:title="@string/menu_reports" />
         <item
             android:id="@+id/nav_user_management"
             android:icon="@drawable/ic_people"

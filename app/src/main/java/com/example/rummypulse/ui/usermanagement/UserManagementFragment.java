@@ -88,13 +88,13 @@ public class UserManagementFragment extends Fragment {
             if (error != null && !error.isEmpty()) {
                 Log.e(TAG, "Error: " + error);
                 showError(error);
-                Toast.makeText(getContext(), "Error: " + error, Toast.LENGTH_LONG).show();
+                com.example.rummypulse.utils.ModernToast.error(getContext(), "Error: " + error);
             }
         });
 
         userManagementViewModel.getRoleUpdateSuccess().observe(getViewLifecycleOwner(), success -> {
             if (success != null && success) {
-                Toast.makeText(getContext(), "User role updated successfully", Toast.LENGTH_SHORT).show();
+                com.example.rummypulse.utils.ModernToast.success(getContext(), "User role updated successfully");
                 // Refresh the list to show updated roles
                 userManagementViewModel.loadAllUsers();
             }
@@ -105,9 +105,8 @@ public class UserManagementFragment extends Fragment {
         // Safety check: Prevent current user from changing their own role
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser != null && currentUser.getUid().equals(user.getUserId())) {
-            Toast.makeText(getContext(), 
-                "⚠️ You cannot change your own role for security reasons", 
-                Toast.LENGTH_LONG).show();
+            com.example.rummypulse.utils.ModernToast.warning(getContext(), 
+                "⚠️ You cannot change your own role for security reasons");
             return;
         }
         

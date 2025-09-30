@@ -1,4 +1,4 @@
-package com.example.rummypulse.ui.slideshow;
+package com.example.rummypulse.ui.reports;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -16,12 +16,12 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.example.rummypulse.databinding.FragmentSlideshowBinding;
+import com.example.rummypulse.databinding.FragmentReportsBinding;
 
-public class SlideshowFragment extends Fragment {
+public class ReportsFragment extends Fragment {
 
-    private FragmentSlideshowBinding binding;
-    private SlideshowViewModel slideshowViewModel;
+    private FragmentReportsBinding binding;
+    private ReportsViewModel reportsViewModel;
     private ExpandableMonthlyReportAdapter reportAdapter;
     private RecyclerView recyclerView;
     private SwipeRefreshLayout swipeRefreshLayout;
@@ -31,9 +31,9 @@ public class SlideshowFragment extends Fragment {
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        slideshowViewModel = new ViewModelProvider(this).get(SlideshowViewModel.class);
+        reportsViewModel = new ViewModelProvider(this).get(ReportsViewModel.class);
 
-        binding = FragmentSlideshowBinding.inflate(inflater, container, false);
+        binding = FragmentReportsBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
         initializeViews();
@@ -60,8 +60,8 @@ public class SlideshowFragment extends Fragment {
 
     private void setupSwipeRefresh() {
         swipeRefreshLayout.setOnRefreshListener(() -> {
-            Toast.makeText(getContext(), "Refreshing reports...", Toast.LENGTH_SHORT).show();
-            slideshowViewModel.refreshReports();
+            com.example.rummypulse.utils.ModernToast.progress(getContext(), "Refreshing reports...");
+            reportsViewModel.refreshReports();
         });
         
         // Set swipe refresh colors
@@ -75,7 +75,7 @@ public class SlideshowFragment extends Fragment {
 
     private void observeViewModel() {
         // Observe monthly point value reports
-        slideshowViewModel.getMonthlyPointValueReports().observe(getViewLifecycleOwner(), reports -> {
+        reportsViewModel.getMonthlyPointValueReports().observe(getViewLifecycleOwner(), reports -> {
             if (reports != null && !reports.isEmpty()) {
                 showReports();
                 reportAdapter.updateReports(reports);
@@ -85,7 +85,7 @@ public class SlideshowFragment extends Fragment {
         });
 
         // Observe loading state
-        slideshowViewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
+        reportsViewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
             if (isLoading != null) {
                 swipeRefreshLayout.setRefreshing(isLoading);
                 if (isLoading) {
@@ -94,13 +94,13 @@ public class SlideshowFragment extends Fragment {
                 } else {
                     progressBar.setVisibility(View.GONE);
                     // Show completion toast when loading finishes
-                    Toast.makeText(getContext(), "Reports refreshed", Toast.LENGTH_SHORT).show();
+                    com.example.rummypulse.utils.ModernToast.success(getContext(), "Reports refreshed");
                 }
             }
         });
 
         // Observe errors
-        slideshowViewModel.getError().observe(getViewLifecycleOwner(), error -> {
+        reportsViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
                 showError(error);
             }

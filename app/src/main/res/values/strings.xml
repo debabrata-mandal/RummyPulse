@@ -11,7 +11,7 @@
 
     <string name="menu_home">Review</string>
     <string name="menu_dashboard">Dashboard</string>
-    <string name="menu_slideshow">Reports</string>
+    <string name="menu_reports">Reports</string>
     
     <!-- Authentication strings -->
     <string name="default_web_client_id">740379545501-g1h84gk3d1hrq0egmpp78tulcuk0igbc.apps.googleusercontent.com</string>

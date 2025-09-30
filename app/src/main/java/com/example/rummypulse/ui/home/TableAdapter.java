@@ -136,8 +136,6 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             }
             holder.statusText.setText(status);
             
-            // Debug logging for status
-            System.out.println("Setting status for game " + item.getGameId() + ": '" + status + "'");
             
             // Set status color based on status
             try {
@@ -157,8 +155,6 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             String gameStatus = item.getGameStatus();
             boolean isGameCompleted = "Completed".equals(gameStatus);
             
-            // Debug logging
-            System.out.println("Game ID: " + item.getGameId() + ", Status: '" + gameStatus + "', Completed: " + isGameCompleted);
             
             holder.btnApproveGst.setEnabled(isGameCompleted);
             holder.btnApproveGst.setAlpha(isGameCompleted ? 1.0f : 0.5f);
@@ -219,7 +215,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
         ClipData clip = ClipData.newPlainText(label, text);
         clipboard.setPrimaryClip(clip);
-        Toast.makeText(context, label + " copied to clipboard", Toast.LENGTH_SHORT).show();
+        com.example.rummypulse.utils.ModernToast.success(context, label + " copied to clipboard");
     }
 
     private void showPlayersDialog(Context context, GameItem gameItem) {
@@ -368,7 +364,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             qrCodeImage.setImageBitmap(bitmap);
         } catch (WriterException e) {
             e.printStackTrace();
-            Toast.makeText(context, "❌ Failed to generate QR code", Toast.LENGTH_SHORT).show();
+            com.example.rummypulse.utils.ModernToast.error(context, "❌ Failed to generate QR code");
             return;
         }
         
@@ -379,7 +375,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         // Set QR code click listener to copy Game ID
         qrCodeImage.setOnClickListener(v -> {
             copyToClipboard(context, gameItem.getGameId(), "Game ID");
-            Toast.makeText(context, "📋 Game ID copied to clipboard!", Toast.LENGTH_SHORT).show();
+            com.example.rummypulse.utils.ModernToast.success(context, "📋 Game ID copied to clipboard!");
         });
         
         // Set close button listener

@@ -99,8 +99,7 @@ public class UpdateChecker {
                     downloadAndInstallUpdate(downloadUrl);
                 })
                 .setNegativeButton("Later", (dialog, which) -> {
-                    Toast.makeText(context, "You can update later from Settings", 
-                                 Toast.LENGTH_SHORT).show();
+                    com.example.rummypulse.utils.ModernToast.info(context, "You can update later from Settings");
                 })
                 .setCancelable(false)
                 .show();
@@ -116,14 +115,12 @@ public class UpdateChecker {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
             
-            Toast.makeText(context, 
-                "Downloading update... Please install when download completes", 
-                Toast.LENGTH_LONG).show();
+            com.example.rummypulse.utils.ModernToast.progress(context, 
+                "Downloading update... Please install when download completes");
                 
         } catch (Exception e) {
             Log.e(TAG, "Error opening download URL", e);
-            Toast.makeText(context, "Error opening download. Please update manually.", 
-                         Toast.LENGTH_LONG).show();
+            com.example.rummypulse.utils.ModernToast.error(context, "Error opening download. Please update manually.");
         }
     }
     

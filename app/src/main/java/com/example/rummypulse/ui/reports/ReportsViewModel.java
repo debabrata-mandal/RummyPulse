@@ -1,4 +1,4 @@
-package com.example.rummypulse.ui.slideshow;
+package com.example.rummypulse.ui.reports;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -17,14 +17,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class SlideshowViewModel extends ViewModel {
+public class ReportsViewModel extends ViewModel {
 
     private final MutableLiveData<List<MonthlyPointValueReport>> mMonthlyPointValueReports;
     private final MutableLiveData<Boolean> mIsLoading;
     private final MutableLiveData<String> mError;
     private final GameRepository gameRepository;
 
-    public SlideshowViewModel() {
+    public ReportsViewModel() {
         mMonthlyPointValueReports = new MutableLiveData<>();
         mIsLoading = new MutableLiveData<>();
         mError = new MutableLiveData<>();

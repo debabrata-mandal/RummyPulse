@@ -73,9 +73,8 @@ public class MainActivity extends AppCompatActivity {
                     authStateManager.getBackedUpUserEmail());
                 
                 // Show a toast to inform user about session restoration
-                android.widget.Toast.makeText(this, 
-                    "Session was interrupted. Please sign in again.", 
-                    android.widget.Toast.LENGTH_LONG).show();
+                com.example.rummypulse.utils.ModernToast.warning(this, 
+                    "Session was interrupted. Please sign in again.");
             } else {
                 android.util.Log.d("MainActivity", "No current user found, redirecting to login");
             }
@@ -99,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         mAppBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.nav_dashboard, R.id.nav_home, R.id.nav_slideshow)
+                R.id.nav_dashboard, R.id.nav_home, R.id.nav_reports)
                 .setOpenableLayout(drawer)
                 .build();
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
@@ -129,9 +128,8 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             // Non-admin user - show access denied message
                             drawer.closeDrawers();
-                            android.widget.Toast.makeText(MainActivity.this, 
-                                "🔒 Access Denied: Admin privileges required for Review screen", 
-                                android.widget.Toast.LENGTH_LONG).show();
+                            com.example.rummypulse.utils.ModernToast.error(MainActivity.this, 
+                                "🔒 Access Denied: Admin privileges required for Review screen");
                         }
                     }
                 });
@@ -150,9 +148,8 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             // Non-admin user - show access denied message
                             drawer.closeDrawers();
-                            android.widget.Toast.makeText(MainActivity.this, 
-                                "🔒 Access Denied: Admin privileges required for Users", 
-                                android.widget.Toast.LENGTH_LONG).show();
+                            com.example.rummypulse.utils.ModernToast.error(MainActivity.this, 
+                                "🔒 Access Denied: Admin privileges required for Users");
                         }
                     }
                 });
@@ -408,8 +405,7 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage(appInfo)
                 .setPositiveButton("Check for Updates", (dialogInterface, which) -> {
                     if (updateChecker != null) {
-                        android.widget.Toast.makeText(this, "Checking for updates...", 
-                                                    android.widget.Toast.LENGTH_SHORT).show();
+                        com.example.rummypulse.utils.ModernToast.info(this, "Checking for updates...");
                         updateChecker.checkForUpdates();
                     }
                 })

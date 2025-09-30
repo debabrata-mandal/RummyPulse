@@ -108,21 +108,14 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         // Observe errors
         homeViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
-                Toast.makeText(getContext(), error, Toast.LENGTH_LONG).show();
+                com.example.rummypulse.utils.ModernToast.error(getContext(), error);
             }
         });
 
         // Setup refresh button
         binding.btnRefresh.setOnClickListener(v -> {
-            Toast.makeText(getContext(), "Refreshing data...", Toast.LENGTH_SHORT).show();
+            com.example.rummypulse.utils.ModernToast.progress(getContext(), "Refreshing data...");
             homeViewModel.refreshGames();
-        });
-        
-        // Temporary test button to force a game to completed status
-        binding.btnRefresh.setOnLongClickListener(v -> {
-            Toast.makeText(getContext(), "Test: Setting first game to Completed status", Toast.LENGTH_SHORT).show();
-            homeViewModel.setTestGameCompleted();
-            return true;
         });
     }
 
@@ -156,7 +149,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
     public void onApproveGst(GameItem game, int position) {
         // Check if game is completed
         if (!"Completed".equals(game.getGameStatus())) {
-            Toast.makeText(getContext(), "Game must be completed before approval", Toast.LENGTH_SHORT).show();
+            com.example.rummypulse.utils.ModernToast.warning(getContext(), "Game must be completed before approval");
             return;
         }
         
@@ -167,7 +160,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 .setPositiveButton("Approve", (dialog, which) -> {
                     // Call the approve method
                     homeViewModel.approveGame(game);
-                    Toast.makeText(getContext(), "✅ Game approved successfully!", Toast.LENGTH_LONG).show();
+                    com.example.rummypulse.utils.ModernToast.success(getContext(), "✅ Game approved successfully!");
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> {
                     // Do nothing
@@ -185,7 +178,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 .setPositiveButton("Delete", (dialog, which) -> {
                     // Delete game from Firebase
                     homeViewModel.deleteGame(game.getGameId());
-                    Toast.makeText(getContext(), "🗑️ Game deleted successfully!", Toast.LENGTH_LONG).show();
+                    com.example.rummypulse.utils.ModernToast.success(getContext(), "🗑️ Game deleted successfully!");
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> {
                     // Do nothing
@@ -194,13 +187,13 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
     }
 
     private void refreshGames() {
-        Toast.makeText(getContext(), "Refreshing games...", Toast.LENGTH_LONG).show();
+        com.example.rummypulse.utils.ModernToast.progress(getContext(), "Refreshing games...");
         homeViewModel.refreshGames();
         
         // Stop the refresh animation after a short delay
         binding.swipeRefresh.postDelayed(() -> {
             binding.swipeRefresh.setRefreshing(false);
-            Toast.makeText(getContext(), "Games refreshed successfully!", Toast.LENGTH_LONG).show();
+            com.example.rummypulse.utils.ModernToast.success(getContext(), "Games refreshed successfully!");
         }, 2000);
     }
 }

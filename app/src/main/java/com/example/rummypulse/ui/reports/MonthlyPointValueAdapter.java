@@ -1,4 +1,4 @@
-package com.example.rummypulse.ui.slideshow;
+package com.example.rummypulse.ui.reports;
 
 import android.view.LayoutInflater;
 import android.view.View;

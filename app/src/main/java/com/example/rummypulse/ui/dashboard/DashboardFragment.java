@@ -49,7 +49,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
     private void setupSwipeRefresh() {
         binding.swipeRefresh.setOnRefreshListener(() -> {
-            Toast.makeText(getContext(), "🔄 Refreshing active games...", Toast.LENGTH_SHORT).show();
+            com.example.rummypulse.utils.ModernToast.progress(getContext(), "🔄 Refreshing active games...");
             dashboardViewModel.loadGames();
         });
         
@@ -91,12 +91,12 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         String roleText = "moderator".equals(joinType) ? "Moderator" : "Player";
         String emoji = "moderator".equals(joinType) ? "🛡️" : "👤";
         
-        Toast.makeText(getContext(), emoji + " Joining game #" + game.getGameId() + " as " + roleText, Toast.LENGTH_LONG).show();
+        com.example.rummypulse.utils.ModernToast.info(getContext(), emoji + " Joining game #" + game.getGameId() + " as " + roleText);
         dashboardViewModel.joinGame(game, joinType);
         
         // TODO: Navigate to game screen or implement join logic
         // For now, just show a toast
-        Toast.makeText(getContext(), "Join as " + roleText + " functionality coming soon!", Toast.LENGTH_SHORT).show();
+        com.example.rummypulse.utils.ModernToast.warning(getContext(), "Join as " + roleText + " functionality coming soon!");
     }
 
     private void setupCreateGameButton() {
@@ -167,10 +167,10 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 dashboardViewModel.createNewGame(pointValue, gstPercentage);
                 dialog.dismiss();
                 
-                Toast.makeText(getContext(), "🎮 Creating new game with you as Player 1...", Toast.LENGTH_LONG).show();
+                com.example.rummypulse.utils.ModernToast.success(getContext(), "🎮 Creating new game with you as Player 1...");
 
             } catch (NumberFormatException e) {
-                Toast.makeText(getContext(), "Please enter valid numbers", Toast.LENGTH_SHORT).show();
+                com.example.rummypulse.utils.ModernToast.error(getContext(), "Please enter valid numbers");
             }
         });
 

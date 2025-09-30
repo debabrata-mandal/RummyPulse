@@ -235,7 +235,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             qrCodeImage.setImageBitmap(bitmap);
         } catch (WriterException e) {
             e.printStackTrace();
-            Toast.makeText(context, "❌ Failed to generate QR code", Toast.LENGTH_SHORT).show();
+            com.example.rummypulse.utils.ModernToast.error(context, "❌ Failed to generate QR code");
             return;
         }
         
@@ -246,7 +246,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         // Set QR code click listener to copy Game ID
         qrCodeImage.setOnClickListener(v -> {
             copyToClipboard(context, gameItem.getGameId(), "Game ID");
-            Toast.makeText(context, "📋 Game ID copied to clipboard!", Toast.LENGTH_SHORT).show();
+            com.example.rummypulse.utils.ModernToast.success(context, "📋 Game ID copied to clipboard!");
         });
         
         // Set close button listener

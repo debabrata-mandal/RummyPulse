@@ -99,9 +99,8 @@ public class LoginActivity extends AppCompatActivity {
                 Log.w(TAG, "Expected user: " + authStateManager.getBackedUpUserEmail());
                 
                 // Show message about session interruption
-                Toast.makeText(this, 
-                    "Your session was interrupted. Please sign in again.", 
-                    Toast.LENGTH_LONG).show();
+                com.example.rummypulse.utils.ModernToast.warning(this, 
+                    "Your session was interrupted. Please sign in again.");
             }
         }
     }
@@ -161,9 +160,8 @@ public class LoginActivity extends AppCompatActivity {
                                         AuthStateManager.getInstance(LoginActivity.this).saveAuthState(user);
                                         
                                         // Welcome message
-                                        Toast.makeText(LoginActivity.this, 
-                                            "Welcome, " + user.getDisplayName() + "!", 
-                                            Toast.LENGTH_SHORT).show();
+                                        com.example.rummypulse.utils.ModernToast.success(LoginActivity.this, 
+                                            "Welcome, " + user.getDisplayName() + "!");
                                         
                                         // Go to main activity
                                         startMainActivity();
@@ -175,9 +173,8 @@ public class LoginActivity extends AppCompatActivity {
                                         
                                         // Still proceed to main activity even if appUser creation fails
                                         // Welcome message
-                                        Toast.makeText(LoginActivity.this, 
-                                            "Welcome, " + user.getDisplayName() + "!", 
-                                            Toast.LENGTH_SHORT).show();
+                                        com.example.rummypulse.utils.ModernToast.success(LoginActivity.this, 
+                                            "Welcome, " + user.getDisplayName() + "!");
                                         
                                         // Go to main activity
                                         startMainActivity();
@@ -205,7 +202,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void showError(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+        com.example.rummypulse.utils.ModernToast.error(this, message);
     }
 
     private void resetUI() {

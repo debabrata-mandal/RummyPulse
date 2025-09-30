@@ -145,12 +145,4 @@ public class HomeViewModel extends ViewModel {
         gameRepository.approveGame(gameItem);
     }
 
-    // Temporary test method to set first game to completed status
-    public void setTestGameCompleted() {
-        List<GameItem> currentGames = mGameItems.getValue();
-        if (currentGames != null && !currentGames.isEmpty()) {
-            GameItem firstGame = currentGames.get(0);
-            gameRepository.updateGameStatus(firstGame.getGameId(), "Completed");
-        }
-    }
 }

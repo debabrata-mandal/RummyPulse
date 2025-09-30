@@ -224,8 +224,7 @@ public class ModernUpdateChecker {
                     }
                 })
                 .setNegativeButton("Later", (dialogInterface, which) -> {
-                    Toast.makeText(context, "💡 You can check for updates anytime in Settings", 
-                                 Toast.LENGTH_SHORT).show();
+                    ModernToast.info(context, "💡 You can check for updates anytime in Settings");
                 })
                 .setCancelable(true)
                 .create();
@@ -391,18 +390,16 @@ public class ModernUpdateChecker {
             downloadId = downloadManager.enqueue(request);
             Log.d(TAG, "Download enqueued with ID: " + downloadId);
             
-            Toast.makeText(context, 
-                "📥 Download started! Check notification for progress", 
-                Toast.LENGTH_LONG).show();
+            ModernToast.progress(context, 
+                "📥 Download started! Check notification for progress");
                 
             // Start polling for download status as backup to BroadcastReceiver
             startDownloadStatusPolling();
             
             // Show a follow-up message after a delay
             new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                Toast.makeText(context, 
-                    "⏳ Download in progress... Installation will start automatically when complete", 
-                    Toast.LENGTH_LONG).show();
+                ModernToast.info(context, 
+                    "⏳ Download in progress... Installation will start automatically when complete");
             }, 3000);
                 
         } catch (SecurityException e) {
@@ -439,7 +436,7 @@ public class ModernUpdateChecker {
                 
                 if (pollCount > maxPolls) {
                     Log.w(TAG, "Download polling timeout reached");
-                    Toast.makeText(context, "⏰ Download taking too long - check notification", Toast.LENGTH_LONG).show();
+                    ModernToast.warning(context, "⏰ Download taking too long - check notification");
                     return;
                 }
                 
@@ -512,20 +509,20 @@ public class ModernUpdateChecker {
                     String localUri = cursor.getString(uriIndex);
                     
                     Log.d(TAG, "✅ Download completed successfully! Local URI: " + localUri);
-                    Toast.makeText(context, "✅ Download complete! Starting installation...", Toast.LENGTH_SHORT).show();
+                    ModernToast.success(context, "✅ Download complete! Starting installation...");
                     
                     if (localUri != null) {
                         installApk(localUri);
                     } else {
                         Log.e(TAG, "Download successful but local URI is null");
-                        Toast.makeText(context, "❌ Download completed but file not found", Toast.LENGTH_LONG).show();
+                        ModernToast.error(context, "❌ Download completed but file not found");
                         showDownloadError("Download completed but file location is unknown", true);
                     }
                 } else {
                     // Get detailed error information
                     String errorMessage = getDownloadErrorMessage(cursor, status);
                     Log.e(TAG, "❌ Download failed with status: " + status + " - " + errorMessage);
-                    Toast.makeText(context, "❌ Download failed: " + getSimpleErrorMessage(status), Toast.LENGTH_LONG).show();
+                    ModernToast.error(context, "❌ Download failed: " + getSimpleErrorMessage(status));
                     showDownloadError(errorMessage, true);
                 }
             } else {
@@ -647,7 +644,7 @@ public class ModernUpdateChecker {
      */
     private void showDownloadError(String errorMessage, boolean showRetryOption) {
         if (!(context instanceof Activity)) {
-            Toast.makeText(context, "❌ " + errorMessage, Toast.LENGTH_LONG).show();
+            ModernToast.error(context, "❌ " + errorMessage);
             return;
         }
 
@@ -716,9 +713,8 @@ public class ModernUpdateChecker {
             // Start installation
             context.startActivity(installIntent);
             
-            Toast.makeText(context, 
-                "🚀 Opening installer... APK will be auto-deleted after installation", 
-                Toast.LENGTH_LONG).show();
+            ModernToast.info(context, 
+                "🚀 Opening installer... APK will be auto-deleted after installation");
                 
             Log.d(TAG, "✅ Installation intent started for: " + apkFile.getPath());
 
@@ -743,8 +739,7 @@ public class ModernUpdateChecker {
                 
         } catch (Exception e) {
             Log.e(TAG, "Error installing APK", e);
-            Toast.makeText(context, "❌ Installation failed. Please install manually.", 
-                         Toast.LENGTH_LONG).show();
+            ModernToast.error(context, "❌ Installation failed. Please install manually.");
         }
     }
     
@@ -760,14 +755,12 @@ public class ModernUpdateChecker {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
             
-            Toast.makeText(context, 
-                "🌐 Opening GitHub releases page", 
-                Toast.LENGTH_SHORT).show();
+            ModernToast.info(context, 
+                "🌐 Opening GitHub releases page");
                 
         } catch (Exception e) {
             Log.e(TAG, "Error opening GitHub releases", e);
-            Toast.makeText(context, "❌ Please check for updates manually", 
-                         Toast.LENGTH_SHORT).show();
+            ModernToast.error(context, "❌ Please check for updates manually");
         }
     }
     
