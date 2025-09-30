@@ -10,6 +10,8 @@ import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.ImageView;
 
+import java.util.List;
+
 import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -17,6 +19,7 @@ import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.ModernUpdateChecker;
+import com.example.rummypulse.utils.PermissionManager;
 
 import androidx.annotation.NonNull;
 import androidx.navigation.NavController;
@@ -35,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener mAuthListener;
     private ModernUpdateChecker updateChecker;
+    private PermissionManager permissionManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -169,8 +173,8 @@ public class MainActivity extends AppCompatActivity {
         // Update menu icons based on admin status
         updateMenuIcons(navigationView);
         
-        // Initialize and check for app updates
-        initializeUpdateChecker();
+        // Initialize permission manager and request permissions
+        initializePermissions();
     }
 
 
@@ -180,6 +184,36 @@ public class MainActivity extends AppCompatActivity {
         // Add auth listener when activity starts
         if (mAuth != null && mAuthListener != null) {
             mAuth.addAuthStateListener(mAuthListener);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Check if permissions were granted while in settings
+        if (permissionManager != null && !permissionManager.areAllPermissionsGranted()) {
+            android.util.Log.d("MainActivity", "Checking permissions on resume...");
+            // Re-check permissions in case user granted them in settings
+            permissionManager.checkAndRequestAllPermissions(new PermissionManager.PermissionCallback() {
+                @Override
+                public void onPermissionsGranted() {
+                    android.util.Log.d("MainActivity", "✅ Permissions granted on resume - initializing app");
+                    if (updateChecker == null) {
+                        initializeUpdateChecker();
+                    }
+                }
+
+                @Override
+                public void onPermissionsDenied(List<String> deniedPermissions) {
+                    android.util.Log.w("MainActivity", "🚫 Permissions still denied on resume: " + deniedPermissions);
+                    // PermissionManager will handle this
+                }
+
+                @Override
+                public void onPermissionsExplained() {
+                    // Already explained
+                }
+            });
         }
     }
 
@@ -198,6 +232,26 @@ public class MainActivity extends AppCompatActivity {
         // Clean up update checker resources
         if (updateChecker != null) {
             updateChecker.cleanup();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        
+        // Forward to permission manager
+        if (permissionManager != null) {
+            permissionManager.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        
+        // Forward to permission manager
+        if (permissionManager != null) {
+            permissionManager.onActivityResult(requestCode, resultCode, data);
         }
     }
 
@@ -265,6 +319,35 @@ public class MainActivity extends AppCompatActivity {
                         userManagementMenuItem.setTitle("Users 🔒");
                     }
                 }
+            }
+        });
+    }
+
+    /**
+     * Initialize permissions and request them if needed
+     */
+    private void initializePermissions() {
+        permissionManager = new PermissionManager(this);
+        
+        // Check and request all necessary permissions (MANDATORY)
+        permissionManager.checkAndRequestAllPermissions(new PermissionManager.PermissionCallback() {
+            @Override
+            public void onPermissionsGranted() {
+                android.util.Log.d("MainActivity", "✅ All MANDATORY permissions granted - App ready to start");
+                // Initialize update checker after permissions are granted
+                initializeUpdateChecker();
+            }
+
+            @Override
+            public void onPermissionsDenied(List<String> deniedPermissions) {
+                android.util.Log.e("MainActivity", "🚫 CRITICAL: Mandatory permissions denied: " + deniedPermissions);
+                // Do NOT initialize the app - permissions are mandatory
+                // The PermissionManager will handle showing error dialogs and exit options
+            }
+
+            @Override
+            public void onPermissionsExplained() {
+                android.util.Log.d("MainActivity", "📋 Mandatory permissions explained to user");
             }
         });
     }

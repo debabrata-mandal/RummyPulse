@@ -2,14 +2,28 @@ package com.example.rummypulse.utils;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
+import androidx.core.content.FileProvider;
 import com.example.rummypulse.R;
+
+import java.io.File;
 
 import org.json.JSONObject;
 
@@ -28,13 +42,19 @@ public class ModernUpdateChecker {
     private static final String TAG = "ModernUpdateChecker";
     // GitHub repository URL for debabrata-mandal
     private static final String GITHUB_API_URL = "https://api.github.com/repos/debabrata-mandal/RummyPulse/releases/latest";
+    private static final int REQUEST_INSTALL_PERMISSION = 1001;
     
     private final Context context;
     private final ExecutorService executor;
+    private DownloadManager downloadManager;
+    private long downloadId = -1;
+    private BroadcastReceiver downloadReceiver;
     
     public ModernUpdateChecker(Context context) {
         this.context = context;
         this.executor = Executors.newSingleThreadExecutor();
+        this.downloadManager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
+        setupDownloadReceiver();
     }
     
     /**
@@ -242,21 +262,489 @@ public class ModernUpdateChecker {
     }
     
     /**
-     * Download and install update
+     * Setup download receiver to handle APK installation after download
+     */
+    private void setupDownloadReceiver() {
+        downloadReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                Log.d(TAG, "Download broadcast received for ID: " + id + " (our ID: " + downloadId + ")");
+                if (id == downloadId) {
+                    Log.d(TAG, "Download completed for our request - processing...");
+                    handleDownloadComplete();
+                }
+            }
+        };
+    }
+
+    /**
+     * Download and install update using DownloadManager
      */
     private void downloadUpdate(String downloadUrl) {
         try {
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl));
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
+            // Check network connectivity first
+            if (!isNetworkAvailable()) {
+                showDownloadError("No internet connection available. Please check your network and try again.", true);
+                return;
+            }
+
+            // Permissions are now handled at app startup, so we can directly start download
+            Log.d(TAG, "Starting download - permissions should already be granted");
+            startApkDownload(downloadUrl);
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting download", e);
+            showDownloadError("Failed to start download: " + e.getMessage(), true);
+        }
+    }
+
+    /**
+     * Check if network is available
+     */
+    private boolean isNetworkAvailable() {
+        try {
+            ConnectivityManager connectivityManager = 
+                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            
+            if (connectivityManager == null) {
+                return false;
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                android.net.Network network = connectivityManager.getActiveNetwork();
+                if (network == null) return false;
+                
+                android.net.NetworkCapabilities capabilities = 
+                    connectivityManager.getNetworkCapabilities(network);
+                return capabilities != null && 
+                       (capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
+                        capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                        capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET));
+            } else {
+                NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+                return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking network availability", e);
+            return true; // Assume network is available if we can't check
+        }
+    }
+
+
+    /**
+     * Start APK download using DownloadManager
+     */
+    private void startApkDownload(String downloadUrl) {
+        try {
+            Log.d(TAG, "Starting APK download from: " + downloadUrl);
+            
+            // Store download URL for retry purposes
+            context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .putString("last_download_url", downloadUrl)
+                .apply();
+
+            // Register download receiver with Android 15 compatibility
+            IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                // Android 13+ requires explicit export flag
+                context.registerReceiver(downloadReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                context.registerReceiver(downloadReceiver, filter);
+            }
+
+            // Create download request
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(downloadUrl));
+            request.setTitle("RummyPulse Update");
+            request.setDescription("Downloading latest version...");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            
+            // Use internal app directory - guaranteed to work without permissions
+            String fileName = "RummyPulse_update_" + System.currentTimeMillis() + ".apk";
+            
+            // Always use internal app directory - no permissions needed on any Android version
+            request.setDestinationInExternalFilesDir(context, null, fileName);
+            Log.d(TAG, "Download destination (API " + Build.VERSION.SDK_INT + "): Internal app directory/" + fileName);
+            
+            // Allow download over mobile data and WiFi
+            request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | 
+                                         DownloadManager.Request.NETWORK_MOBILE);
+            request.setAllowedOverRoaming(false);
+            request.setAllowedOverMetered(true);
+
+            // Add headers to mimic browser request
+            request.addRequestHeader("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:40.0) Gecko/40.0 Firefox/40.0");
+            request.addRequestHeader("Accept", "application/vnd.android.package-archive,application/octet-stream,*/*");
+
+            // Additional configuration for Android 15
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                request.setRequiresCharging(false);
+                request.setRequiresDeviceIdle(false);
+            }
+
+            Log.d(TAG, "DownloadManager request configured for API " + Build.VERSION.SDK_INT);
+            Log.d(TAG, "Download URL: " + downloadUrl);
+            Log.d(TAG, "Download destination: " + context.getExternalFilesDir(null) + "/" + fileName);
+
+            // Start download
+            downloadId = downloadManager.enqueue(request);
+            Log.d(TAG, "Download enqueued with ID: " + downloadId);
             
             Toast.makeText(context, 
-                "📥 Opening download... Please install when complete", 
+                "📥 Download started! Check notification for progress", 
                 Toast.LENGTH_LONG).show();
                 
+            // Start polling for download status as backup to BroadcastReceiver
+            startDownloadStatusPolling();
+            
+            // Show a follow-up message after a delay
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                Toast.makeText(context, 
+                    "⏳ Download in progress... Installation will start automatically when complete", 
+                    Toast.LENGTH_LONG).show();
+            }, 3000);
+                
+        } catch (SecurityException e) {
+            Log.e(TAG, "Security exception starting download - API " + Build.VERSION.SDK_INT, e);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                showDownloadError("Download failed. Using app-specific storage should not require permissions on Android " + Build.VERSION.SDK_INT, true);
+            } else {
+                showDownloadError("Permission denied. Please check storage permissions.", false);
+            }
         } catch (Exception e) {
-            Log.e(TAG, "Error opening download URL", e);
-            openGitHubReleases();
+            Log.e(TAG, "Error starting download", e);
+            showDownloadError("Failed to start download: " + e.getMessage(), true);
+        }
+    }
+
+    /**
+     * Start polling for download status as backup to BroadcastReceiver
+     */
+    private void startDownloadStatusPolling() {
+        if (downloadId == -1) return;
+        
+        Log.d(TAG, "Starting download status polling for ID: " + downloadId);
+        
+        // Poll every 2 seconds
+        Handler handler = new Handler(Looper.getMainLooper());
+        Runnable pollRunnable = new Runnable() {
+            int pollCount = 0;
+            final int maxPolls = 60; // Poll for max 2 minutes
+            
+            @Override
+            public void run() {
+                pollCount++;
+                Log.d(TAG, "Polling download status... attempt " + pollCount + "/" + maxPolls);
+                
+                if (pollCount > maxPolls) {
+                    Log.w(TAG, "Download polling timeout reached");
+                    Toast.makeText(context, "⏰ Download taking too long - check notification", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                
+                try {
+                    DownloadManager.Query query = new DownloadManager.Query();
+                    query.setFilterById(downloadId);
+                    Cursor cursor = downloadManager.query(query);
+                    
+                    if (cursor.moveToFirst()) {
+                        int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                        int status = cursor.getInt(statusIndex);
+                        
+                        int bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
+                        int bytesTotalIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
+                        
+                        long bytesDownloaded = cursor.getLong(bytesDownloadedIndex);
+                        long bytesTotal = cursor.getLong(bytesTotalIndex);
+                        
+                        Log.d(TAG, "Download status: " + status + ", Progress: " + bytesDownloaded + "/" + bytesTotal);
+                        
+                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                            Log.d(TAG, "✅ Download completed via polling! Triggering installation...");
+                            cursor.close();
+                            handleDownloadComplete();
+                            return;
+                        } else if (status == DownloadManager.STATUS_FAILED) {
+                            Log.e(TAG, "❌ Download failed via polling");
+                            cursor.close();
+                            handleDownloadComplete();
+                            return;
+                        } else if (status == DownloadManager.STATUS_RUNNING) {
+                            if (bytesTotal > 0) {
+                                int progress = (int) ((bytesDownloaded * 100) / bytesTotal);
+                                Log.d(TAG, "📥 Download progress: " + progress + "%");
+                            }
+                        }
+                    }
+                    cursor.close();
+                    
+                    // Continue polling
+                    handler.postDelayed(this, 2000);
+                    
+                } catch (Exception e) {
+                    Log.e(TAG, "Error polling download status", e);
+                    handler.postDelayed(this, 2000);
+                }
+            }
+        };
+        
+        // Start polling after 5 seconds
+        handler.postDelayed(pollRunnable, 5000);
+    }
+
+    /**
+     * Handle download completion and start installation
+     */
+    private void handleDownloadComplete() {
+        try {
+            // Query download status
+            DownloadManager.Query query = new DownloadManager.Query();
+            query.setFilterById(downloadId);
+            
+            Cursor cursor = downloadManager.query(query);
+            if (cursor.moveToFirst()) {
+                int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                int status = cursor.getInt(statusIndex);
+                
+                if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                    int uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+                    String localUri = cursor.getString(uriIndex);
+                    
+                    Log.d(TAG, "✅ Download completed successfully! Local URI: " + localUri);
+                    Toast.makeText(context, "✅ Download complete! Starting installation...", Toast.LENGTH_SHORT).show();
+                    
+                    if (localUri != null) {
+                        installApk(localUri);
+                    } else {
+                        Log.e(TAG, "Download successful but local URI is null");
+                        Toast.makeText(context, "❌ Download completed but file not found", Toast.LENGTH_LONG).show();
+                        showDownloadError("Download completed but file location is unknown", true);
+                    }
+                } else {
+                    // Get detailed error information
+                    String errorMessage = getDownloadErrorMessage(cursor, status);
+                    Log.e(TAG, "❌ Download failed with status: " + status + " - " + errorMessage);
+                    Toast.makeText(context, "❌ Download failed: " + getSimpleErrorMessage(status), Toast.LENGTH_LONG).show();
+                    showDownloadError(errorMessage, true);
+                }
+            } else {
+                Log.e(TAG, "Download query returned no results");
+                showDownloadError("Unable to check download status", true);
+            }
+            cursor.close();
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error handling download completion", e);
+            showDownloadError("Error processing download: " + e.getMessage(), true);
+        } finally {
+            // Unregister receiver
+            try {
+                context.unregisterReceiver(downloadReceiver);
+            } catch (Exception e) {
+                Log.w(TAG, "Error unregistering receiver", e);
+            }
+        }
+    }
+
+    /**
+     * Get detailed error message for download failure
+     */
+    private String getDownloadErrorMessage(Cursor cursor, int status) {
+        try {
+            switch (status) {
+                case DownloadManager.STATUS_FAILED:
+                    int reasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
+                    if (reasonIndex >= 0) {
+                        int reason = cursor.getInt(reasonIndex);
+                        return getFailureReason(reason);
+                    }
+                    return "Download failed for unknown reason";
+                    
+                case DownloadManager.STATUS_PAUSED:
+                    int pauseReasonIndex = cursor.getColumnIndex(DownloadManager.COLUMN_REASON);
+                    if (pauseReasonIndex >= 0) {
+                        int pauseReason = cursor.getInt(pauseReasonIndex);
+                        return getPauseReason(pauseReason);
+                    }
+                    return "Download paused";
+                    
+                case DownloadManager.STATUS_PENDING:
+                    return "Download is pending";
+                    
+                case DownloadManager.STATUS_RUNNING:
+                    return "Download is still running";
+                    
+                default:
+                    return "Unknown download status: " + status;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting download error message", e);
+            return "Unable to determine download error";
+        }
+    }
+
+    /**
+     * Get human-readable failure reason
+     */
+    private String getFailureReason(int reason) {
+        switch (reason) {
+            case DownloadManager.ERROR_CANNOT_RESUME:
+                return "Cannot resume download";
+            case DownloadManager.ERROR_DEVICE_NOT_FOUND:
+                return "Storage device not found";
+            case DownloadManager.ERROR_FILE_ALREADY_EXISTS:
+                return "File already exists";
+            case DownloadManager.ERROR_FILE_ERROR:
+                return "File system error";
+            case DownloadManager.ERROR_HTTP_DATA_ERROR:
+                return "HTTP data error";
+            case DownloadManager.ERROR_INSUFFICIENT_SPACE:
+                return "Insufficient storage space";
+            case DownloadManager.ERROR_TOO_MANY_REDIRECTS:
+                return "Too many redirects";
+            case DownloadManager.ERROR_UNHANDLED_HTTP_CODE:
+                return "Unhandled HTTP response code";
+            case DownloadManager.ERROR_UNKNOWN:
+            default:
+                return "Unknown download error (code: " + reason + ")";
+        }
+    }
+
+    /**
+     * Get human-readable pause reason
+     */
+    private String getPauseReason(int reason) {
+        switch (reason) {
+            case DownloadManager.PAUSED_QUEUED_FOR_WIFI:
+                return "Waiting for WiFi connection";
+            case DownloadManager.PAUSED_WAITING_FOR_NETWORK:
+                return "Waiting for network connection";
+            case DownloadManager.PAUSED_WAITING_TO_RETRY:
+                return "Waiting to retry download";
+            case DownloadManager.PAUSED_UNKNOWN:
+            default:
+                return "Download paused (reason: " + reason + ")";
+        }
+    }
+
+    /**
+     * Get simple error message for Toast display
+     */
+    private String getSimpleErrorMessage(int status) {
+        switch (status) {
+            case DownloadManager.STATUS_FAILED:
+                return "Network or storage error";
+            case DownloadManager.STATUS_PAUSED:
+                return "Download paused";
+            default:
+                return "Unknown error";
+        }
+    }
+
+    /**
+     * Show download error with detailed message and options
+     */
+    private void showDownloadError(String errorMessage, boolean showRetryOption) {
+        if (!(context instanceof Activity)) {
+            Toast.makeText(context, "❌ " + errorMessage, Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Activity activity = (Activity) context;
+        activity.runOnUiThread(() -> {
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity, R.style.DarkAlertDialog)
+                .setTitle("❌ Download Failed")
+                .setMessage("Update download failed:\n\n" + errorMessage + "\n\nWhat would you like to do?")
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+
+            if (showRetryOption) {
+                builder.setPositiveButton("Try Again", (dialog, which) -> {
+                    // Get the last download URL from shared preferences if available
+                    String lastUrl = context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                        .getString("last_download_url", null);
+                    if (lastUrl != null) {
+                        startApkDownload(lastUrl);
+                    } else {
+                        // Re-check for updates
+                        checkForUpdates();
+                    }
+                });
+            }
+
+            builder.setNeutralButton("Manual Download", (dialog, which) -> openGitHubReleases());
+
+            AlertDialog dialog = builder.create();
+            dialog.show();
+
+            // Style the buttons
+            if (dialog.getButton(AlertDialog.BUTTON_POSITIVE) != null) {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(
+                    activity.getColor(R.color.accent_blue));
+            }
+        });
+    }
+
+    /**
+     * Install APK and delete file after installation
+     */
+    private void installApk(String localUri) {
+        try {
+            File apkFile = new File(Uri.parse(localUri).getPath());
+            
+            if (!apkFile.exists()) {
+                Log.e(TAG, "APK file not found: " + localUri);
+                return;
+            }
+
+            // Create install intent
+            Intent installIntent = new Intent(Intent.ACTION_VIEW);
+            installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            Uri apkUri;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                // Use FileProvider for Android 7.0+
+                apkUri = FileProvider.getUriForFile(context, 
+                    context.getPackageName() + ".fileprovider", apkFile);
+            } else {
+                apkUri = Uri.fromFile(apkFile);
+            }
+
+            installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            
+            // Start installation
+            context.startActivity(installIntent);
+            
+            Toast.makeText(context, 
+                "🚀 Opening installer... APK will be auto-deleted after installation", 
+                Toast.LENGTH_LONG).show();
+                
+            Log.d(TAG, "✅ Installation intent started for: " + apkFile.getPath());
+
+            // Schedule APK deletion after a delay (to allow installation to complete)
+            executor.execute(() -> {
+                try {
+                    // Wait for installation to start
+                    Thread.sleep(5000);
+                    
+                    // Delete APK file
+                    if (apkFile.exists() && apkFile.delete()) {
+                        Log.d(TAG, "APK file deleted successfully: " + apkFile.getPath());
+                    } else {
+                        Log.w(TAG, "Failed to delete APK file: " + apkFile.getPath());
+                    }
+                } catch (InterruptedException e) {
+                    Log.w(TAG, "Sleep interrupted", e);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error deleting APK file", e);
+                }
+            });
+                
+        } catch (Exception e) {
+            Log.e(TAG, "Error installing APK", e);
+            Toast.makeText(context, "❌ Installation failed. Please install manually.", 
+                         Toast.LENGTH_LONG).show();
         }
     }
     
@@ -290,7 +778,17 @@ public class ModernUpdateChecker {
         if (executor != null && !executor.isShutdown()) {
             executor.shutdown();
         }
+        
+        // Unregister download receiver if still registered
+        try {
+            if (downloadReceiver != null) {
+                context.unregisterReceiver(downloadReceiver);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error unregistering receiver during cleanup", e);
+        }
     }
+
     
     /**
      * Data class to hold update information
