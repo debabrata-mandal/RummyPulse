@@ -15,6 +15,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.example.rummypulse.databinding.ActivityJoinGameBinding;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
 import com.example.rummypulse.utils.ModernToast;
 import com.google.android.material.textfield.TextInputEditText;
@@ -22,23 +23,15 @@ import com.google.android.material.textfield.TextInputEditText;
 public class JoinGameActivity extends AppCompatActivity {
 
     private JoinGameViewModel viewModel;
-    private LinearLayout playersSection;
-    private LinearLayout standingsCard;
-    private LinearLayout playersContainer;
-    private Button btnAddPlayer;
-    private LinearLayout standingsTableContainer;
-    private TextView textPointValueInfo;
-    private TextView textGstInfo;
-    private TextView textCurrentRound;
-    private TextView textGameIdHeader;
-    private TextView textAdminMode;
-    private TextView textHeaderTitle;
-    private ImageView btnClose;
+    private ActivityJoinGameBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_join_game);
+        
+        // Initialize ViewBinding
+        binding = ActivityJoinGameBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         // Initialize ViewModel
         viewModel = new ViewModelProvider(this).get(JoinGameViewModel.class);
@@ -49,7 +42,7 @@ public class JoinGameActivity extends AppCompatActivity {
         observeViewModel();
 
         // Set up back button
-        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+        binding.btnBack.setOnClickListener(v -> finish());
 
         // Get game ID from intent if available
         Intent intent = getIntent();
@@ -59,7 +52,7 @@ public class JoinGameActivity extends AppCompatActivity {
             
             if (gameId != null) {
                 // Update header title with actual game ID
-                textHeaderTitle.setText("Game View: " + gameId);
+                binding.textHeaderTitle.setText("Game View: " + gameId);
                 // Automatically join the game
                 joinGame(gameId);
             }
@@ -67,27 +60,14 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void initializeViews() {
-        playersSection = findViewById(R.id.players_section);
-        standingsCard = findViewById(R.id.standings_card);
-        playersContainer = findViewById(R.id.players_container);
-        btnAddPlayer = findViewById(R.id.btn_add_player);
-        standingsTableContainer = findViewById(R.id.standings_table_container);
-        textPointValueInfo = findViewById(R.id.text_point_value_info);
-        textGstInfo = findViewById(R.id.text_gst_info);
-        textCurrentRound = findViewById(R.id.text_current_round);
-        textGameIdHeader = findViewById(R.id.text_game_id_header);
-        textAdminMode = findViewById(R.id.text_admin_mode);
-        textHeaderTitle = findViewById(R.id.text_header_title);
-        btnClose = findViewById(R.id.btn_close);
-
         // Initially hide the cards
-        playersSection.setVisibility(View.GONE);
-        standingsCard.setVisibility(View.GONE);
+        binding.playersSection.setVisibility(View.GONE);
+        binding.standingsCard.setVisibility(View.GONE);
     }
 
     private void setupClickListeners() {
-        btnClose.setOnClickListener(v -> finish());
-        btnAddPlayer.setOnClickListener(v -> {
+        binding.btnClose.setOnClickListener(v -> finish());
+        binding.btnAddPlayer.setOnClickListener(v -> {
             // TODO: Show dialog to add new player
             ModernToast.info(this, "Add player feature coming soon!");
         });
@@ -114,7 +94,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
         viewModel.getEditAccessGranted().observe(this, granted -> {
             if (granted) {
-                textAdminMode.setVisibility(View.VISIBLE);
+                binding.textAdminMode.setVisibility(View.VISIBLE);
                 ModernToast.success(this, "✅ Edit access granted!");
             }
         });
@@ -138,8 +118,8 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void displayGameData(com.example.rummypulse.data.GameData gameData) {
         // Show the cards
-        playersSection.setVisibility(View.VISIBLE);
-        standingsCard.setVisibility(View.VISIBLE);
+        binding.playersSection.setVisibility(View.VISIBLE);
+        binding.standingsCard.setVisibility(View.VISIBLE);
 
         // Get the game ID from intent
         Intent intent = getIntent();
@@ -149,11 +129,11 @@ public class JoinGameActivity extends AppCompatActivity {
         }
 
         // Update header with game ID
-        textGameIdHeader.setText(gameId);
+        binding.textGameIdHeader.setText(gameId);
 
         // Update game info bar
-        textPointValueInfo.setText("₹" + String.format("%.0f", gameData.getPointValue()) + " /point");
-        textGstInfo.setText(String.format("%.0f", gameData.getGstPercent()) + "% GST");
+        binding.textPointValueInfo.setText("₹" + String.format("%.0f", gameData.getPointValue()) + " /point");
+        binding.textGstInfo.setText(String.format("%.0f", gameData.getGstPercent()) + "% GST");
 
         // Generate player cards
         generatePlayerCards(gameData);
@@ -171,18 +151,18 @@ public class JoinGameActivity extends AppCompatActivity {
         updateRoundColors(gameData);
 
         // Hide admin mode initially
-        textAdminMode.setVisibility(View.GONE);
+        binding.textAdminMode.setVisibility(View.GONE);
     }
 
     private void generatePlayerCards(com.example.rummypulse.data.GameData gameData) {
         // Clear existing player cards
-        playersContainer.removeAllViews();
+        binding.playersContainer.removeAllViews();
 
         // Add player cards
         for (int i = 0; i < gameData.getPlayers().size(); i++) {
             final int playerIndex = i;
             com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
-            View playerCardView = LayoutInflater.from(this).inflate(R.layout.item_player_card, playersContainer, false);
+            View playerCardView = LayoutInflater.from(this).inflate(R.layout.item_player_card, binding.playersContainer, false);
             
             // Set player name
             TextView playerName = playerCardView.findViewById(R.id.text_player_name);
@@ -251,7 +231,7 @@ public class JoinGameActivity extends AppCompatActivity {
             }
 
 
-            playersContainer.addView(playerCardView);
+            binding.playersContainer.addView(playerCardView);
         }
     }
 
@@ -273,7 +253,7 @@ public class JoinGameActivity extends AppCompatActivity {
             boolean playerCompleted = false;
             
             // Check UI input field first
-            EditText previousScoreInput = playersContainer.findViewWithTag("p" + (p + 1) + "r" + round);
+            EditText previousScoreInput = binding.playersContainer.findViewWithTag("p" + (p + 1) + "r" + round);
             if (previousScoreInput != null) {
                 String text = previousScoreInput.getText().toString();
                 
@@ -321,7 +301,7 @@ public class JoinGameActivity extends AppCompatActivity {
         // Update all score inputs based on sequential validation
         for (int playerIndex = 0; playerIndex < gameData.getPlayers().size(); playerIndex++) {
             for (int round = 0; round < 10; round++) {
-                EditText scoreInput = playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + (round + 1));
+                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + (round + 1));
                 if (scoreInput != null) {
                     boolean isEnabled = isRoundEnabled(round, playerIndex, gameData);
                     scoreInput.setEnabled(isEnabled);
@@ -346,7 +326,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private void updateRoundColors(com.example.rummypulse.data.GameData gameData) {
         // Update round badge colors based on completion status
         for (int playerIndex = 0; playerIndex < gameData.getPlayers().size(); playerIndex++) {
-            View playerCardView = playersContainer.getChildAt(playerIndex);
+            View playerCardView = binding.playersContainer.getChildAt(playerIndex);
             if (playerCardView != null) {
                 TextView roundBadge = playerCardView.findViewById(R.id.text_current_round_badge);
                 if (roundBadge != null) {
@@ -386,7 +366,7 @@ public class JoinGameActivity extends AppCompatActivity {
             boolean playerCompleted = false;
             
             // Check UI input field first
-            EditText scoreInput = playersContainer.findViewWithTag("p" + (p + 1) + "r" + round);
+            EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (p + 1) + "r" + round);
             if (scoreInput != null) {
                 String text = scoreInput.getText().toString();
                 
@@ -454,11 +434,11 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void updateCurrentRound(com.example.rummypulse.data.GameData gameData) {
         int currentRound = calculateCurrentRound(gameData);
-        textCurrentRound.setText("Round#" + currentRound + " Round");
+        binding.textCurrentRound.setText("Round#" + currentRound + " Round");
         
         // Update all player cards' round badges
-        for (int i = 0; i < playersContainer.getChildCount(); i++) {
-            View playerCardView = playersContainer.getChildAt(i);
+        for (int i = 0; i < binding.playersContainer.getChildCount(); i++) {
+            View playerCardView = binding.playersContainer.getChildAt(i);
             TextView roundBadge = playerCardView.findViewById(R.id.text_current_round_badge);
             if (roundBadge != null) {
                 roundBadge.setText("Round#" + currentRound);
@@ -472,7 +452,7 @@ public class JoinGameActivity extends AppCompatActivity {
         // Check all players' scores to find the highest round with valid scores
         for (int playerIndex = 0; playerIndex < gameData.getPlayers().size(); playerIndex++) {
             for (int round = 1; round <= 10; round++) {
-                EditText scoreInput = playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + round);
+                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + round);
                 if (scoreInput != null) {
                         try {
                             String text = scoreInput.getText().toString();
@@ -494,11 +474,11 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void generateStandingsTable(com.example.rummypulse.data.GameData gameData) {
         // Clear existing standings
-        standingsTableContainer.removeAllViews();
+        binding.standingsTableContainer.removeAllViews();
 
         // Add header
-        View headerView = LayoutInflater.from(this).inflate(R.layout.item_standings_header, standingsTableContainer, false);
-        standingsTableContainer.addView(headerView);
+        View headerView = LayoutInflater.from(this).inflate(R.layout.item_standings_header, binding.standingsTableContainer, false);
+        binding.standingsTableContainer.addView(headerView);
 
         // Calculate standings
         updateStandings(gameData);
@@ -506,8 +486,8 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void updateStandings(com.example.rummypulse.data.GameData gameData) {
         // Clear existing standings rows (keep header)
-        if (standingsTableContainer.getChildCount() > 1) {
-            standingsTableContainer.removeViews(1, standingsTableContainer.getChildCount() - 1);
+        if (binding.standingsTableContainer.getChildCount() > 1) {
+            binding.standingsTableContainer.removeViews(1, binding.standingsTableContainer.getChildCount() - 1);
         }
 
         // First pass: collect all scores
@@ -520,7 +500,7 @@ public class JoinGameActivity extends AppCompatActivity {
             // Calculate total score from input fields
             int totalScore = 0;
             for (int round = 1; round <= 10; round++) {
-                EditText scoreInput = playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
+                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
                 if (scoreInput != null) {
                     try {
                         String text = scoreInput.getText().toString();
@@ -570,7 +550,7 @@ public class JoinGameActivity extends AppCompatActivity {
         // Add standings rows
         for (int i = 0; i < standings.size(); i++) {
             PlayerStanding standing = standings.get(i);
-            View standingsRowView = LayoutInflater.from(this).inflate(R.layout.item_standings_row, standingsTableContainer, false);
+            View standingsRowView = LayoutInflater.from(this).inflate(R.layout.item_standings_row, binding.standingsTableContainer, false);
             
             // Set rank
             TextView rankText = standingsRowView.findViewById(R.id.text_rank);
@@ -606,7 +586,7 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
             netAmountText.setText("₹" + String.format("%.0f", standing.netAmount));
 
-            standingsTableContainer.addView(standingsRowView);
+            binding.standingsTableContainer.addView(standingsRowView);
         }
     }
 
