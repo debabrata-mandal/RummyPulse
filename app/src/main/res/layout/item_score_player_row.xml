@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@android:color/white">
+
+    <!-- Player Name -->
+    <LinearLayout
+        android:layout_width="120dp"
+        android:layout_height="48dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@android:color/white"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/text_player_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Player 1"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/text_player_id"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="#21"
+            android:textColor="#6c757d"
+            android:textSize="10sp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- Score Inputs -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/edit_score_r1"
+            android:layout_width="60dp"
+            android:layout_height="48dp"
+            android:inputType="number"
+            android:text="-1"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@android:color/white"
+            android:hint="-1"
+            android:padding="8dp" />
+
+        <EditText
+            android:id="@+id/edit_score_r2"
+            android:layout_width="60dp"
+            android:layout_height="48dp"
+            android:inputType="number"
+            android:text="-1"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@android:color/white"
+            android:hint="-1"
+            android:padding="8dp" />
+
+        <EditText
+            android:id="@+id/edit_score_r3"
+            android:layout_width="60dp"
+            android:layout_height="48dp"
+            android:inputType="number"
+            android:text="-1"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@android:color/white"
+            android:hint="-1"
+            android:padding="8dp" />
+
+        <EditText
+            android:id="@+id/edit_score_r4"
+            android:layout_width="60dp"
+            android:layout_height="48dp"
+            android:inputType="number"
+            android:text="-1"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@android:color/white"
+            android:hint="-1"
+            android:padding="8dp" />
+
+        <EditText
+            android:id="@+id/edit_score_r5"
+            android:layout_width="60dp"
+            android:layout_height="48dp"
+            android:inputType="number"
+            android:text="-1"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@android:color/white"
+            android:hint="-1"
+            android:padding="8dp" />
+
+        <EditText
+            android:id="@+id/edit_score_r6"
+            android:layout_width="60dp"
+            android:layout_height="48dp"
+            android:inputType="number"
+            android:text="-1"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@android:color/white"
+            android:hint="-1"
+            android:padding="8dp" />
+
+        <EditText
+            android:id="@+id/edit_score_r7"
+            android:layout_width="60dp"
+            android:layout_height="48dp"
+            android:inputType="number"
+            android:text="-1"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@android:color/white"
+            android:hint="-1"
+            android:padding="8dp" />
+
+        <EditText
+            android:id="@+id/edit_score_r8"
+            android:layout_width="60dp"
+            android:layout_height="48dp"
+            android:inputType="number"
+            android:text="-1"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@android:color/white"
+            android:hint="-1"
+            android:padding="8dp" />
+
+        <EditText
+            android:id="@+id/edit_score_r9"
+            android:layout_width="60dp"
+            android:layout_height="48dp"
+            android:inputType="number"
+            android:text="-1"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@android:color/white"
+            android:hint="-1"
+            android:padding="8dp" />
+
+        <EditText
+            android:id="@+id/edit_score_r10"
+            android:layout_width="60dp"
+            android:layout_height="48dp"
+            android:inputType="number"
+            android:text="-1"
+            android:textColor="@android:color/black"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:background="@android:color/white"
+            android:hint="-1"
+            android:padding="8dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Original background -->
+    <item android:drawable="@drawable/score_input_background" />
+    <!-- Red border overlay -->
+    <item android:drawable="@drawable/current_round_border" />
+</layer-list>

@@ -1,6 +1,7 @@
 package com.example.rummypulse.ui.dashboard;
 
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -14,6 +15,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.example.rummypulse.JoinGameActivity;
 import com.example.rummypulse.R;
 import com.example.rummypulse.databinding.FragmentDashboardBinding;
 import com.example.rummypulse.ui.home.GameItem;
@@ -92,11 +94,12 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         String emoji = "moderator".equals(joinType) ? "🛡️" : "👤";
         
         com.example.rummypulse.utils.ModernToast.info(getContext(), emoji + " Joining game #" + game.getGameId() + " as " + roleText);
-        dashboardViewModel.joinGame(game, joinType);
         
-        // TODO: Navigate to game screen or implement join logic
-        // For now, just show a toast
-        com.example.rummypulse.utils.ModernToast.warning(getContext(), "Join as " + roleText + " functionality coming soon!");
+        // Navigate to JoinGameActivity with the game ID
+        Intent intent = new Intent(getContext(), JoinGameActivity.class);
+        intent.putExtra("GAME_ID", game.getGameId());
+        intent.putExtra("JOIN_TYPE", joinType);
+        startActivity(intent);
     }
 
     private void setupCreateGameButton() {

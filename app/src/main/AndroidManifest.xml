@@ -47,6 +47,12 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.RummyPulse.NoActionBar" />
             
+        <activity
+            android:name=".JoinGameActivity"
+            android:exported="false"
+            android:label="Join Game"
+            android:theme="@style/Theme.RummyPulse.NoActionBar" />
+            
         <!-- FileProvider for APK installation on Android 7.0+ -->
         <provider
             android:name="androidx.core.content.FileProvider"

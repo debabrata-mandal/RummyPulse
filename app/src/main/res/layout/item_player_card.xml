@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#2C2C2C"
+    android:padding="16dp"
+    android:layout_marginBottom="12dp"
+    android:elevation="2dp">
+
+    <!-- Player Header Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <!-- Player Icon -->
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_gamepad"
+            android:tint="#2196F3"
+            android:background="@drawable/circle_background"
+            android:padding="8dp"
+            android:layout_marginEnd="12dp" />
+
+        <!-- Player Info -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/text_player_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Player Name"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/text_player_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="#21"
+                android:textColor="#666666"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <!-- Current Round Badge -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:background="@drawable/round_badge_background"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="👤"
+                android:textSize="14sp"
+                android:layout_marginEnd="4dp" />
+
+            <TextView
+                android:id="@+id/text_current_round_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="R1"
+                android:textColor="#2196F3"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Score Inputs Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scores:"
+            android:textColor="#CCCCCC"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- First Row: R1-R5 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <!-- Round 1 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginHorizontal="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R1"
+                    android:textColor="#CCCCCC"
+                    android:textSize="10sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_score_r1"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:inputType="number"
+                    android:text="-1"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:background="@drawable/score_input_background"
+                    android:padding="2dp" />
+
+            </LinearLayout>
+
+            <!-- Round 2 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginHorizontal="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R2"
+                    android:textColor="#CCCCCC"
+                    android:textSize="10sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_score_r2"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:inputType="number"
+                    android:text="-1"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:background="@drawable/score_input_background"
+                    android:padding="2dp" />
+
+            </LinearLayout>
+
+            <!-- Round 3 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginHorizontal="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R3"
+                    android:textColor="#CCCCCC"
+                    android:textSize="10sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_score_r3"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:inputType="number"
+                    android:text="-1"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:background="@drawable/score_input_background"
+                    android:padding="2dp" />
+
+            </LinearLayout>
+
+            <!-- Round 4 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginHorizontal="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R4"
+                    android:textColor="#CCCCCC"
+                    android:textSize="10sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_score_r4"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:inputType="number"
+                    android:text="-1"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:background="@drawable/score_input_background"
+                    android:padding="2dp" />
+
+            </LinearLayout>
+
+            <!-- Round 5 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginHorizontal="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R5"
+                    android:textColor="#CCCCCC"
+                    android:textSize="10sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_score_r5"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:inputType="number"
+                    android:text="-1"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:background="@drawable/score_input_background"
+                    android:padding="2dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Second Row: R6-R10 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- Round 6 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginHorizontal="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R6"
+                    android:textColor="#CCCCCC"
+                    android:textSize="10sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_score_r6"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:inputType="number"
+                    android:text="-1"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:background="@drawable/score_input_background"
+                    android:padding="2dp" />
+
+            </LinearLayout>
+
+            <!-- Round 7 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginHorizontal="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R7"
+                    android:textColor="#CCCCCC"
+                    android:textSize="10sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_score_r7"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:inputType="number"
+                    android:text="-1"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:background="@drawable/score_input_background"
+                    android:padding="2dp" />
+
+            </LinearLayout>
+
+            <!-- Round 8 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginHorizontal="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R8"
+                    android:textColor="#CCCCCC"
+                    android:textSize="10sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_score_r8"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:inputType="number"
+                    android:text="-1"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:background="@drawable/score_input_background"
+                    android:padding="2dp" />
+
+            </LinearLayout>
+
+            <!-- Round 9 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginHorizontal="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R9"
+                    android:textColor="#CCCCCC"
+                    android:textSize="10sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_score_r9"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:inputType="number"
+                    android:text="-1"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:background="@drawable/score_input_background"
+                    android:padding="2dp" />
+
+            </LinearLayout>
+
+            <!-- Round 10 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginHorizontal="2dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="R10"
+                    android:textColor="#CCCCCC"
+                    android:textSize="10sp"
+                    android:layout_marginBottom="4dp" />
+
+                <EditText
+                    android:id="@+id/edit_score_r10"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:inputType="number"
+                    android:text="-1"
+                    android:textColor="@android:color/white"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:background="@drawable/score_input_background"
+                    android:padding="2dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
