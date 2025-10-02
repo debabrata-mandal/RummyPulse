@@ -13,6 +13,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.rummypulse.databinding.ActivityJoinGameBinding;
@@ -33,6 +34,13 @@ public class JoinGameActivity extends AppCompatActivity {
         binding = ActivityJoinGameBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // Set up toolbar
+        setSupportActionBar(binding.toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+        }
+
         // Initialize ViewModel
         viewModel = new ViewModelProvider(this).get(JoinGameViewModel.class);
 
@@ -41,9 +49,6 @@ public class JoinGameActivity extends AppCompatActivity {
         setupClickListeners();
         observeViewModel();
 
-        // Set up back button
-        binding.btnBack.setOnClickListener(v -> finish());
-
         // Get game ID from intent if available
         Intent intent = getIntent();
         if (intent != null && intent.hasExtra("GAME_ID")) {
@@ -51,12 +56,20 @@ public class JoinGameActivity extends AppCompatActivity {
             String joinType = intent.getStringExtra("JOIN_TYPE");
             
             if (gameId != null) {
-                // Update header title with actual game ID
-                binding.textHeaderTitle.setText("Game View: " + gameId);
+                // Keep toolbar title as "Game View" only
+                if (getSupportActionBar() != null) {
+                    getSupportActionBar().setTitle("Game View");
+                }
                 // Automatically join the game
                 joinGame(gameId);
             }
         }
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        finish();
+        return true;
     }
 
     private void initializeViews() {
