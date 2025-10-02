@@ -708,7 +708,9 @@ public class JoinGameActivity extends AppCompatActivity {
 
             // Create the bar
             android.view.View bar = new android.view.View(this);
-            int barHeight = Math.max(dpToPx(25), (int) (standing.totalScore * dpToPx(75) / (double) maxScore));
+            // Reserve space for score label (20dp) and name label (~24dp), use remaining space for bar
+            int availableHeight = dpToPx(140) - dpToPx(20) - dpToPx(24) - dpToPx(16); // Total - score label - name label - padding
+            int barHeight = Math.max(dpToPx(20), (int) (standing.totalScore * availableHeight / (double) maxScore));
             android.widget.LinearLayout.LayoutParams barParams = new android.widget.LinearLayout.LayoutParams(
                 android.widget.LinearLayout.LayoutParams.MATCH_PARENT, barHeight);
             barParams.setMargins(0, 0, 0, dpToPx(4));
@@ -727,6 +729,20 @@ public class JoinGameActivity extends AppCompatActivity {
                 bar.setBackgroundColor(0xFFFFEB3B);
             }
 
+            // Create score value label (on top of bar)
+            android.widget.TextView scoreLabel = new android.widget.TextView(this);
+            scoreLabel.setText(String.valueOf(standing.totalScore));
+            scoreLabel.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
+            scoreLabel.setTextSize(10);
+            scoreLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            scoreLabel.setGravity(android.view.Gravity.CENTER);
+            
+            // Set fixed height for score label to prevent clipping
+            android.widget.LinearLayout.LayoutParams scoreLabelParams = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(20));
+            scoreLabelParams.setMargins(0, dpToPx(4), 0, dpToPx(2)); // Add top margin
+            scoreLabel.setLayoutParams(scoreLabelParams);
+
             // Create player name label
             android.widget.TextView nameLabel = new android.widget.TextView(this);
             nameLabel.setText(standing.player.getName());
@@ -736,6 +752,7 @@ public class JoinGameActivity extends AppCompatActivity {
             nameLabel.setGravity(android.view.Gravity.CENTER);
 
             // Add views to container
+            barContainer.addView(scoreLabel);
             barContainer.addView(bar);
             barContainer.addView(nameLabel);
 

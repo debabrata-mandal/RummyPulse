@@ -574,19 +574,35 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Bar Chart Container -->
-                    <LinearLayout
-                        android:id="@+id/chart_container"
+                    <!-- Bar Chart Container with Grid -->
+                    <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="120dp"
-                        android:orientation="horizontal"
-                        android:gravity="bottom"
-                        android:padding="8dp"
+                        android:layout_height="140dp"
                         android:layout_marginBottom="8dp">
 
-                        <!-- Dynamic chart bars will be added here -->
+                        <!-- Grid Lines Background -->
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/chart_grid_background" />
 
-                    </LinearLayout>
+                        <!-- Chart Bars Container -->
+                        <LinearLayout
+                            android:id="@+id/chart_container"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="horizontal"
+                            android:gravity="bottom"
+                            android:paddingLeft="8dp"
+                            android:paddingRight="8dp"
+                            android:paddingTop="8dp"
+                            android:paddingBottom="8dp">
+
+                            <!-- Dynamic chart bars will be added here -->
+
+                        </LinearLayout>
+
+                    </FrameLayout>
 
                 </LinearLayout>
 
