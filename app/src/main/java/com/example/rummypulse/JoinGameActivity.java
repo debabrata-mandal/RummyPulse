@@ -583,21 +583,21 @@ public class JoinGameActivity extends AppCompatActivity {
                 playerId.setVisibility(View.VISIBLE);
             }
 
-            // Set score
+            // Set score with label
             TextView scoreText = standingsRowView.findViewById(R.id.text_score);
-            scoreText.setText(String.valueOf(standing.totalScore));
+            scoreText.setText("Score: " + String.valueOf(standing.totalScore));
 
             // Set gross amount
             TextView grossAmountText = standingsRowView.findViewById(R.id.text_gross_amount);
             grossAmountText.setText("₹" + String.format("%.0f", standing.grossAmount));
 
-            // Set GST
+            // Set GST with label
             TextView gstText = standingsRowView.findViewById(R.id.text_gst);
-            gstText.setText("₹" + String.format("%.0f", standing.gstPaid));
+            gstText.setText("GST: ₹" + String.format("%.0f", standing.gstPaid));
 
-            // Set net amount
+            // Set net amount with label
             TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
-            netAmountText.setText("₹" + String.format("%.0f", standing.netAmount));
+            netAmountText.setText("Net: ₹" + String.format("%.0f", standing.netAmount));
 
             binding.standingsTableContainer.addView(standingsRowView);
         }

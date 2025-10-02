@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="wrap_content"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:background="#2C2C2C">
 
-    <!-- Rank Header -->
+    <!-- Left Composite Column: Rank + Player + Score -->
     <LinearLayout
-        android:layout_width="50dp"
-        android:layout_height="48dp"
-        android:orientation="horizontal"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
         android:gravity="center"
         android:background="#404040"
         android:padding="8dp">
@@ -17,105 +18,45 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Rank"
+            android:text="Player Details"
             android:textColor="@android:color/white"
             android:textSize="12sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Rank • Name • Score"
+            android:textColor="#B0B0B0"
+            android:textSize="10sp" />
 
     </LinearLayout>
 
-    <!-- Player Header -->
+    <!-- Right Composite Column: Gross + GST + Net -->
     <LinearLayout
-        android:layout_width="100dp"
-        android:layout_height="48dp"
-        android:orientation="horizontal"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
         android:gravity="center"
         android:background="#404040"
-        android:padding="8dp">
+        android:padding="8dp"
+        android:layout_marginStart="1dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Player"
+            android:text="Amount Details"
             android:textColor="@android:color/white"
             android:textSize="12sp"
             android:textStyle="bold" />
-
-    </LinearLayout>
-
-    <!-- Score Header -->
-    <LinearLayout
-        android:layout_width="50dp"
-        android:layout_height="48dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:background="#404040"
-        android:padding="8dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Score"
-            android:textColor="@android:color/white"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-    </LinearLayout>
-
-    <!-- Gross Amount Header -->
-    <LinearLayout
-        android:layout_width="80dp"
-        android:layout_height="48dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:background="#404040"
-        android:padding="8dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Gross Amount"
-            android:textColor="@android:color/white"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-    </LinearLayout>
-
-    <!-- GST Header -->
-    <LinearLayout
-        android:layout_width="65dp"
-        android:layout_height="48dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:background="#404040"
-        android:padding="8dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="GST (27%)"
-            android:textColor="@android:color/white"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-    </LinearLayout>
-
-    <!-- Net Amount Header -->
-    <LinearLayout
-        android:layout_width="80dp"
-        android:layout_height="48dp"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:background="#404040"
-        android:padding="8dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Net Amount"
-            android:textColor="@android:color/white"
-            android:textSize="12sp"
-            android:textStyle="bold" />
+            android:text="Gross • GST • Net"
+            android:textColor="#B0B0B0"
+            android:textSize="10sp" />
 
     </LinearLayout>
 
