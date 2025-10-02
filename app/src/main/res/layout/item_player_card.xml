@@ -26,21 +26,44 @@
             android:padding="8dp"
             android:layout_marginEnd="12dp" />
 
-        <!-- Player Info -->
+        <!-- Player Info with Delete Button -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/text_player_name"
+            <!-- Player Name Row with Delete Button -->
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Player Name"
-                android:textColor="@android:color/white"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/text_player_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Player Name"
+                    android:textColor="@android:color/white"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <!-- Small Delete Button -->
+                <ImageView
+                    android:id="@+id/btn_delete_player"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_delete"
+                    android:background="@drawable/small_delete_button_background"
+                    android:padding="4dp"
+                    android:tint="#FFFFFF"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Delete Player"
+                    android:layout_marginStart="8dp" />
+
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/text_player_id"
@@ -61,7 +84,8 @@
             android:gravity="center"
             android:background="@drawable/round_badge_background"
             android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp">
+            android:paddingVertical="6dp"
+            android:layout_marginEnd="8dp">
 
             <TextView
                 android:layout_width="wrap_content"

@@ -52,8 +52,6 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-
-
             <!-- Players Section -->
             <LinearLayout
                 android:id="@+id/players_section"
@@ -63,57 +61,218 @@
                 android:layout_marginBottom="16dp"
                 android:visibility="gone">
 
-                <!-- Section Header -->
+                <!-- Collapsible Section Header -->
                 <LinearLayout
+                    android:id="@+id/players_header"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="12dp">
+                    android:layout_marginBottom="12dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:padding="8dp">
 
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_gamepad"
-                        android:tint="#2196F3"
-                        android:layout_marginEnd="8dp" />
-
-                    <TextView
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Players &amp; Scores"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                        android:orientation="vertical">
 
-                    <!-- Add Player Button -->
-                    <Button
-                        android:id="@+id/btn_add_player"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="+ Add Player"
-                        android:textColor="@android:color/white"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:background="#2196F3"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="6dp"
-                        android:layout_marginStart="8dp" />
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_gamepad"
+                                android:tint="#2196F3"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Players &amp; Scores"
+                                android:textColor="@color/text_primary"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                        <!-- Players Information Card -->
+                        <androidx.cardview.widget.CardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="3dp"
+                            app:cardBackgroundColor="@color/card_background_elevated">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <!-- Game Rules Section -->
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:layout_marginBottom="12dp">
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical"
+                                        android:layout_marginEnd="8dp">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Point Value"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="11sp" />
+
+                                        <TextView
+                                            android:id="@+id/text_players_point_value"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="₹99 per point"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="14sp"
+                                            android:textStyle="bold"
+                                            android:layout_marginTop="2dp" />
+
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="GST Rate"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="11sp" />
+
+                                        <TextView
+                                            android:id="@+id/text_players_gst_rate"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="55% GST"
+                                            android:textColor="#FF9800"
+                                            android:textSize="14sp"
+                                            android:textStyle="bold"
+                                            android:layout_marginTop="2dp" />
+
+                                    </LinearLayout>
+
+                                </LinearLayout>
+
+                                <!-- Game Progress & Player Count -->
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal">
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical"
+                                        android:layout_marginEnd="8dp">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Current Round"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="11sp" />
+
+                                        <TextView
+                                            android:id="@+id/text_players_current_round"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Round 2"
+                                            android:textColor="#2196F3"
+                                            android:textSize="14sp"
+                                            android:textStyle="bold"
+                                            android:layout_marginTop="2dp" />
+
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Number of Players"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="11sp" />
+
+                                        <TextView
+                                            android:id="@+id/text_number_of_players"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="4 Players"
+                                            android:textColor="#4CAF50"
+                                            android:textSize="14sp"
+                                            android:textStyle="bold"
+                                            android:layout_marginTop="2dp" />
+
+                                    </LinearLayout>
+
+                                </LinearLayout>
+
+                            </LinearLayout>
+
+                        </androidx.cardview.widget.CardView>
+
+                    </LinearLayout>
+
+                    <!-- Collapse/Expand Icon -->
+                    <ImageView
+                        android:id="@+id/players_collapse_icon"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_expand_less"
+                        android:tint="@color/text_secondary" />
 
                 </LinearLayout>
 
-                <!-- Players Container -->
+                <!-- Collapsible Players Content -->
                 <LinearLayout
-                    android:id="@+id/players_container"
+                    android:id="@+id/players_content"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:visibility="visible">
 
-                    <!-- Player cards will be dynamically generated here -->
+                    <!-- Players Container -->
+                    <LinearLayout
+                        android:id="@+id/players_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Player cards will be dynamically generated here -->
+
+                    </LinearLayout>
 
                 </LinearLayout>
-
 
             </LinearLayout>
 
@@ -134,139 +293,222 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_bar_chart"
-                        android:tint="#2196F3"
-                        android:layout_marginEnd="8dp" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Standings"
-                        android:textColor="@color/text_primary"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                </LinearLayout>
-
-                <!-- Game Info Bar -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="16dp">
-
+                    <!-- Collapsible Standings Header -->
                     <LinearLayout
-                        android:layout_width="0dp"
+                        android:id="@+id/standings_header"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
                         android:orientation="horizontal"
-                        android:gravity="center"
-                        android:background="#9C27B0"
-                        android:padding="8dp"
-                        android:layout_marginEnd="4dp">
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp"
+                        android:background="?android:attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:padding="8dp">
 
-                        <TextView
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:text="💰"
-                            android:textSize="16sp"
-                            android:layout_marginEnd="4dp" />
+                            android:layout_weight="1"
+                            android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/text_point_value_info"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="₹50 /point"
-                            android:textColor="@android:color/white"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <ImageView
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:src="@drawable/ic_bar_chart"
+                                    android:tint="#2196F3"
+                                    android:layout_marginEnd="8dp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Standings"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold" />
+
+                            </LinearLayout>
+
+                            <!-- Game Information Card -->
+                            <androidx.cardview.widget.CardView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="3dp"
+                                app:cardBackgroundColor="@color/card_background_elevated">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="16dp">
+
+                                    <!-- Game Rules Section -->
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:layout_marginBottom="12dp">
+
+                                        <LinearLayout
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:orientation="vertical"
+                                            android:layout_marginEnd="8dp">
+
+                                            <TextView
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="Point Value"
+                                                android:textColor="@color/text_secondary"
+                                                android:textSize="11sp" />
+
+                                            <TextView
+                                                android:id="@+id/text_point_value_info"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="₹99 per point"
+                                                android:textColor="@color/text_primary"
+                                                android:textSize="14sp"
+                                                android:textStyle="bold"
+                                                android:layout_marginTop="2dp" />
+
+                                        </LinearLayout>
+
+                                        <LinearLayout
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:orientation="vertical">
+
+                                            <TextView
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="GST Rate"
+                                                android:textColor="@color/text_secondary"
+                                                android:textSize="11sp" />
+
+                                            <TextView
+                                                android:id="@+id/text_gst_rate_info"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="55% GST"
+                                                android:textColor="#FF9800"
+                                                android:textSize="14sp"
+                                                android:textStyle="bold"
+                                                android:layout_marginTop="2dp" />
+
+                                        </LinearLayout>
+
+                                    </LinearLayout>
+
+                                    <!-- Game Progress & Financial Summary -->
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal">
+
+                                        <LinearLayout
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:orientation="vertical"
+                                            android:layout_marginEnd="8dp">
+
+                                            <TextView
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="Current Round"
+                                                android:textColor="@color/text_secondary"
+                                                android:textSize="11sp" />
+
+                                            <TextView
+                                                android:id="@+id/text_current_round_info"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="Round 2"
+                                                android:textColor="#2196F3"
+                                                android:textSize="14sp"
+                                                android:textStyle="bold"
+                                                android:layout_marginTop="2dp" />
+
+                                        </LinearLayout>
+
+                                        <LinearLayout
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:orientation="vertical">
+
+                                            <TextView
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="Total GST Collected"
+                                                android:textColor="@color/text_secondary"
+                                                android:textSize="11sp" />
+
+                                            <TextView
+                                                android:id="@+id/text_total_gst_info"
+                                                android:layout_width="wrap_content"
+                                                android:layout_height="wrap_content"
+                                                android:text="₹6,861"
+                                                android:textColor="#F44336"
+                                                android:textSize="14sp"
+                                                android:textStyle="bold"
+                                                android:layout_marginTop="2dp" />
+
+                                        </LinearLayout>
+
+                                    </LinearLayout>
+
+                                </LinearLayout>
+
+                            </androidx.cardview.widget.CardView>
+
+                        </LinearLayout>
+
+                        <!-- Collapse/Expand Icon -->
+                        <ImageView
+                            android:id="@+id/standings_collapse_icon"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_expand_less"
+                            android:tint="@color/text_secondary" />
 
                     </LinearLayout>
 
+                    <!-- Collapsible Standings Content -->
                     <LinearLayout
-                        android:layout_width="0dp"
+                        android:id="@+id/standings_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="horizontal"
-                        android:gravity="center"
-                        android:background="#E91E63"
-                        android:padding="8dp"
-                        android:layout_marginHorizontal="4dp">
+                        android:orientation="vertical"
+                        android:visibility="visible">
 
-                        <TextView
-                            android:layout_width="wrap_content"
+                        <!-- Standings table container (no horizontal scroll needed) -->
+                        <LinearLayout
+                            android:id="@+id/standings_table_container"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="📊"
-                            android:textSize="16sp"
-                            android:layout_marginEnd="4dp" />
+                            android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/text_gst_info"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="27% GST"
-                            android:textColor="@android:color/white"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
+                            <!-- Standings table will be dynamically generated here -->
+
+                        </LinearLayout>
 
                     </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="horizontal"
-                        android:gravity="center"
-                        android:background="#F44336"
-                        android:padding="8dp"
-                        android:layout_marginStart="4dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="🎯"
-                            android:textSize="16sp"
-                            android:layout_marginEnd="4dp" />
-
-                        <TextView
-                            android:id="@+id/text_current_round"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="R1 Round"
-                            android:textColor="@android:color/white"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
-
-                    </LinearLayout>
-
-                </LinearLayout>
-
-                <!-- Standings table container (no horizontal scroll needed) -->
-                <LinearLayout
-                    android:id="@+id/standings_table_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <!-- Standings table will be dynamically generated here -->
-
-                </LinearLayout>
 
                 </LinearLayout>
 
             </androidx.cardview.widget.CardView>
-
 
             <!-- Admin Mode Indicator -->
             <androidx.cardview.widget.CardView
@@ -286,31 +528,254 @@
                     android:gravity="center_vertical"
                     android:padding="16dp">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_shield"
-                    android:tint="#4CAF50"
-                    android:layout_marginEnd="8dp" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_shield"
+                        android:tint="#4CAF50"
+                        android:layout_marginEnd="8dp" />
 
-                <TextView
-                    android:id="@+id/text_admin_mode"
-                    android:layout_width="0dp"
+                    <TextView
+                        android:id="@+id/text_admin_mode"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Admin Mode"
+                        android:textColor="#4CAF50"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/btn_close"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_close"
+                        android:tint="#FF5722"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="4dp" />
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- Example Score Chart (Always Visible) -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/card_background">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Admin Mode"
-                    android:textColor="#4CAF50"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                <ImageView
-                    android:id="@+id/btn_close"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_close"
-                    android:tint="#FF5722"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:padding="4dp" />
+                    <!-- Bar Chart Container -->
+                    <LinearLayout
+                        android:id="@+id/chart_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="120dp"
+                        android:orientation="horizontal"
+                        android:gravity="bottom"
+                        android:padding="8dp"
+                        android:layout_marginBottom="8dp">
+
+                        <!-- Dynamic chart bars will be added here -->
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+
+            <!-- Settlement Rules Content (Always Visible) -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/card_background">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="💡 How Settlement Works:"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- Winners Rule -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="• "
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Winners (Green): Receive money but pay 55% GST on winnings"
+                            android:textColor="#4CAF50"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- Losers Rule -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="• "
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Losers (Red): Pay money, no GST required"
+                            android:textColor="#F44336"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- Formula -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="• "
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Formula: (Total All Scores - Your Score × 4) × ₹99"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- GST Rule -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="• "
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="GST: Only winners pay 55% GST on positive amounts"
+                            android:textColor="#FF9800"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- Net Amount -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="• "
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Net Amount: Gross Amount - GST (for winners) or just Gross Amount (for losers)"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                    <!-- Example -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="#E3F2FD"
+                        android:padding="12dp"
+                        android:layout_marginTop="8dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="💡 Example:"
+                            android:textColor="#1976D2"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="If you score 25 points in a 4-player game with ₹99/point:"
+                            android:textColor="#1976D2"
+                            android:textSize="13sp"
+                            android:layout_marginBottom="4dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Your settlement = (Total of all 4 scores - 25 × 4) × ₹99"
+                            android:textColor="#1976D2"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
 
                 </LinearLayout>
 
@@ -319,5 +784,17 @@
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
+
+    <!-- Floating Add Player Button -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_add_player"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:src="@drawable/ic_add_person"
+        android:contentDescription="Add Player"
+        app:backgroundTint="#2196F3"
+        app:tint="@android:color/white" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

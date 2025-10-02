@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@color/card_background_elevated"
+    android:padding="16dp"
+    android:layout_marginTop="8dp"
+    android:gravity="center_vertical">
+
+    <!-- GST Icon -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📊"
+        android:textSize="20sp"
+        android:layout_marginEnd="12dp" />
+
+    <!-- GST Label -->
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Total GST Collected:"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <!-- GST Amount -->
+    <TextView
+        android:id="@+id/text_total_gst"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="₹6860"
+        android:textColor="#FF9800"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:background="#FF37474F"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp" />
+
+</LinearLayout>

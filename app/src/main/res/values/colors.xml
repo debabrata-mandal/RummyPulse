@@ -37,6 +37,10 @@
     <color name="loss_red">#FFF44336</color>
     <color name="neutral_gray">#FF9E9E9E</color>
     
+    <!-- Amount Background Colors -->
+    <color name="positive_background">#FF1B5E20</color>
+    <color name="negative_background">#FF5D4037</color>
+    
     <!-- Ranking Colors -->
     <color name="success_green">#FF4CAF50</color>
     <color name="warning_orange">#FFFF9800</color>

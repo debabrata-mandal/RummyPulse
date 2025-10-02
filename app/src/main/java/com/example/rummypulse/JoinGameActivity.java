@@ -84,6 +84,9 @@ public class JoinGameActivity extends AppCompatActivity {
             // TODO: Show dialog to add new player
             ModernToast.info(this, "Add player feature coming soon!");
         });
+        
+        // Setup collapsible sections
+        setupCollapsibleSections();
     }
 
     private void observeViewModel() {
@@ -144,15 +147,18 @@ public class JoinGameActivity extends AppCompatActivity {
         // Update header with game ID
         binding.textGameIdHeader.setText(gameId);
 
-        // Update game info bar
-        binding.textPointValueInfo.setText("₹" + String.format("%.0f", gameData.getPointValue()) + " /point");
-        binding.textGstInfo.setText(String.format("%.0f", gameData.getGstPercent()) + "% GST");
+        // Update game info in both sections
+        updatePlayersInfo(gameData);
+        updateStandingsInfo(gameData);
 
         // Generate player cards
         generatePlayerCards(gameData);
 
         // Generate standings table
         generateStandingsTable(gameData);
+        
+        // Update score chart
+        updateScoreChart(gameData);
 
         // Update current round
         updateCurrentRound(gameData);
@@ -239,6 +245,7 @@ public class JoinGameActivity extends AppCompatActivity {
                         updateStandings(gameData);
                         updateCurrentRound(gameData);
                         updateRoundValidation(gameData);
+                        updateScoreChart(gameData);
                     }
                 });
             }
@@ -447,7 +454,9 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void updateCurrentRound(com.example.rummypulse.data.GameData gameData) {
         int currentRound = calculateCurrentRound(gameData);
-        binding.textCurrentRound.setText("Round#" + currentRound + " Round");
+        // Update current round in both info cards
+        updatePlayersInfo(gameData);
+        updateStandingsInfo(gameData);
         
         // Update all player cards' round badges
         for (int i = 0; i < binding.playersContainer.getChildCount(); i++) {
@@ -489,19 +498,13 @@ public class JoinGameActivity extends AppCompatActivity {
         // Clear existing standings
         binding.standingsTableContainer.removeAllViews();
 
-        // Add header
-        View headerView = LayoutInflater.from(this).inflate(R.layout.item_standings_header, binding.standingsTableContainer, false);
-        binding.standingsTableContainer.addView(headerView);
-
-        // Calculate standings
+        // Calculate standings (no header needed)
         updateStandings(gameData);
     }
 
     private void updateStandings(com.example.rummypulse.data.GameData gameData) {
-        // Clear existing standings rows (keep header)
-        if (binding.standingsTableContainer.getChildCount() > 1) {
-            binding.standingsTableContainer.removeViews(1, binding.standingsTableContainer.getChildCount() - 1);
-        }
+        // Clear existing standings rows
+        binding.standingsTableContainer.removeAllViews();
 
         // First pass: collect all scores
         java.util.List<PlayerStanding> standings = new java.util.ArrayList<>();
@@ -563,7 +566,7 @@ public class JoinGameActivity extends AppCompatActivity {
         // Add standings rows
         for (int i = 0; i < standings.size(); i++) {
             PlayerStanding standing = standings.get(i);
-            View standingsRowView = LayoutInflater.from(this).inflate(R.layout.item_standings_row, binding.standingsTableContainer, false);
+            View standingsRowView = LayoutInflater.from(this).inflate(R.layout.item_standings_card, binding.standingsTableContainer, false);
             
             // Set rank
             TextView rankText = standingsRowView.findViewById(R.id.text_rank);
@@ -595,12 +598,214 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView gstText = standingsRowView.findViewById(R.id.text_gst);
             gstText.setText("GST: ₹" + String.format("%.0f", standing.gstPaid));
 
-            // Set net amount with label
+            // Set net amount with label and conditional coloring
             TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
             netAmountText.setText("Net: ₹" + String.format("%.0f", standing.netAmount));
+            
+            // Color code based on positive/negative net amount
+            if (standing.netAmount > 0) {
+                // Positive net amount (winners) - green text and background
+                netAmountText.setTextColor(getResources().getColor(android.R.color.white, getTheme()));
+                netAmountText.setBackgroundColor(getResources().getColor(R.color.positive_background, getTheme()));
+            } else {
+                // Negative net amount (losers) - red text and background
+                netAmountText.setTextColor(getResources().getColor(android.R.color.white, getTheme()));
+                netAmountText.setBackgroundColor(getResources().getColor(R.color.negative_background, getTheme()));
+            }
 
             binding.standingsTableContainer.addView(standingsRowView);
         }
+    }
+
+    private void updatePlayersInfo(com.example.rummypulse.data.GameData gameData) {
+        // Update Players & Scores information card
+        binding.textPlayersPointValue.setText("₹" + String.format("%.2f", gameData.getPointValue()) + " per point");
+        binding.textPlayersGstRate.setText(String.format("%.0f", gameData.getGstPercent()) + "% GST");
+        
+        int currentRound = calculateCurrentRound(gameData);
+        binding.textPlayersCurrentRound.setText("Round " + currentRound);
+        
+        int numberOfPlayers = gameData.getPlayers().size();
+        binding.textNumberOfPlayers.setText(numberOfPlayers + " Players");
+    }
+
+    private void setupCollapsibleSections() {
+        // Setup Players section collapsible
+        binding.playersHeader.setOnClickListener(v -> {
+            toggleSection(binding.playersContent, binding.playersCollapseIcon);
+        });
+        
+        // Setup Standings section collapsible
+        binding.standingsHeader.setOnClickListener(v -> {
+            toggleSection(binding.standingsContent, binding.standingsCollapseIcon);
+        });
+    }
+    
+    private void toggleSection(View contentView, ImageView arrowIcon) {
+        if (contentView.getVisibility() == View.VISIBLE) {
+            // Collapse
+            contentView.setVisibility(View.GONE);
+            arrowIcon.setImageResource(R.drawable.ic_expand_more);
+        } else {
+            // Expand
+            contentView.setVisibility(View.VISIBLE);
+            arrowIcon.setImageResource(R.drawable.ic_expand_less);
+        }
+    }
+
+    private void updateScoreChart(com.example.rummypulse.data.GameData gameData) {
+        // Get the chart container
+        android.widget.LinearLayout chartContainer = binding.chartContainer;
+
+        // Clear existing bars
+        chartContainer.removeAllViews();
+
+        // Get all players and their total scores
+        java.util.List<PlayerStanding> standings = new java.util.ArrayList<>();
+
+        for (int i = 0; i < gameData.getPlayers().size(); i++) {
+            com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
+            int totalScore = 0;
+
+            // Calculate total score from input fields
+            for (int round = 1; round <= 10; round++) {
+                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
+                if (scoreInput != null && !scoreInput.getText().toString().trim().isEmpty()) {
+                    try {
+                        int score = Integer.parseInt(scoreInput.getText().toString().trim());
+                        if (score != -1) { // Don't count -1 values
+                            totalScore += score;
+                        }
+                    } catch (NumberFormatException e) {
+                        // Skip invalid scores
+                    }
+                }
+            }
+
+            PlayerStanding standing = new PlayerStanding();
+            standing.player = player;
+            standing.totalScore = totalScore;
+            standings.add(standing);
+        }
+
+        // Sort by score (ascending - lower scores are better/winners)
+        standings.sort((a, b) -> Integer.compare(a.totalScore, b.totalScore));
+
+        // Find max score for scaling
+        int maxScore = standings.isEmpty() ? 100 : Math.max(standings.get(standings.size() - 1).totalScore, 100);
+        if (maxScore == 0) maxScore = 100; // Avoid division by zero
+
+        // Create bars for each player
+        for (PlayerStanding standing : standings) {
+            // Create bar container
+            android.widget.LinearLayout barContainer = new android.widget.LinearLayout(this);
+            android.widget.LinearLayout.LayoutParams containerParams = new android.widget.LinearLayout.LayoutParams(
+                0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+            containerParams.setMargins(dpToPx(4), 0, dpToPx(4), 0);
+            barContainer.setLayoutParams(containerParams);
+            barContainer.setOrientation(android.widget.LinearLayout.VERTICAL);
+            barContainer.setGravity(android.view.Gravity.CENTER);
+
+            // Create the bar
+            android.view.View bar = new android.view.View(this);
+            int barHeight = Math.max(dpToPx(25), (int) (standing.totalScore * dpToPx(75) / (double) maxScore));
+            android.widget.LinearLayout.LayoutParams barParams = new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, barHeight);
+            barParams.setMargins(0, 0, 0, dpToPx(4));
+            bar.setLayoutParams(barParams);
+
+            // Set bar color based on ranking (winners = green, losers = red/yellow)
+            int rank = standings.indexOf(standing);
+            if (rank < standings.size() / 2) {
+                // Winners (lower scores) - green
+                bar.setBackgroundColor(0xFF4CAF50);
+            } else if (rank == standings.size() - 1) {
+                // Highest score - red
+                bar.setBackgroundColor(0xFFF44336);
+            } else {
+                // Middle scores - yellow
+                bar.setBackgroundColor(0xFFFFEB3B);
+            }
+
+            // Create player name label
+            android.widget.TextView nameLabel = new android.widget.TextView(this);
+            nameLabel.setText(standing.player.getName());
+            nameLabel.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
+            nameLabel.setTextSize(12);
+            nameLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+            nameLabel.setGravity(android.view.Gravity.CENTER);
+
+            // Add views to container
+            barContainer.addView(bar);
+            barContainer.addView(nameLabel);
+
+            // Add container to chart
+            chartContainer.addView(barContainer);
+        }
+    }
+
+    // Helper method to convert dp to pixels
+    private int dpToPx(int dp) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
+    }
+
+    private double calculateTotalGST(com.example.rummypulse.data.GameData gameData) {
+        double totalGST = 0.0;
+        
+        // Calculate total GST from all players' standings
+        java.util.List<PlayerStanding> standings = new java.util.ArrayList<>();
+        
+        for (int i = 0; i < gameData.getPlayers().size(); i++) {
+            com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
+            int totalScore = 0;
+            
+            // Calculate total score from input fields
+            for (int round = 1; round <= 10; round++) {
+                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
+                if (scoreInput != null && !scoreInput.getText().toString().trim().isEmpty()) {
+                    try {
+                        totalScore += Integer.parseInt(scoreInput.getText().toString().trim());
+                    } catch (NumberFormatException e) {
+                        // Skip invalid scores
+                    }
+                }
+            }
+            
+            PlayerStanding standing = new PlayerStanding();
+            standing.player = player;
+            standing.totalScore = totalScore;
+            standings.add(standing);
+        }
+        
+        // Calculate gross amounts and GST
+        int totalAllScores = standings.stream().mapToInt(s -> s.totalScore).sum();
+        
+        for (PlayerStanding standing : standings) {
+            standing.grossAmount = (totalAllScores - standing.totalScore * gameData.getPlayers().size()) * gameData.getPointValue();
+            
+            if (standing.grossAmount > 0) {
+                standing.gstPaid = standing.grossAmount * (gameData.getGstPercent() / 100.0);
+                totalGST += standing.gstPaid;
+            } else {
+                standing.gstPaid = 0;
+            }
+        }
+        
+        return totalGST;
+    }
+
+    private void updateStandingsInfo(com.example.rummypulse.data.GameData gameData) {
+        // Update Standings information card
+        binding.textPointValueInfo.setText("₹" + String.format("%.2f", gameData.getPointValue()) + " per point");
+        binding.textGstRateInfo.setText(String.format("%.0f", gameData.getGstPercent()) + "% GST");
+        
+        int currentRound = calculateCurrentRound(gameData);
+        binding.textCurrentRoundInfo.setText("Round " + currentRound);
+        
+        // Calculate total GST collected
+        double totalGST = calculateTotalGST(gameData);
+        binding.textTotalGstInfo.setText("₹" + String.format("%.0f", totalGST));
     }
 
     // Helper class for standings
