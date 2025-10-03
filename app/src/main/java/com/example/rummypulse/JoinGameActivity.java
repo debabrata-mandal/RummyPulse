@@ -958,7 +958,7 @@ public class JoinGameActivity extends AppCompatActivity {
             }
 
             // Populate round scores
-            populateRoundScores(standingsRowView, standing.player);
+            populateRoundScores(standingsRowView, standing.player, gameData);
 
             binding.standingsTableContainer.addView(standingsRowView);
         }
@@ -985,16 +985,22 @@ public class JoinGameActivity extends AppCompatActivity {
     /**
      * Populate the 10 round score boxes for a player
      */
-    private void populateRoundScores(View standingsRowView, com.example.rummypulse.data.Player player) {
+    private void populateRoundScores(View standingsRowView, com.example.rummypulse.data.Player player, com.example.rummypulse.data.GameData gameData) {
         // Array of round score TextViews
         int[] roundScoreIds = {
             R.id.round_1_score, R.id.round_2_score, R.id.round_3_score, R.id.round_4_score, R.id.round_5_score,
             R.id.round_6_score, R.id.round_7_score, R.id.round_8_score, R.id.round_9_score, R.id.round_10_score
         };
 
+        // Get current round for blinking animation
+        int currentRound = calculateCurrentRound(gameData);
+
         for (int round = 0; round < 10; round++) {
             TextView roundScoreText = standingsRowView.findViewById(roundScoreIds[round]);
             if (roundScoreText != null) {
+                // Clear any existing animation first
+                roundScoreText.clearAnimation();
+                
                 Integer score = null;
                 if (player.getScores() != null && round < player.getScores().size()) {
                     score = player.getScores().get(round);
@@ -1038,6 +1044,12 @@ public class JoinGameActivity extends AppCompatActivity {
                     roundScoreText.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
                     roundScoreText.setTypeface(null, android.graphics.Typeface.NORMAL);
                     roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() & ~android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
+                    
+                    // Add blinking animation to current round square (only if it's empty)
+                    if ((round + 1) == currentRound) {
+                        android.view.animation.Animation blinkAnimation = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.blink_animation);
+                        roundScoreText.startAnimation(blinkAnimation);
+                    }
                 }
             }
         }
