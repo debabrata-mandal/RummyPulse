@@ -1038,17 +1038,45 @@ public class JoinGameActivity extends AppCompatActivity {
                         roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() | android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
                     }
                 } else {
-                    // No score yet (null or -1) - show dash
-                    roundScoreText.setText("-");
-                    roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box, getTheme()));
-                    roundScoreText.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
-                    roundScoreText.setTypeface(null, android.graphics.Typeface.NORMAL);
-                    roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() & ~android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
-                    
-                    // Add blinking animation to current round square (only if it's empty)
+                    // No score yet (null or -1) - show dash or random number for current round
                     if ((round + 1) == currentRound) {
+                        // Current round - show random number with blinking animation that changes numbers
+                        roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box, getTheme()));
+                        roundScoreText.setTextColor(getResources().getColor(R.color.warning_orange, getTheme())); // Orange color for visibility
+                        roundScoreText.setTypeface(android.graphics.Typeface.DEFAULT_BOLD, android.graphics.Typeface.BOLD);
+                        roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() | android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
+                        
+                        // Start with initial random number
+                        int initialNumber = (int) (Math.random() * 101); // 0-100
+                        roundScoreText.setText(String.valueOf(initialNumber));
+                        
+                        // Start blinking animation
                         android.view.animation.Animation blinkAnimation = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.blink_animation);
                         roundScoreText.startAnimation(blinkAnimation);
+                        
+                        // Use Handler to change numbers every 400ms (half of blink cycle)
+                        android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+                        Runnable numberChanger = new Runnable() {
+                            @Override
+                            public void run() {
+                                // Only change if this TextView still has the animation running
+                                if (roundScoreText.getAnimation() != null) {
+                                    int newRandomNumber = (int) (Math.random() * 101);
+                                    roundScoreText.setText(String.valueOf(newRandomNumber));
+                                    // Schedule next change
+                                    handler.postDelayed(this, 400); // Change every 400ms
+                                }
+                            }
+                        };
+                        // Start the number changing after initial delay
+                        handler.postDelayed(numberChanger, 400);
+                    } else {
+                        // Future rounds - show dash
+                        roundScoreText.setText("-");
+                        roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box, getTheme()));
+                        roundScoreText.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
+                        roundScoreText.setTypeface(null, android.graphics.Typeface.NORMAL);
+                        roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() & ~android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
                     }
                 }
             }
