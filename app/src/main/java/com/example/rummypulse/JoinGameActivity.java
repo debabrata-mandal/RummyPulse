@@ -686,19 +686,20 @@ public class JoinGameActivity extends AppCompatActivity {
                     // Currently revealed, mask it
                     gamePinText.setText(maskedPin);
                     gamePinText.setTag(false);
-                    ModernToast.info(this, "🔒 PIN masked for security");
+                    // No toast needed - user can see the PIN is now masked
                 } else {
                     // Currently masked, reveal it
                     gamePinText.setText(currentGamePin);
                     gamePinText.setTag(true);
-                    ModernToast.success(this, "👁️ PIN revealed: " + currentGamePin);
+                    // No toast needed - user can see the PIN is now revealed
                     
                     // Auto-mask after 3 seconds for security
                     gamePinText.postDelayed(() -> {
                         if (gamePinText.getTag() != null && (Boolean) gamePinText.getTag()) {
                             gamePinText.setText(maskedPin);
                             gamePinText.setTag(false);
-                            ModernToast.info(this, "🔒 PIN auto-masked for security");
+                            // Optional: subtle indication that PIN was auto-masked
+                            ModernToast.info(this, "🔒 PIN auto-masked");
                         }
                     }, 3000);
                 }
@@ -719,14 +720,61 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     private void toggleSection(View contentView, ImageView arrowIcon) {
-        if (contentView.getVisibility() == View.VISIBLE) {
-            // Collapse
-            contentView.setVisibility(View.GONE);
-            arrowIcon.setImageResource(R.drawable.ic_expand_more);
+        if (contentView.getId() == R.id.players_content) {
+            // For players section, only toggle the players_container (not the info card)
+            View playersContainer = findViewById(R.id.players_container);
+            if (playersContainer != null) {
+                if (playersContainer.getVisibility() == View.VISIBLE) {
+                    // Collapse - hide only the player cards
+                    playersContainer.setVisibility(View.GONE);
+                    arrowIcon.setImageResource(R.drawable.ic_expand_more);
+                } else {
+                    // Expand - show the player cards
+                    playersContainer.setVisibility(View.VISIBLE);
+                    arrowIcon.setImageResource(R.drawable.ic_expand_less);
+                }
+            }
+        } else if (contentView.getId() == R.id.standings_content) {
+            // For standings section, toggle both the standings table and the chart
+            View standingsTableContainer = findViewById(R.id.standings_table_container);
+            View chartContainer = findViewById(R.id.chart_container);
+            
+            if (standingsTableContainer != null) {
+                if (standingsTableContainer.getVisibility() == View.VISIBLE) {
+                    // Collapse - hide the standings table and chart
+                    standingsTableContainer.setVisibility(View.GONE);
+                    // Also hide the chart section (find its parent LinearLayout)
+                    if (chartContainer != null && chartContainer.getParent() != null) {
+                        View chartSection = (View) chartContainer.getParent().getParent(); // FrameLayout -> LinearLayout
+                        if (chartSection != null) {
+                            chartSection.setVisibility(View.GONE);
+                        }
+                    }
+                    arrowIcon.setImageResource(R.drawable.ic_expand_more);
+                } else {
+                    // Expand - show the standings table and chart
+                    standingsTableContainer.setVisibility(View.VISIBLE);
+                    // Also show the chart section
+                    if (chartContainer != null && chartContainer.getParent() != null) {
+                        View chartSection = (View) chartContainer.getParent().getParent(); // FrameLayout -> LinearLayout
+                        if (chartSection != null) {
+                            chartSection.setVisibility(View.VISIBLE);
+                        }
+                    }
+                    arrowIcon.setImageResource(R.drawable.ic_expand_less);
+                }
+            }
         } else {
-            // Expand
-            contentView.setVisibility(View.VISIBLE);
-            arrowIcon.setImageResource(R.drawable.ic_expand_less);
+            // Default behavior for other sections
+            if (contentView.getVisibility() == View.VISIBLE) {
+                // Collapse
+                contentView.setVisibility(View.GONE);
+                arrowIcon.setImageResource(R.drawable.ic_expand_more);
+            } else {
+                // Expand
+                contentView.setVisibility(View.VISIBLE);
+                arrowIcon.setImageResource(R.drawable.ic_expand_less);
+            }
         }
     }
 

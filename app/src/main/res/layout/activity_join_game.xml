@@ -534,6 +534,45 @@
 
                         </LinearLayout>
 
+                        <!-- Score Chart Section -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="16dp">
+
+                            <!-- Bar Chart Container with Grid -->
+                            <FrameLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="140dp"
+                                android:layout_marginBottom="8dp">
+
+                                <!-- Grid Lines Background -->
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/chart_grid_background" />
+
+                                <!-- Chart Bars Container -->
+                                <LinearLayout
+                                    android:id="@+id/chart_container"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:orientation="horizontal"
+                                    android:gravity="bottom"
+                                    android:paddingLeft="8dp"
+                                    android:paddingRight="8dp"
+                                    android:paddingTop="8dp"
+                                    android:paddingBottom="8dp">
+
+                                    <!-- Dynamic chart bars will be added here -->
+
+                                </LinearLayout>
+
+                            </FrameLayout>
+
+                        </LinearLayout>
+
                     </LinearLayout>
 
                 </LinearLayout>
@@ -583,56 +622,6 @@
                         android:tint="#FF5722"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:padding="4dp" />
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
-            <!-- Example Score Chart (Always Visible) -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="@color/card_background">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <!-- Bar Chart Container with Grid -->
-                    <FrameLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="140dp"
-                        android:layout_marginBottom="8dp">
-
-                        <!-- Grid Lines Background -->
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:background="@drawable/chart_grid_background" />
-
-                        <!-- Chart Bars Container -->
-                        <LinearLayout
-                            android:id="@+id/chart_container"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:orientation="horizontal"
-                            android:gravity="bottom"
-                            android:paddingLeft="8dp"
-                            android:paddingRight="8dp"
-                            android:paddingTop="8dp"
-                            android:paddingBottom="8dp">
-
-                            <!-- Dynamic chart bars will be added here -->
-
-                        </LinearLayout>
-
-                    </FrameLayout>
 
                 </LinearLayout>
 
