@@ -25,6 +25,7 @@ public class JoinGameViewModel extends AndroidViewModel {
     private MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private MutableLiveData<String> successMessage = new MutableLiveData<>();
     private MutableLiveData<Boolean> editAccessGranted = new MutableLiveData<>();
+    private MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
 
     public JoinGameViewModel(@NonNull Application application) {
         super(application);
@@ -47,6 +48,10 @@ public class JoinGameViewModel extends AndroidViewModel {
         return editAccessGranted;
     }
 
+    public LiveData<Boolean> getIsLoading() {
+        return isLoading;
+    }
+
     public void joinGame(String gameId, boolean requestEditAccess) {
         if (TextUtils.isEmpty(gameId)) {
             errorMessage.setValue("Please enter a Game ID");
@@ -58,26 +63,36 @@ public class JoinGameViewModel extends AndroidViewModel {
             return;
         }
 
-        // First, check if the game exists in the games collection
-        db.collection("games").document(gameId)
-            .get()
-            .addOnSuccessListener(documentSnapshot -> {
-                if (documentSnapshot.exists()) {
-                    // Game exists, now fetch the game data
-                    fetchGameData(gameId, requestEditAccess);
-                } else {
-                    errorMessage.setValue("Game not found. Please check the Game ID.");
-                }
-            })
-            .addOnFailureListener(e -> {
-                errorMessage.setValue("Failed to connect to server. Please try again.");
-            });
+        // Start loading
+        System.out.println("Starting loading for game: " + gameId);
+        isLoading.setValue(true);
+
+        // Add a small delay to make spinner visible for testing
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            // First, check if the game exists in the games collection
+            db.collection("games").document(gameId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        // Game exists, now fetch the game data
+                        fetchGameData(gameId, requestEditAccess);
+                    } else {
+                        isLoading.setValue(false);
+                        errorMessage.setValue("Game not found. Please check the Game ID.");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    isLoading.setValue(false);
+                    errorMessage.setValue("Failed to connect to server. Please try again.");
+                });
+        }, 500); // 500ms delay to make spinner visible
     }
 
     private void fetchGameData(String gameId, boolean requestEditAccess) {
         db.collection("gameData").document(gameId)
             .get()
             .addOnSuccessListener(documentSnapshot -> {
+                isLoading.setValue(false); // Stop loading
                 if (documentSnapshot.exists()) {
                     try {
                         GameDataWrapper wrapper = documentSnapshot.toObject(GameDataWrapper.class);
@@ -101,6 +116,7 @@ public class JoinGameViewModel extends AndroidViewModel {
                 }
             })
             .addOnFailureListener(e -> {
+                isLoading.setValue(false); // Stop loading
                 errorMessage.setValue("Failed to load game data. Please try again.");
             });
     }

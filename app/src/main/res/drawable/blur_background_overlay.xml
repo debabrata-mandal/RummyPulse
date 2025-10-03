@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Base blur effect using multiple gradient layers -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#40FFFFFF"
+                android:centerColor="#20FFFFFF"
+                android:endColor="#40FFFFFF"
+                android:angle="45" />
+        </shape>
+    </item>
+    
+    <!-- Additional blur layer -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#30000000"
+                android:centerColor="#50000000"
+                android:endColor="#30000000"
+                android:angle="135" />
+        </shape>
+    </item>
+    
+    <!-- Frosted glass effect -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="#15FFFFFF"
+                android:endColor="#25FFFFFF"
+                android:angle="90" />
+        </shape>
+    </item>
+    
+</layer-list>

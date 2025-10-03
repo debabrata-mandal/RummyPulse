@@ -114,6 +114,25 @@ public class JoinGameActivity extends AppCompatActivity {
                 ModernToast.success(this, "✅ Edit access granted!");
             }
         });
+
+        // Observe loading state
+        viewModel.getIsLoading().observe(this, isLoading -> {
+            if (isLoading != null) {
+                System.out.println("Loading state changed: " + isLoading);
+                if (isLoading) {
+                    System.out.println("Showing loading spinner with blur");
+                    binding.loadingOverlay.setVisibility(View.VISIBLE);
+                    binding.loadingOverlay.bringToFront(); // Ensure it's on top
+                    // Apply blur effect to the main content
+                    applyBlurEffect(true);
+                } else {
+                    System.out.println("Hiding loading spinner");
+                    binding.loadingOverlay.setVisibility(View.GONE);
+                    // Remove blur effect
+                    applyBlurEffect(false);
+                }
+            }
+        });
     }
 
     private void joinGame(String gameId) {
@@ -171,6 +190,9 @@ public class JoinGameActivity extends AppCompatActivity {
 
         // Hide admin mode initially
         binding.textAdminMode.setVisibility(View.GONE);
+        
+        // Update settlement explanation with dynamic values
+        updateSettlementExplanation(gameData);
     }
 
     private void generatePlayerCards(com.example.rummypulse.data.GameData gameData) {
@@ -823,6 +845,127 @@ public class JoinGameActivity extends AppCompatActivity {
         // Calculate total GST collected
         double totalGST = calculateTotalGST(gameData);
         binding.textTotalGstInfo.setText("₹" + String.format("%.0f", totalGST));
+    }
+
+    private void updateSettlementExplanation(com.example.rummypulse.data.GameData gameData) {
+        try {
+            double pointValue = gameData.getPointValue();
+            double gstPercent = gameData.getGstPercent();
+            int playerCount = gameData.getPlayers() != null ? gameData.getPlayers().size() : 4;
+            
+            // Format values - preserve fractional parts for point value
+            String pointValueText = "₹" + formatPointValue(pointValue);
+            
+            String gstPercentText = String.format("%.0f", gstPercent) + "%";
+            
+            // Update Winners Rule
+            TextView winnersRule = findViewById(R.id.text_settlement_winners_rule);
+            if (winnersRule != null) {
+                winnersRule.setText("Winners (Green): Receive money but pay " + gstPercentText + " GST on winnings");
+            }
+            
+            // Update Formula
+            TextView formulaText = findViewById(R.id.text_settlement_formula);
+            if (formulaText != null) {
+                formulaText.setText("Formula: (Total All Scores - Your Score × " + playerCount + ") × " + pointValueText);
+            }
+            
+            // Update GST Rule
+            TextView gstRule = findViewById(R.id.text_settlement_gst_rule);
+            if (gstRule != null) {
+                gstRule.setText("GST: Only winners pay " + gstPercentText + " GST on positive amounts");
+            }
+            
+            // Update Example Description
+            TextView exampleDesc = findViewById(R.id.text_settlement_example_description);
+            if (exampleDesc != null) {
+                exampleDesc.setText("If you score 25 points in a " + playerCount + "-player game with " + pointValueText + "/point:");
+            }
+            
+            // Update Example Formula
+            TextView exampleFormula = findViewById(R.id.text_settlement_example_formula);
+            if (exampleFormula != null) {
+                exampleFormula.setText("Your settlement = (Total of all " + playerCount + " scores - 25 × " + playerCount + ") × " + pointValueText);
+            }
+            
+        } catch (Exception e) {
+            System.out.println("Error updating settlement explanation: " + e.getMessage());
+        }
+    }
+
+    private String formatPointValue(double value) {
+        // Remove unnecessary trailing zeros while preserving meaningful decimals
+        if (value == Math.floor(value)) {
+            // Whole number - show without decimals
+            return String.format("%.0f", value);
+        } else {
+            // Has decimals - format to remove trailing zeros
+            String formatted = String.format("%.2f", value);
+            // Remove trailing zeros after decimal point
+            formatted = formatted.replaceAll("0*$", "").replaceAll("\\.$", "");
+            return formatted;
+        }
+    }
+
+    private void applyBlurEffect(boolean apply) {
+        try {
+            if (apply) {
+                // Apply blur effect to the main content areas only
+                View[] viewsToBlur = {
+                    binding.playersSection,
+                    binding.standingsCard,
+                    findViewById(R.id.admin_mode_card)
+                };
+                
+                for (View view : viewsToBlur) {
+                    if (view != null) {
+                        view.animate()
+                            .alpha(0.6f)
+                            .scaleX(0.98f)
+                            .scaleY(0.98f)
+                            .setDuration(200)
+                            .start();
+                    }
+                }
+                
+                // Also blur the floating action button
+                binding.btnAddPlayer.animate()
+                    .alpha(0.5f)
+                    .scaleX(0.9f)
+                    .scaleY(0.9f)
+                    .setDuration(200)
+                    .start();
+                    
+            } else {
+                // Remove blur effect
+                View[] viewsToRestore = {
+                    binding.playersSection,
+                    binding.standingsCard,
+                    findViewById(R.id.admin_mode_card)
+                };
+                
+                for (View view : viewsToRestore) {
+                    if (view != null) {
+                        view.animate()
+                            .alpha(1.0f)
+                            .scaleX(1.0f)
+                            .scaleY(1.0f)
+                            .setDuration(200)
+                            .start();
+                    }
+                }
+                
+                // Restore floating action button
+                binding.btnAddPlayer.animate()
+                    .alpha(1.0f)
+                    .scaleX(1.0f)
+                    .scaleY(1.0f)
+                    .setDuration(200)
+                    .start();
+            }
+        } catch (Exception e) {
+            System.out.println("Error applying blur effect: " + e.getMessage());
+        }
     }
 
     // Helper class for standings

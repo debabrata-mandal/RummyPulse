@@ -650,6 +650,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:id="@+id/text_settlement_winners_rule"
                             android:text="Winners (Green): Receive money but pay 55% GST on winnings"
                             android:textColor="#4CAF50"
                             android:textSize="14sp"
@@ -700,6 +701,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:id="@+id/text_settlement_formula"
                             android:text="Formula: (Total All Scores - Your Score × 4) × ₹99"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
@@ -725,6 +727,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:id="@+id/text_settlement_gst_rule"
                             android:text="GST: Only winners pay 55% GST on positive amounts"
                             android:textColor="#FF9800"
                             android:textSize="14sp"
@@ -778,6 +781,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:id="@+id/text_settlement_example_description"
                             android:text="If you score 25 points in a 4-player game with ₹99/point:"
                             android:textColor="#1976D2"
                             android:textSize="13sp"
@@ -786,6 +790,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:id="@+id/text_settlement_example_formula"
                             android:text="Your settlement = (Total of all 4 scores - 25 × 4) × ₹99"
                             android:textColor="#1976D2"
                             android:textSize="13sp"
@@ -812,5 +817,52 @@
         android:contentDescription="Add Player"
         app:backgroundTint="#2196F3"
         app:tint="@android:color/white" />
+
+    <!-- Loading Spinner Overlay - Must be last to appear on top -->
+    <FrameLayout
+        android:id="@+id/loading_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CC000000"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        android:elevation="10dp">
+
+        <!-- Blur effect background -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/blur_background_overlay" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/dialog_background"
+            android:padding="32dp"
+            android:elevation="12dp">
+
+            <ProgressBar
+                android:id="@+id/progress_bar"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:indeterminateTint="@color/accent_blue"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:id="@+id/loading_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Loading game data..."
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+    </FrameLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
