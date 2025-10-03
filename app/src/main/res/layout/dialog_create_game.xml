@@ -152,17 +152,19 @@
             android:id="@+id/btn_cancel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Cancel"
-            android:textColor="@color/text_secondary"
-            android:background="?attr/selectableItemBackground"
+            android:text="CANCEL"
+            android:textColor="@color/text_primary"
+            android:backgroundTint="@color/card_background"
+            android:strokeColor="@color/text_secondary"
+            android:strokeWidth="2"
             android:layout_marginEnd="16dp"
-            style="@style/Widget.MaterialComponents.Button.TextButton" />
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
         <Button
             android:id="@+id/btn_create"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Create Game"
+            android:text="CREATE GAME"
             android:backgroundTint="@color/accent_blue"
             android:textColor="@android:color/white"
             style="@style/Widget.MaterialComponents.Button" />

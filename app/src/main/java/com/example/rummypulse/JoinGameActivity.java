@@ -124,6 +124,92 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.standingsCard.setVisibility(View.GONE);
         binding.btnAddPlayer.setVisibility(View.GONE); // Hide FAB in view mode
     }
+    
+    private void showLoadingState() {
+        // Show standings card with placeholder data
+        binding.standingsCard.setVisibility(View.VISIBLE);
+        
+        // Clear any existing standings
+        binding.standingsTableContainer.removeAllViews();
+        
+        // Create placeholder standings for 2 players with zero values
+        for (int i = 0; i < 2; i++) {
+            View standingsRowView = LayoutInflater.from(this).inflate(R.layout.item_standings_card, binding.standingsTableContainer, false);
+            
+            // Set rank
+            TextView rankText = standingsRowView.findViewById(R.id.text_rank);
+            rankText.setText(String.valueOf(i + 1));
+
+            // Set placeholder player name
+            TextView playerName = standingsRowView.findViewById(R.id.text_player_name);
+            playerName.setText("Player " + (i + 1));
+
+            // Hide player ID during loading
+            TextView playerId = standingsRowView.findViewById(R.id.text_player_id);
+            playerId.setVisibility(View.GONE);
+
+            // Set zero score
+            TextView scoreText = standingsRowView.findViewById(R.id.text_score);
+            scoreText.setText("Score: 0");
+
+            // Set zero gross amount
+            TextView grossAmountText = standingsRowView.findViewById(R.id.text_gross_amount);
+            grossAmountText.setText("₹0");
+
+            // Set zero GST
+            TextView gstText = standingsRowView.findViewById(R.id.text_gst);
+            gstText.setText("GST: ₹0");
+
+            // Set zero net amount
+            TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
+            netAmountText.setText("Net: ₹0");
+            netAmountText.setTextColor(getResources().getColor(android.R.color.white, getTheme()));
+            netAmountText.setBackgroundColor(getResources().getColor(R.color.text_secondary, getTheme()));
+
+            binding.standingsTableContainer.addView(standingsRowView);
+        }
+        
+        // Set placeholder game info
+        showLoadingGameInfo();
+    }
+    
+    private void showLoadingGameInfo() {
+        // Set placeholder values for game info in standings section
+        binding.textPointValueInfo.setText("₹0.00 per point");
+        binding.textGstRateInfo.setText("0% GST");
+        binding.textCurrentRoundInfo.setText("Round 1");
+        binding.textTotalGstInfo.setText("Total GST: ₹0");
+        
+        // Set placeholder game ID if not already set
+        if (currentGameId != null) {
+            binding.textGameIdHeader.setText(currentGameId);
+        } else {
+            binding.textGameIdHeader.setText("Loading...");
+        }
+    }
+    
+    private void showLoadingPlayerCards() {
+        // Clear existing player cards
+        binding.playersContainer.removeAllViews();
+        
+        // Create placeholder player cards with zero scores
+        for (int i = 0; i < 2; i++) {
+            View playerCardView = LayoutInflater.from(this).inflate(R.layout.item_player_card, binding.playersContainer, false);
+            
+            // Set placeholder player name
+            EditText playerNameText = playerCardView.findViewById(R.id.text_player_name);
+            playerNameText.setText("Player " + (i + 1));
+            playerNameText.setEnabled(false); // Disable during loading
+            
+            binding.playersContainer.addView(playerCardView);
+        }
+        
+        // Set placeholder values for players info
+        binding.textPlayersPointValue.setText("₹0.00 per point");
+        binding.textPlayersGstRate.setText("0% GST");
+        binding.textPlayersCurrentRound.setText("Round 1");
+        binding.textNumberOfPlayers.setText("2 Players");
+    }
 
     private void setupClickListeners() {
         binding.btnClose.setOnClickListener(v -> finish());
@@ -172,6 +258,9 @@ public class JoinGameActivity extends AppCompatActivity {
                 if (gameData != null) {
                     updatePlayersInfo(gameData);
                     generatePlayerCards(gameData);
+                } else {
+                    // Show loading state for player cards if data not yet available
+                    showLoadingPlayerCards();
                 }
                 // Hide the 3-dot menu when edit access is granted
                 invalidateOptionsMenu();
@@ -190,6 +279,9 @@ public class JoinGameActivity extends AppCompatActivity {
                     binding.loadingOverlay.bringToFront(); // Ensure it's on top
                     // Apply blur effect to the main content
                     applyBlurEffect(true);
+                    
+                    // Show loading placeholders only during actual loading
+                    showLoadingState();
                 } else {
                     System.out.println("Hiding loading spinner");
                     binding.loadingOverlay.setVisibility(View.GONE);
@@ -359,6 +451,8 @@ public class JoinGameActivity extends AppCompatActivity {
                     String newName = s.toString().trim();
                     if (!newName.isEmpty()) {
                         player.setName(newName);
+                        // Save the updated game data to Firebase (with debouncing)
+                        saveGameDataWithDebounce(gameData);
                         // Update standings table to reflect name change
                         generateStandingsTable(gameData);
                     }
@@ -425,6 +519,15 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Set up sequential round validation
                 setupSequentialRoundValidation(scoreInput, round, playerIndex, gameData);
 
+                // Add focus listener to clear -1 values when user clicks
+                scoreInput.setOnFocusChangeListener((v, hasFocus) -> {
+                    if (hasFocus) {
+                        String currentText = scoreInput.getText().toString().trim();
+                        if ("-1".equals(currentText)) {
+                            scoreInput.setText("");
+                        }
+                    }
+                });
 
                 // Add text change listener for color coding and standings update
                 final int finalPlayerIndex = playerIndex;
@@ -438,6 +541,26 @@ public class JoinGameActivity extends AppCompatActivity {
 
                     @Override
                     public void afterTextChanged(android.text.Editable s) {
+                        // Update the score in the player's data
+                        try {
+                            String text = s.toString().trim();
+                            int score = text.isEmpty() ? -1 : Integer.parseInt(text);
+                            
+                            // Update the player's score in the game data
+                            if (player.getScores() != null && finalRound < player.getScores().size()) {
+                                player.getScores().set(finalRound, score);
+                            }
+                            
+                            // Save the updated game data to Firebase (with debouncing)
+                            saveGameDataWithDebounce(gameData);
+                            
+                        } catch (NumberFormatException e) {
+                            // Invalid number, set to -1
+                            if (player.getScores() != null && finalRound < player.getScores().size()) {
+                                player.getScores().set(finalRound, -1);
+                            }
+                        }
+                        
                         updateScoreColor(scoreInput);
                         updateStandings(gameData);
                         updateCurrentRound(gameData);
@@ -666,29 +789,56 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private int calculateCurrentRound(com.example.rummypulse.data.GameData gameData) {
-        int maxRound = 1; // Start with round 1
-        
-        // Check all players' scores to find the highest round with valid scores
-        for (int playerIndex = 0; playerIndex < gameData.getPlayers().size(); playerIndex++) {
-            for (int round = 1; round <= 10; round++) {
-                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + round);
-                if (scoreInput != null) {
-                        try {
-                            String text = scoreInput.getText().toString();
-                            if (!text.isEmpty()) {
-                                int score = Integer.parseInt(text);
-                                if (score >= 0) { // Valid score (0 or positive)
-                                    maxRound = Math.max(maxRound, round);
-                                }
-                            }
-                        } catch (NumberFormatException e) {
-                            // Ignore invalid scores
-                        }
-                }
+        // Find the first round that is not completed by ALL players
+        for (int round = 1; round <= 10; round++) {
+            if (!isRoundComplete(round, gameData)) {
+                return round; // This is the current round - not all players have completed it
             }
         }
         
-        return maxRound;
+        // If all rounds 1-10 are complete, we're still on round 10 (game over)
+        return 10;
+    }
+    
+    private boolean isGameCompleted(com.example.rummypulse.data.GameData gameData) {
+        // Check if all players have completed round 10
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        
+        if (editAccess != null && editAccess) {
+            // Edit mode: check input fields for round 10
+            for (int playerIndex = 0; playerIndex < gameData.getPlayers().size(); playerIndex++) {
+                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r10");
+                if (scoreInput != null) {
+                    try {
+                        String text = scoreInput.getText().toString();
+                        if (text.isEmpty()) {
+                            return false; // Player hasn't completed round 10
+                        }
+                        int score = Integer.parseInt(text);
+                        if (score < 0) { // -1 means not played
+                            return false;
+                        }
+                    } catch (NumberFormatException e) {
+                        return false; // Invalid score means not completed
+                    }
+                } else {
+                    return false; // Input field not found
+                }
+            }
+            return true; // All players have completed round 10
+        } else {
+            // View mode: check game data for round 10 (index 9)
+            for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+                if (player.getScores() == null || player.getScores().size() < 10) {
+                    return false; // Player doesn't have 10 rounds
+                }
+                Integer round10Score = player.getScores().get(9); // Round 10 is index 9
+                if (round10Score == null || round10Score < 0) {
+                    return false; // Round 10 not completed
+                }
+            }
+            return true; // All players have completed round 10
+        }
     }
 
     private void generateStandingsTable(com.example.rummypulse.data.GameData gameData) {
@@ -710,22 +860,36 @@ public class JoinGameActivity extends AppCompatActivity {
         for (int i = 0; i < gameData.getPlayers().size(); i++) {
             com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
             
-            // Calculate total score from input fields
+            // Calculate total score from game data (works in both view and edit mode)
             int totalScore = 0;
-            for (int round = 1; round <= 10; round++) {
-                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
-                if (scoreInput != null) {
-                    try {
-                        String text = scoreInput.getText().toString();
-                        if (!text.isEmpty()) {
-                            int score = Integer.parseInt(text);
-                            if (score > 0) {
-                                totalScore += score;
+            
+            // First try to get scores from input fields (edit mode)
+            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+            if (editAccess != null && editAccess) {
+                // Edit mode: get scores from input fields
+                for (int round = 1; round <= 10; round++) {
+                    EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
+                    if (scoreInput != null) {
+                        try {
+                            String text = scoreInput.getText().toString();
+                            if (!text.isEmpty()) {
+                                int score = Integer.parseInt(text);
+                                if (score > 0) {
+                                    totalScore += score;
+                                }
                             }
+                        } catch (NumberFormatException e) {
+                            // Ignore invalid scores
                         }
-                        // Empty values are treated as 0, so no addition needed
-                    } catch (NumberFormatException e) {
-                        // Ignore invalid scores
+                    }
+                }
+            } else {
+                // View mode: get scores from game data
+                if (player.getScores() != null) {
+                    for (Integer score : player.getScores()) {
+                        if (score != null && score > 0) {
+                            totalScore += score;
+                        }
                     }
                 }
             }
@@ -820,7 +984,11 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.textPlayersGstRate.setText(String.format("%.0f", gameData.getGstPercent()) + "% GST");
         
         int currentRound = calculateCurrentRound(gameData);
-        binding.textPlayersCurrentRound.setText("Round " + currentRound);
+        if (currentRound == 10 && isGameCompleted(gameData)) {
+            binding.textPlayersCurrentRound.setText("Game Over");
+        } else {
+            binding.textPlayersCurrentRound.setText("Round " + currentRound);
+        }
         
         int numberOfPlayers = gameData.getPlayers().size();
         binding.textNumberOfPlayers.setText(numberOfPlayers + " Players");
@@ -957,17 +1125,30 @@ public class JoinGameActivity extends AppCompatActivity {
             com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
             int totalScore = 0;
 
-            // Calculate total score from input fields
-            for (int round = 1; round <= 10; round++) {
-                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
-                if (scoreInput != null && !scoreInput.getText().toString().trim().isEmpty()) {
-                    try {
-                        int score = Integer.parseInt(scoreInput.getText().toString().trim());
-                        if (score != -1) { // Don't count -1 values
+            // Calculate total score from game data (works in both view and edit mode)
+            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+            if (editAccess != null && editAccess) {
+                // Edit mode: get scores from input fields
+                for (int round = 1; round <= 10; round++) {
+                    EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
+                    if (scoreInput != null && !scoreInput.getText().toString().trim().isEmpty()) {
+                        try {
+                            int score = Integer.parseInt(scoreInput.getText().toString().trim());
+                            if (score != -1) { // Don't count -1 values
+                                totalScore += score;
+                            }
+                        } catch (NumberFormatException e) {
+                            // Skip invalid scores
+                        }
+                    }
+                }
+            } else {
+                // View mode: get scores from game data
+                if (player.getScores() != null) {
+                    for (Integer score : player.getScores()) {
+                        if (score != null && score > 0) {
                             totalScore += score;
                         }
-                    } catch (NumberFormatException e) {
-                        // Skip invalid scores
                     }
                 }
             }
@@ -978,11 +1159,13 @@ public class JoinGameActivity extends AppCompatActivity {
             standings.add(standing);
         }
 
-        // Sort by score (ascending - lower scores are better/winners)
-        standings.sort((a, b) -> Integer.compare(a.totalScore, b.totalScore));
+        // Don't sort - maintain original game data order (based on random numbers)
 
         // Find max score for scaling
-        int maxScore = standings.isEmpty() ? 100 : Math.max(standings.get(standings.size() - 1).totalScore, 100);
+        int maxScore = 100; // Default minimum
+        for (PlayerStanding standing : standings) {
+            maxScore = Math.max(maxScore, standing.totalScore);
+        }
         if (maxScore == 0) maxScore = 100; // Avoid division by zero
 
         // Create bars for each player
@@ -1006,17 +1189,19 @@ public class JoinGameActivity extends AppCompatActivity {
             barParams.setMargins(0, 0, 0, dpToPx(4));
             bar.setLayoutParams(barParams);
 
-            // Set bar color based on ranking (winners = green, losers = red/yellow)
-            int rank = standings.indexOf(standing);
-            if (rank < standings.size() / 2) {
-                // Winners (lower scores) - green
+            // Set bar color based on score value (lower scores are better in Rummy)
+            if (standing.totalScore == 0) {
+                // No score yet - gray
+                bar.setBackgroundColor(0xFF9E9E9E);
+            } else if (standing.totalScore <= maxScore * 0.3) {
+                // Low scores (winners) - green
                 bar.setBackgroundColor(0xFF4CAF50);
-            } else if (rank == standings.size() - 1) {
-                // Highest score - red
-                bar.setBackgroundColor(0xFFF44336);
-            } else {
-                // Middle scores - yellow
+            } else if (standing.totalScore <= maxScore * 0.7) {
+                // Medium scores - yellow
                 bar.setBackgroundColor(0xFFFFEB3B);
+            } else {
+                // High scores (losers) - red
+                bar.setBackgroundColor(0xFFF44336);
             }
 
             // Create score value label (on top of bar)
@@ -1067,14 +1252,30 @@ public class JoinGameActivity extends AppCompatActivity {
             com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
             int totalScore = 0;
             
-            // Calculate total score from input fields
-            for (int round = 1; round <= 10; round++) {
-                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
-                if (scoreInput != null && !scoreInput.getText().toString().trim().isEmpty()) {
-                    try {
-                        totalScore += Integer.parseInt(scoreInput.getText().toString().trim());
-                    } catch (NumberFormatException e) {
-                        // Skip invalid scores
+            // Calculate total score from game data (works in both view and edit mode)
+            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+            if (editAccess != null && editAccess) {
+                // Edit mode: get scores from input fields
+                for (int round = 1; round <= 10; round++) {
+                    EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
+                    if (scoreInput != null && !scoreInput.getText().toString().trim().isEmpty()) {
+                        try {
+                            int score = Integer.parseInt(scoreInput.getText().toString().trim());
+                            if (score > 0) { // Only count positive scores
+                                totalScore += score;
+                            }
+                        } catch (NumberFormatException e) {
+                            // Skip invalid scores
+                        }
+                    }
+                }
+            } else {
+                // View mode: get scores from game data
+                if (player.getScores() != null) {
+                    for (Integer score : player.getScores()) {
+                        if (score != null && score > 0) {
+                            totalScore += score;
+                        }
                     }
                 }
             }
@@ -1108,7 +1309,11 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.textGstRateInfo.setText(String.format("%.0f", gameData.getGstPercent()) + "% GST");
         
         int currentRound = calculateCurrentRound(gameData);
-        binding.textCurrentRoundInfo.setText("Round " + currentRound);
+        if (currentRound == 10 && isGameCompleted(gameData)) {
+            binding.textCurrentRoundInfo.setText("Game Over");
+        } else {
+            binding.textCurrentRoundInfo.setText("Round " + currentRound);
+        }
         
         // Calculate total GST collected
         double totalGST = calculateTotalGST(gameData);
@@ -1267,15 +1472,16 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     private void showAddPlayerDialog() {
-        // Create dialog
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        // Create dialog with dark theme to match the app
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this, R.style.DarkDialogTheme);
         builder.setTitle("Add New Player");
         
         // Create input field
         EditText input = new EditText(this);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
         input.setHint("Enter player name");
-        input.setTextColor(getResources().getColor(android.R.color.black));
+        input.setTextColor(getResources().getColor(android.R.color.white)); // White text for dark theme
+        input.setHintTextColor(getResources().getColor(android.R.color.darker_gray));
         input.setPadding(50, 20, 50, 20);
         
         builder.setView(input);
@@ -1339,7 +1545,16 @@ public class JoinGameActivity extends AppCompatActivity {
         gameData.getPlayers().add(newPlayer);
         gameData.setNumPlayers(gameData.getPlayers().size());
         
-        // Refresh UI
+        // Save the updated game data to Firebase
+        viewModel.saveGameData(currentGameId, gameData);
+        
+        // Refresh player cards UI immediately
+        generatePlayerCards(gameData);
+        
+        // Update players info section
+        updatePlayersInfo(gameData);
+        
+        // Refresh standings and chart
         displayGameData(gameData);
         
         ModernToast.success(this, "Player '" + playerName + "' added successfully!");
@@ -1352,20 +1567,29 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
-        builder.setTitle("Delete Player");
-        builder.setMessage("Are you sure you want to delete '" + player.getName() + "'?\n\nThis action cannot be undone.");
+        // Create custom dialog with proper button styling
+        android.app.Dialog dialog = new android.app.Dialog(this, R.style.DarkDialogTheme);
+        dialog.setContentView(R.layout.dialog_delete_player);
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        dialog.setCancelable(true);
         
-        builder.setPositiveButton("Delete", (dialog, which) -> {
+        // Get views
+        TextView deleteMessage = dialog.findViewById(R.id.text_delete_message);
+        Button btnCancel = dialog.findViewById(R.id.btn_cancel);
+        Button btnDelete = dialog.findViewById(R.id.btn_delete);
+        
+        // Set player-specific message
+        deleteMessage.setText("Are you sure you want to delete '" + player.getName() + "'?");
+        
+        // Set up buttons
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        
+        btnDelete.setOnClickListener(v -> {
+            dialog.dismiss();
             deletePlayer(player, gameData);
         });
         
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-        
-        // Make delete button red
-        android.app.AlertDialog dialog = builder.create();
         dialog.show();
-        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setTextColor(getResources().getColor(android.R.color.holo_red_dark));
     }
     
     private void deletePlayer(com.example.rummypulse.data.Player player, com.example.rummypulse.data.GameData gameData) {
@@ -1373,10 +1597,41 @@ public class JoinGameActivity extends AppCompatActivity {
         gameData.getPlayers().remove(player);
         gameData.setNumPlayers(gameData.getPlayers().size());
         
-        // Refresh UI
+        // Save the updated game data to Firebase
+        viewModel.saveGameData(currentGameId, gameData);
+        
+        // Refresh player cards UI immediately
+        generatePlayerCards(gameData);
+        
+        // Update players info section
+        updatePlayersInfo(gameData);
+        
+        // Refresh standings and chart
         displayGameData(gameData);
         
         ModernToast.success(this, "Player '" + player.getName() + "' deleted successfully!");
+    }
+
+    // Debouncing for Firebase saves
+    private android.os.Handler saveHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable saveRunnable;
+    private static final int SAVE_DELAY_MS = 1000; // 1 second delay
+    
+    private void saveGameDataWithDebounce(com.example.rummypulse.data.GameData gameData) {
+        // Cancel any pending save
+        if (saveRunnable != null) {
+            saveHandler.removeCallbacks(saveRunnable);
+        }
+        
+        // Schedule a new save
+        saveRunnable = new Runnable() {
+            @Override
+            public void run() {
+                viewModel.saveGameData(currentGameId, gameData);
+            }
+        };
+        
+        saveHandler.postDelayed(saveRunnable, SAVE_DELAY_MS);
     }
 
     private void showQrCodeDialog(String gameId) {

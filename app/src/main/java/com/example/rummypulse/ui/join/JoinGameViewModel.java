@@ -172,6 +172,31 @@ public class JoinGameViewModel extends AndroidViewModel {
         successMessage.setValue("Edit access granted! You can now modify the game.");
     }
 
+    public void saveGameData(String gameId, GameData updatedGameData) {
+        if (TextUtils.isEmpty(gameId) || updatedGameData == null) {
+            errorMessage.setValue("Invalid game data");
+            return;
+        }
+
+        // Create the game data wrapper
+        Map<String, Object> gameDataDoc = new HashMap<>();
+        gameDataDoc.put("data", updatedGameData);
+        gameDataDoc.put("lastUpdated", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        gameDataDoc.put("version", "1.0");
+
+        // Save to Firebase
+        db.collection("gameData").document(gameId)
+            .set(gameDataDoc)
+            .addOnSuccessListener(aVoid -> {
+                // Update the local game data to trigger UI refresh
+                gameData.setValue(updatedGameData);
+                successMessage.setValue("Game data saved successfully!");
+            })
+            .addOnFailureListener(e -> {
+                errorMessage.setValue("Failed to save game data: " + e.getMessage());
+            });
+    }
+
     public void validatePinAndGrantEditAccess(String gameId, String enteredPin) {
         if (TextUtils.isEmpty(gameId) || TextUtils.isEmpty(enteredPin)) {
             errorMessage.setValue("Please enter both Game ID and PIN");
