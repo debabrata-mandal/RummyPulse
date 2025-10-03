@@ -358,7 +358,19 @@ public class MainActivity extends AppCompatActivity {
         // Check for updates with a slight delay to not interfere with app startup
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             android.util.Log.d("MainActivity", "Checking for app updates...");
-            updateChecker.checkForUpdates();
+            
+            // Check if current user is admin before running auto-update
+            AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
+                @Override
+                public void onResult(boolean isAdmin) {
+                    if (isAdmin) {
+                        android.util.Log.d("MainActivity", "Admin user detected - skipping auto-update check");
+                    } else {
+                        android.util.Log.d("MainActivity", "Regular user - proceeding with auto-update check");
+                    }
+                    updateChecker.checkForUpdates(isAdmin);
+                }
+            });
         }, 2000); // 2 second delay
     }
 
@@ -406,7 +418,7 @@ public class MainActivity extends AppCompatActivity {
                 .setPositiveButton("Check for Updates", (dialogInterface, which) -> {
                     if (updateChecker != null) {
                         com.example.rummypulse.utils.ModernToast.info(this, "Checking for updates...");
-                        updateChecker.checkForUpdates();
+                        updateChecker.forceCheckForUpdates();
                     }
                 })
                 .setNegativeButton("OK", null)

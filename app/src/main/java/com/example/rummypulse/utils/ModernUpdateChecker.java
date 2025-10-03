@@ -61,6 +61,19 @@ public class ModernUpdateChecker {
      * Check for updates and show dialog if newer version is available
      */
     public void checkForUpdates() {
+        checkForUpdates(false);
+    }
+    
+    /**
+     * Check for updates and show dialog if newer version is available
+     * @param isAdminUser If true, skips auto-update check (admin users don't need auto-updates)
+     */
+    public void checkForUpdates(boolean isAdminUser) {
+        if (isAdminUser) {
+            Log.d(TAG, "Skipping auto-update check for admin user");
+            return;
+        }
+        
         Log.d(TAG, "Checking for app updates...");
         
         executor.execute(() -> {
@@ -77,6 +90,41 @@ public class ModernUpdateChecker {
                 }
             } else {
                 Log.w(TAG, "Could not check for updates");
+            }
+        });
+    }
+    
+    /**
+     * Force check for updates regardless of admin status (for manual checks)
+     */
+    public void forceCheckForUpdates() {
+        Log.d(TAG, "Force checking for app updates (manual check)...");
+        
+        executor.execute(() -> {
+            UpdateInfo updateInfo = fetchLatestVersionInfo();
+            
+            if (updateInfo != null) {
+                String currentVersion = getCurrentVersion();
+                
+                if (compareVersions(currentVersion, updateInfo.version) < 0) {
+                    Log.d(TAG, "Update available: " + currentVersion + " -> " + updateInfo.version);
+                    showUpdateDialog(updateInfo);
+                } else {
+                    Log.d(TAG, "App is up to date: " + currentVersion);
+                    // Show a message even when up to date for manual checks
+                    if (context instanceof Activity) {
+                        ((Activity) context).runOnUiThread(() -> {
+                            ModernToast.success(context, "✅ You're running the latest version!");
+                        });
+                    }
+                }
+            } else {
+                Log.w(TAG, "Could not check for updates");
+                if (context instanceof Activity) {
+                    ((Activity) context).runOnUiThread(() -> {
+                        ModernToast.error(context, "❌ Unable to check for updates. Please try again later.");
+                    });
+                }
             }
         });
     }
