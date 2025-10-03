@@ -38,6 +38,9 @@ public class JoinGameActivity extends AppCompatActivity {
     
     // Track previous ranks for animation
     private java.util.Map<String, Integer> previousRanks = new java.util.HashMap<>();
+    
+    // Firestore listener for real-time updates
+    private com.google.firebase.firestore.ListenerRegistration gameDataListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +97,16 @@ public class JoinGameActivity extends AppCompatActivity {
     public boolean onSupportNavigateUp() {
         finish();
         return true;
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Clean up Firestore listener to prevent memory leaks
+        if (gameDataListener != null) {
+            gameDataListener.remove();
+            gameDataListener = null;
+        }
     }
 
     @Override
@@ -230,6 +243,15 @@ public class JoinGameActivity extends AppCompatActivity {
         viewModel.getGameData().observe(this, gameData -> {
             if (gameData != null) {
                 displayGameData(gameData);
+                
+                // Set up real-time listener if in view mode (no edit access)
+                Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+                if (editAccess == null || !editAccess) {
+                    System.out.println("Game data loaded in VIEW MODE - setting up real-time listener");
+                    setupRealtimeListener();
+                } else {
+                    System.out.println("Game data loaded in EDIT MODE - real-time listener NOT started (edit access granted)");
+                }
             }
         });
 
@@ -264,6 +286,19 @@ public class JoinGameActivity extends AppCompatActivity {
                 invalidateOptionsMenu();
                 // Don't show duplicate success message here since it's already shown in ViewModel
                 System.out.println("Edit access granted - Players section should now be visible");
+                
+                // Remove real-time listener when in edit mode (to avoid conflicts)
+                if (gameDataListener != null) {
+                    System.out.println("EDIT ACCESS GRANTED - Removing existing real-time listener to avoid conflicts");
+                    gameDataListener.remove();
+                    gameDataListener = null;
+                } else {
+                    System.out.println("EDIT ACCESS GRANTED - No existing real-time listener to remove");
+                }
+            } else {
+                // In view mode - set up real-time listener for game data updates
+                System.out.println("EDIT ACCESS DENIED - Setting up real-time listener for view mode");
+                setupRealtimeListener();
             }
         });
 
@@ -844,6 +879,12 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void updateStandings(com.example.rummypulse.data.GameData gameData) {
+        // Validate input data
+        if (gameData == null || gameData.getPlayers() == null || gameData.getPlayers().isEmpty()) {
+            System.err.println("Cannot update standings: gameData or players is null/empty");
+            return;
+        }
+        
         // Clear existing standings rows
         binding.standingsTableContainer.removeAllViews();
 
@@ -1670,6 +1711,126 @@ public class JoinGameActivity extends AppCompatActivity {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         ClipData clip = ClipData.newPlainText(label, text);
         clipboard.setPrimaryClip(clip);
+    }
+    
+    /**
+     * Set up real-time Firestore listener for game data updates in view mode
+     * This ensures the standings update automatically when other players modify scores or names
+     */
+    private void setupRealtimeListener() {
+        if (currentGameId == null) {
+            System.out.println("Cannot setup listener: currentGameId is null");
+            return;
+        }
+        
+        // Don't create duplicate listeners
+        if (gameDataListener != null) {
+            System.out.println("Real-time listener already exists for game: " + currentGameId);
+            return;
+        }
+        
+        System.out.println("Setting up real-time listener for game: " + currentGameId);
+        
+        // Set up Firestore listener
+        com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
+        gameDataListener = db.collection("gameData")
+            .document(currentGameId)
+            .addSnapshotListener((documentSnapshot, error) -> {
+                if (error != null) {
+                    System.err.println("Error listening to game data: " + error.getMessage());
+                    return;
+                }
+                
+                if (documentSnapshot != null && documentSnapshot.exists()) {
+                    try {
+                        System.out.println("Real-time update received for game: " + currentGameId);
+                        System.out.println("Raw document data keys: " + documentSnapshot.getData().keySet());
+                        
+                        // The actual game data is nested inside the 'data' field
+                        Object dataField = documentSnapshot.get("data");
+                        if (dataField instanceof java.util.Map) {
+                            @SuppressWarnings("unchecked")
+                            java.util.Map<String, Object> dataMap = (java.util.Map<String, Object>) dataField;
+                            
+                            // Convert the nested data to GameData object
+                            com.example.rummypulse.data.GameData gameData = new com.example.rummypulse.data.GameData();
+                            
+                            // Manually map the fields
+                            if (dataMap.get("numPlayers") instanceof Number) {
+                                gameData.setNumPlayers(((Number) dataMap.get("numPlayers")).intValue());
+                            }
+                            if (dataMap.get("pointValue") instanceof Number) {
+                                gameData.setPointValue(((Number) dataMap.get("pointValue")).doubleValue());
+                            }
+                            if (dataMap.get("gstPercent") instanceof Number) {
+                                gameData.setGstPercent(((Number) dataMap.get("gstPercent")).doubleValue());
+                            }
+                            
+                            // Handle players array
+                            Object playersField = dataMap.get("players");
+                            if (playersField instanceof java.util.List) {
+                                @SuppressWarnings("unchecked")
+                                java.util.List<java.util.Map<String, Object>> playersMapList = (java.util.List<java.util.Map<String, Object>>) playersField;
+                                
+                                java.util.List<com.example.rummypulse.data.Player> players = new java.util.ArrayList<>();
+                                for (java.util.Map<String, Object> playerMap : playersMapList) {
+                                    com.example.rummypulse.data.Player player = new com.example.rummypulse.data.Player();
+                                    
+                                    if (playerMap.get("name") instanceof String) {
+                                        player.setName((String) playerMap.get("name"));
+                                    }
+                                    if (playerMap.get("randomNumber") instanceof Number) {
+                                        player.setRandomNumber(((Number) playerMap.get("randomNumber")).intValue());
+                                    }
+                                    
+                                    // Handle scores array
+                                    Object scoresField = playerMap.get("scores");
+                                    if (scoresField instanceof java.util.List) {
+                                        @SuppressWarnings("unchecked")
+                                        java.util.List<Object> scoresObjectList = (java.util.List<Object>) scoresField;
+                                        java.util.List<Integer> scores = new java.util.ArrayList<>();
+                                        for (Object scoreObj : scoresObjectList) {
+                                            if (scoreObj instanceof Number) {
+                                                scores.add(((Number) scoreObj).intValue());
+                                            } else {
+                                                scores.add(-1); // Default for null/invalid scores
+                                            }
+                                        }
+                                        player.setScores(scores);
+                                    }
+                                    
+                                    players.add(player);
+                                }
+                                gameData.setPlayers(players);
+                            }
+                            
+                            System.out.println("Players field: " + (gameData.getPlayers() != null ? gameData.getPlayers().size() + " players" : "null"));
+                            
+                            // Update UI on main thread
+                            runOnUiThread(() -> {
+                                // Validate game data before updating UI
+                                if (gameData.getPlayers() != null && !gameData.getPlayers().isEmpty()) {
+                                    // Update the standings table with new data
+                                    updateStandings(gameData);
+                                    updateStandingsInfo(gameData);
+                                    
+                                    // Also update the game info cards
+                                    updatePlayersInfo(gameData);
+                                } else {
+                                    System.err.println("Real-time update received but players data is null or empty");
+                                }
+                            });
+                        } else {
+                            System.err.println("Data field is not a Map or is null");
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error parsing game data: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println("Game document does not exist: " + currentGameId);
+                }
+            });
     }
 
     // Helper class for standings
