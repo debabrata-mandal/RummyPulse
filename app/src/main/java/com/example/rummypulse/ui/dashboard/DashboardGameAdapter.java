@@ -8,7 +8,6 @@ import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
@@ -31,6 +30,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
 
     private List<GameItem> gameItems = new ArrayList<>();
     private OnGameJoinListener joinListener;
+    private boolean isCompletedGamesAdapter = false;
 
     public interface OnGameJoinListener {
         void onJoinGame(GameItem game, int position, String joinType);
@@ -43,6 +43,10 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
     public void setGameItems(List<GameItem> gameItems) {
         this.gameItems = gameItems != null ? gameItems : new ArrayList<>();
         notifyDataSetChanged();
+    }
+
+    public void setIsCompletedGamesAdapter(boolean isCompletedGamesAdapter) {
+        this.isCompletedGamesAdapter = isCompletedGamesAdapter;
     }
 
     @NonNull
@@ -101,10 +105,12 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             holder.creatorNameText.setVisibility(View.GONE);
         }
         
-        // Set join button click listener (always join as player)
-        holder.joinButton.setOnClickListener(v -> {
+        // Set card click behavior based on game status
+        final String finalStatus = status;
+        holder.itemView.setOnClickListener(v -> {
             if (joinListener != null) {
-                joinListener.onJoinGame(item, position, "player");
+                String joinType = (isCompletedGamesAdapter || "Completed".equals(finalStatus)) ? "view" : "player";
+                joinListener.onJoinGame(item, position, joinType);
             }
         });
         
@@ -227,7 +233,6 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
 
     static class GameViewHolder extends RecyclerView.ViewHolder {
         TextView gameIdText, gameStatusText, playersText, pointValueText, gstText, createdTimeText, creatorNameText;
-        Button joinButton;
         ImageView qrCodeIcon;
 
         GameViewHolder(@NonNull View itemView) {
@@ -240,7 +245,6 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             createdTimeText = itemView.findViewById(R.id.text_created_time);
             creatorNameText = itemView.findViewById(R.id.text_creator_name);
             qrCodeIcon = itemView.findViewById(R.id.icon_qr_code_dashboard);
-            joinButton = itemView.findViewById(R.id.btn_join_game);
         }
     }
 }

@@ -26,6 +26,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     private FragmentDashboardBinding binding;
     private DashboardViewModel dashboardViewModel;
     private DashboardGameAdapter gameAdapter;
+    private DashboardGameAdapter completedGameAdapter;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -43,10 +44,18 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     private void setupRecyclerView() {
+        // Setup active games adapter
         gameAdapter = new DashboardGameAdapter();
         gameAdapter.setOnGameJoinListener(this);
         binding.recyclerViewGames.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.recyclerViewGames.setAdapter(gameAdapter);
+        
+        // Setup completed games adapter
+        completedGameAdapter = new DashboardGameAdapter();
+        completedGameAdapter.setIsCompletedGamesAdapter(true);
+        completedGameAdapter.setOnGameJoinListener(this);
+        binding.recyclerViewCompletedGames.setLayoutManager(new LinearLayoutManager(getContext()));
+        binding.recyclerViewCompletedGames.setAdapter(completedGameAdapter);
     }
 
     private void setupSwipeRefresh() {
@@ -64,27 +73,36 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     private void observeViewModel() {
-        // Observe games count
-        dashboardViewModel.getGamesCount().observe(getViewLifecycleOwner(), count -> {
-            binding.textGamesCount.setText(count);
-            binding.swipeRefresh.setRefreshing(false);
+        // Observe active games count
+        dashboardViewModel.getActiveGamesCount().observe(getViewLifecycleOwner(), count -> {
+            binding.textActiveGamesHeader.setText(count);
+        });
+
+        // Observe completed games count
+        dashboardViewModel.getCompletedGamesCount().observe(getViewLifecycleOwner(), count -> {
+            binding.textCompletedGamesHeader.setText(count);
         });
 
         // Observe in-progress games
         dashboardViewModel.getInProgressGames().observe(getViewLifecycleOwner(), games -> {
             gameAdapter.setGameItems(games);
+            updateEmptyStateVisibility();
+            binding.swipeRefresh.setRefreshing(false);
+        });
+
+        // Observe completed games
+        dashboardViewModel.getCompletedGames().observe(getViewLifecycleOwner(), completedGames -> {
+            completedGameAdapter.setGameItems(completedGames);
             
-            // Show/hide empty state
-            if (games == null || games.isEmpty()) {
-                binding.emptyState.setVisibility(View.VISIBLE);
-                binding.recyclerViewGames.setVisibility(View.GONE);
+            // Show/hide completed games section
+            if (completedGames != null && !completedGames.isEmpty()) {
+                binding.completedGamesSection.setVisibility(View.VISIBLE);
             } else {
-                binding.emptyState.setVisibility(View.GONE);
-                binding.recyclerViewGames.setVisibility(View.VISIBLE);
+                binding.completedGamesSection.setVisibility(View.GONE);
             }
             
-            binding.swipeRefresh.setRefreshing(false);
-            // Removed automatic "Games refreshed" toast - only show on manual refresh
+            // Update empty state visibility based on both active and completed games
+            updateEmptyStateVisibility();
         });
 
         // Observe new game creation
@@ -99,12 +117,26 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         });
     }
 
+    private void updateEmptyStateVisibility() {
+        boolean hasActiveGames = gameAdapter.getItemCount() > 0;
+        boolean hasCompletedGames = completedGameAdapter.getItemCount() > 0;
+        
+        if (!hasActiveGames && !hasCompletedGames) {
+            binding.emptyState.setVisibility(View.VISIBLE);
+        } else {
+            binding.emptyState.setVisibility(View.GONE);
+        }
+    }
+
     @Override
     public void onJoinGame(GameItem game, int position, String joinType) {
-        String roleText = "moderator".equals(joinType) ? "Moderator" : "Player";
-        String emoji = "moderator".equals(joinType) ? "🛡️" : "👤";
-        
-        com.example.rummypulse.utils.ModernToast.info(getContext(), emoji + " Joining game #" + game.getGameId() + " as " + roleText);
+        if ("view".equals(joinType)) {
+            com.example.rummypulse.utils.ModernToast.info(getContext(), "👁️ Viewing completed game #" + game.getGameId());
+        } else {
+            String roleText = "moderator".equals(joinType) ? "Moderator" : "Player";
+            String emoji = "moderator".equals(joinType) ? "🛡️" : "👤";
+            com.example.rummypulse.utils.ModernToast.info(getContext(), emoji + " Joining game #" + game.getGameId() + " as " + roleText);
+        }
         
         // Navigate to JoinGameActivity with the game ID
         Intent intent = new Intent(getContext(), JoinGameActivity.class);

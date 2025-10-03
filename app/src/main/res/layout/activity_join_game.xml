@@ -23,17 +23,37 @@
             app:navigationIcon="@drawable/ic_arrow_back"
             app:title="Game View">
 
-            <!-- Game ID in toolbar -->
-            <TextView
-                android:id="@+id/text_game_id_header"
+            <!-- Game ID and QR Code in toolbar -->
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
                 android:layout_marginEnd="16dp"
-                android:text="FNKV66TSI"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/text_game_id_header"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FNKV66TSI"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:layout_marginEnd="8dp" />
+
+                <ImageView
+                    android:id="@+id/icon_qr_code_header"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_qr_code"
+                    android:background="@drawable/icon_background"
+                    android:padding="3dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Show QR Code" />
+
+            </LinearLayout>
 
         </androidx.appcompat.widget.Toolbar>
 

@@ -20,39 +20,62 @@ public class DashboardViewModel extends ViewModel {
 
     private final GameRepository gameRepository;
     private final MutableLiveData<List<GameItem>> mInProgressGames;
-    private final MutableLiveData<String> mGamesCount;
+    private final MutableLiveData<List<GameItem>> mCompletedGames;
+    private final MutableLiveData<String> mActiveGamesCount;
+    private final MutableLiveData<String> mCompletedGamesCount;
     private final MutableLiveData<String> newGameCreated;
 
     public DashboardViewModel() {
         gameRepository = new GameRepository();
         mInProgressGames = new MutableLiveData<>();
-        mGamesCount = new MutableLiveData<>();
+        mCompletedGames = new MutableLiveData<>();
+        mActiveGamesCount = new MutableLiveData<>();
+        mCompletedGamesCount = new MutableLiveData<>();
         newGameCreated = new MutableLiveData<>();
         
-        // Observe all games and filter for in-progress ones
+        // Observe all games and filter for in-progress and completed ones
         gameRepository.getGameItems().observeForever(allGames -> {
             if (allGames != null) {
                 List<GameItem> inProgressGames = new ArrayList<>();
+                List<GameItem> completedGames = new ArrayList<>();
+                
                 for (GameItem game : allGames) {
-                    // Filter for in-progress games (not completed)
-                    if (!game.isCompleted() && !"Completed".equals(game.getGameStatus())) {
+                    if (game.isCompleted() || "Completed".equals(game.getGameStatus())) {
+                        completedGames.add(game);
+                    } else {
                         inProgressGames.add(game);
                     }
                 }
-                mInProgressGames.setValue(inProgressGames);
                 
-                // Update games count text
-                int count = inProgressGames.size();
-                if (count == 0) {
-                    mGamesCount.setValue("No active games available");
-                } else if (count == 1) {
-                    mGamesCount.setValue("1 active game available");
+                mInProgressGames.setValue(inProgressGames);
+                mCompletedGames.setValue(completedGames);
+                
+                // Update separate counts
+                int activeCount = inProgressGames.size();
+                int completedCount = completedGames.size();
+                
+                // Set active games count
+                if (activeCount == 0) {
+                    mActiveGamesCount.setValue("Active Games");
+                } else if (activeCount == 1) {
+                    mActiveGamesCount.setValue("Active Games (1)");
                 } else {
-                    mGamesCount.setValue(count + " active games available");
+                    mActiveGamesCount.setValue("Active Games (" + activeCount + ")");
+                }
+                
+                // Set completed games count
+                if (completedCount == 0) {
+                    mCompletedGamesCount.setValue("Completed Games");
+                } else if (completedCount == 1) {
+                    mCompletedGamesCount.setValue("Completed Games (1)");
+                } else {
+                    mCompletedGamesCount.setValue("Completed Games (" + completedCount + ")");
                 }
             } else {
                 mInProgressGames.setValue(new ArrayList<>());
-                mGamesCount.setValue("Loading games...");
+                mCompletedGames.setValue(new ArrayList<>());
+                mActiveGamesCount.setValue("Active Games");
+                mCompletedGamesCount.setValue("Completed Games");
             }
         });
         
@@ -64,8 +87,16 @@ public class DashboardViewModel extends ViewModel {
         return mInProgressGames;
     }
 
-    public LiveData<String> getGamesCount() {
-        return mGamesCount;
+    public LiveData<List<GameItem>> getCompletedGames() {
+        return mCompletedGames;
+    }
+
+    public LiveData<String> getActiveGamesCount() {
+        return mActiveGamesCount;
+    }
+
+    public LiveData<String> getCompletedGamesCount() {
+        return mCompletedGamesCount;
     }
 
     public LiveData<String> getNewGameCreated() {

@@ -1,6 +1,10 @@
 package com.example.rummypulse;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -12,6 +16,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.ViewModelProvider;
@@ -20,12 +25,16 @@ import com.example.rummypulse.databinding.ActivityJoinGameBinding;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
 import com.example.rummypulse.utils.ModernToast;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 public class JoinGameActivity extends AppCompatActivity {
 
     private JoinGameViewModel viewModel;
     private ActivityJoinGameBinding binding;
     private String currentGamePin;
+    private String currentGameId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +67,8 @@ public class JoinGameActivity extends AppCompatActivity {
             boolean isCreator = intent.getBooleanExtra("IS_CREATOR", false);
             
             if (gameId != null) {
+                currentGameId = gameId; // Store the game ID
+                
                 // Keep toolbar title as "Game View" only
                 if (getSupportActionBar() != null) {
                     getSupportActionBar().setTitle("Game View");
@@ -118,6 +129,13 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.btnClose.setOnClickListener(v -> finish());
         binding.btnAddPlayer.setOnClickListener(v -> {
             addNewPlayerDirectly();
+        });
+        
+        // Setup QR code click listener
+        binding.iconQrCodeHeader.setOnClickListener(v -> {
+            if (currentGameId != null) {
+                showQrCodeDialog(currentGameId);
+            }
         });
         
         // Setup collapsible sections
@@ -1359,6 +1377,54 @@ public class JoinGameActivity extends AppCompatActivity {
         displayGameData(gameData);
         
         ModernToast.success(this, "Player '" + player.getName() + "' deleted successfully!");
+    }
+
+    private void showQrCodeDialog(String gameId) {
+        // Create dialog
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.DarkDialogTheme);
+        
+        // Inflate custom layout
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_qr_code, null);
+        
+        // Get views
+        ImageView qrCodeImage = dialogView.findViewById(R.id.qr_code_image);
+        TextView gameIdText = dialogView.findViewById(R.id.text_game_id_qr);
+        ImageView closeButton = dialogView.findViewById(R.id.btn_close);
+        
+        // Set game information
+        gameIdText.setText("Game ID: " + gameId);
+        
+        // Generate QR code
+        try {
+            BarcodeEncoder barcodeEncoder = new BarcodeEncoder();
+            Bitmap bitmap = barcodeEncoder.encodeBitmap(gameId, BarcodeFormat.QR_CODE, 300, 300);
+            qrCodeImage.setImageBitmap(bitmap);
+        } catch (WriterException e) {
+            e.printStackTrace();
+            ModernToast.error(this, "❌ Failed to generate QR code");
+            return;
+        }
+        
+        // Set up dialog
+        builder.setView(dialogView);
+        AlertDialog dialog = builder.create();
+        
+        // Set QR code click listener to copy Game ID
+        qrCodeImage.setOnClickListener(v -> {
+            copyToClipboard(gameId, "Game ID");
+            ModernToast.success(this, "📋 Game ID copied to clipboard!");
+        });
+        
+        // Set close button listener
+        closeButton.setOnClickListener(v -> dialog.dismiss());
+        
+        dialog.show();
+    }
+    
+    private void copyToClipboard(String text, String label) {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText(label, text);
+        clipboard.setPrimaryClip(clip);
     }
 
     // Helper class for standings
