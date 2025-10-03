@@ -10,6 +10,7 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.example.rummypulse.data.GameData;
 import com.example.rummypulse.data.GameDataWrapper;
+import com.example.rummypulse.data.GameAuth;
 import com.example.rummypulse.data.Player;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -26,6 +27,7 @@ public class JoinGameViewModel extends AndroidViewModel {
     private MutableLiveData<String> successMessage = new MutableLiveData<>();
     private MutableLiveData<Boolean> editAccessGranted = new MutableLiveData<>();
     private MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
+    private MutableLiveData<String> gamePin = new MutableLiveData<>();
 
     public JoinGameViewModel(@NonNull Application application) {
         super(application);
@@ -52,6 +54,10 @@ public class JoinGameViewModel extends AndroidViewModel {
         return isLoading;
     }
 
+    public LiveData<String> getGamePin() {
+        return gamePin;
+    }
+
     public void joinGame(String gameId, boolean requestEditAccess) {
         if (TextUtils.isEmpty(gameId)) {
             errorMessage.setValue("Please enter a Game ID");
@@ -74,7 +80,15 @@ public class JoinGameViewModel extends AndroidViewModel {
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
-                        // Game exists, now fetch the game data
+                        // Game exists, extract PIN and fetch the game data
+                        try {
+                            GameAuth gameAuth = documentSnapshot.toObject(GameAuth.class);
+                            if (gameAuth != null && gameAuth.getPin() != null) {
+                                gamePin.setValue(gameAuth.getPin());
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Error extracting PIN: " + e.getMessage());
+                        }
                         fetchGameData(gameId, requestEditAccess);
                     } else {
                         isLoading.setValue(false);

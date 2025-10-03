@@ -25,6 +25,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private JoinGameViewModel viewModel;
     private ActivityJoinGameBinding binding;
+    private String currentGamePin;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -131,6 +132,15 @@ public class JoinGameActivity extends AppCompatActivity {
                     // Remove blur effect
                     applyBlurEffect(false);
                 }
+            }
+        });
+
+        // Observe game PIN
+        viewModel.getGamePin().observe(this, pin -> {
+            if (pin != null) {
+                currentGamePin = pin;
+                // Update PIN display if game data is already loaded
+                updateGamePinDisplay();
             }
         });
     }
@@ -641,7 +651,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void updatePlayersInfo(com.example.rummypulse.data.GameData gameData) {
         // Update Players & Scores information card
-        binding.textPlayersPointValue.setText("₹" + String.format("%.2f", gameData.getPointValue()) + " per point");
+        binding.textPlayersPointValue.setText("₹" + formatPointValue(gameData.getPointValue()) + " per point");
         binding.textPlayersGstRate.setText(String.format("%.0f", gameData.getGstPercent()) + "% GST");
         
         int currentRound = calculateCurrentRound(gameData);
@@ -649,6 +659,51 @@ public class JoinGameActivity extends AppCompatActivity {
         
         int numberOfPlayers = gameData.getPlayers().size();
         binding.textNumberOfPlayers.setText(numberOfPlayers + " Players");
+        
+        // Setup Game PIN display and masking
+        setupGamePinDisplay(gameData);
+    }
+
+    private void setupGamePinDisplay(com.example.rummypulse.data.GameData gameData) {
+        // This method is called when game data is loaded
+        // The actual PIN setup is done in updateGamePinDisplay() when PIN is available
+        updateGamePinDisplay();
+    }
+
+    private void updateGamePinDisplay() {
+        TextView gamePinText = findViewById(R.id.text_players_game_pin);
+        if (gamePinText != null && currentGamePin != null) {
+            String maskedPin = "••••••";
+            
+            // Initially show masked PIN
+            gamePinText.setText(maskedPin);
+            gamePinText.setTag(false); // false = masked, true = revealed
+            
+            // Set click listener to toggle between masked and revealed
+            gamePinText.setOnClickListener(v -> {
+                boolean isRevealed = (Boolean) gamePinText.getTag();
+                if (isRevealed) {
+                    // Currently revealed, mask it
+                    gamePinText.setText(maskedPin);
+                    gamePinText.setTag(false);
+                    ModernToast.info(this, "🔒 PIN masked for security");
+                } else {
+                    // Currently masked, reveal it
+                    gamePinText.setText(currentGamePin);
+                    gamePinText.setTag(true);
+                    ModernToast.success(this, "👁️ PIN revealed: " + currentGamePin);
+                    
+                    // Auto-mask after 3 seconds for security
+                    gamePinText.postDelayed(() -> {
+                        if (gamePinText.getTag() != null && (Boolean) gamePinText.getTag()) {
+                            gamePinText.setText(maskedPin);
+                            gamePinText.setTag(false);
+                            ModernToast.info(this, "🔒 PIN auto-masked for security");
+                        }
+                    }, 3000);
+                }
+            });
+        }
     }
 
     private void setupCollapsibleSections() {
