@@ -82,8 +82,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private void setupClickListeners() {
         binding.btnClose.setOnClickListener(v -> finish());
         binding.btnAddPlayer.setOnClickListener(v -> {
-            // TODO: Show dialog to add new player
-            ModernToast.info(this, "Add player feature coming soon!");
+            addNewPlayerDirectly();
         });
         
         // Setup collapsible sections
@@ -216,8 +215,41 @@ public class JoinGameActivity extends AppCompatActivity {
             View playerCardView = LayoutInflater.from(this).inflate(R.layout.item_player_card, binding.playersContainer, false);
             
             // Set player name
-            TextView playerName = playerCardView.findViewById(R.id.text_player_name);
+            EditText playerName = playerCardView.findViewById(R.id.text_player_name);
             playerName.setText(player.getName());
+            
+            // Add text change listener for player name
+            playerName.addTextChangedListener(new android.text.TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+                @Override
+                public void afterTextChanged(android.text.Editable s) {
+                    // Update player name in the data model
+                    String newName = s.toString().trim();
+                    if (!newName.isEmpty()) {
+                        player.setName(newName);
+                        // Update standings table to reflect name change
+                        generateStandingsTable(gameData);
+                    }
+                }
+            });
+
+            // Handle done action on player name
+            playerName.setOnEditorActionListener((v, actionId, event) -> {
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                    // Hide keyboard and clear focus
+                    android.view.inputmethod.InputMethodManager imm = 
+                        (android.view.inputmethod.InputMethodManager) getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(playerName.getWindowToken(), 0);
+                    playerName.clearFocus();
+                    return true;
+                }
+                return false;
+            });
 
             // Set player ID if available (for games with more than 2 players)
             TextView playerId = playerCardView.findViewById(R.id.text_player_id);
@@ -225,6 +257,12 @@ public class JoinGameActivity extends AppCompatActivity {
                 playerId.setText("#" + player.getRandomNumber());
                 playerId.setVisibility(View.VISIBLE);
             }
+
+            // Setup delete player button
+            ImageView deleteButton = playerCardView.findViewById(R.id.btn_delete_player);
+            deleteButton.setOnClickListener(v -> {
+                showDeletePlayerConfirmation(player, gameData);
+            });
 
             // Set up score inputs
             EditText[] scoreInputs = {
@@ -1069,6 +1107,149 @@ public class JoinGameActivity extends AppCompatActivity {
         } catch (Exception e) {
             System.out.println("Error applying blur effect: " + e.getMessage());
         }
+    }
+    
+    private void addNewPlayerDirectly() {
+        // Get current game data
+        com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+        if (gameData == null) return;
+        
+        // Check maximum player limit
+        if (gameData.getPlayers().size() >= 15) {
+            ModernToast.warning(this, "Cannot add more players. Maximum 15 players allowed.");
+            return;
+        }
+        
+        // Generate default player name
+        int playerNumber = gameData.getPlayers().size() + 1;
+        String defaultName = "Player " + playerNumber;
+        
+        // Check if name already exists and make it unique
+        java.util.Set<String> existingNames = new java.util.HashSet<>();
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            existingNames.add(player.getName().toLowerCase());
+        }
+        
+        int counter = playerNumber;
+        while (existingNames.contains(defaultName.toLowerCase())) {
+            counter++;
+            defaultName = "Player " + counter;
+        }
+        
+        addNewPlayer(defaultName);
+    }
+    
+    private void showAddPlayerDialog() {
+        // Create dialog
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Add New Player");
+        
+        // Create input field
+        EditText input = new EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
+        input.setHint("Enter player name");
+        input.setTextColor(getResources().getColor(android.R.color.black));
+        input.setPadding(50, 20, 50, 20);
+        
+        builder.setView(input);
+        
+        builder.setPositiveButton("Add Player", (dialog, which) -> {
+            String playerName = input.getText().toString().trim();
+            if (!playerName.isEmpty()) {
+                addNewPlayer(playerName);
+            } else {
+                ModernToast.error(this, "Please enter a player name");
+            }
+        });
+        
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+        
+        android.app.AlertDialog dialog = builder.create();
+        dialog.show();
+        
+        // Show keyboard
+        input.requestFocus();
+        android.view.inputmethod.InputMethodManager imm = 
+            (android.view.inputmethod.InputMethodManager) getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+        imm.showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+    }
+    
+    private void addNewPlayer(String playerName) {
+        // Get current game data
+        com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+        if (gameData == null) return;
+        
+        // Create new player
+        com.example.rummypulse.data.Player newPlayer = new com.example.rummypulse.data.Player();
+        newPlayer.setName(playerName);
+        
+        // Initialize scores with -1 for all rounds
+        java.util.List<Integer> scores = new java.util.ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            scores.add(-1);
+        }
+        newPlayer.setScores(scores);
+        
+        // Generate random number for player ID (if more than 2 players)
+        if (gameData.getPlayers().size() >= 2) {
+            // Generate a unique random number
+            java.util.Set<Integer> existingNumbers = new java.util.HashSet<>();
+            for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+                if (player.getRandomNumber() != null) {
+                    existingNumbers.add(player.getRandomNumber());
+                }
+            }
+            
+            int randomNumber;
+            do {
+                randomNumber = 10 + new java.util.Random().nextInt(90); // 10-99
+            } while (existingNumbers.contains(randomNumber));
+            
+            newPlayer.setRandomNumber(randomNumber);
+        }
+        
+        // Add player to game data
+        gameData.getPlayers().add(newPlayer);
+        gameData.setNumPlayers(gameData.getPlayers().size());
+        
+        // Refresh UI
+        displayGameData(gameData);
+        
+        ModernToast.success(this, "Player '" + playerName + "' added successfully!");
+    }
+    
+    private void showDeletePlayerConfirmation(com.example.rummypulse.data.Player player, com.example.rummypulse.data.GameData gameData) {
+        // Don't allow deleting if only 2 players remain
+        if (gameData.getPlayers().size() <= 2) {
+            ModernToast.warning(this, "Cannot delete player. Minimum 2 players required.");
+            return;
+        }
+        
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setTitle("Delete Player");
+        builder.setMessage("Are you sure you want to delete '" + player.getName() + "'?\n\nThis action cannot be undone.");
+        
+        builder.setPositiveButton("Delete", (dialog, which) -> {
+            deletePlayer(player, gameData);
+        });
+        
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+        
+        // Make delete button red
+        android.app.AlertDialog dialog = builder.create();
+        dialog.show();
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setTextColor(getResources().getColor(android.R.color.holo_red_dark));
+    }
+    
+    private void deletePlayer(com.example.rummypulse.data.Player player, com.example.rummypulse.data.GameData gameData) {
+        // Remove player from game data
+        gameData.getPlayers().remove(player);
+        gameData.setNumPlayers(gameData.getPlayers().size());
+        
+        // Refresh UI
+        displayGameData(gameData);
+        
+        ModernToast.success(this, "Player '" + player.getName() + "' deleted successfully!");
     }
 
     // Helper class for standings
