@@ -178,9 +178,18 @@ public class JoinGameViewModel extends AndroidViewModel {
             return;
         }
 
+        // Create clean data structure with only essential fields (no calculated values)
+        Map<String, Object> cleanGameData = new HashMap<>();
+        cleanGameData.put("numPlayers", updatedGameData.getNumPlayers());
+        cleanGameData.put("pointValue", updatedGameData.getPointValue());
+        cleanGameData.put("gstPercent", updatedGameData.getGstPercent());
+        cleanGameData.put("players", updatedGameData.getPlayers());
+        cleanGameData.put("version", updatedGameData.getVersion());
+        // Don't save calculated fields: gameStatus, totalScore, gstAmount
+
         // Create the game data wrapper
         Map<String, Object> gameDataDoc = new HashMap<>();
-        gameDataDoc.put("data", updatedGameData);
+        gameDataDoc.put("data", cleanGameData);
         gameDataDoc.put("lastUpdated", com.google.firebase.firestore.FieldValue.serverTimestamp());
         gameDataDoc.put("version", "1.0");
 

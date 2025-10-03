@@ -23,7 +23,7 @@ public class GameData {
         this.players = players;
         this.lastUpdated = lastUpdated;
         this.version = version;
-        this.gameStatus = calculateCurrentRound();
+        // Don't store calculated gameStatus - it should always be calculated dynamically
     }
 
     // Getters and setters
@@ -124,12 +124,13 @@ public class GameData {
     }
 
     public String getGameStatus() {
-        // Return stored status if available, otherwise calculate it
-        if (gameStatus != null && !gameStatus.isEmpty()) {
-            System.out.println("Using stored gameStatus: " + gameStatus);
+        // Use stored status only for administrative statuses (like "Approved")
+        if (gameStatus != null && ("Approved".equals(gameStatus) || "Rejected".equals(gameStatus))) {
+            System.out.println("Using administrative gameStatus: " + gameStatus);
             return gameStatus;
         }
         
+        // For game progress, always calculate dynamically from player data
         if (players == null || players.isEmpty()) {
             System.out.println("No players, returning Not Started");
             return "Not Started";
