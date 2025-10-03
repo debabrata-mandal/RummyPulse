@@ -35,6 +35,9 @@ public class JoinGameActivity extends AppCompatActivity {
     private ActivityJoinGameBinding binding;
     private String currentGamePin;
     private String currentGameId;
+    
+    // Track previous ranks for animation
+    private java.util.Map<String, Integer> previousRanks = new java.util.HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -920,22 +923,43 @@ public class JoinGameActivity extends AppCompatActivity {
             PlayerStanding standing = standings.get(i);
             View standingsRowView = LayoutInflater.from(this).inflate(R.layout.item_standings_card, binding.standingsTableContainer, false);
             
+            // Check for rank changes and apply animations
+            String playerKey = standing.player.getName(); // Use name as unique identifier
+            int currentRank = i + 1;
+            Integer previousRank = previousRanks.get(playerKey);
+            
             // Set rank
             TextView rankText = standingsRowView.findViewById(R.id.text_rank);
             if (i == 0) rankText.setText("🥇");
             else if (i == 1) rankText.setText("🥈");
             else if (i == 2) rankText.setText("🥉");
             else rankText.setText(String.valueOf(i + 1));
+            
+            // Apply rank change animation if rank changed
+            if (previousRank != null && previousRank != currentRank) {
+                if (currentRank < previousRank) {
+                    // Rank improved (moved up) - celebration animation
+                    android.view.animation.Animation rankUpAnim = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.rank_up_animation);
+                    standingsRowView.startAnimation(rankUpAnim);
+                } else {
+                    // Rank worsened (moved down) - shake animation
+                    android.view.animation.Animation rankDownAnim = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.rank_down_animation);
+                    standingsRowView.startAnimation(rankDownAnim);
+                }
+            }
+            
+            // Update previous rank for next comparison
+            previousRanks.put(playerKey, currentRank);
 
             // Set player name
             TextView playerName = standingsRowView.findViewById(R.id.text_player_name);
             playerName.setText(standing.player.getName());
 
             // Set player ID if available
-            TextView playerId = standingsRowView.findViewById(R.id.text_player_id);
+            TextView playerIdText = standingsRowView.findViewById(R.id.text_player_id);
             if (gameData.getNumPlayers() > 2 && standing.player.getRandomNumber() != null) {
-                playerId.setText("(#" + standing.player.getRandomNumber() + ")");
-                playerId.setVisibility(View.VISIBLE);
+                playerIdText.setText("(#" + standing.player.getRandomNumber() + ")");
+                playerIdText.setVisibility(View.VISIBLE);
             }
 
             // Set score (no label for cleaner look)
