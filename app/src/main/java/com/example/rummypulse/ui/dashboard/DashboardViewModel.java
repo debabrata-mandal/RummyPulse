@@ -21,11 +21,13 @@ public class DashboardViewModel extends ViewModel {
     private final GameRepository gameRepository;
     private final MutableLiveData<List<GameItem>> mInProgressGames;
     private final MutableLiveData<String> mGamesCount;
+    private final MutableLiveData<String> newGameCreated;
 
     public DashboardViewModel() {
         gameRepository = new GameRepository();
         mInProgressGames = new MutableLiveData<>();
         mGamesCount = new MutableLiveData<>();
+        newGameCreated = new MutableLiveData<>();
         
         // Observe all games and filter for in-progress ones
         gameRepository.getGameItems().observeForever(allGames -> {
@@ -64,6 +66,10 @@ public class DashboardViewModel extends ViewModel {
 
     public LiveData<String> getGamesCount() {
         return mGamesCount;
+    }
+
+    public LiveData<String> getNewGameCreated() {
+        return newGameCreated;
     }
 
     public void loadGames() {
@@ -156,8 +162,9 @@ public class DashboardViewModel extends ViewModel {
                         // Refresh the games list to show the new game
                         loadGames();
                         
-                        // TODO: Add success callback to notify Fragment
-                        // For now, just log success
+                        // Trigger navigation to the new game with edit access
+                        newGameCreated.setValue(gameId);
+                        
                         android.util.Log.d("GameCreation", "Game created successfully with creator: " + creatorName);
                     })
                     .addOnFailureListener(e -> {

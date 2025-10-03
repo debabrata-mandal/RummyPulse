@@ -101,16 +101,11 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             holder.creatorNameText.setVisibility(View.GONE);
         }
         
-        // Set join button click listener (default join as player)
+        // Set join button click listener (always join as player)
         holder.joinButton.setOnClickListener(v -> {
             if (joinListener != null) {
                 joinListener.onJoinGame(item, position, "player");
             }
-        });
-        
-        // Set dropdown button click listener
-        holder.dropdownButton.setOnClickListener(v -> {
-            showJoinOptionsMenu(v, item, position);
         });
         
         // Set QR code icon click listener
@@ -122,37 +117,6 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
     @Override
     public int getItemCount() {
         return gameItems.size();
-    }
-    
-    private void showJoinOptionsMenu(View anchor, GameItem item, int position) {
-        // Create popup menu with dark theme
-        Context wrapper = new ContextThemeWrapper(anchor.getContext(), R.style.DarkPopupMenuStyle);
-        PopupMenu popup = new PopupMenu(wrapper, anchor);
-        popup.getMenuInflater().inflate(R.menu.join_game_menu, popup.getMenu());
-        
-        // Force show icons in popup menu
-        try {
-            java.lang.reflect.Field field = popup.getClass().getDeclaredField("mPopup");
-            field.setAccessible(true);
-            Object menuPopupHelper = field.get(popup);
-            Class<?> classPopupHelper = Class.forName(menuPopupHelper.getClass().getName());
-            java.lang.reflect.Method setForceIcons = classPopupHelper.getMethod("setForceShowIcon", boolean.class);
-            setForceIcons.invoke(menuPopupHelper, true);
-        } catch (Exception e) {
-            // Ignore if reflection fails
-        }
-        
-        popup.setOnMenuItemClickListener(menuItem -> {
-            if (joinListener != null) {
-                if (menuItem.getItemId() == R.id.join_as_moderator) {
-                    joinListener.onJoinGame(item, position, "moderator");
-                    return true;
-                }
-            }
-            return false;
-        });
-        
-        popup.show();
     }
 
     private String formatDateTime(String dateTime) {
@@ -263,7 +227,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
 
     static class GameViewHolder extends RecyclerView.ViewHolder {
         TextView gameIdText, gameStatusText, playersText, pointValueText, gstText, createdTimeText, creatorNameText;
-        Button joinButton, dropdownButton;
+        Button joinButton;
         ImageView qrCodeIcon;
 
         GameViewHolder(@NonNull View itemView) {
@@ -277,7 +241,6 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             creatorNameText = itemView.findViewById(R.id.text_creator_name);
             qrCodeIcon = itemView.findViewById(R.id.icon_qr_code_dashboard);
             joinButton = itemView.findViewById(R.id.btn_join_game);
-            dropdownButton = itemView.findViewById(R.id.btn_join_dropdown);
         }
     }
 }

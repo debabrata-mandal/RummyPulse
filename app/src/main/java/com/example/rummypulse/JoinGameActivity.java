@@ -55,12 +55,21 @@ public class JoinGameActivity extends AppCompatActivity {
         if (intent != null && intent.hasExtra("GAME_ID")) {
             String gameId = intent.getStringExtra("GAME_ID");
             String joinType = intent.getStringExtra("JOIN_TYPE");
+            boolean isCreator = intent.getBooleanExtra("IS_CREATOR", false);
             
             if (gameId != null) {
                 // Keep toolbar title as "Game View" only
                 if (getSupportActionBar() != null) {
                     getSupportActionBar().setTitle("Game View");
                 }
+                
+                // If creator, automatically grant edit access
+                if (isCreator) {
+                    viewModel.grantEditAccess();
+                    // The menu will be hidden when the observer triggers
+                    ModernToast.success(this, "🎮 Welcome to your new game!");
+                }
+                
                 // Automatically join the game
                 joinGame(gameId);
             }
@@ -73,10 +82,36 @@ public class JoinGameActivity extends AppCompatActivity {
         return true;
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(android.view.Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_join_game, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(android.view.Menu menu) {
+        // Hide menu if user already has edit access
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        if (editAccess != null && editAccess) {
+            menu.clear(); // Remove all menu items when in edit mode
+        }
+        return super.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(android.view.MenuItem item) {
+        if (item.getItemId() == R.id.action_edit_access) {
+            requestEditAccess();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
     private void initializeViews() {
-        // Initially hide the cards
+        // Initially hide the cards and FAB
         binding.playersSection.setVisibility(View.GONE);
         binding.standingsCard.setVisibility(View.GONE);
+        binding.btnAddPlayer.setVisibility(View.GONE); // Hide FAB in view mode
     }
 
     private void setupClickListeners() {
@@ -111,7 +146,19 @@ public class JoinGameActivity extends AppCompatActivity {
         viewModel.getEditAccessGranted().observe(this, granted -> {
             if (granted) {
                 binding.textAdminMode.setVisibility(View.VISIBLE);
-                ModernToast.success(this, "✅ Edit access granted!");
+                // Show Players section and FAB when edit access is granted
+                binding.playersSection.setVisibility(View.VISIBLE);
+                binding.btnAddPlayer.setVisibility(View.VISIBLE);
+                // Generate player cards and update players info when edit access is granted
+                com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+                if (gameData != null) {
+                    updatePlayersInfo(gameData);
+                    generatePlayerCards(gameData);
+                }
+                // Hide the 3-dot menu when edit access is granted
+                invalidateOptionsMenu();
+                // Don't show duplicate success message here since it's already shown in ViewModel
+                System.out.println("Edit access granted - Players section should now be visible");
             }
         });
 
@@ -159,10 +206,76 @@ public class JoinGameActivity extends AppCompatActivity {
         viewModel.joinGame(gameId, false);
     }
 
+    private void requestEditAccess() {
+        // Get game ID from intent
+        Intent intent = getIntent();
+        if (intent != null && intent.hasExtra("GAME_ID")) {
+            String gameId = intent.getStringExtra("GAME_ID");
+            if (gameId != null) {
+                // Show PIN input dialog
+                showPinInputDialog(gameId);
+            }
+        } else {
+            ModernToast.error(this, "Game ID not found");
+        }
+    }
+
+    private void showPinInputDialog(String gameId) {
+        // Create custom dialog
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        dialog.setContentView(R.layout.dialog_pin_input);
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        dialog.setCancelable(true);
+        
+        // Get views
+        com.google.android.material.textfield.TextInputEditText pinInput = dialog.findViewById(R.id.edit_pin_input);
+        Button btnVerify = dialog.findViewById(R.id.btn_verify);
+        Button btnCancel = dialog.findViewById(R.id.btn_cancel);
+        
+        // Set up PIN input
+        pinInput.requestFocus();
+        
+        // Set up buttons
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        
+        btnVerify.setOnClickListener(v -> {
+            String enteredPin = pinInput.getText().toString().trim();
+            if (enteredPin.length() == 4) {
+                dialog.dismiss();
+                // Request edit access with PIN
+                viewModel.joinGame(gameId, true, enteredPin);
+            } else {
+                pinInput.setError("Please enter a 4-digit PIN");
+                ModernToast.error(this, "Please enter a 4-digit PIN");
+            }
+        });
+        
+        // Handle Enter key
+        pinInput.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                btnVerify.performClick();
+                return true;
+            }
+            return false;
+        });
+        
+        dialog.show();
+        
+        // Show keyboard
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            android.view.inputmethod.InputMethodManager imm = 
+                (android.view.inputmethod.InputMethodManager) getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+            imm.showSoftInput(pinInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+        }, 100);
+    }
+
 
     private void displayGameData(com.example.rummypulse.data.GameData gameData) {
-        // Show the cards
-        binding.playersSection.setVisibility(View.VISIBLE);
+        // Show the cards - only hide players section if edit access is not granted
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        if (editAccess == null || !editAccess) {
+            binding.playersSection.setVisibility(View.GONE); // Hidden in view mode only
+        }
         binding.standingsCard.setVisibility(View.VISIBLE);
 
         // Get the game ID from intent
@@ -175,12 +288,8 @@ public class JoinGameActivity extends AppCompatActivity {
         // Update header with game ID
         binding.textGameIdHeader.setText(gameId);
 
-        // Update game info in both sections
-        updatePlayersInfo(gameData);
+        // Update game info in standings section only
         updateStandingsInfo(gameData);
-
-        // Generate player cards
-        generatePlayerCards(gameData);
 
         // Generate standings table
         generateStandingsTable(gameData);

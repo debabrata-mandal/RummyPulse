@@ -86,6 +86,17 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             binding.swipeRefresh.setRefreshing(false);
             // Removed automatic "Games refreshed" toast - only show on manual refresh
         });
+
+        // Observe new game creation
+        dashboardViewModel.getNewGameCreated().observe(getViewLifecycleOwner(), gameId -> {
+            if (gameId != null) {
+                // Navigate to the newly created game with creator access
+                Intent intent = new Intent(getContext(), JoinGameActivity.class);
+                intent.putExtra("GAME_ID", gameId);
+                intent.putExtra("IS_CREATOR", true); // Flag to indicate creator access
+                startActivity(intent);
+            }
+        });
     }
 
     @Override

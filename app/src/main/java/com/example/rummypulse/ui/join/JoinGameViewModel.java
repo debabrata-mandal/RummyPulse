@@ -58,7 +58,15 @@ public class JoinGameViewModel extends AndroidViewModel {
         return gamePin;
     }
 
+    public void grantEditAccess() {
+        editAccessGranted.setValue(true);
+    }
+
     public void joinGame(String gameId, boolean requestEditAccess) {
+        joinGame(gameId, requestEditAccess, null);
+    }
+
+    public void joinGame(String gameId, boolean requestEditAccess, String enteredPin) {
         if (TextUtils.isEmpty(gameId)) {
             errorMessage.setValue("Please enter a Game ID");
             return;
@@ -85,6 +93,18 @@ public class JoinGameViewModel extends AndroidViewModel {
                             GameAuth gameAuth = documentSnapshot.toObject(GameAuth.class);
                             if (gameAuth != null && gameAuth.getPin() != null) {
                                 gamePin.setValue(gameAuth.getPin());
+                                
+                                // If requesting edit access, verify PIN
+                                if (requestEditAccess && enteredPin != null) {
+                                    if (gameAuth.getPin().equals(enteredPin)) {
+                                        editAccessGranted.setValue(true);
+                                        successMessage.setValue("✅ PIN verified! Edit access granted.");
+                                    } else {
+                                        isLoading.setValue(false);
+                                        errorMessage.setValue("Incorrect PIN. Please try again.");
+                                        return;
+                                    }
+                                }
                             }
                         } catch (Exception e) {
                             System.out.println("Error extracting PIN: " + e.getMessage());
@@ -114,7 +134,12 @@ public class JoinGameViewModel extends AndroidViewModel {
                             GameData data = wrapper.getData();
                             gameData.setValue(data);
                             
-                            if (requestEditAccess) {
+                            // Only show success message if edit access was not already granted
+                            Boolean editAccess = editAccessGranted.getValue();
+                            if (editAccess != null && editAccess) {
+                                // Edit access already granted, don't show any additional message
+                                // The access granted message was already shown during PIN verification
+                            } else if (requestEditAccess) {
                                 successMessage.setValue("Game loaded successfully. You can now request edit access.");
                             } else {
                                 successMessage.setValue("Game loaded successfully. You are in view mode.");

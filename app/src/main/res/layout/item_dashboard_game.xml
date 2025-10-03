@@ -173,35 +173,24 @@
             android:layout_marginBottom="16dp"
             android:visibility="gone" />
 
-        <!-- Join Button with Dropdown -->
+        <!-- Join Button (Bigger) -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center">
 
             <Button
                 android:id="@+id/btn_join_game"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
+                android:layout_width="200dp"
+                android:layout_height="48dp"
                 android:text="🎮 JOIN GAME"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:textColor="@color/white"
                 android:background="@drawable/button_primary"
-                android:elevation="4dp" />
-
-            <Button
-                android:id="@+id/btn_join_dropdown"
-                android:layout_width="48dp"
-                android:layout_height="match_parent"
-                android:text="▼"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="@color/white"
-                android:background="@drawable/button_primary_dropdown"
-                android:elevation="4dp" />
+                android:elevation="4dp"
+                android:layout_marginHorizontal="4dp" />
 
         </LinearLayout>
 
