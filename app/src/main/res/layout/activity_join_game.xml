@@ -189,7 +189,7 @@
                                             android:id="@+id/text_players_gst_rate"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
-                                            android:text="55% GST"
+                                            android:text="55%"
                                             android:textColor="#FF9800"
                                             android:textSize="14sp"
                                             android:textStyle="bold"
@@ -450,7 +450,7 @@
                                                 android:id="@+id/text_gst_rate_info"
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
-                                                android:text="55% GST"
+                                                android:text="55%"
                                                 android:textColor="#FF9800"
                                                 android:textSize="14sp"
                                                 android:textStyle="bold"
@@ -501,7 +501,7 @@
                                             <TextView
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
-                                                android:text="Total GST Collected"
+                                                android:text="Total GST"
                                                 android:textColor="@color/text_secondary"
                                                 android:textSize="11sp" />
 
@@ -652,7 +652,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:id="@+id/text_settlement_winners_rule"
-                            android:text="Winners (Green): Receive money but pay 55% GST on winnings"
+                            android:text="Winners (Green): Receive money but pay 55% on winnings"
                             android:textColor="#4CAF50"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -729,7 +729,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:id="@+id/text_settlement_gst_rule"
-                            android:text="GST: Only winners pay 55% GST on positive amounts"
+                            android:text="GST: Only winners pay 55% on positive amounts"
                             android:textColor="#FF9800"
                             android:textSize="14sp"
                             android:textStyle="bold" />

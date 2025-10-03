@@ -187,7 +187,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private void showLoadingGameInfo() {
         // Set placeholder values for game info in standings section
         binding.textPointValueInfo.setText("₹0.00 per point");
-        binding.textGstRateInfo.setText("0% GST");
+        binding.textGstRateInfo.setText("0%");
         binding.textCurrentRoundInfo.setText("Round 1");
         binding.textTotalGstInfo.setText("Total GST: ₹0");
         
@@ -217,7 +217,7 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Set placeholder values for players info
         binding.textPlayersPointValue.setText("₹0.00 per point");
-        binding.textPlayersGstRate.setText("0% GST");
+        binding.textPlayersGstRate.setText("0%");
         binding.textPlayersCurrentRound.setText("Round 1");
         binding.textNumberOfPlayers.setText("2 Players");
     }
@@ -1151,7 +1151,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private void updatePlayersInfo(com.example.rummypulse.data.GameData gameData) {
         // Update Players & Scores information card
         binding.textPlayersPointValue.setText("₹" + formatPointValue(gameData.getPointValue()) + " per point");
-        binding.textPlayersGstRate.setText(String.format("%.0f", gameData.getGstPercent()) + "% GST");
+        binding.textPlayersGstRate.setText(String.format("%.0f", gameData.getGstPercent()) + "%");
         
         int currentRound = calculateCurrentRound(gameData);
         if (currentRound == 10 && isGameCompleted(gameData)) {
@@ -1337,7 +1337,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private void updateStandingsInfo(com.example.rummypulse.data.GameData gameData) {
         // Update Standings information card
         binding.textPointValueInfo.setText("₹" + String.format("%.2f", gameData.getPointValue()) + " per point");
-        binding.textGstRateInfo.setText(String.format("%.0f", gameData.getGstPercent()) + "% GST");
+        binding.textGstRateInfo.setText(String.format("%.0f", gameData.getGstPercent()) + "%");
         
         int currentRound = calculateCurrentRound(gameData);
         if (currentRound == 10 && isGameCompleted(gameData)) {
@@ -1365,7 +1365,7 @@ public class JoinGameActivity extends AppCompatActivity {
             // Update Winners Rule
             TextView winnersRule = findViewById(R.id.text_settlement_winners_rule);
             if (winnersRule != null) {
-                winnersRule.setText("Winners (Green): Receive money but pay " + gstPercentText + " GST on winnings");
+                winnersRule.setText("Winners (Green): Receive money but pay " + gstPercentText + " on winnings");
             }
             
             // Update Formula
@@ -1377,7 +1377,7 @@ public class JoinGameActivity extends AppCompatActivity {
             // Update GST Rule
             TextView gstRule = findViewById(R.id.text_settlement_gst_rule);
             if (gstRule != null) {
-                gstRule.setText("GST: Only winners pay " + gstPercentText + " GST on positive amounts");
+                gstRule.setText("GST: Only winners pay " + gstPercentText + " on positive amounts");
             }
             
             // Update Example Description
