@@ -12,36 +12,35 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:gravity="center_vertical">
+        android:orientation="vertical"
+        android:padding="12dp">
 
-        <!-- Left Side: Rank + Player Info -->
+        <!-- Top Row: Player Info + Net Amount -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
 
-            <!-- Rank Badge - Smaller -->
+            <!-- Rank Badge -->
             <LinearLayout
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
                 android:background="@drawable/rank_badge_background"
                 android:gravity="center"
-                android:layout_marginEnd="8dp">
+                android:layout_marginEnd="6dp">
 
                 <TextView
                     android:id="@+id/text_rank"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🥇"
-                    android:textSize="12sp" />
+                    android:textSize="10sp" />
 
             </LinearLayout>
 
-            <!-- Player Details - All on one row -->
+            <!-- Player Details -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -55,7 +54,7 @@
                     android:layout_height="wrap_content"
                     android:text="Ajay"
                     android:textColor="@color/text_primary"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -64,8 +63,8 @@
                     android:layout_height="wrap_content"
                     android:text="(#75)"
                     android:textColor="@color/text_secondary"
-                    android:textSize="9sp"
-                    android:layout_marginStart="4dp" />
+                    android:textSize="8sp"
+                    android:layout_marginStart="3dp" />
 
                 <TextView
                     android:id="@+id/text_score"
@@ -73,30 +72,170 @@
                     android:layout_height="wrap_content"
                     android:text="158"
                     android:textColor="#FFC107"
-                    android:textSize="10sp"
+                    android:textSize="9sp"
                     android:textStyle="bold"
-                    android:layout_marginStart="8dp" />
+                    android:layout_marginStart="6dp" />
 
             </LinearLayout>
 
-        </LinearLayout>
-
-        <!-- Right Side: Simplified Amount Display -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="end">
-
-            <!-- Net Amount Only -->
+            <!-- Net Amount -->
             <TextView
                 android:id="@+id/text_net_amount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="₹369"
-                android:textSize="13sp"
+                android:text="₹515"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:gravity="end" />
+
+        </LinearLayout>
+
+        <!-- Bottom Row: 10 Round Score Boxes -->
+        <LinearLayout
+            android:id="@+id/round_scores_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Round 1 -->
+            <TextView
+                android:id="@+id/round_1_score"
+                android:layout_width="0dp"
+                android:layout_height="20dp"
+                android:layout_weight="1"
+                android:text="15"
+                android:textSize="8sp"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/round_score_box"
+                android:gravity="center"
+                android:layout_marginEnd="1dp"
+                android:maxLines="1" />
+
+            <!-- Round 2 -->
+            <TextView
+                android:id="@+id/round_2_score"
+                android:layout_width="0dp"
+                android:layout_height="20dp"
+                android:layout_weight="1"
+                android:text="23"
+                android:textSize="8sp"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/round_score_box"
+                android:gravity="center"
+                android:layout_marginEnd="1dp"
+                android:maxLines="1" />
+
+            <!-- Round 3 -->
+            <TextView
+                android:id="@+id/round_3_score"
+                android:layout_width="0dp"
+                android:layout_height="20dp"
+                android:layout_weight="1"
+                android:text="8"
+                android:textSize="8sp"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/round_score_box"
+                android:gravity="center"
+                android:layout_marginEnd="1dp"
+                android:maxLines="1" />
+
+            <!-- Round 4 -->
+            <TextView
+                android:id="@+id/round_4_score"
+                android:layout_width="0dp"
+                android:layout_height="20dp"
+                android:layout_weight="1"
+                android:text="12"
+                android:textSize="8sp"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/round_score_box"
+                android:gravity="center"
+                android:layout_marginEnd="1dp"
+                android:maxLines="1" />
+
+            <!-- Round 5 -->
+            <TextView
+                android:id="@+id/round_5_score"
+                android:layout_width="0dp"
+                android:layout_height="20dp"
+                android:layout_weight="1"
+                android:text="31"
+                android:textSize="8sp"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/round_score_box"
+                android:gravity="center"
+                android:layout_marginEnd="1dp"
+                android:maxLines="1" />
+
+            <!-- Round 6 -->
+            <TextView
+                android:id="@+id/round_6_score"
+                android:layout_width="0dp"
+                android:layout_height="20dp"
+                android:layout_weight="1"
+                android:text="19"
+                android:textSize="8sp"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/round_score_box"
+                android:gravity="center"
+                android:layout_marginEnd="1dp"
+                android:maxLines="1" />
+
+            <!-- Round 7 -->
+            <TextView
+                android:id="@+id/round_7_score"
+                android:layout_width="0dp"
+                android:layout_height="20dp"
+                android:layout_weight="1"
+                android:text="27"
+                android:textSize="8sp"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/round_score_box"
+                android:gravity="center"
+                android:layout_marginEnd="1dp"
+                android:maxLines="1" />
+
+            <!-- Round 8 -->
+            <TextView
+                android:id="@+id/round_8_score"
+                android:layout_width="0dp"
+                android:layout_height="20dp"
+                android:layout_weight="1"
+                android:text="14"
+                android:textSize="8sp"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/round_score_box"
+                android:gravity="center"
+                android:layout_marginEnd="1dp"
+                android:maxLines="1" />
+
+            <!-- Round 9 -->
+            <TextView
+                android:id="@+id/round_9_score"
+                android:layout_width="0dp"
+                android:layout_height="20dp"
+                android:layout_weight="1"
+                android:text="6"
+                android:textSize="8sp"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/round_score_box"
+                android:gravity="center"
+                android:layout_marginEnd="1dp"
+                android:maxLines="1" />
+
+            <!-- Round 10 -->
+            <TextView
+                android:id="@+id/round_10_score"
+                android:layout_width="0dp"
+                android:layout_height="20dp"
+                android:layout_weight="1"
+                android:text="3"
+                android:textSize="8sp"
+                android:textColor="@color/text_primary"
+                android:background="@drawable/round_score_box"
+                android:gravity="center"
+                android:maxLines="1" />
 
         </LinearLayout>
 

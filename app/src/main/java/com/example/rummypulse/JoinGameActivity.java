@@ -158,6 +158,9 @@ public class JoinGameActivity extends AppCompatActivity {
             netAmountText.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
             netAmountText.setBackground(null); // Remove any background
 
+            // Set all round scores to dash for loading state
+            populateLoadingRoundScores(standingsRowView);
+
             binding.standingsTableContainer.addView(standingsRowView);
         }
         
@@ -954,7 +957,89 @@ public class JoinGameActivity extends AppCompatActivity {
                 netAmountText.setBackground(null); // Remove any background
             }
 
+            // Populate round scores
+            populateRoundScores(standingsRowView, standing.player);
+
             binding.standingsTableContainer.addView(standingsRowView);
+        }
+    }
+
+    /**
+     * Populate round scores with dashes for loading state
+     */
+    private void populateLoadingRoundScores(View standingsRowView) {
+        int[] roundScoreIds = {
+            R.id.round_1_score, R.id.round_2_score, R.id.round_3_score, R.id.round_4_score, R.id.round_5_score,
+            R.id.round_6_score, R.id.round_7_score, R.id.round_8_score, R.id.round_9_score, R.id.round_10_score
+        };
+
+        for (int roundScoreId : roundScoreIds) {
+            TextView roundScoreText = standingsRowView.findViewById(roundScoreId);
+            if (roundScoreText != null) {
+                roundScoreText.setText("-");
+                roundScoreText.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
+            }
+        }
+    }
+
+    /**
+     * Populate the 10 round score boxes for a player
+     */
+    private void populateRoundScores(View standingsRowView, com.example.rummypulse.data.Player player) {
+        // Array of round score TextViews
+        int[] roundScoreIds = {
+            R.id.round_1_score, R.id.round_2_score, R.id.round_3_score, R.id.round_4_score, R.id.round_5_score,
+            R.id.round_6_score, R.id.round_7_score, R.id.round_8_score, R.id.round_9_score, R.id.round_10_score
+        };
+
+        for (int round = 0; round < 10; round++) {
+            TextView roundScoreText = standingsRowView.findViewById(roundScoreIds[round]);
+            if (roundScoreText != null) {
+                Integer score = null;
+                if (player.getScores() != null && round < player.getScores().size()) {
+                    score = player.getScores().get(round);
+                }
+                
+                if (score != null && score >= 0) {
+                    // Valid score (including 0) - show it
+                    roundScoreText.setText(String.valueOf(score));
+                    
+                    if (score == 0) {
+                        // Zero score (winning round) - use rounded green background
+                        roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box_zero, getTheme()));
+                        roundScoreText.setTextColor(getResources().getColor(android.R.color.white, getTheme()));
+                        roundScoreText.setTypeface(android.graphics.Typeface.DEFAULT_BOLD, android.graphics.Typeface.BOLD);
+                        roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() | android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
+                    } else {
+                        // Regular score - use colored boundary based on score value
+                        
+                        if (score > 65) {
+                            // Very high score (bad round) - red boundary and text
+                            roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box_red, getTheme()));
+                            roundScoreText.setTextColor(getResources().getColor(R.color.error_red, getTheme()));
+                        } else if (score >= 40) {
+                            // High score - yellow boundary
+                            roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box_yellow, getTheme()));
+                            roundScoreText.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
+                        } else {
+                            // Low score (good performance) - green boundary
+                            roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box_green, getTheme()));
+                            roundScoreText.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
+                        }
+                        
+                        // Make ALL scores bold for better readability
+                        roundScoreText.setTypeface(android.graphics.Typeface.DEFAULT_BOLD, android.graphics.Typeface.BOLD);
+                        roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() | android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
+                    }
+                } else {
+                    // No score yet (null or -1) - show dash
+                    roundScoreText.setText("-");
+                    roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box, getTheme()));
+                    roundScoreText.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
+                    roundScoreText.setTypeface(null, android.graphics.Typeface.NORMAL);
+                    roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() & ~android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
+                }
+            }
         }
     }
 
