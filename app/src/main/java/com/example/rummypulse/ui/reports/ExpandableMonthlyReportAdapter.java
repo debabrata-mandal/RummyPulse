@@ -88,8 +88,8 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
 
     public void setMonthlyPointValueReports(List<MonthlyPointValueReport> reports) {
         items.clear();
-        expandedStates.clear();
-
+        // Don't clear expandedStates to preserve user's expand/collapse preferences
+        
         if (reports != null) {
             for (MonthlyPointValueReport monthlyReport : reports) {
                 String monthYear = monthlyReport.getMonthYear();
@@ -97,9 +97,13 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
                 // Add month header
                 items.add(new MonthHeaderItem(monthlyReport));
                 
-                // Set default expanded state (first month expanded, others collapsed)
-                boolean isExpanded = expandedStates.getOrDefault(monthYear, reports.indexOf(monthlyReport) == 0);
-                expandedStates.put(monthYear, isExpanded);
+                // Set default expanded state only if not already set (first month expanded, others collapsed)
+                if (!expandedStates.containsKey(monthYear)) {
+                    boolean isExpanded = reports.indexOf(monthlyReport) == 0;
+                    expandedStates.put(monthYear, isExpanded);
+                }
+                
+                boolean isExpanded = expandedStates.get(monthYear);
                 
                 // Add point value cards if expanded
                 if (isExpanded && monthlyReport.getPointValueReports() != null) {
@@ -114,12 +118,75 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
 
     public void toggleMonth(String monthYear) {
         boolean currentState = expandedStates.getOrDefault(monthYear, false);
-        expandedStates.put(monthYear, !currentState);
+        boolean newState = !currentState;
+        expandedStates.put(monthYear, newState);
         
-        // Rebuild the items list
-        List<MonthlyPointValueReport> reports = getCurrentReports();
-        if (reports != null) {
-            setMonthlyPointValueReports(reports);
+        // Find the header position for this month
+        int headerPosition = -1;
+        for (int i = 0; i < items.size(); i++) {
+            if (items.get(i) instanceof MonthHeaderItem) {
+                MonthHeaderItem headerItem = (MonthHeaderItem) items.get(i);
+                if (monthYear.equals(headerItem.getMonthlyReport().getMonthYear())) {
+                    headerPosition = i;
+                    break;
+                }
+            }
+        }
+        
+        if (headerPosition == -1) return;
+        
+        // Update the header icon
+        notifyItemChanged(headerPosition);
+        
+        // Find the corresponding monthly report
+        MonthlyPointValueReport monthlyReport = null;
+        for (MonthlyPointValueReport report : getCurrentReports()) {
+            if (monthYear.equals(report.getMonthYear())) {
+                monthlyReport = report;
+                break;
+            }
+        }
+        
+        if (monthlyReport == null || monthlyReport.getPointValueReports() == null) return;
+        
+        if (newState) {
+            // Expanding - insert point value cards
+            List<PointValueCardItem> cardsToAdd = new ArrayList<>();
+            for (PointValueReport pointReport : monthlyReport.getPointValueReports()) {
+                cardsToAdd.add(new PointValueCardItem(monthYear, pointReport));
+            }
+            
+            // Insert cards after the header
+            int insertPosition = headerPosition + 1;
+            for (int i = 0; i < cardsToAdd.size(); i++) {
+                items.add(insertPosition + i, cardsToAdd.get(i));
+            }
+            notifyItemRangeInserted(insertPosition, cardsToAdd.size());
+            
+        } else {
+            // Collapsing - remove point value cards
+            int removeStart = headerPosition + 1;
+            int removeCount = 0;
+            
+            // Count how many point value cards to remove
+            for (int i = removeStart; i < items.size(); i++) {
+                if (items.get(i) instanceof PointValueCardItem) {
+                    PointValueCardItem cardItem = (PointValueCardItem) items.get(i);
+                    if (monthYear.equals(cardItem.getMonthYear())) {
+                        removeCount++;
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            
+            // Remove the cards
+            for (int i = 0; i < removeCount; i++) {
+                items.remove(removeStart);
+            }
+            notifyItemRangeRemoved(removeStart, removeCount);
         }
     }
 

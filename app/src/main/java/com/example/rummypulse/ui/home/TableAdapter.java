@@ -157,7 +157,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             
             
             holder.btnApproveGst.setEnabled(isGameCompleted);
-            holder.btnApproveGst.setAlpha(isGameCompleted ? 1.0f : 0.5f);
+            // Remove alpha setting - handled by state list drawable now
             
             // Set up button click listeners
             holder.btnApproveGst.setOnClickListener(v -> {
