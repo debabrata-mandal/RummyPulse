@@ -148,23 +148,15 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView playerId = standingsRowView.findViewById(R.id.text_player_id);
             playerId.setVisibility(View.GONE);
 
-            // Set zero score
+            // Set zero score (no label for cleaner look)
             TextView scoreText = standingsRowView.findViewById(R.id.text_score);
-            scoreText.setText("Score: 0");
+            scoreText.setText("0");
 
-            // Set zero gross amount
-            TextView grossAmountText = standingsRowView.findViewById(R.id.text_gross_amount);
-            grossAmountText.setText("₹0");
-
-            // Set zero GST
-            TextView gstText = standingsRowView.findViewById(R.id.text_gst);
-            gstText.setText("GST: ₹0");
-
-            // Set zero net amount
+            // Set zero net amount only (simplified display)
             TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
-            netAmountText.setText("Net: ₹0");
-            netAmountText.setTextColor(getResources().getColor(android.R.color.white, getTheme()));
-            netAmountText.setBackgroundColor(getResources().getColor(R.color.text_secondary, getTheme()));
+            netAmountText.setText("₹0");
+            netAmountText.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
+            netAmountText.setBackground(null); // Remove any background
 
             binding.standingsTableContainer.addView(standingsRowView);
         }
@@ -403,9 +395,6 @@ public class JoinGameActivity extends AppCompatActivity {
 
         // Generate standings table
         generateStandingsTable(gameData);
-        
-        // Update score chart
-        updateScoreChart(gameData);
 
         // Update current round
         updateCurrentRound(gameData);
@@ -565,7 +554,6 @@ public class JoinGameActivity extends AppCompatActivity {
                         updateStandings(gameData);
                         updateCurrentRound(gameData);
                         updateRoundValidation(gameData);
-                        updateScoreChart(gameData);
                     }
                 });
             }
@@ -947,31 +935,23 @@ public class JoinGameActivity extends AppCompatActivity {
                 playerId.setVisibility(View.VISIBLE);
             }
 
-            // Set score with label
+            // Set score (no label for cleaner look)
             TextView scoreText = standingsRowView.findViewById(R.id.text_score);
-            scoreText.setText("Score: " + String.valueOf(standing.totalScore));
+            scoreText.setText(String.valueOf(standing.totalScore));
 
-            // Set gross amount
-            TextView grossAmountText = standingsRowView.findViewById(R.id.text_gross_amount);
-            grossAmountText.setText("₹" + String.format("%.0f", standing.grossAmount));
-
-            // Set GST with label
-            TextView gstText = standingsRowView.findViewById(R.id.text_gst);
-            gstText.setText("GST: ₹" + String.format("%.0f", standing.gstPaid));
-
-            // Set net amount with label and conditional coloring
+            // Set net amount only (simplified display)
             TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
-            netAmountText.setText("Net: ₹" + String.format("%.0f", standing.netAmount));
+            netAmountText.setText("₹" + String.format("%.0f", standing.netAmount));
             
-            // Color code based on positive/negative net amount
+            // Color code based on positive/negative net amount - text color only
             if (standing.netAmount > 0) {
-                // Positive net amount (winners) - green text and background
-                netAmountText.setTextColor(getResources().getColor(android.R.color.white, getTheme()));
-                netAmountText.setBackgroundColor(getResources().getColor(R.color.positive_background, getTheme()));
+                // Positive net amount (winners) - green text only
+                netAmountText.setTextColor(getResources().getColor(R.color.success_green, getTheme()));
+                netAmountText.setBackground(null); // Remove any background
             } else {
-                // Negative net amount (losers) - red text and background
-                netAmountText.setTextColor(getResources().getColor(android.R.color.white, getTheme()));
-                netAmountText.setBackgroundColor(getResources().getColor(R.color.negative_background, getTheme()));
+                // Negative net amount (losers) - red text only
+                netAmountText.setTextColor(getResources().getColor(R.color.error_red, getTheme()));
+                netAmountText.setBackground(null); // Remove any background
             }
 
             binding.standingsTableContainer.addView(standingsRowView);
@@ -1068,32 +1048,17 @@ public class JoinGameActivity extends AppCompatActivity {
                 }
             }
         } else if (contentView.getId() == R.id.standings_content) {
-            // For standings section, toggle both the standings table and the chart
+            // For standings section, toggle the standings table
             View standingsTableContainer = findViewById(R.id.standings_table_container);
-            View chartContainer = findViewById(R.id.chart_container);
             
             if (standingsTableContainer != null) {
                 if (standingsTableContainer.getVisibility() == View.VISIBLE) {
-                    // Collapse - hide the standings table and chart
+                    // Collapse - hide the standings table
                     standingsTableContainer.setVisibility(View.GONE);
-                    // Also hide the chart section (find its parent LinearLayout)
-                    if (chartContainer != null && chartContainer.getParent() != null) {
-                        View chartSection = (View) chartContainer.getParent().getParent(); // FrameLayout -> LinearLayout
-                        if (chartSection != null) {
-                            chartSection.setVisibility(View.GONE);
-                        }
-                    }
                     arrowIcon.setImageResource(R.drawable.ic_expand_more);
                 } else {
-                    // Expand - show the standings table and chart
+                    // Expand - show the standings table
                     standingsTableContainer.setVisibility(View.VISIBLE);
-                    // Also show the chart section
-                    if (chartContainer != null && chartContainer.getParent() != null) {
-                        View chartSection = (View) chartContainer.getParent().getParent(); // FrameLayout -> LinearLayout
-                        if (chartSection != null) {
-                            chartSection.setVisibility(View.VISIBLE);
-                        }
-                    }
                     arrowIcon.setImageResource(R.drawable.ic_expand_less);
                 }
             }
@@ -1111,130 +1076,6 @@ public class JoinGameActivity extends AppCompatActivity {
         }
     }
 
-    private void updateScoreChart(com.example.rummypulse.data.GameData gameData) {
-        // Get the chart container
-        android.widget.LinearLayout chartContainer = binding.chartContainer;
-
-        // Clear existing bars
-        chartContainer.removeAllViews();
-
-        // Get all players and their total scores
-        java.util.List<PlayerStanding> standings = new java.util.ArrayList<>();
-
-        for (int i = 0; i < gameData.getPlayers().size(); i++) {
-            com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
-            int totalScore = 0;
-
-            // Calculate total score from game data (works in both view and edit mode)
-            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-            if (editAccess != null && editAccess) {
-                // Edit mode: get scores from input fields
-                for (int round = 1; round <= 10; round++) {
-                    EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
-                    if (scoreInput != null && !scoreInput.getText().toString().trim().isEmpty()) {
-                        try {
-                            int score = Integer.parseInt(scoreInput.getText().toString().trim());
-                            if (score != -1) { // Don't count -1 values
-                                totalScore += score;
-                            }
-                        } catch (NumberFormatException e) {
-                            // Skip invalid scores
-                        }
-                    }
-                }
-            } else {
-                // View mode: get scores from game data
-                if (player.getScores() != null) {
-                    for (Integer score : player.getScores()) {
-                        if (score != null && score > 0) {
-                            totalScore += score;
-                        }
-                    }
-                }
-            }
-
-            PlayerStanding standing = new PlayerStanding();
-            standing.player = player;
-            standing.totalScore = totalScore;
-            standings.add(standing);
-        }
-
-        // Don't sort - maintain original game data order (based on random numbers)
-
-        // Find max score for scaling
-        int maxScore = 100; // Default minimum
-        for (PlayerStanding standing : standings) {
-            maxScore = Math.max(maxScore, standing.totalScore);
-        }
-        if (maxScore == 0) maxScore = 100; // Avoid division by zero
-
-        // Create bars for each player
-        for (PlayerStanding standing : standings) {
-            // Create bar container
-            android.widget.LinearLayout barContainer = new android.widget.LinearLayout(this);
-            android.widget.LinearLayout.LayoutParams containerParams = new android.widget.LinearLayout.LayoutParams(
-                0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
-            containerParams.setMargins(dpToPx(4), 0, dpToPx(4), 0);
-            barContainer.setLayoutParams(containerParams);
-            barContainer.setOrientation(android.widget.LinearLayout.VERTICAL);
-            barContainer.setGravity(android.view.Gravity.CENTER);
-
-            // Create the bar
-            android.view.View bar = new android.view.View(this);
-            // Reserve space for score label (20dp) and name label (~24dp), use remaining space for bar
-            int availableHeight = dpToPx(140) - dpToPx(20) - dpToPx(24) - dpToPx(16); // Total - score label - name label - padding
-            int barHeight = Math.max(dpToPx(20), (int) (standing.totalScore * availableHeight / (double) maxScore));
-            android.widget.LinearLayout.LayoutParams barParams = new android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, barHeight);
-            barParams.setMargins(0, 0, 0, dpToPx(4));
-            bar.setLayoutParams(barParams);
-
-            // Set bar color based on score value (lower scores are better in Rummy)
-            if (standing.totalScore == 0) {
-                // No score yet - gray
-                bar.setBackgroundColor(0xFF9E9E9E);
-            } else if (standing.totalScore <= maxScore * 0.3) {
-                // Low scores (winners) - green
-                bar.setBackgroundColor(0xFF4CAF50);
-            } else if (standing.totalScore <= maxScore * 0.7) {
-                // Medium scores - yellow
-                bar.setBackgroundColor(0xFFFFEB3B);
-            } else {
-                // High scores (losers) - red
-                bar.setBackgroundColor(0xFFF44336);
-            }
-
-            // Create score value label (on top of bar)
-            android.widget.TextView scoreLabel = new android.widget.TextView(this);
-            scoreLabel.setText(String.valueOf(standing.totalScore));
-            scoreLabel.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
-            scoreLabel.setTextSize(10);
-            scoreLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-            scoreLabel.setGravity(android.view.Gravity.CENTER);
-            
-            // Set fixed height for score label to prevent clipping
-            android.widget.LinearLayout.LayoutParams scoreLabelParams = new android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(20));
-            scoreLabelParams.setMargins(0, dpToPx(4), 0, dpToPx(2)); // Add top margin
-            scoreLabel.setLayoutParams(scoreLabelParams);
-
-            // Create player name label
-            android.widget.TextView nameLabel = new android.widget.TextView(this);
-            nameLabel.setText(standing.player.getName());
-            nameLabel.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
-            nameLabel.setTextSize(12);
-            nameLabel.setTypeface(null, android.graphics.Typeface.BOLD);
-            nameLabel.setGravity(android.view.Gravity.CENTER);
-
-            // Add views to container
-            barContainer.addView(scoreLabel);
-            barContainer.addView(bar);
-            barContainer.addView(nameLabel);
-
-            // Add container to chart
-            chartContainer.addView(barContainer);
-        }
-    }
 
     // Helper method to convert dp to pixels
     private int dpToPx(int dp) {

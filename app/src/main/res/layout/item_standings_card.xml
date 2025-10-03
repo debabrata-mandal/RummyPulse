@@ -24,147 +24,79 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <!-- Rank Badge -->
+            <!-- Rank Badge - Smaller -->
             <LinearLayout
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:background="@drawable/rank_badge_background"
                 android:gravity="center"
-                android:layout_marginEnd="12dp">
+                android:layout_marginEnd="8dp">
 
                 <TextView
                     android:id="@+id/text_rank"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🥇"
-                    android:textSize="20sp" />
+                    android:textSize="12sp" />
 
             </LinearLayout>
 
-            <!-- Player Details -->
+            <!-- Player Details - All on one row -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical">
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
                 <TextView
                     android:id="@+id/text_player_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Raja"
+                    android:text="Ajay"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="12sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/text_player_id"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="(#21)"
+                    android:text="(#75)"
                     android:textColor="@color/text_secondary"
-                    android:textSize="11sp"
-                    android:layout_marginTop="1dp" />
+                    android:textSize="9sp"
+                    android:layout_marginStart="4dp" />
 
                 <TextView
                     android:id="@+id/text_score"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Score: 45"
+                    android:text="158"
                     android:textColor="#FFC107"
-                    android:textSize="13sp"
+                    android:textSize="10sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="2dp" />
+                    android:layout_marginStart="8dp" />
 
             </LinearLayout>
 
         </LinearLayout>
 
-        <!-- Right Side: Amount Details in Compact Grid -->
+        <!-- Right Side: Simplified Amount Display -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="end">
 
-            <!-- Gross Amount Row -->
-            <LinearLayout
+            <!-- Net Amount Only -->
+            <TextView
+                android:id="@+id/text_net_amount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Gross: "
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
-
-                <TextView
-                    android:id="@+id/text_gross_amount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹450"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
-
-            <!-- GST Row -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="2dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="GST: "
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
-
-                <TextView
-                    android:id="@+id/text_gst"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹81"
-                    android:textColor="#FF5722"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
-
-            <!-- Net Amount Row (Most Important) -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="4dp"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="2dp"
-                android:layout_gravity="end">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Net: "
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
-
-                <TextView
-                    android:id="@+id/text_net_amount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹369"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
+                android:text="₹369"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:gravity="end" />
 
         </LinearLayout>
 
