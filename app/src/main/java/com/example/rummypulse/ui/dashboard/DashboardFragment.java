@@ -113,6 +113,9 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 intent.putExtra("GAME_ID", gameId);
                 intent.putExtra("IS_CREATOR", true); // Flag to indicate creator access
                 startActivity(intent);
+                
+                // Clear the value to prevent re-navigation when returning to dashboard
+                dashboardViewModel.clearNewGameCreated();
             }
         });
     }

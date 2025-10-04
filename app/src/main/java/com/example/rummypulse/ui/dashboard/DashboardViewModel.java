@@ -102,6 +102,10 @@ public class DashboardViewModel extends ViewModel {
     public LiveData<String> getNewGameCreated() {
         return newGameCreated;
     }
+    
+    public void clearNewGameCreated() {
+        newGameCreated.setValue(null);
+    }
 
     public void loadGames() {
         gameRepository.loadAllGames();

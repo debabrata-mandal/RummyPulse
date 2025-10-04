@@ -88,15 +88,16 @@ public class JoinGameActivity extends AppCompatActivity {
                     getSupportActionBar().setTitle("Game View");
                 }
                 
-                // If creator, automatically grant edit access
-                if (isCreator) {
-                    viewModel.grantEditAccess();
-                    // The menu will be hidden when the observer triggers
-                    ModernToast.success(this, "🎮 Welcome to your new game!");
-                }
-                
                 // Automatically join the game
-                joinGame(gameId);
+                if (isCreator) {
+                    ModernToast.success(this, "🎮 Welcome to your new game!");
+                    // For creator, join game and auto-grant edit access
+                    // First join to load game data and fetch PIN
+                    joinGameAsCreator(gameId);
+                } else {
+                    // Regular join without edit access
+                    joinGame(gameId);
+                }
             }
         }
     }
@@ -479,6 +480,50 @@ public class JoinGameActivity extends AppCompatActivity {
             // Join game in view mode (no PIN required)
             viewModel.joinGame(gameId, false, null);
         }
+    }
+    
+    /**
+     * Join game as creator with automatic edit access and PIN saving
+     */
+    private void joinGameAsCreator(String gameId) {
+        currentGameId = gameId;
+        
+        // Fetch the game PIN from Firebase and grant edit access
+        com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            .collection("games")
+            .document(gameId)
+            .get()
+            .addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    try {
+                        com.example.rummypulse.data.GameAuth gameAuth = 
+                            documentSnapshot.toObject(com.example.rummypulse.data.GameAuth.class);
+                        if (gameAuth != null && gameAuth.getPin() != null) {
+                            String pin = gameAuth.getPin();
+                            System.out.println("Creator PIN fetched: " + pin);
+                            
+                            // Save the PIN immediately for persistent edit access
+                            savePin(gameId, pin);
+                            
+                            // Join with the PIN to grant edit access
+                            viewModel.joinGame(gameId, true, pin);
+                        } else {
+                            System.err.println("PIN not found for creator game");
+                            // Fallback to normal join
+                            viewModel.joinGame(gameId, false, null);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error fetching creator PIN: " + e.getMessage());
+                        viewModel.joinGame(gameId, false, null);
+                    }
+                } else {
+                    ModernToast.error(this, "Game not found");
+                }
+            })
+            .addOnFailureListener(e -> {
+                System.err.println("Failed to fetch game for creator: " + e.getMessage());
+                ModernToast.error(this, "Failed to load game");
+            });
     }
     
     /**

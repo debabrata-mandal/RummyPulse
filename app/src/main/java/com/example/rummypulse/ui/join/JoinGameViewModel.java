@@ -98,7 +98,7 @@ public class JoinGameViewModel extends AndroidViewModel {
                                 if (requestEditAccess && enteredPin != null) {
                                     if (gameAuth.getPin().equals(enteredPin)) {
                                         editAccessGranted.setValue(true);
-                                        successMessage.setValue("✅ PIN verified! Edit access granted.");
+                                        // No success message - edit access indication is clear from UI
                                     } else {
                                         // Don't set isLoading to false - let fetchGameData handle it
                                         // This allows the existing game data to remain visible
