@@ -41,6 +41,11 @@ public class JoinGameActivity extends AppCompatActivity {
     
     // Firestore listener for real-time updates
     private com.google.firebase.firestore.ListenerRegistration gameDataListener;
+    
+    // Network monitoring
+    private android.net.ConnectivityManager.NetworkCallback networkCallback;
+    private boolean isConnected = true;
+    private android.os.Handler reconnectHandler = new android.os.Handler(android.os.Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +69,9 @@ public class JoinGameActivity extends AppCompatActivity {
         initializeViews();
         setupClickListeners();
         observeViewModel();
+        
+        // Setup network monitoring
+        setupNetworkMonitoring();
 
         // Get game ID from intent if available
         Intent intent = getIntent();
@@ -102,11 +110,28 @@ public class JoinGameActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        
         // Clean up Firestore listener to prevent memory leaks
         if (gameDataListener != null) {
             gameDataListener.remove();
             gameDataListener = null;
         }
+        
+        // Unregister network callback
+        if (networkCallback != null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            android.net.ConnectivityManager connectivityManager = 
+                (android.net.ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (connectivityManager != null) {
+                try {
+                    connectivityManager.unregisterNetworkCallback(networkCallback);
+                } catch (Exception e) {
+                    System.err.println("Error unregistering network callback: " + e.getMessage());
+                }
+            }
+        }
+        
+        // Remove any pending reconnect tasks
+        reconnectHandler.removeCallbacksAndMessages(null);
     }
 
     @Override
@@ -1827,6 +1852,142 @@ public class JoinGameActivity extends AppCompatActivity {
                     System.out.println("Game document does not exist: " + currentGameId);
                 }
             });
+    }
+    
+    /**
+     * Setup network monitoring to track connectivity and update status indicator
+     */
+    private void setupNetworkMonitoring() {
+        android.net.ConnectivityManager connectivityManager = 
+            (android.net.ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        
+        if (connectivityManager == null) {
+            return;
+        }
+        
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            networkCallback = new android.net.ConnectivityManager.NetworkCallback() {
+                @Override
+                public void onAvailable(android.net.Network network) {
+                    runOnUiThread(() -> {
+                        isConnected = true;
+                        updateNetworkStatus(true);
+                        // Attempt to reconnect listener if it was disconnected
+                        attemptReconnect();
+                    });
+                }
+                
+                @Override
+                public void onLost(android.net.Network network) {
+                    runOnUiThread(() -> {
+                        isConnected = false;
+                        updateNetworkStatus(false);
+                    });
+                }
+            };
+            
+            connectivityManager.registerDefaultNetworkCallback(networkCallback);
+        }
+        
+        // Initial status check
+        updateNetworkStatus(isNetworkAvailable());
+    }
+    
+    /**
+     * Check if network is currently available
+     */
+    private boolean isNetworkAvailable() {
+        android.net.ConnectivityManager connectivityManager = 
+            (android.net.ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        
+        if (connectivityManager == null) {
+            return false;
+        }
+        
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            android.net.Network network = connectivityManager.getActiveNetwork();
+            if (network == null) return false;
+            
+            android.net.NetworkCapabilities capabilities = 
+                connectivityManager.getNetworkCapabilities(network);
+            return capabilities != null && 
+                   (capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
+                    capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                    capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET));
+        } else {
+            android.net.NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+            return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+        }
+    }
+    
+    /**
+     * Update network status indicator UI
+     */
+    private void updateNetworkStatus(boolean connected) {
+        if (binding.networkStatusIndicator == null) {
+            return;
+        }
+        
+        View statusDot = binding.statusDot;
+        TextView statusText = binding.statusText;
+        LinearLayout statusIndicator = binding.networkStatusIndicator;
+        
+        if (connected) {
+            // Show "Live" status
+            statusText.setText("Live");
+            statusText.setTextColor(0xFF4CAF50); // Green
+            if (statusDot != null) {
+                statusDot.setBackgroundResource(R.drawable.status_dot);
+                android.graphics.drawable.GradientDrawable drawable = 
+                    (android.graphics.drawable.GradientDrawable) statusDot.getBackground();
+                drawable.setColor(0xFF4CAF50);
+            }
+            statusIndicator.setBackgroundResource(R.drawable.status_badge_background);
+        } else {
+            // Show "Offline" status
+            statusText.setText("Offline");
+            statusText.setTextColor(0xFFF44336); // Red
+            if (statusDot != null) {
+                statusDot.setBackgroundResource(R.drawable.status_dot);
+                android.graphics.drawable.GradientDrawable drawable = 
+                    (android.graphics.drawable.GradientDrawable) statusDot.getBackground();
+                drawable.setColor(0xFFF44336);
+            }
+            // Change badge background to red theme
+            android.graphics.drawable.GradientDrawable badgeDrawable = 
+                new android.graphics.drawable.GradientDrawable();
+            badgeDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+            badgeDrawable.setColor(0x1AF44336); // Semi-transparent red
+            badgeDrawable.setStroke(2, 0xFFF44336); // Red border
+            badgeDrawable.setCornerRadius(12 * getResources().getDisplayMetrics().density);
+            statusIndicator.setBackground(badgeDrawable);
+        }
+    }
+    
+    /**
+     * Attempt to reconnect Firebase listener when network is restored
+     */
+    private void attemptReconnect() {
+        if (currentGameId == null) {
+            return;
+        }
+        
+        System.out.println("Network restored, attempting to reconnect Firebase listener...");
+        
+        // Remove old listener if exists
+        if (gameDataListener != null) {
+            gameDataListener.remove();
+            gameDataListener = null;
+        }
+        
+        // Wait a bit before reconnecting to ensure network is stable
+        reconnectHandler.postDelayed(() -> {
+            if (isConnected && isNetworkAvailable()) {
+                System.out.println("Reconnecting Firebase listener for game: " + currentGameId);
+                setupRealtimeListener();
+                ModernToast.info(this, "🔄 Connection restored, syncing data...");
+            }
+        }, 1000); // 1 second delay
     }
 
     // Helper class for standings
