@@ -312,6 +312,9 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Don't show duplicate success message here since it's already shown in ViewModel
                 System.out.println("Edit access granted - Players section should now be visible");
                 
+                // Show online/offline indicator when edit access is granted
+                updateOnlineOfflineIndicators();
+                
                 // Remove real-time listener when in edit mode (to avoid conflicts)
                 if (gameDataListener != null) {
                     System.out.println("EDIT ACCESS GRANTED - Removing existing real-time listener to avoid conflicts");
@@ -324,6 +327,11 @@ public class JoinGameActivity extends AppCompatActivity {
                 // In view mode - set up real-time listener for game data updates
                 System.out.println("EDIT ACCESS DENIED - Setting up real-time listener for view mode");
                 setupRealtimeListener();
+                // Hide online/offline indicators in view mode
+                if (binding.editOnlineIndicator != null && binding.editOfflineIndicator != null) {
+                    binding.editOnlineIndicator.setVisibility(View.GONE);
+                    binding.editOfflineIndicator.setVisibility(View.GONE);
+                }
             }
         });
 
@@ -1927,6 +1935,26 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     /**
+     * Update online/offline indicators based on current network status
+     */
+    private void updateOnlineOfflineIndicators() {
+        if (binding.editOnlineIndicator == null || binding.editOfflineIndicator == null) {
+            return;
+        }
+        
+        // Check current network status
+        boolean isConnected = isNetworkAvailable();
+        
+        if (isConnected) {
+            binding.editOnlineIndicator.setVisibility(View.VISIBLE);
+            binding.editOfflineIndicator.setVisibility(View.GONE);
+        } else {
+            binding.editOnlineIndicator.setVisibility(View.GONE);
+            binding.editOfflineIndicator.setVisibility(View.VISIBLE);
+        }
+    }
+    
+    /**
      * Update network status indicator UI
      */
     private void updateNetworkStatus(boolean connected) {
@@ -1950,16 +1978,10 @@ public class JoinGameActivity extends AppCompatActivity {
             }
             statusIndicator.setBackgroundResource(R.drawable.status_badge_background);
             
-            // Show online indicator for edit mode if user has edit access
-            if (binding.editOnlineIndicator != null && binding.editOfflineIndicator != null) {
-                Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-                if (editAccess != null && editAccess) {
-                    binding.editOnlineIndicator.setVisibility(View.VISIBLE);
-                    binding.editOfflineIndicator.setVisibility(View.GONE);
-                } else {
-                    binding.editOnlineIndicator.setVisibility(View.GONE);
-                    binding.editOfflineIndicator.setVisibility(View.GONE);
-                }
+            // Update online/offline indicators for edit mode
+            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+            if (editAccess != null && editAccess) {
+                updateOnlineOfflineIndicators();
             }
         } else {
             // Show "Offline" status
@@ -1980,16 +2002,10 @@ public class JoinGameActivity extends AppCompatActivity {
             badgeDrawable.setCornerRadius(12 * getResources().getDisplayMetrics().density);
             statusIndicator.setBackground(badgeDrawable);
             
-            // Show offline indicator for edit mode if user has edit access
-            if (binding.editOnlineIndicator != null && binding.editOfflineIndicator != null) {
-                Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-                if (editAccess != null && editAccess) {
-                    binding.editOnlineIndicator.setVisibility(View.GONE);
-                    binding.editOfflineIndicator.setVisibility(View.VISIBLE);
-                } else {
-                    binding.editOnlineIndicator.setVisibility(View.GONE);
-                    binding.editOfflineIndicator.setVisibility(View.GONE);
-                }
+            // Update online/offline indicators for edit mode
+            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+            if (editAccess != null && editAccess) {
+                updateOnlineOfflineIndicators();
             }
         }
     }
