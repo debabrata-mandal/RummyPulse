@@ -1124,38 +1124,43 @@ public class JoinGameActivity extends AppCompatActivity {
                         roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() | android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
                     }
                 } else {
-                    // No score yet (null or -1) - show dash or random number for current round
+                    // No score yet (null or -1) - show dash or asterisks for current round
                     if ((round + 1) == currentRound) {
-                        // Current round - show random number with blinking animation that changes numbers
+                        // Current round - show cycling asterisks with blinking animation (* → ** → ***)
                         roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box, getTheme()));
                         roundScoreText.setTextColor(getResources().getColor(R.color.warning_orange, getTheme())); // Orange color for visibility
                         roundScoreText.setTypeface(android.graphics.Typeface.DEFAULT_BOLD, android.graphics.Typeface.BOLD);
                         roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() | android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
                         
-                        // Start with initial random number
-                        int initialNumber = (int) (Math.random() * 101); // 0-100
-                        roundScoreText.setText(String.valueOf(initialNumber));
+                        // Start with one asterisk
+                        roundScoreText.setText("*");
                         
                         // Start blinking animation
                         android.view.animation.Animation blinkAnimation = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.blink_animation);
                         roundScoreText.startAnimation(blinkAnimation);
                         
-                        // Use Handler to change numbers every 400ms (half of blink cycle)
+                        // Use Handler to cycle asterisks every 400ms (* → ** → *** → * → ...)
                         android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
-                        Runnable numberChanger = new Runnable() {
+                        final int[] asteriskCount = {1}; // Start with 1 asterisk
+                        Runnable asteriskChanger = new Runnable() {
                             @Override
                             public void run() {
                                 // Only change if this TextView still has the animation running
                                 if (roundScoreText.getAnimation() != null) {
-                                    int newRandomNumber = (int) (Math.random() * 101);
-                                    roundScoreText.setText(String.valueOf(newRandomNumber));
+                                    // Cycle through 1, 2, 3 asterisks
+                                    asteriskCount[0] = (asteriskCount[0] % 3) + 1;
+                                    String asterisks = "";
+                                    for (int i = 0; i < asteriskCount[0]; i++) {
+                                        asterisks += "*";
+                                    }
+                                    roundScoreText.setText(asterisks);
                                     // Schedule next change
                                     handler.postDelayed(this, 400); // Change every 400ms
                                 }
                             }
                         };
-                        // Start the number changing after initial delay
-                        handler.postDelayed(numberChanger, 400);
+                        // Start the asterisk cycling after initial delay
+                        handler.postDelayed(asteriskChanger, 400);
                     } else {
                         // Future rounds - show dash
                         roundScoreText.setText("-");

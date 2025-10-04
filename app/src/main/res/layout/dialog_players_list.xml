@@ -107,7 +107,10 @@
             android:text="0"
             android:textSize="18sp"
             android:textColor="@color/accent_blue"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
     </LinearLayout>
 

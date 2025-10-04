@@ -50,14 +50,15 @@
 
                 <TextView
                     android:id="@+id/text_player_name"
-                    android:layout_width="160dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Ajay"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:maxLines="1"
-                    android:ellipsize="end" />
+                    android:ellipsize="end"
+                    android:layout_marginEnd="8dp" />
 
                 <TextView
                     android:id="@+id/text_player_id"
@@ -66,7 +67,8 @@
                     android:text="(#75)"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
-                    android:visibility="gone" />
+                    android:visibility="gone"
+                    android:layout_marginEnd="8dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -82,7 +84,10 @@
                     android:text="158"
                     android:textColor="#FFC107"
                     android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:singleLine="true"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
 
             </LinearLayout>
 
@@ -94,7 +99,10 @@
                 android:text="₹515"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:gravity="end" />
+                android:gravity="end"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
         </LinearLayout>
 

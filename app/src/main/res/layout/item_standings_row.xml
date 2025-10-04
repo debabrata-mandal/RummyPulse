@@ -34,14 +34,15 @@
 
             <TextView
                 android:id="@+id/text_player_name"
-                android:layout_width="160dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Raja"
                 android:textColor="@android:color/white"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:maxLines="1"
-                android:ellipsize="end" />
+                android:ellipsize="end"
+                android:layout_marginEnd="8dp" />
 
             <TextView
                 android:id="@+id/text_player_id"
@@ -50,7 +51,8 @@
                 android:text="(#21)"
                 android:textColor="#6c757d"
                 android:textSize="13sp"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:layout_marginEnd="8dp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -66,7 +68,10 @@
                 android:text="0"
                 android:textColor="#FFC107"
                 android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
         </LinearLayout>
 
@@ -90,7 +95,10 @@
             android:text="₹0"
             android:textColor="@android:color/white"
             android:textSize="12sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
         <TextView
             android:id="@+id/text_gst"
@@ -99,7 +107,10 @@
             android:text="GST: ₹0"
             android:textColor="#FF5722"
             android:textSize="10sp"
-            android:layout_marginTop="1dp" />
+            android:layout_marginTop="1dp"
+            android:singleLine="true"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
         <TextView
             android:id="@+id/text_net_amount"
@@ -109,7 +120,10 @@
             android:textColor="#4CAF50"
             android:textSize="11sp"
             android:textStyle="bold"
-            android:layout_marginTop="1dp" />
+            android:layout_marginTop="1dp"
+            android:singleLine="true"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
     </LinearLayout>
 
