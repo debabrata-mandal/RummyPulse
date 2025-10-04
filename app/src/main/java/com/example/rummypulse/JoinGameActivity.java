@@ -996,14 +996,10 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView playerName = standingsRowView.findViewById(R.id.text_player_name);
             playerName.setText(standing.player.getName());
 
-            // Set player ID if available
-            TextView playerIdText = standingsRowView.findViewById(R.id.text_player_id);
-            if (gameData.getNumPlayers() > 2 && standing.player.getRandomNumber() != null) {
-                playerIdText.setText("(#" + standing.player.getRandomNumber() + ")");
-                playerIdText.setVisibility(View.VISIBLE);
-            }
+            // Player ID is hidden (not displayed in standings)
+            // TextView playerIdText = standingsRowView.findViewById(R.id.text_player_id);
 
-            // Set score (no label for cleaner look)
+            // Set score (with "Score:" label for clarity)
             TextView scoreText = standingsRowView.findViewById(R.id.text_score);
             scoreText.setText(String.valueOf(standing.totalScore));
 
