@@ -133,6 +133,7 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Get views
         TextView pinDisplay = dialog.findViewById(R.id.text_pin_display);
+        android.widget.CheckBox checkboxForgetPin = dialog.findViewById(R.id.checkbox_forget_pin);
         Button btnStay = dialog.findViewById(R.id.btn_stay);
         Button btnExit = dialog.findViewById(R.id.btn_exit);
         
@@ -147,6 +148,11 @@ public class JoinGameActivity extends AppCompatActivity {
         btnStay.setOnClickListener(v -> dialog.dismiss());
         
         btnExit.setOnClickListener(v -> {
+            // Check if user wants to forget the PIN
+            if (checkboxForgetPin.isChecked() && currentGameId != null) {
+                clearSavedPin(currentGameId);
+                ModernToast.info(this, "PIN forgotten. You'll need to enter it again next time.");
+            }
             dialog.dismiss();
             finish();
         });
@@ -323,6 +329,13 @@ public class JoinGameActivity extends AppCompatActivity {
                     setupRealtimeListener();
                 } else {
                     System.out.println("Game data loaded in EDIT MODE - real-time listener NOT started (edit access granted)");
+                    // If edit access is already granted, update player cards with the loaded data
+                    updatePlayersInfo(gameData);
+                    generatePlayerCards(gameData);
+                    // Update current round indicator and validation
+                    updateCurrentRound(gameData);
+                    updateRoundValidation(gameData);
+                    updateRoundColors(gameData);
                 }
             }
         });
@@ -358,6 +371,12 @@ public class JoinGameActivity extends AppCompatActivity {
                 invalidateOptionsMenu();
                 // Don't show duplicate success message here since it's already shown in ViewModel
                 System.out.println("Edit access granted - Players section should now be visible");
+                
+                // Save PIN for persistent edit access across app restarts
+                String pin = viewModel.getGamePin().getValue();
+                if (currentGameId != null && pin != null) {
+                    savePin(currentGameId, pin);
+                }
                 
                 // Show online/offline indicator when edit access is granted
                 updateOnlineOfflineIndicators();
@@ -425,8 +444,51 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
 
-        // Join game in view mode (no PIN required)
-        viewModel.joinGame(gameId, false);
+        currentGameId = gameId;
+        
+        // Check if user had edit access for this game previously
+        String savedPin = getSavedPin(gameId);
+        if (savedPin != null) {
+            // User had edit access before, try to restore it
+            System.out.println("Restoring edit access for game: " + gameId);
+            viewModel.joinGame(gameId, true, savedPin);
+        } else {
+            // Join game in view mode (no PIN required)
+            viewModel.joinGame(gameId, false, null);
+        }
+    }
+    
+    /**
+     * Save PIN for a game when edit access is granted
+     */
+    private void savePin(String gameId, String pin) {
+        if (gameId != null && pin != null) {
+            android.content.SharedPreferences prefs = getSharedPreferences("RummyPulse_EditAccess", MODE_PRIVATE);
+            prefs.edit().putString("pin_" + gameId, pin).apply();
+            System.out.println("PIN saved for game: " + gameId);
+        }
+    }
+    
+    /**
+     * Get saved PIN for a game
+     */
+    private String getSavedPin(String gameId) {
+        if (gameId != null) {
+            android.content.SharedPreferences prefs = getSharedPreferences("RummyPulse_EditAccess", MODE_PRIVATE);
+            return prefs.getString("pin_" + gameId, null);
+        }
+        return null;
+    }
+    
+    /**
+     * Clear saved PIN for a game
+     */
+    private void clearSavedPin(String gameId) {
+        if (gameId != null) {
+            android.content.SharedPreferences prefs = getSharedPreferences("RummyPulse_EditAccess", MODE_PRIVATE);
+            prefs.edit().remove("pin_" + gameId).apply();
+            System.out.println("PIN cleared for game: " + gameId);
+        }
     }
 
     private void requestEditAccess() {

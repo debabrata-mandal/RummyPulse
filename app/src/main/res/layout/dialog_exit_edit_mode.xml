@@ -86,6 +86,33 @@
 
     </LinearLayout>
 
+    <!-- Forget PIN Option -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/professional_row_background"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp"
+        android:gravity="center_vertical">
+
+        <CheckBox
+            android:id="@+id/checkbox_forget_pin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:buttonTint="@color/accent_blue" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Forget PIN (require PIN next time)"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
     <!-- Buttons Section -->
     <LinearLayout
         android:layout_width="match_parent"
