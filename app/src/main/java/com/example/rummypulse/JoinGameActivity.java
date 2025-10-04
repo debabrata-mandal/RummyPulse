@@ -1093,16 +1093,17 @@ public class JoinGameActivity extends AppCompatActivity {
                 }
                 
                 if (score != null && score >= 0) {
-                    // Valid score (including 0) - show it
-                    roundScoreText.setText(String.valueOf(score));
-                    
+                    // Valid score (including 0)
                     if (score == 0) {
-                        // Zero score (winning round) - use rounded green background
+                        // Zero score (winning round) - show empty box with green filled background
+                        roundScoreText.setText(""); // Empty - color indicates winning round
                         roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box_zero, getTheme()));
                         roundScoreText.setTextColor(getResources().getColor(android.R.color.white, getTheme()));
                         roundScoreText.setTypeface(android.graphics.Typeface.DEFAULT_BOLD, android.graphics.Typeface.BOLD);
                         roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() | android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
                     } else {
+                        // Show the score value
+                        roundScoreText.setText(String.valueOf(score));
                         // Regular score - use colored boundary based on score value
                         
                         if (score > 65) {
