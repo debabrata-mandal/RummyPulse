@@ -100,8 +100,12 @@ public class JoinGameViewModel extends AndroidViewModel {
                                         editAccessGranted.setValue(true);
                                         successMessage.setValue("✅ PIN verified! Edit access granted.");
                                     } else {
-                                        isLoading.setValue(false);
+                                        // Don't set isLoading to false - let fetchGameData handle it
+                                        // This allows the existing game data to remain visible
                                         errorMessage.setValue("Incorrect PIN. Please try again.");
+                                        editAccessGranted.setValue(false);
+                                        // Still fetch game data in view mode
+                                        fetchGameData(gameId, false);
                                         return;
                                     }
                                 }
@@ -134,16 +138,13 @@ public class JoinGameViewModel extends AndroidViewModel {
                             GameData data = wrapper.getData();
                             gameData.setValue(data);
                             
-                            // Only show success message if edit access was not already granted
+                            // Only show success message if edit access was just granted
                             Boolean editAccess = editAccessGranted.getValue();
                             if (editAccess != null && editAccess) {
                                 // Edit access already granted, don't show any additional message
                                 // The access granted message was already shown during PIN verification
-                            } else if (requestEditAccess) {
-                                successMessage.setValue("Game loaded successfully. You can now request edit access.");
-                            } else {
-                                successMessage.setValue("Game loaded successfully. You are in view mode.");
                             }
+                            // No success message for view mode - it's obvious from the UI
                         } else {
                             errorMessage.setValue("Game data is corrupted. Please try again.");
                         }

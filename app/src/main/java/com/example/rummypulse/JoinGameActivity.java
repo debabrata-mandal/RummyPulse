@@ -103,8 +103,55 @@ public class JoinGameActivity extends AppCompatActivity {
 
     @Override
     public boolean onSupportNavigateUp() {
-        finish();
+        handleBackPress();
         return true;
+    }
+    
+    @Override
+    public void onBackPressed() {
+        handleBackPress();
+    }
+    
+    private void handleBackPress() {
+        // Check if user has edit access
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        if (editAccess != null && editAccess) {
+            // Show warning dialog before exiting edit mode
+            showExitWarningDialog();
+        } else {
+            // Normal exit for view mode
+            finish();
+        }
+    }
+    
+    private void showExitWarningDialog() {
+        // Create custom dialog
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        dialog.setContentView(R.layout.dialog_exit_edit_mode);
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        dialog.setCancelable(true);
+        
+        // Get views
+        TextView pinDisplay = dialog.findViewById(R.id.text_pin_display);
+        Button btnStay = dialog.findViewById(R.id.btn_stay);
+        Button btnExit = dialog.findViewById(R.id.btn_exit);
+        
+        // Set PIN
+        if (currentGamePin != null) {
+            pinDisplay.setText(currentGamePin);
+        } else {
+            pinDisplay.setText("****");
+        }
+        
+        // Set up buttons
+        btnStay.setOnClickListener(v -> dialog.dismiss());
+        
+        btnExit.setOnClickListener(v -> {
+            dialog.dismiss();
+            finish();
+        });
+        
+        dialog.show();
     }
     
     @Override
@@ -248,7 +295,7 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        binding.btnClose.setOnClickListener(v -> finish());
+        binding.btnClose.setOnClickListener(v -> handleBackPress());
         binding.btnAddPlayer.setOnClickListener(v -> {
             addNewPlayerDirectly();
         });
