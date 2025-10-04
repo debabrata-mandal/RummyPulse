@@ -329,13 +329,36 @@ public class JoinGameActivity extends AppCompatActivity {
                     setupRealtimeListener();
                 } else {
                     System.out.println("Game data loaded in EDIT MODE - real-time listener NOT started (edit access granted)");
-                    // If edit access is already granted, update player cards with the loaded data
-                    updatePlayersInfo(gameData);
-                    generatePlayerCards(gameData);
-                    // Update current round indicator and validation
-                    updateCurrentRound(gameData);
-                    updateRoundValidation(gameData);
-                    updateRoundColors(gameData);
+                    // If edit access is already granted, check if player cards need to be generated
+                    // Check if REAL player cards exist (with EditText fields that have tags)
+                    // Loading placeholders don't have these tags, so we'll regenerate
+                    boolean realPlayerCardsExist = false;
+                    if (binding.playersContainer.getChildCount() > 0) {
+                        // Check if first card has a score input with a tag (real player card)
+                        View firstCard = binding.playersContainer.getChildAt(0);
+                        EditText firstScoreInput = firstCard.findViewById(R.id.edit_score_r1);
+                        if (firstScoreInput != null && firstScoreInput.getTag() != null) {
+                            realPlayerCardsExist = true;
+                        }
+                    }
+                    
+                    if (!realPlayerCardsExist) {
+                        System.out.println("Player cards don't exist yet (or are placeholders) - generating them");
+                        updatePlayersInfo(gameData);
+                        generatePlayerCards(gameData);
+                        // Update current round indicator and validation
+                        updateCurrentRound(gameData);
+                        updateRoundValidation(gameData);
+                        updateRoundColors(gameData);
+                    } else {
+                        System.out.println("Real player cards already exist - skipping regeneration to preserve user input");
+                        // Update player info section, standings, and validation, but don't touch the input fields
+                        updatePlayersInfo(gameData);
+                        updateStandings(gameData);
+                        updateCurrentRound(gameData);
+                        updateRoundValidation(gameData);
+                        updateRoundColors(gameData);
+                    }
                 }
             }
         });
@@ -698,6 +721,12 @@ public class JoinGameActivity extends AppCompatActivity {
                         if ("-1".equals(currentText)) {
                             scoreInput.setText("");
                         }
+                    } else {
+                        // When focus is lost, if field is empty, show -1 placeholder
+                        String currentText = scoreInput.getText().toString().trim();
+                        if (currentText.isEmpty()) {
+                            scoreInput.setText("-1");
+                        }
                     }
                 });
 
@@ -716,27 +745,32 @@ public class JoinGameActivity extends AppCompatActivity {
                         // Update the score in the player's data
                         try {
                             String text = s.toString().trim();
-                            int score = text.isEmpty() ? -1 : Integer.parseInt(text);
                             
-                            // Update the player's score in the game data
-                            if (player.getScores() != null && finalRound < player.getScores().size()) {
-                                player.getScores().set(finalRound, score);
+                            // Only save if user entered a valid number (not empty, not just clearing)
+                            if (!text.isEmpty()) {
+                                int score = Integer.parseInt(text);
+                                
+                                // Update the player's score in the game data
+                                if (player.getScores() != null && finalRound < player.getScores().size()) {
+                                    player.getScores().set(finalRound, score);
+                                }
+                                
+                                // Save the updated game data to Firebase (with debouncing)
+                                saveGameDataWithDebounce(gameData);
+                                
+                                updateScoreColor(scoreInput);
+                                updateStandings(gameData);
+                                updateCurrentRound(gameData);
+                                updateRoundValidation(gameData);
+                            } else {
+                                // Field is empty - just update color, don't save to DB
+                                updateScoreColor(scoreInput);
                             }
-                            
-                            // Save the updated game data to Firebase (with debouncing)
-                            saveGameDataWithDebounce(gameData);
                             
                         } catch (NumberFormatException e) {
-                            // Invalid number, set to -1
-                            if (player.getScores() != null && finalRound < player.getScores().size()) {
-                                player.getScores().set(finalRound, -1);
-                            }
+                            // Invalid number - just update color
+                            updateScoreColor(scoreInput);
                         }
-                        
-                        updateScoreColor(scoreInput);
-                        updateStandings(gameData);
-                        updateCurrentRound(gameData);
-                        updateRoundValidation(gameData);
                     }
                 });
             }
@@ -1953,12 +1987,23 @@ public class JoinGameActivity extends AppCompatActivity {
                             runOnUiThread(() -> {
                                 // Validate game data before updating UI
                                 if (gameData.getPlayers() != null && !gameData.getPlayers().isEmpty()) {
-                                    // Update the standings table with new data
-                                    updateStandings(gameData);
-                                    updateStandingsInfo(gameData);
+                                    // Check if we're in edit mode
+                                    Boolean editAccess = viewModel.getEditAccessGranted().getValue();
                                     
-                                    // Also update the game info cards
-                                    updatePlayersInfo(gameData);
+                                    if (editAccess != null && editAccess) {
+                                        // EDIT MODE: Only update standings (read-only display)
+                                        // DO NOT update player cards to avoid destroying focused input fields
+                                        System.out.println("Real-time update in EDIT MODE - updating standings only, preserving input fields");
+                                        updateStandings(gameData);
+                                        updateStandingsInfo(gameData);
+                                        // DO NOT call updatePlayersInfo or generatePlayerCards in edit mode
+                                    } else {
+                                        // VIEW MODE: Update everything including player cards
+                                        System.out.println("Real-time update in VIEW MODE - updating all UI elements");
+                                        updateStandings(gameData);
+                                        updateStandingsInfo(gameData);
+                                        updatePlayersInfo(gameData);
+                                    }
                                 } else {
                                     System.err.println("Real-time update received but players data is null or empty");
                                 }
@@ -2137,8 +2182,14 @@ public class JoinGameActivity extends AppCompatActivity {
         // Wait a bit before reconnecting to ensure network is stable
         reconnectHandler.postDelayed(() -> {
             if (isConnected && isNetworkAvailable()) {
-                System.out.println("Reconnecting Firebase listener for game: " + currentGameId);
-                setupRealtimeListener();
+                // Only reconnect if NOT in edit mode
+                Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+                if (editAccess == null || !editAccess) {
+                    System.out.println("Reconnecting Firebase listener for game: " + currentGameId + " (VIEW MODE)");
+                    setupRealtimeListener();
+                } else {
+                    System.out.println("NOT reconnecting Firebase listener - currently in EDIT MODE (user has edit access)");
+                }
                 // Network status indicator already shows connection state, no need for toast
             }
         }, 1000); // 1 second delay
