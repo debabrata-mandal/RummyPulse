@@ -1231,15 +1231,14 @@ public class JoinGameActivity extends AppCompatActivity {
                     gamePinText.setTag(true);
                     // No toast needed - user can see the PIN is now revealed
                     
-                    // Auto-mask after 3 seconds for security
+                    // Auto-mask after 8 seconds for security
                     gamePinText.postDelayed(() -> {
                         if (gamePinText.getTag() != null && (Boolean) gamePinText.getTag()) {
                             gamePinText.setText(maskedPin);
                             gamePinText.setTag(false);
-                            // Optional: subtle indication that PIN was auto-masked
-                            ModernToast.info(this, "🔒 PIN auto-masked");
+                            // PIN auto-masked silently for security
                         }
-                    }, 3000);
+                    }, 8000);
                 }
             });
         }
