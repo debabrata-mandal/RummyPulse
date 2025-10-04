@@ -24,6 +24,15 @@ public class GameRepository {
     private MutableLiveData<Double> totalApprovedGstLiveData;
     private MutableLiveData<Integer> approvedGamesCountLiveData;
     private MutableLiveData<List<ApprovedGameData>> approvedGamesForReportsLiveData;
+    
+    // Firestore listeners for real-time updates
+    private com.google.firebase.firestore.ListenerRegistration gamesListener;
+    private com.google.firebase.firestore.ListenerRegistration approvedGamesListener;
+    private java.util.Map<String, com.google.firebase.firestore.ListenerRegistration> gameDataListeners = new java.util.HashMap<>();
+    
+    // Store game items and game IDs order for maintaining consistency
+    private java.util.Map<String, GameItem> gameItemsMap = new java.util.HashMap<>();
+    private List<String> gameIdsOrder = new ArrayList<>();
 
     public GameRepository() {
         db = FirebaseFirestore.getInstance();
@@ -55,53 +64,110 @@ public class GameRepository {
     }
 
     public void loadAllGames() {
-        System.out.println("GameRepository: Starting to load all games from Firebase");
+        System.out.println("GameRepository: Setting up real-time listener for games collection");
         
-        // First, get all game IDs from the games collection, ordered by newest first
-        db.collection(GAMES_COLLECTION)
+        // Remove existing listener if any
+        if (gamesListener != null) {
+            gamesListener.remove();
+        }
+        
+        // Set up real-time listener for games collection
+        gamesListener = db.collection(GAMES_COLLECTION)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    System.out.println("GameRepository: Successfully queried games collection, found " + querySnapshot.size() + " documents");
-                    List<String> gameIds = new ArrayList<>();
-                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-                        gameIds.add(document.getId());
-                    }
-                    
-                    if (gameIds.isEmpty()) {
-                        System.out.println("GameRepository: No games found in database");
-                        gameItemsLiveData.setValue(new ArrayList<>());
+                .addSnapshotListener((querySnapshot, error) -> {
+                    if (error != null) {
+                        System.out.println("GameRepository: Error listening to games collection: " + error.getMessage());
+                        errorLiveData.setValue("Failed to load games: " + error.getMessage());
                         return;
                     }
                     
-                    System.out.println("GameRepository: Found " + gameIds.size() + " game IDs, loading game data");
-                    // Now load game data for each game ID
-                    loadGameDataForIds(gameIds);
-                })
-                .addOnFailureListener(e -> {
-                    System.out.println("GameRepository: Failed to load games: " + e.getMessage());
-                    errorLiveData.setValue("Failed to load games: " + e.getMessage());
+                    if (querySnapshot != null) {
+                        System.out.println("GameRepository: Real-time update received, found " + querySnapshot.size() + " documents");
+                        List<String> gameIds = new ArrayList<>();
+                        for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                            gameIds.add(document.getId());
+                        }
+                        
+                        if (gameIds.isEmpty()) {
+                            System.out.println("GameRepository: No games found in database");
+                            gameItemsLiveData.setValue(new ArrayList<>());
+                            return;
+                        }
+                        
+                        System.out.println("GameRepository: Found " + gameIds.size() + " game IDs, loading game data");
+                        // Now load game data for each game ID
+                        loadGameDataForIds(gameIds);
+                    }
                 });
+    }
+    
+    /**
+     * Remove listeners when repository is no longer needed
+     */
+    public void removeListeners() {
+        if (gamesListener != null) {
+            gamesListener.remove();
+            gamesListener = null;
+        }
+        if (approvedGamesListener != null) {
+            approvedGamesListener.remove();
+            approvedGamesListener = null;
+        }
+        // Remove all gameData listeners
+        for (com.google.firebase.firestore.ListenerRegistration listener : gameDataListeners.values()) {
+            listener.remove();
+        }
+        gameDataListeners.clear();
     }
 
     private void loadGameDataForIds(List<String> gameIds) {
-        // Use arrays to maintain exact order and track completion
-        GameItem[] gameItemsArray = new GameItem[gameIds.size()];
-        boolean[] completedFlags = new boolean[gameIds.size()];
-        int[] completedCount = {0};
+        // Update the game IDs order
+        gameIdsOrder = new ArrayList<>(gameIds);
         
-        for (int i = 0; i < gameIds.size(); i++) {
-            final String gameId = gameIds.get(i);
-            final int index = i;
-            
-            db.collection(GAME_DATA_COLLECTION)
-                    .document(gameId)
-                    .get()
-                    .addOnSuccessListener(documentSnapshot -> {
-                        if (documentSnapshot.exists()) {
-                            try {
-                                GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
-                                if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
+        // Remove listeners and data for games that are no longer in the list
+        java.util.Set<String> currentGameIds = new java.util.HashSet<>(gameIds);
+        java.util.Iterator<java.util.Map.Entry<String, com.google.firebase.firestore.ListenerRegistration>> iterator = 
+            gameDataListeners.entrySet().iterator();
+        while (iterator.hasNext()) {
+            java.util.Map.Entry<String, com.google.firebase.firestore.ListenerRegistration> entry = iterator.next();
+            if (!currentGameIds.contains(entry.getKey())) {
+                entry.getValue().remove();
+                iterator.remove();
+                gameItemsMap.remove(entry.getKey());
+                System.out.println("Removed listener and data for gameData: " + entry.getKey());
+            }
+        }
+        
+        // Setup listeners for each game
+        for (String gameId : gameIds) {
+            setupGameDataListener(gameId);
+        }
+        
+        // Trigger initial update
+        updateGameItemsList();
+    }
+    
+    private void setupGameDataListener(String gameId) {
+        // If listener already exists, don't create duplicate
+        if (gameDataListeners.containsKey(gameId)) {
+            System.out.println("Listener already exists for gameData: " + gameId);
+            return;
+        }
+        
+        System.out.println("Setting up real-time listener for gameData: " + gameId);
+        
+        com.google.firebase.firestore.ListenerRegistration listener = db.collection(GAME_DATA_COLLECTION)
+                .document(gameId)
+                .addSnapshotListener((documentSnapshot, error) -> {
+                    if (error != null) {
+                        System.out.println("Error listening to gameData for " + gameId + ": " + error.getMessage());
+                        return;
+                    }
+                    
+                    if (documentSnapshot != null && documentSnapshot.exists()) {
+                        try {
+                            GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
+                            if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
                                 GameData gameData = gameDataWrapper.getData();
                                 // Also get the auth data for PIN
                                 db.collection(GAMES_COLLECTION)
@@ -115,79 +181,36 @@ public class GameRepository {
                                             // Use createdAt from games collection instead of lastUpdated from gameData collection
                                             com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
                                             GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName);
-                                            if (gameItem != null) {
-                                                gameItemsArray[index] = gameItem;
-                                            }
-                                            completedFlags[index] = true;
                                             
-                                            completedCount[0]++;
-                                            if (completedCount[0] == gameIds.size()) {
-                                                // Convert array to list maintaining exact order
-                                                List<GameItem> gameItems = new ArrayList<>();
-                                                for (GameItem item : gameItemsArray) {
-                                                    if (item != null) {
-                                                        gameItems.add(item);
-                                                    }
-                                                }
-                                                gameItemsLiveData.setValue(gameItems);
+                                            if (gameItem != null) {
+                                                gameItemsMap.put(gameId, gameItem);
+                                                updateGameItemsList();
                                             }
                                         });
-                            } else {
-                                completedFlags[index] = true;
-                                completedCount[0]++;
-                                if (completedCount[0] == gameIds.size()) {
-                                    List<GameItem> gameItems = new ArrayList<>();
-                                    for (GameItem item : gameItemsArray) {
-                                        if (item != null) {
-                                            gameItems.add(item);
-                                        }
-                                    }
-                                    gameItemsLiveData.setValue(gameItems);
-                                }
                             }
-                            } catch (Exception e) {
-                                System.out.println("Error deserializing game data for " + gameId + ": " + e.getMessage());
-                                e.printStackTrace();
-                                completedFlags[index] = true;
-                                completedCount[0]++;
-                                if (completedCount[0] == gameIds.size()) {
-                                    List<GameItem> gameItems = new ArrayList<>();
-                                    for (GameItem item : gameItemsArray) {
-                                        if (item != null) {
-                                            gameItems.add(item);
-                                        }
-                                    }
-                                    gameItemsLiveData.setValue(gameItems);
-                                }
-                            }
-                        } else {
-                            completedFlags[index] = true;
-                            completedCount[0]++;
-                            if (completedCount[0] == gameIds.size()) {
-                                List<GameItem> gameItems = new ArrayList<>();
-                                for (GameItem item : gameItemsArray) {
-                                    if (item != null) {
-                                        gameItems.add(item);
-                                    }
-                                }
-                                gameItemsLiveData.setValue(gameItems);
-                            }
+                        } catch (Exception e) {
+                            System.out.println("Error deserializing game data for " + gameId + ": " + e.getMessage());
+                            e.printStackTrace();
                         }
-                    })
-                    .addOnFailureListener(e -> {
-                        completedFlags[index] = true;
-                        completedCount[0]++;
-                        if (completedCount[0] == gameIds.size()) {
-                            List<GameItem> gameItems = new ArrayList<>();
-                            for (GameItem item : gameItemsArray) {
-                                if (item != null) {
-                                    gameItems.add(item);
-                                }
-                            }
-                            gameItemsLiveData.setValue(gameItems);
-                        }
-                    });
+                    } else {
+                        System.out.println("GameData document doesn't exist yet for " + gameId);
+                    }
+                });
+        
+        gameDataListeners.put(gameId, listener);
+    }
+    
+    private void updateGameItemsList() {
+        List<GameItem> gameItems = new ArrayList<>();
+        // Maintain the order from gameIdsOrder
+        for (String gameId : gameIdsOrder) {
+            GameItem item = gameItemsMap.get(gameId);
+            if (item != null) {
+                gameItems.add(item);
+            }
         }
+        System.out.println("Updating game items list with " + gameItems.size() + " games");
+        gameItemsLiveData.setValue(gameItems);
     }
 
     private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt, String creatorName) {
@@ -207,14 +230,8 @@ public class GameRepository {
         // Format creation date (from timestamp)
         String creationDateTime = formatTimestamp(createdAt);
         
-        // Get game status
+        // Get game status (no need to filter "Approved" status since approved games are deleted from games collection)
         String gameStatus = gameData.getGameStatus();
-        
-        // Skip approved games - they should not appear in active games list
-        if ("Approved".equals(gameStatus)) {
-            System.out.println("Skipping approved game: " + gameId);
-            return null;
-        }
         
         // Get number of players
         String numberOfPlayers = String.valueOf(gameData.getNumPlayers());
@@ -415,32 +432,43 @@ public class GameRepository {
     }
 
     public void loadApprovedGames() {
-        // Load all approved games and calculate total GST amount
-        db.collection(APPROVED_GAMES_COLLECTION)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    double totalGst = 0.0;
-                    int approvedCount = 0;
-                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-                        try {
-                            ApprovedGameData approvedGame = document.toObject(ApprovedGameData.class);
-                            if (approvedGame != null) {
-                                totalGst += approvedGame.getGstAmountAsDouble();
-                                approvedCount++;
-                            }
-                        } catch (Exception e) {
-                            System.out.println("Error parsing approved game: " + e.getMessage());
-                        }
+        System.out.println("GameRepository: Setting up real-time listener for approved games collection");
+        
+        // Remove existing listener if any
+        if (approvedGamesListener != null) {
+            approvedGamesListener.remove();
+        }
+        
+        // Set up real-time listener for approved games collection
+        approvedGamesListener = db.collection(APPROVED_GAMES_COLLECTION)
+                .addSnapshotListener((querySnapshot, error) -> {
+                    if (error != null) {
+                        System.out.println("GameRepository: Error listening to approved games: " + error.getMessage());
+                        errorLiveData.setValue("Failed to load approved games: " + error.getMessage());
+                        totalApprovedGstLiveData.setValue(0.0);
+                        approvedGamesCountLiveData.setValue(0);
+                        return;
                     }
-                    totalApprovedGstLiveData.setValue(totalGst);
-                    approvedGamesCountLiveData.setValue(approvedCount);
-                    System.out.println("Total approved GST amount: ₹" + String.format("%.0f", totalGst));
-                    System.out.println("Total approved games count: " + approvedCount);
-                })
-                .addOnFailureListener(e -> {
-                    errorLiveData.setValue("Failed to load approved games: " + e.getMessage());
-                    totalApprovedGstLiveData.setValue(0.0);
-                    approvedGamesCountLiveData.setValue(0);
+                    
+                    if (querySnapshot != null) {
+                        double totalGst = 0.0;
+                        int approvedCount = 0;
+                        for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                            try {
+                                ApprovedGameData approvedGame = document.toObject(ApprovedGameData.class);
+                                if (approvedGame != null) {
+                                    totalGst += approvedGame.getGstAmountAsDouble();
+                                    approvedCount++;
+                                }
+                            } catch (Exception e) {
+                                System.out.println("Error parsing approved game: " + e.getMessage());
+                            }
+                        }
+                        totalApprovedGstLiveData.setValue(totalGst);
+                        approvedGamesCountLiveData.setValue(approvedCount);
+                        System.out.println("Total approved GST amount: ₹" + String.format("%.0f", totalGst));
+                        System.out.println("Total approved games count: " + approvedCount);
+                    }
                 });
     }
 

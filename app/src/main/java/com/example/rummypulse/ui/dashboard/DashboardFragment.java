@@ -226,6 +226,13 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        // Stop time updates when fragment is destroyed
+        if (gameAdapter != null) {
+            gameAdapter.stopTimeUpdates();
+        }
+        if (completedGameAdapter != null) {
+            completedGameAdapter.stopTimeUpdates();
+        }
         binding = null;
     }
 }

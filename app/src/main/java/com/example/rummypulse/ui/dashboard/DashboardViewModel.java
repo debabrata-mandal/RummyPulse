@@ -230,4 +230,13 @@ public class DashboardViewModel extends ViewModel {
         
         return pin;
     }
+    
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        // Clean up listeners when ViewModel is destroyed
+        if (gameRepository != null) {
+            gameRepository.removeListeners();
+        }
+    }
 }

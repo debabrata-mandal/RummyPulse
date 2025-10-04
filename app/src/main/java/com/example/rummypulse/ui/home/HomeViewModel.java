@@ -144,5 +144,14 @@ public class HomeViewModel extends ViewModel {
     public void approveGame(GameItem gameItem) {
         gameRepository.approveGame(gameItem);
     }
+    
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        // Clean up listeners when ViewModel is destroyed
+        if (gameRepository != null) {
+            gameRepository.removeListeners();
+        }
+    }
 
 }

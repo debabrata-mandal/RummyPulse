@@ -31,6 +31,8 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
     private List<GameItem> gameItems = new ArrayList<>();
     private OnGameJoinListener joinListener;
     private boolean isCompletedGamesAdapter = false;
+    private android.os.Handler updateHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private Runnable updateRunnable;
 
     public interface OnGameJoinListener {
         void onJoinGame(GameItem game, int position, String joinType);
@@ -43,6 +45,34 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
     public void setGameItems(List<GameItem> gameItems) {
         this.gameItems = gameItems != null ? gameItems : new ArrayList<>();
         notifyDataSetChanged();
+        startTimeUpdates();
+    }
+    
+    private void startTimeUpdates() {
+        // Cancel any existing updates
+        if (updateRunnable != null) {
+            updateHandler.removeCallbacks(updateRunnable);
+        }
+        
+        // Create new update runnable
+        updateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                // Update only the time text for all visible items
+                notifyItemRangeChanged(0, gameItems.size(), "time_update");
+                // Schedule next update in 60 seconds
+                updateHandler.postDelayed(this, 60000);
+            }
+        };
+        
+        // Start updates after 60 seconds
+        updateHandler.postDelayed(updateRunnable, 60000);
+    }
+    
+    public void stopTimeUpdates() {
+        if (updateRunnable != null) {
+            updateHandler.removeCallbacks(updateRunnable);
+        }
     }
 
     public void setIsCompletedGamesAdapter(boolean isCompletedGamesAdapter) {
@@ -59,8 +89,20 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
 
     @Override
     public void onBindViewHolder(@NonNull GameViewHolder holder, int position) {
+        onBindViewHolder(holder, position, new ArrayList<>());
+    }
+    
+    @Override
+    public void onBindViewHolder(@NonNull GameViewHolder holder, int position, @NonNull List<Object> payloads) {
         GameItem item = gameItems.get(position);
         
+        // If this is a partial update for time only
+        if (!payloads.isEmpty() && payloads.contains("time_update")) {
+            holder.createdTimeText.setText("Started " + formatDateTime(item.getCreationDateTime()));
+            return;
+        }
+        
+        // Full bind
         // Set game ID
         holder.gameIdText.setText("Game #" + item.getGameId());
         

@@ -199,7 +199,7 @@ public class JoinGameViewModel extends AndroidViewModel {
             .addOnSuccessListener(aVoid -> {
                 // Update the local game data to trigger UI refresh
                 gameData.setValue(updatedGameData);
-                successMessage.setValue("Game data saved successfully!");
+                // Don't show success toast for auto-saves - real-time sync handles it
             })
             .addOnFailureListener(e -> {
                 errorMessage.setValue("Failed to save game data: " + e.getMessage());

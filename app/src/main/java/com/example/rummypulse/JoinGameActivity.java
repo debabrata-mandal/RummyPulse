@@ -1943,6 +1943,18 @@ public class JoinGameActivity extends AppCompatActivity {
                 drawable.setColor(0xFF4CAF50);
             }
             statusIndicator.setBackgroundResource(R.drawable.status_badge_background);
+            
+            // Show online indicator for edit mode if user has edit access
+            if (binding.editOnlineIndicator != null && binding.editOfflineIndicator != null) {
+                Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+                if (editAccess != null && editAccess) {
+                    binding.editOnlineIndicator.setVisibility(View.VISIBLE);
+                    binding.editOfflineIndicator.setVisibility(View.GONE);
+                } else {
+                    binding.editOnlineIndicator.setVisibility(View.GONE);
+                    binding.editOfflineIndicator.setVisibility(View.GONE);
+                }
+            }
         } else {
             // Show "Offline" status
             statusText.setText("Offline");
@@ -1961,6 +1973,18 @@ public class JoinGameActivity extends AppCompatActivity {
             badgeDrawable.setStroke(2, 0xFFF44336); // Red border
             badgeDrawable.setCornerRadius(12 * getResources().getDisplayMetrics().density);
             statusIndicator.setBackground(badgeDrawable);
+            
+            // Show offline indicator for edit mode if user has edit access
+            if (binding.editOnlineIndicator != null && binding.editOfflineIndicator != null) {
+                Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+                if (editAccess != null && editAccess) {
+                    binding.editOnlineIndicator.setVisibility(View.GONE);
+                    binding.editOfflineIndicator.setVisibility(View.VISIBLE);
+                } else {
+                    binding.editOnlineIndicator.setVisibility(View.GONE);
+                    binding.editOfflineIndicator.setVisibility(View.GONE);
+                }
+            }
         }
     }
     
@@ -1985,7 +2009,7 @@ public class JoinGameActivity extends AppCompatActivity {
             if (isConnected && isNetworkAvailable()) {
                 System.out.println("Reconnecting Firebase listener for game: " + currentGameId);
                 setupRealtimeListener();
-                ModernToast.info(this, "🔄 Connection restored, syncing data...");
+                // Network status indicator already shows connection state, no need for toast
             }
         }, 1000); // 1 second delay
     }
