@@ -162,6 +162,24 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     @Override
+    protected void onResume() {
+        super.onResume();
+        
+        // Refresh standings when returning to the activity
+        // This ensures calculations are updated even if network was offline
+        com.example.rummypulse.data.GameData currentGameData = viewModel.getGameData().getValue();
+        if (currentGameData != null) {
+            System.out.println("onResume: Refreshing standings with cached game data");
+            // Force a complete refresh of the standings
+            // updateStandings now handles both view and edit mode intelligently
+            generateStandingsTable(currentGameData);
+            updateStandingsInfo(currentGameData);
+        } else {
+            System.out.println("onResume: No cached game data available, will wait for data to load");
+        }
+    }
+    
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         
@@ -1128,24 +1146,41 @@ public class JoinGameActivity extends AppCompatActivity {
             
             // Calculate total score from game data (works in both view and edit mode)
             int totalScore = 0;
+            boolean scoresFoundInInputFields = false;
             
             // First try to get scores from input fields (edit mode)
             Boolean editAccess = viewModel.getEditAccessGranted().getValue();
             if (editAccess != null && editAccess) {
-                // Edit mode: get scores from input fields
-                for (int round = 1; round <= 10; round++) {
-                    EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
-                    if (scoreInput != null) {
-                        try {
-                            String text = scoreInput.getText().toString();
-                            if (!text.isEmpty()) {
-                                int score = Integer.parseInt(text);
-                                if (score > 0) {
-                                    totalScore += score;
+                // Edit mode: try to get scores from input fields
+                // Check if input fields exist first
+                EditText firstScoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r1");
+                if (firstScoreInput != null) {
+                    // Input fields exist, read from them
+                    for (int round = 1; round <= 10; round++) {
+                        EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
+                        if (scoreInput != null) {
+                            try {
+                                String text = scoreInput.getText().toString();
+                                if (!text.isEmpty()) {
+                                    int score = Integer.parseInt(text);
+                                    if (score > 0) {
+                                        totalScore += score;
+                                        scoresFoundInInputFields = true;
+                                    }
                                 }
+                            } catch (NumberFormatException e) {
+                                // Ignore invalid scores
                             }
-                        } catch (NumberFormatException e) {
-                            // Ignore invalid scores
+                        }
+                    }
+                }
+                
+                // If no input fields found or no scores in them, fall back to game data
+                if (!scoresFoundInInputFields && player.getScores() != null) {
+                    System.out.println("Edit mode but input fields not ready, using game data for player " + (i + 1));
+                    for (Integer score : player.getScores()) {
+                        if (score != null && score > 0) {
+                            totalScore += score;
                         }
                     }
                 }
@@ -1514,21 +1549,37 @@ public class JoinGameActivity extends AppCompatActivity {
         for (int i = 0; i < gameData.getPlayers().size(); i++) {
             com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
             int totalScore = 0;
+            boolean scoresFoundInInputFields = false;
             
             // Calculate total score from game data (works in both view and edit mode)
             Boolean editAccess = viewModel.getEditAccessGranted().getValue();
             if (editAccess != null && editAccess) {
-                // Edit mode: get scores from input fields
-                for (int round = 1; round <= 10; round++) {
-                    EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
-                    if (scoreInput != null && !scoreInput.getText().toString().trim().isEmpty()) {
-                        try {
-                            int score = Integer.parseInt(scoreInput.getText().toString().trim());
-                            if (score > 0) { // Only count positive scores
-                                totalScore += score;
+                // Edit mode: try to get scores from input fields
+                // Check if input fields exist first
+                EditText firstScoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r1");
+                if (firstScoreInput != null) {
+                    // Input fields exist, read from them
+                    for (int round = 1; round <= 10; round++) {
+                        EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
+                        if (scoreInput != null && !scoreInput.getText().toString().trim().isEmpty()) {
+                            try {
+                                int score = Integer.parseInt(scoreInput.getText().toString().trim());
+                                if (score > 0) { // Only count positive scores
+                                    totalScore += score;
+                                    scoresFoundInInputFields = true;
+                                }
+                            } catch (NumberFormatException e) {
+                                // Skip invalid scores
                             }
-                        } catch (NumberFormatException e) {
-                            // Skip invalid scores
+                        }
+                    }
+                }
+                
+                // If no input fields found or no scores in them, fall back to game data
+                if (!scoresFoundInInputFields && player.getScores() != null) {
+                    for (Integer score : player.getScores()) {
+                        if (score != null && score > 0) {
+                            totalScore += score;
                         }
                     }
                 }

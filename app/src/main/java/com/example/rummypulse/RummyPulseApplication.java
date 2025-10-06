@@ -35,14 +35,17 @@ public class RummyPulseApplication extends Application {
             Log.e(TAG, "Error configuring Firebase Auth persistence", e);
         }
         
-        // Enable offline persistence for Firestore (helps with auth state)
+        // Enable offline persistence for Firestore
         try {
             com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
-            // Enable offline persistence to help maintain auth state
-            db.enableNetwork();
-            Log.d(TAG, "Firestore network enabled for better persistence");
+            com.google.firebase.firestore.FirebaseFirestoreSettings settings = 
+                new com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
+                    .setPersistenceEnabled(true)
+                    .build();
+            db.setFirestoreSettings(settings);
+            Log.d(TAG, "Firestore offline persistence enabled successfully");
         } catch (Exception e) {
-            Log.e(TAG, "Error enabling Firestore network", e);
+            Log.e(TAG, "Error enabling Firestore offline persistence", e);
         }
         
         // Initialize AuthStateManager
