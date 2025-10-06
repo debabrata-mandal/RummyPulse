@@ -291,6 +291,12 @@ public class JoinGameActivity extends AppCompatActivity {
             playerNameText.setText("Player " + (i + 1));
             playerNameText.setEnabled(false); // Disable during loading
             
+            // Set placeholder round badge
+            TextView roundBadge = playerCardView.findViewById(R.id.text_current_round_badge);
+            if (roundBadge != null) {
+                roundBadge.setText("Round#1");
+            }
+            
             binding.playersContainer.addView(playerCardView);
         }
         
@@ -382,15 +388,12 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Show Players section and FAB when edit access is granted
                 binding.playersSection.setVisibility(View.VISIBLE);
                 binding.btnAddPlayer.setVisibility(View.VISIBLE);
-                // Generate player cards and update players info when edit access is granted
-                com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
-                if (gameData != null) {
-                    updatePlayersInfo(gameData);
-                    generatePlayerCards(gameData);
-                } else {
-                    // Show loading state for player cards if data not yet available
-                    showLoadingPlayerCards();
-                }
+                
+                // Always show loading placeholders when switching to edit mode
+                // The real player cards will be generated when fresh data arrives in the gameData observer
+                showLoadingPlayerCards();
+                System.out.println("Edit access granted - showing loading placeholders, waiting for fresh data");
+                
                 // Hide the 3-dot menu when edit access is granted
                 invalidateOptionsMenu();
                 // Don't show duplicate success message here since it's already shown in ViewModel
@@ -717,6 +720,13 @@ public class JoinGameActivity extends AppCompatActivity {
             if (gameData.getNumPlayers() > 2 && player.getRandomNumber() != null) {
                 playerId.setText("#" + player.getRandomNumber());
                 playerId.setVisibility(View.VISIBLE);
+            }
+
+            // Set current round badge
+            TextView roundBadge = playerCardView.findViewById(R.id.text_current_round_badge);
+            if (roundBadge != null) {
+                int currentRound = calculateCurrentRound(gameData);
+                roundBadge.setText("Round#" + currentRound);
             }
 
             // Setup delete player button
