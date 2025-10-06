@@ -257,38 +257,41 @@ public class ModernUpdateChecker {
         activity.runOnUiThread(() -> {
             String currentVersion = getCurrentVersion();
             
-            // Create dialog with dark theme
-            AlertDialog dialog = new AlertDialog.Builder(activity, R.style.DarkAlertDialog)
-                .setTitle("🚀 Update Available")
-                .setMessage("A new version is available!\n\n" +
-                           "📱 Current: v" + currentVersion + "\n" +
-                           "✨ Latest: v" + updateInfo.version + "\n\n" +
-                           "📝 What's new:\n" + formatReleaseNotes(updateInfo.releaseNotes))
-                .setPositiveButton("Update Now", (dialogInterface, which) -> {
-                    if (updateInfo.downloadUrl != null) {
-                        downloadUpdate(updateInfo.downloadUrl);
-                    } else {
-                        openGitHubReleases();
-                    }
-                })
-                .setNegativeButton("Later", (dialogInterface, which) -> {
-                    ModernToast.info(context, "💡 You can check for updates anytime in Settings");
-                })
-                .setCancelable(true)
-                .create();
-                
-            // Show dialog and apply button styling
-            dialog.show();
+            // Create custom dialog
+            android.app.Dialog dialog = new android.app.Dialog(activity);
+            dialog.setContentView(R.layout.dialog_update_available);
+            dialog.getWindow().setBackgroundDrawable(
+                new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            dialog.setCancelable(true);
             
-            // Style the buttons to match app theme
-            if (dialog.getButton(AlertDialog.BUTTON_POSITIVE) != null) {
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(
-                    activity.getColor(R.color.accent_blue));
-            }
-            if (dialog.getButton(AlertDialog.BUTTON_NEGATIVE) != null) {
-                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(
-                    activity.getColor(R.color.text_secondary));
-            }
+            // Get views
+            android.widget.TextView textCurrentVersion = dialog.findViewById(R.id.text_current_version);
+            android.widget.TextView textLatestVersion = dialog.findViewById(R.id.text_latest_version);
+            android.widget.TextView textReleaseNotes = dialog.findViewById(R.id.text_release_notes);
+            android.widget.ImageButton btnClose = dialog.findViewById(R.id.btn_close);
+            android.widget.Button btnUpdateNow = dialog.findViewById(R.id.btn_update_now);
+            
+            // Set values
+            textCurrentVersion.setText("v" + currentVersion);
+            textLatestVersion.setText("v" + updateInfo.version);
+            textReleaseNotes.setText(formatReleaseNotes(updateInfo.releaseNotes));
+            
+            // Set button listeners
+            btnClose.setOnClickListener(v -> {
+                dialog.dismiss();
+                ModernToast.info(context, "💡 You can check for updates anytime from App Info");
+            });
+            
+            btnUpdateNow.setOnClickListener(v -> {
+                dialog.dismiss();
+                if (updateInfo.downloadUrl != null) {
+                    downloadUpdate(updateInfo.downloadUrl);
+                } else {
+                    openGitHubReleases();
+                }
+            });
+            
+            dialog.show();
         });
     }
     
@@ -300,12 +303,61 @@ public class ModernUpdateChecker {
             return "• Bug fixes and improvements";
         }
         
-        // Limit length and clean up formatting
-        if (releaseNotes.length() > 200) {
-            releaseNotes = releaseNotes.substring(0, 200) + "...";
+        // Clean up markdown formatting
+        String formatted = releaseNotes
+            .replaceAll("\\*\\*([^*]+)\\*\\*", "$1")  // Remove bold **text**
+            .replaceAll("###+\\s*", "")                // Remove ### headers
+            .replaceAll("\\*\\s*", "• ")               // Convert * to bullet points
+            .replaceAll("-\\s*", "• ")                 // Convert - to bullet points
+            .replaceAll("\\n\\n+", "\n")               // Remove extra newlines
+            .trim();
+        
+        // Format date from technical format to user-friendly format
+        // Pattern: Date: 2025-10-06T15:07:21+05:30 -> Released: Oct 06, 2025
+        java.util.regex.Pattern datePattern = java.util.regex.Pattern.compile(
+            "(?i)Date:\\s*(\\d{4})-(\\d{2})-(\\d{2})T[^\\n]+");
+        java.util.regex.Matcher dateMatcher = datePattern.matcher(formatted);
+        if (dateMatcher.find()) {
+            try {
+                int year = Integer.parseInt(dateMatcher.group(1));
+                int month = Integer.parseInt(dateMatcher.group(2));
+                int day = Integer.parseInt(dateMatcher.group(3));
+                
+                String[] monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+                String monthName = month > 0 && month <= 12 ? monthNames[month - 1] : String.valueOf(month);
+                
+                String friendlyDate = "Released: " + monthName + " " + 
+                                     String.format("%02d", day) + ", " + year;
+                formatted = dateMatcher.replaceFirst(friendlyDate);
+            } catch (Exception e) {
+                // If parsing fails, just remove the date line
+                formatted = dateMatcher.replaceFirst("");
+            }
         }
         
-        return releaseNotes.trim();
+        // Remove installation instructions section (not needed in update dialog)
+        int installIndex = formatted.toLowerCase().indexOf("installation instructions");
+        if (installIndex != -1) {
+            formatted = formatted.substring(0, installIndex).trim();
+        }
+        
+        // Also try to remove by numbered list pattern
+        formatted = formatted.replaceAll("(?i)(installation instructions|install.*instructions)[\\s\\S]*", "").trim();
+        
+        // Remove technical commit info and build number
+        formatted = formatted.replaceAll("(?i)Commit:\\s*[^\\n]+", "").trim();
+        formatted = formatted.replaceAll("(?i)Build Number:\\s*[^\\n]+", "").trim();
+        
+        // Remove empty lines
+        formatted = formatted.replaceAll("\\n\\s*\\n", "\n").trim();
+        
+        // Limit length if too long
+        if (formatted.length() > 400) {
+            formatted = formatted.substring(0, 400) + "...";
+        }
+        
+        return formatted;
     }
     
     /**
@@ -572,6 +624,9 @@ public class ModernUpdateChecker {
                     Log.e(TAG, "❌ Download failed with status: " + status + " - " + errorMessage);
                     ModernToast.error(context, "❌ Download failed: " + getSimpleErrorMessage(status));
                     showDownloadError(errorMessage, true);
+                    
+                    // Clean up failed download file
+                    cleanupFailedDownload(cursor);
                 }
             } else {
                 Log.e(TAG, "Download query returned no results");
@@ -592,6 +647,32 @@ public class ModernUpdateChecker {
         }
     }
 
+    /**
+     * Clean up failed download file
+     */
+    private void cleanupFailedDownload(Cursor cursor) {
+        try {
+            int uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+            if (uriIndex >= 0) {
+                String localUri = cursor.getString(uriIndex);
+                if (localUri != null) {
+                    File failedFile = new File(Uri.parse(localUri).getPath());
+                    if (failedFile.exists() && failedFile.delete()) {
+                        Log.d(TAG, "Cleaned up failed download file: " + failedFile.getPath());
+                    }
+                }
+            }
+            
+            // Also remove from DownloadManager
+            if (downloadId != -1) {
+                downloadManager.remove(downloadId);
+                Log.d(TAG, "Removed failed download from DownloadManager");
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error cleaning up failed download", e);
+        }
+    }
+    
     /**
      * Get detailed error message for download failure
      */
@@ -788,6 +869,16 @@ public class ModernUpdateChecker {
         } catch (Exception e) {
             Log.e(TAG, "Error installing APK", e);
             ModernToast.error(context, "❌ Installation failed. Please install manually.");
+            
+            // Clean up APK file on error
+            try {
+                File apkFile = new File(Uri.parse(localUri).getPath());
+                if (apkFile.exists() && apkFile.delete()) {
+                    Log.d(TAG, "Cleaned up APK file after installation error");
+                }
+            } catch (Exception cleanupError) {
+                Log.w(TAG, "Failed to clean up APK after error", cleanupError);
+            }
         }
     }
     

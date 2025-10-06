@@ -402,58 +402,47 @@ public class MainActivity extends AppCompatActivity {
             FirebaseUser currentUser = mAuth.getCurrentUser();
             String userEmail = currentUser != null ? currentUser.getEmail() : "Not signed in";
             
-            String appInfo = "📱 RummyPulse\n\n" +
-                           "🏷️ Version: " + versionName + "\n" +
-                           "🔢 Build: " + versionCode + "\n" +
-                           "👤 User: " + userEmail + "\n" +
-                           "🔧 Auto-Update: Enabled\n\n" +
-                           "🚀 Built with Firebase & Android\n" +
-                           "💡 Developed by Debabrata Mandal\n\n" +
-                           "📅 " + new java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+            String currentDate = new java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
                                    .format(new java.util.Date());
             
-            // Create dialog with dark theme
-            AlertDialog dialog = new AlertDialog.Builder(this, R.style.DarkAlertDialog)
-                .setTitle("ℹ️ App Information")
-                .setMessage(appInfo)
-                .setPositiveButton("Check for Updates", (dialogInterface, which) -> {
-                    if (updateChecker != null) {
-                        com.example.rummypulse.utils.ModernToast.info(this, "Checking for updates...");
-                        updateChecker.forceCheckForUpdates();
-                    }
-                })
-                .setNegativeButton("OK", null)
-                .create();
-                
-            // Apply dark theme styling
-            dialog.show();
+            // Create custom dialog
+            android.app.Dialog dialog = new android.app.Dialog(this);
+            dialog.setContentView(R.layout.dialog_app_info);
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            dialog.setCancelable(true);
             
-            // Style the buttons to match app theme
-            if (dialog.getButton(AlertDialog.BUTTON_POSITIVE) != null) {
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(getColor(R.color.accent_blue));
-            }
-            if (dialog.getButton(AlertDialog.BUTTON_NEGATIVE) != null) {
-                dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(getColor(R.color.text_secondary));
-            }
+            // Get views
+            android.widget.TextView textVersion = dialog.findViewById(R.id.text_version);
+            android.widget.TextView textBuild = dialog.findViewById(R.id.text_build);
+            android.widget.TextView textUserEmail = dialog.findViewById(R.id.text_user_email);
+            android.widget.TextView textDate = dialog.findViewById(R.id.text_date);
+            android.widget.ImageButton btnClose = dialog.findViewById(R.id.btn_close);
+            android.widget.Button btnCheckUpdates = dialog.findViewById(R.id.btn_check_updates);
+            
+            // Set values
+            textVersion.setText(versionName);
+            textBuild.setText(String.valueOf(versionCode));
+            textUserEmail.setText(userEmail);
+            textDate.setText("📅 " + currentDate);
+            
+            // Set button listeners
+            btnClose.setOnClickListener(v -> dialog.dismiss());
+            
+            btnCheckUpdates.setOnClickListener(v -> {
+                dialog.dismiss();
+                if (updateChecker != null) {
+                    com.example.rummypulse.utils.ModernToast.info(this, "Checking for updates...");
+                    updateChecker.forceCheckForUpdates();
+                }
+            });
+            
+            dialog.show();
                 
         } catch (PackageManager.NameNotFoundException e) {
             android.util.Log.e("MainActivity", "Error getting package info", e);
             
-            AlertDialog errorDialog = new AlertDialog.Builder(this, R.style.DarkAlertDialog)
-                .setTitle("ℹ️ App Information")
-                .setMessage("📱 RummyPulse\n\n" +
-                           "🏷️ Version: Unknown\n" +
-                           "👤 User: " + (mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getEmail() : "Not signed in") + "\n" +
-                           "🔧 Auto-Update: Enabled")
-                .setPositiveButton("OK", null)
-                .create();
-                
-            errorDialog.show();
-            
-            // Style the button
-            if (errorDialog.getButton(AlertDialog.BUTTON_POSITIVE) != null) {
-                errorDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(getColor(R.color.accent_blue));
-            }
+            // Fallback to simple dialog
+            com.example.rummypulse.utils.ModernToast.error(this, "Unable to retrieve app information");
         }
     }
 }
