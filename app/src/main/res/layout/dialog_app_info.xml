@@ -122,32 +122,6 @@
 
         </LinearLayout>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="👤 User"
-                android:textColor="@color/text_secondary"
-                android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/text_user_email"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="user@example.com"
-                android:textColor="@color/accent_blue"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:maxLines="1"
-                android:ellipsize="end" />
-
-        </LinearLayout>
-
     </LinearLayout>
 
     <!-- Features Section -->

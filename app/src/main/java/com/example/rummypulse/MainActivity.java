@@ -260,8 +260,8 @@ public class MainActivity extends AppCompatActivity {
             String displayName = user.getDisplayName();
             String email = user.getEmail();
             
-            // Set email first
-            emailTextView.setText(email != null ? email : "");
+            // Hide email for privacy
+            emailTextView.setVisibility(android.view.View.GONE);
             
             // Load user profile image with Glide
             if (user.getPhotoUrl() != null) {
@@ -278,17 +278,8 @@ public class MainActivity extends AppCompatActivity {
                 profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo);
             }
             
-            // Check if user is admin and update name accordingly
-            AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
-                @Override
-                public void onResult(boolean isAdmin) {
-                    String finalDisplayName = displayName != null ? displayName : "User";
-                    if (isAdmin) {
-                        finalDisplayName += " (Admin)";
-                    }
-                    nameTextView.setText(finalDisplayName);
-                }
-            });
+            // Hide username for privacy
+            nameTextView.setVisibility(android.view.View.GONE);
         }
     }
     
@@ -400,7 +391,6 @@ public class MainActivity extends AppCompatActivity {
             long versionCode = packageInfo.getLongVersionCode();
             
             FirebaseUser currentUser = mAuth.getCurrentUser();
-            String userEmail = currentUser != null ? currentUser.getEmail() : "Not signed in";
             
             String currentDate = new java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
                                    .format(new java.util.Date());
@@ -414,7 +404,6 @@ public class MainActivity extends AppCompatActivity {
             // Get views
             android.widget.TextView textVersion = dialog.findViewById(R.id.text_version);
             android.widget.TextView textBuild = dialog.findViewById(R.id.text_build);
-            android.widget.TextView textUserEmail = dialog.findViewById(R.id.text_user_email);
             android.widget.TextView textDate = dialog.findViewById(R.id.text_date);
             android.widget.ImageButton btnClose = dialog.findViewById(R.id.btn_close);
             android.widget.Button btnCheckUpdates = dialog.findViewById(R.id.btn_check_updates);
@@ -422,7 +411,6 @@ public class MainActivity extends AppCompatActivity {
             // Set values
             textVersion.setText(versionName);
             textBuild.setText(String.valueOf(versionCode));
-            textUserEmail.setText(userEmail);
             textDate.setText("📅 " + currentDate);
             
             // Set button listeners
