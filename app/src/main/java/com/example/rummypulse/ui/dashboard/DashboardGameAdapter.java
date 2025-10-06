@@ -9,10 +9,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.request.RequestOptions;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
@@ -139,12 +143,27 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         // Set created time
         holder.createdTimeText.setText("Started " + formatDateTime(item.getCreationDateTime()));
         
-        // Set creator name if available
+        // Set creator section if available
         if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
+            holder.creatorSection.setVisibility(View.VISIBLE);
             holder.creatorNameText.setText("Created by: " + item.getCreatorName());
-            holder.creatorNameText.setVisibility(View.VISIBLE);
+            
+            // Load creator profile image with Glide
+            if (item.getCreatorPhotoUrl() != null && !item.getCreatorPhotoUrl().isEmpty()) {
+                Glide.with(holder.itemView.getContext())
+                    .load(item.getCreatorPhotoUrl())
+                    .apply(new RequestOptions()
+                        .circleCrop()
+                        .placeholder(R.drawable.ic_person)
+                        .error(R.drawable.ic_person)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL))
+                    .into(holder.creatorProfileImage);
+            } else {
+                // No photo URL, show default icon
+                holder.creatorProfileImage.setImageResource(R.drawable.ic_person);
+            }
         } else {
-            holder.creatorNameText.setVisibility(View.GONE);
+            holder.creatorSection.setVisibility(View.GONE);
         }
         
         // Set card click behavior based on game status
@@ -275,7 +294,8 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
 
     static class GameViewHolder extends RecyclerView.ViewHolder {
         TextView gameIdText, gameStatusText, playersText, pointValueText, gstText, createdTimeText, creatorNameText;
-        ImageView qrCodeIcon;
+        ImageView qrCodeIcon, creatorProfileImage;
+        LinearLayout creatorSection;
 
         GameViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -286,6 +306,8 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             gstText = itemView.findViewById(R.id.text_gst);
             createdTimeText = itemView.findViewById(R.id.text_created_time);
             creatorNameText = itemView.findViewById(R.id.text_creator_name);
+            creatorProfileImage = itemView.findViewById(R.id.image_creator_profile);
+            creatorSection = itemView.findViewById(R.id.creator_section);
             qrCodeIcon = itemView.findViewById(R.id.icon_qr_code_dashboard);
         }
     }

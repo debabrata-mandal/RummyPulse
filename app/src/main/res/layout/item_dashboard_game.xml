@@ -164,17 +164,38 @@
             android:textColor="@color/text_secondary"
             android:layout_marginBottom="8dp" />
 
-        <!-- Creator Name -->
-        <TextView
-            android:id="@+id/text_creator_name"
+        <!-- Creator Section -->
+        <LinearLayout
+            android:id="@+id/creator_section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Created by: John Doe"
-            android:textSize="11sp"
-            android:textColor="@color/text_secondary"
-            android:textStyle="italic"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
             android:layout_marginBottom="16dp"
-            android:visibility="gone" />
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/image_creator_profile"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_person"
+                android:contentDescription="Creator Profile Photo"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/text_creator_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Created by: John Doe"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android:textStyle="italic"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+        </LinearLayout>
 
 
     </LinearLayout>

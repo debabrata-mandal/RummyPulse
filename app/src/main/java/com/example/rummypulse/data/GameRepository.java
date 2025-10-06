@@ -177,14 +177,43 @@ public class GameRepository {
                                             GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
                                             String pin = gameAuth != null ? gameAuth.getPin() : "0000";
                                             String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
+                                            String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
                                             
                                             // Use createdAt from games collection instead of lastUpdated from gameData collection
                                             com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
-                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName);
                                             
-                                            if (gameItem != null) {
-                                                gameItemsMap.put(gameId, gameItem);
-                                                updateGameItemsList();
+                                            // Fetch creator's photo URL from appUser collection
+                                            if (creatorUserId != null && !creatorUserId.isEmpty()) {
+                                                db.collection("appUser")
+                                                        .document(creatorUserId)
+                                                        .get()
+                                                        .addOnSuccessListener(userSnapshot -> {
+                                                            String creatorPhotoUrl = null;
+                                                            if (userSnapshot.exists()) {
+                                                                creatorPhotoUrl = userSnapshot.getString("photoUrl");
+                                                            }
+                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl);
+                                                            
+                                                            if (gameItem != null) {
+                                                                gameItemsMap.put(gameId, gameItem);
+                                                                updateGameItemsList();
+                                                            }
+                                                        })
+                                                        .addOnFailureListener(e -> {
+                                                            // If fetching photo fails, create game item without photo
+                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null);
+                                                            if (gameItem != null) {
+                                                                gameItemsMap.put(gameId, gameItem);
+                                                                updateGameItemsList();
+                                                            }
+                                                        });
+                                            } else {
+                                                // No creator user ID, create game item without photo
+                                                GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null);
+                                                if (gameItem != null) {
+                                                    gameItemsMap.put(gameId, gameItem);
+                                                    updateGameItemsList();
+                                                }
                                             }
                                         });
                             }
@@ -213,7 +242,7 @@ public class GameRepository {
         gameItemsLiveData.setValue(gameItems);
     }
 
-    private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt, String creatorName) {
+    private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt, String creatorName, String creatorPhotoUrl) {
         // Calculate total score
         int totalScore = gameData.getTotalScore();
         
@@ -236,7 +265,7 @@ public class GameRepository {
         // Get number of players
         String numberOfPlayers = String.valueOf(gameData.getNumPlayers());
 
-        return new GameItem(
+        GameItem gameItem = new GameItem(
                 gameId,
                 pin,
                 String.valueOf(totalScore),
@@ -249,6 +278,11 @@ public class GameRepository {
                 creatorName,
                 gameData.getPlayers()
         );
+        
+        // Set creator photo URL
+        gameItem.setCreatorPhotoUrl(creatorPhotoUrl);
+        
+        return gameItem;
     }
 
     private String formatTimestamp(com.google.firebase.Timestamp timestamp) {
