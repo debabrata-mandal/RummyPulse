@@ -58,8 +58,8 @@ public class AppUserRepository {
                 if (task.isSuccessful()) {
                     DocumentSnapshot document = task.getResult();
                     if (document.exists()) {
-                        // User exists, update lastLoginAt
-                        updateLastLogin(userId, callback);
+                        // User exists, update lastLoginAt and photoUrl
+                        updateLastLogin(firebaseUser, callback);
                     } else {
                         // User doesn't exist, create new user
                         createNewUser(firebaseUser, provider, callback);
@@ -81,9 +81,10 @@ public class AppUserRepository {
         String userId = firebaseUser.getUid();
         String email = firebaseUser.getEmail();
         String displayName = firebaseUser.getDisplayName();
+        String photoUrl = firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : null;
         
         // Create AppUser object
-        AppUser appUser = new AppUser(userId, provider, UserRole.REGULAR_USER, email, displayName);
+        AppUser appUser = new AppUser(userId, provider, UserRole.REGULAR_USER, email, displayName, photoUrl);
         
         // Convert to Map for Firestore
         Map<String, Object> userData = new HashMap<>();
@@ -92,6 +93,7 @@ public class AppUserRepository {
         userData.put("role", appUser.getRole().getValue());
         userData.put("email", appUser.getEmail());
         userData.put("displayName", appUser.getDisplayName());
+        userData.put("photoUrl", appUser.getPhotoUrl());
         userData.put("createdAt", FieldValue.serverTimestamp());
         userData.put("lastLoginAt", FieldValue.serverTimestamp());
         
@@ -118,18 +120,22 @@ public class AppUserRepository {
     }
     
     /**
-     * Update lastLoginAt timestamp for existing user
+     * Update lastLoginAt timestamp and photoUrl for existing user
      */
-    private void updateLastLogin(String userId, AppUserCallback callback) {
+    private void updateLastLogin(FirebaseUser firebaseUser, AppUserCallback callback) {
+        String userId = firebaseUser.getUid();
+        String photoUrl = firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : null;
+        
         Map<String, Object> updates = new HashMap<>();
         updates.put("lastLoginAt", FieldValue.serverTimestamp());
+        updates.put("photoUrl", photoUrl); // Update photo URL on each login
         
         db.collection(COLLECTION_NAME).document(userId)
                 .update(updates)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void aVoid) {
-                        Log.d(TAG, "User lastLoginAt updated successfully: " + userId);
+                        Log.d(TAG, "User lastLoginAt and photoUrl updated successfully: " + userId);
                         if (callback != null) {
                             // Fetch updated user data
                             getUserById(userId, callback);
@@ -139,7 +145,7 @@ public class AppUserRepository {
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Log.e(TAG, "Error updating lastLoginAt", e);
+                        Log.e(TAG, "Error updating lastLoginAt and photoUrl", e);
                         if (callback != null) {
                             callback.onFailure(e);
                         }
@@ -225,6 +231,7 @@ public class AppUserRepository {
         appUser.setRole(UserRole.fromString(document.getString("role")));
         appUser.setEmail(document.getString("email"));
         appUser.setDisplayName(document.getString("displayName"));
+        appUser.setPhotoUrl(document.getString("photoUrl"));
         appUser.setCreatedAt(document.getDate("createdAt"));
         appUser.setLastLoginAt(document.getDate("lastLoginAt"));
         return appUser;

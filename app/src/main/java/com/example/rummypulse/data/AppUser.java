@@ -13,6 +13,7 @@ public class AppUser {
     private UserRole role;
     private String email;
     private String displayName;
+    private String photoUrl;
     @ServerTimestamp
     private Date createdAt;
     @ServerTimestamp
@@ -27,6 +28,15 @@ public class AppUser {
         this.role = role;
         this.email = email;
         this.displayName = displayName;
+    }
+    
+    public AppUser(String userId, String provider, UserRole role, String email, String displayName, String photoUrl) {
+        this.userId = userId;
+        this.provider = provider;
+        this.role = role;
+        this.email = email;
+        this.displayName = displayName;
+        this.photoUrl = photoUrl;
     }
 
     // Getters and setters
@@ -70,6 +80,14 @@ public class AppUser {
         this.displayName = displayName;
     }
 
+    public String getPhotoUrl() {
+        return photoUrl;
+    }
+
+    public void setPhotoUrl(String photoUrl) {
+        this.photoUrl = photoUrl;
+    }
+
     public Date getCreatedAt() {
         return createdAt;
     }
@@ -94,6 +112,7 @@ public class AppUser {
                 ", role=" + role +
                 ", email='" + email + '\'' +
                 ", displayName='" + displayName + '\'' +
+                ", photoUrl='" + photoUrl + '\'' +
                 ", createdAt=" + createdAt +
                 ", lastLoginAt=" + lastLoginAt +
                 '}';

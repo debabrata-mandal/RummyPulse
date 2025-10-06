@@ -12,38 +12,56 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:padding="16dp">
 
-        <!-- User Name and Role Row -->
+        <!-- Profile Image -->
+        <ImageView
+            android:id="@+id/imageViewUserProfile"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginEnd="16dp"
+            android:scaleType="centerCrop"
+            android:contentDescription="User Profile Photo"
+            android:src="@drawable/ic_person"
+            tools:src="@drawable/ic_person" />
+
+        <!-- User Info Container -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="4dp">
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/textViewUserName"
-                android:layout_width="0dp"
+            <!-- User Name and Role Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary"
-                tools:text="John Doe" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="4dp">
 
-            <TextView
-                android:id="@+id/textViewUserRole"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:padding="6dp"
-                android:background="@drawable/role_badge_background"
-                tools:text="🔑 Admin User" />
+                <TextView
+                    android:id="@+id/textViewUserName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    tools:text="John Doe" />
 
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/textViewUserRole"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:padding="6dp"
+                    android:background="@drawable/role_badge_background"
+                    tools:text="🔑 Admin User" />
+
+            </LinearLayout>
 
         <!-- Email -->
         <TextView
@@ -81,17 +99,19 @@
 
         </LinearLayout>
 
-        <!-- Action Button -->
-        <Button
-            android:id="@+id/buttonChangeRole"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/button_rounded_dark"
-            android:textColor="@color/text_white"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginTop="4dp"
-            tools:text="Promote to Admin" />
+            <!-- Action Button -->
+            <Button
+                android:id="@+id/buttonChangeRole"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/button_rounded_dark"
+                android:textColor="@color/text_white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginTop="4dp"
+                tools:text="Promote to Admin" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

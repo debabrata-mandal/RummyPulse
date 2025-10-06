@@ -4,11 +4,15 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.request.RequestOptions;
 import com.example.rummypulse.R;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.UserRole;
@@ -61,6 +65,7 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
     }
 
     static class UserViewHolder extends RecyclerView.ViewHolder {
+        private final ImageView profileImageView;
         private final TextView nameTextView;
         private final TextView emailTextView;
         private final TextView roleTextView;
@@ -70,6 +75,7 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
 
         public UserViewHolder(@NonNull View itemView) {
             super(itemView);
+            profileImageView = itemView.findViewById(R.id.imageViewUserProfile);
             nameTextView = itemView.findViewById(R.id.textViewUserName);
             emailTextView = itemView.findViewById(R.id.textViewUserEmail);
             roleTextView = itemView.findViewById(R.id.textViewUserRole);
@@ -79,6 +85,21 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
         }
 
         public void bind(AppUser user, OnRoleChangeClickListener listener) {
+            // Load profile image with Glide
+            if (user.getPhotoUrl() != null && !user.getPhotoUrl().isEmpty()) {
+                Glide.with(itemView.getContext())
+                    .load(user.getPhotoUrl())
+                    .apply(new RequestOptions()
+                        .circleCrop()
+                        .placeholder(R.drawable.ic_person)
+                        .error(R.drawable.ic_person)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL))
+                    .into(profileImageView);
+            } else {
+                // No photo URL, show default icon
+                profileImageView.setImageResource(R.drawable.ic_person);
+            }
+            
             // Set user information
             nameTextView.setText(user.getDisplayName() != null ? user.getDisplayName() : "No Name");
             emailTextView.setText(user.getEmail() != null ? user.getEmail() : "No Email");
