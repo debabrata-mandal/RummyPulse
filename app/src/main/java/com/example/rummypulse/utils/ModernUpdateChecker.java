@@ -49,6 +49,8 @@ public class ModernUpdateChecker {
     private DownloadManager downloadManager;
     private long downloadId = -1;
     private BroadcastReceiver downloadReceiver;
+    private Handler pollingHandler;
+    private Runnable pollingRunnable;
     
     public ModernUpdateChecker(Context context) {
         this.context = context;
@@ -438,6 +440,9 @@ public class ModernUpdateChecker {
         try {
             Log.d(TAG, "Starting APK download from: " + downloadUrl);
             
+            // Cancel any previous downloads and polling
+            cleanupPreviousDownload();
+            
             // Store download URL for retry purposes
             context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
                 .edit()
@@ -521,11 +526,14 @@ public class ModernUpdateChecker {
     private void startDownloadStatusPolling() {
         if (downloadId == -1) return;
         
+        // Stop any previous polling
+        stopPolling();
+        
         Log.d(TAG, "Starting download status polling for ID: " + downloadId);
         
         // Poll every 2 seconds
-        Handler handler = new Handler(Looper.getMainLooper());
-        Runnable pollRunnable = new Runnable() {
+        pollingHandler = new Handler(Looper.getMainLooper());
+        pollingRunnable = new Runnable() {
             int pollCount = 0;
             final int maxPolls = 60; // Poll for max 2 minutes
             
@@ -537,6 +545,7 @@ public class ModernUpdateChecker {
                 if (pollCount > maxPolls) {
                     Log.w(TAG, "Download polling timeout reached");
                     ModernToast.warning(context, "⏰ Download taking too long - check notification");
+                    stopPolling();
                     return;
                 }
                 
@@ -560,11 +569,13 @@ public class ModernUpdateChecker {
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
                             Log.d(TAG, "✅ Download completed via polling! Triggering installation...");
                             cursor.close();
+                            stopPolling();
                             handleDownloadComplete();
                             return;
                         } else if (status == DownloadManager.STATUS_FAILED) {
                             Log.e(TAG, "❌ Download failed via polling");
                             cursor.close();
+                            stopPolling();
                             handleDownloadComplete();
                             return;
                         } else if (status == DownloadManager.STATUS_RUNNING) {
@@ -577,17 +588,65 @@ public class ModernUpdateChecker {
                     cursor.close();
                     
                     // Continue polling
-                    handler.postDelayed(this, 2000);
+                    if (pollingHandler != null && pollingRunnable != null) {
+                        pollingHandler.postDelayed(pollingRunnable, 2000);
+                    }
                     
                 } catch (Exception e) {
                     Log.e(TAG, "Error polling download status", e);
-                    handler.postDelayed(this, 2000);
+                    if (pollingHandler != null && pollingRunnable != null) {
+                        pollingHandler.postDelayed(pollingRunnable, 2000);
+                    }
                 }
             }
         };
         
         // Start polling after 5 seconds
-        handler.postDelayed(pollRunnable, 5000);
+        pollingHandler.postDelayed(pollingRunnable, 5000);
+    }
+    
+    /**
+     * Stop polling for download status
+     */
+    private void stopPolling() {
+        if (pollingHandler != null && pollingRunnable != null) {
+            Log.d(TAG, "Stopping download status polling");
+            pollingHandler.removeCallbacks(pollingRunnable);
+            pollingHandler = null;
+            pollingRunnable = null;
+        }
+    }
+    
+    /**
+     * Clean up any previous download before starting a new one
+     */
+    private void cleanupPreviousDownload() {
+        // Stop any ongoing polling
+        stopPolling();
+        
+        // Unregister any previous broadcast receiver
+        try {
+            if (downloadReceiver != null) {
+                context.unregisterReceiver(downloadReceiver);
+                Log.d(TAG, "Unregistered previous download receiver");
+            }
+        } catch (IllegalArgumentException e) {
+            // Receiver wasn't registered, ignore
+        }
+        
+        // Re-setup the receiver
+        setupDownloadReceiver();
+        
+        // Cancel previous download if exists
+        if (downloadId != -1) {
+            try {
+                downloadManager.remove(downloadId);
+                Log.d(TAG, "Cancelled previous download ID: " + downloadId);
+            } catch (Exception e) {
+                Log.w(TAG, "Error cancelling previous download", e);
+            }
+            downloadId = -1;
+        }
     }
 
     /**
