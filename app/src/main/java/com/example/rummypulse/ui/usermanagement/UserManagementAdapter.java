@@ -15,6 +15,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.RequestOptions;
 import com.example.rummypulse.R;
 import com.example.rummypulse.data.AppUser;
+import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.data.UserRole;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -133,40 +134,53 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
             boolean isCurrentUser = currentUser != null && 
                                   currentUser.getUid().equals(user.getUserId());
             
-            // Set up role change button
-            if (isCurrentUser) {
-                // Current user cannot change their own role
-                roleChangeButton.setText("Current User");
-                roleChangeButton.setEnabled(false);
-                roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    itemView.getContext().getColor(R.color.neutral_gray)));
-                roleChangeButton.setTextColor(itemView.getContext().getColor(R.color.text_secondary));
-                roleChangeButton.setOnClickListener(null);
-            } else {
-                // Other users can have their roles changed
-                String buttonText = user.getRole() == UserRole.ADMIN_USER ? 
-                    "Demote to Regular" : "Promote to Admin";
-                roleChangeButton.setText(buttonText);
-                roleChangeButton.setEnabled(true);
-                
-                // Set button styling based on action
-                if (user.getRole() == UserRole.ADMIN_USER) {
-                    roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                        itemView.getContext().getColor(R.color.demote_button_color)));
-                } else {
-                    roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                        itemView.getContext().getColor(R.color.promote_button_color)));
-                }
-                
-                // Set text color to white for better contrast
-                roleChangeButton.setTextColor(itemView.getContext().getColor(R.color.text_white));
-                
-                roleChangeButton.setOnClickListener(v -> {
-                    if (listener != null) {
-                        listener.onRoleChangeClicked(user);
+            // Check if current user is admin to show/hide role change buttons
+            AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
+                @Override
+                public void onResult(boolean isAdmin) {
+                    if (!isAdmin) {
+                        // Non-admin user - hide the role change button entirely
+                        roleChangeButton.setVisibility(View.GONE);
+                    } else {
+                        // Admin user - show and configure the button
+                        roleChangeButton.setVisibility(View.VISIBLE);
+                        
+                        if (isCurrentUser) {
+                            // Current user cannot change their own role
+                            roleChangeButton.setText("Current User");
+                            roleChangeButton.setEnabled(false);
+                            roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                                itemView.getContext().getColor(R.color.neutral_gray)));
+                            roleChangeButton.setTextColor(itemView.getContext().getColor(R.color.text_secondary));
+                            roleChangeButton.setOnClickListener(null);
+                        } else {
+                            // Other users can have their roles changed
+                            String buttonText = user.getRole() == UserRole.ADMIN_USER ? 
+                                "Demote to Regular" : "Promote to Admin";
+                            roleChangeButton.setText(buttonText);
+                            roleChangeButton.setEnabled(true);
+                            
+                            // Set button styling based on action
+                            if (user.getRole() == UserRole.ADMIN_USER) {
+                                roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                                    itemView.getContext().getColor(R.color.demote_button_color)));
+                            } else {
+                                roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                                    itemView.getContext().getColor(R.color.promote_button_color)));
+                            }
+                            
+                            // Set text color to white for better contrast
+                            roleChangeButton.setTextColor(itemView.getContext().getColor(R.color.text_white));
+                            
+                            roleChangeButton.setOnClickListener(v -> {
+                                if (listener != null) {
+                                    listener.onRoleChangeClicked(user);
+                                }
+                            });
+                        }
                     }
-                });
-            }
+                }
+            });
         }
     }
 }

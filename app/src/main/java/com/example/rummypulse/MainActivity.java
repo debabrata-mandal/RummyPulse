@@ -12,6 +12,9 @@ import android.widget.ImageView;
 
 import java.util.List;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.request.RequestOptions;
 import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -135,25 +138,13 @@ public class MainActivity extends AppCompatActivity {
                 });
                 return true;
             } else if (item.getItemId() == R.id.nav_user_management) {
-                // Check admin status before allowing access to User Management screen
-                AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
-                    @Override
-                    public void onResult(boolean isAdmin) {
-                        if (isAdmin) {
-                            // Admin user - allow access
-                            boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
-                            if (handled) {
-                                drawer.closeDrawers();
-                            }
-                        } else {
-                            // Non-admin user - show access denied message
-                            drawer.closeDrawers();
-                            com.example.rummypulse.utils.ModernToast.error(MainActivity.this, 
-                                "🔒 Access Denied: Admin privileges required for Users");
-                        }
-                    }
-                });
-                return true;
+                // Allow all users to access the Users screen
+                // Role change buttons will be hidden for non-admin users in the adapter
+                boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
+                if (handled) {
+                    drawer.closeDrawers();
+                }
+                return handled;
             } else {
                 // Handle other navigation items with default behavior
                 boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
@@ -263,6 +254,7 @@ public class MainActivity extends AppCompatActivity {
         android.view.View headerView = navigationView.getHeaderView(0);
         TextView nameTextView = headerView.findViewById(R.id.nav_header_title);
         TextView emailTextView = headerView.findViewById(R.id.nav_header_subtitle);
+        ImageView profileImageView = headerView.findViewById(R.id.imageView);
         
         if (user != null) {
             String displayName = user.getDisplayName();
@@ -270,6 +262,21 @@ public class MainActivity extends AppCompatActivity {
             
             // Set email first
             emailTextView.setText(email != null ? email : "");
+            
+            // Load user profile image with Glide
+            if (user.getPhotoUrl() != null) {
+                Glide.with(this)
+                    .load(user.getPhotoUrl())
+                    .apply(new RequestOptions()
+                        .circleCrop()
+                        .placeholder(R.drawable.ic_rummy_pulse_logo)
+                        .error(R.drawable.ic_rummy_pulse_logo)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL))
+                    .into(profileImageView);
+            } else {
+                // No photo URL, show default game icon
+                profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo);
+            }
             
             // Check if user is admin and update name accordingly
             AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
@@ -306,15 +313,9 @@ public class MainActivity extends AppCompatActivity {
                 }
                 
                 if (userManagementMenuItem != null) {
-                    if (isAdmin) {
-                        // Admin user - show normal users icon
-                        userManagementMenuItem.setIcon(R.drawable.ic_people);
-                        userManagementMenuItem.setTitle("Users");
-                    } else {
-                        // Non-admin user - show lock icon
-                        userManagementMenuItem.setIcon(R.drawable.ic_lock);
-                        userManagementMenuItem.setTitle("Users 🔒");
-                    }
+                    // Users menu is accessible to everyone - always show people icon
+                    userManagementMenuItem.setIcon(R.drawable.ic_people);
+                    userManagementMenuItem.setTitle("Users");
                 }
             }
         });

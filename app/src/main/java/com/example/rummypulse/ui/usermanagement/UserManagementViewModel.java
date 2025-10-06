@@ -10,6 +10,8 @@ import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.UserRole;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -63,6 +65,29 @@ public class UserManagementViewModel extends ViewModel {
             @Override
             public void onSuccess(List<AppUser> userList) {
                 Log.d(TAG, "Successfully loaded " + userList.size() + " users");
+                
+                // Sort users: Admins first, then regular users, both alphabetically by name
+                Collections.sort(userList, new Comparator<AppUser>() {
+                    @Override
+                    public int compare(AppUser user1, AppUser user2) {
+                        // First, compare by role (Admin comes before Regular)
+                        boolean isAdmin1 = user1.getRole() == UserRole.ADMIN_USER;
+                        boolean isAdmin2 = user2.getRole() == UserRole.ADMIN_USER;
+                        
+                        if (isAdmin1 && !isAdmin2) {
+                            return -1; // user1 is admin, user2 is not - user1 comes first
+                        } else if (!isAdmin1 && isAdmin2) {
+                            return 1; // user2 is admin, user1 is not - user2 comes first
+                        } else {
+                            // Both have same role, sort alphabetically by name
+                            String name1 = user1.getDisplayName() != null ? user1.getDisplayName() : "";
+                            String name2 = user2.getDisplayName() != null ? user2.getDisplayName() : "";
+                            return name1.compareToIgnoreCase(name2);
+                        }
+                    }
+                });
+                
+                Log.d(TAG, "Users sorted: Admins first, then regular users (both alphabetically)");
                 users.setValue(userList);
                 loading.setValue(false);
             }
