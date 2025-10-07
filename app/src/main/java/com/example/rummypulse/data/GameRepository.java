@@ -10,7 +10,6 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.example.rummypulse.ui.home.GameItem;
-import com.example.rummypulse.utils.NotificationHelper;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -39,7 +38,7 @@ public class GameRepository {
     private java.util.Map<String, GameItem> gameItemsMap = new java.util.HashMap<>();
     private List<String> gameIdsOrder = new ArrayList<>();
     
-    // Track seen games for notifications
+    // Track seen games
     private Set<String> seenGameIds = new HashSet<>();
     private Context appContext;
 
@@ -53,7 +52,7 @@ public class GameRepository {
     }
     
     /**
-     * Set application context for notifications
+     * Set application context
      */
     public void setContext(Context context) {
         this.appContext = context.getApplicationContext();
@@ -213,7 +212,7 @@ public class GameRepository {
                                                             if (gameItem != null) {
                                                                 gameItemsMap.put(gameId, gameItem);
                                                                 
-                                                                // Check if this is a new game and trigger notification
+                                                                // Check if this is a new game
                                                                 checkAndNotifyNewGame(gameItem);
                                                                 
                                                                 updateGameItemsList();
@@ -225,7 +224,7 @@ public class GameRepository {
                                                             if (gameItem != null) {
                                                                 gameItemsMap.put(gameId, gameItem);
                                                                 
-                                                                // Check if this is a new game and trigger notification
+                                                                // Check if this is a new game
                                                                 checkAndNotifyNewGame(gameItem);
                                                                 
                                                                 updateGameItemsList();
@@ -237,7 +236,7 @@ public class GameRepository {
                                                 if (gameItem != null) {
                                                     gameItemsMap.put(gameId, gameItem);
                                                     
-                                                    // Check if this is a new game and trigger notification
+                                                    // Check if this is a new game
                                                     checkAndNotifyNewGame(gameItem);
                                                     
                                                     updateGameItemsList();
@@ -325,7 +324,7 @@ public class GameRepository {
     }
     
     /**
-     * Check if a game is new and trigger notification if needed
+     * Check if a game is new
      */
     private void checkAndNotifyNewGame(GameItem game) {
         // Skip if no context available or game is completed
@@ -341,45 +340,7 @@ public class GameRepository {
             // Mark as seen
             seenGameIds.add(game.getGameId());
             
-            // Get current user ID
-            String currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null 
-                ? FirebaseAuth.getInstance().getCurrentUser().getUid() 
-                : null;
-            
-            // Show notification if:
-            // 1. Creator ID is missing (null) - can't verify, so show notification
-            // 2. Current user is NOT the creator
-            boolean shouldNotify = false;
-            String reason = "";
-            
-            if (game.getCreatorUserId() == null) {
-                shouldNotify = true;
-                reason = "creator ID is missing";
-            } else if (currentUserId != null && !currentUserId.equals(game.getCreatorUserId())) {
-                shouldNotify = true;
-                reason = "different user";
-            } else {
-                reason = "user is creator";
-            }
-            
-            if (shouldNotify) {
-                // Trigger notification for new game
-                String creatorName = game.getCreatorName() != null ? game.getCreatorName() : "Someone";
-                double pointValue = parsePointValue(game.getPointValue());
-                
-                android.util.Log.d("GameRepository", "🔔 Triggering notification from repository for game " + game.getGameId() + 
-                    " created by " + creatorName + " (Reason: " + reason + ")");
-                
-                NotificationHelper.showGameCreatedNotification(
-                    appContext, 
-                    game.getGameId(), 
-                    creatorName, 
-                    pointValue
-                );
-            } else {
-                android.util.Log.d("GameRepository", "❌ Not triggering notification - " + reason + ". " +
-                    "Current user: " + currentUserId + ", Creator: " + game.getCreatorUserId());
-            }
+            android.util.Log.d("GameRepository", "New game detected: " + game.getGameId());
         }
     }
     

@@ -9,7 +9,6 @@ import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.utils.AuthStateManager;
-import com.example.rummypulse.utils.NotificationHelper;
 
 /**
  * Custom Application class to initialize Firebase and configure authentication persistence
@@ -79,15 +78,11 @@ public class RummyPulseApplication extends Application {
         // Handle post-force-stop recovery
         authStateManager.handlePostForceStopRecovery();
         
-        // Initialize notification channel
-        NotificationHelper.createNotificationChannel(this);
-        Log.d(TAG, "Notification channel created");
-        
-        // Initialize GameRepository with context for background notifications
+        // Initialize GameRepository
         GameRepository gameRepository = new GameRepository();
         gameRepository.setContext(this);
         gameRepository.loadAllGames(); // Start listening for games immediately
-        Log.d(TAG, "GameRepository initialized for background notifications");
+        Log.d(TAG, "GameRepository initialized");
         
         Log.d(TAG, "RummyPulse Application initialized with Firebase Auth persistence");
     }

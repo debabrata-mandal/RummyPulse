@@ -74,28 +74,25 @@ public class DashboardViewModel extends ViewModel {
                             // Mark as seen
                             seenGameIds.add(game.getGameId());
                             
-                            // Show notification if:
-                            // 1. Creator ID is missing (null) - can't verify, so show notification
-                            // 2. Current user is NOT the creator
-                            boolean shouldNotify = false;
+                            // Check if this is from a different user
+                            boolean isDifferentUser = false;
                             String reason = "";
                             
                             if (game.getCreatorUserId() == null) {
-                                shouldNotify = true;
+                                isDifferentUser = true;
                                 reason = "creator ID is missing";
                             } else if (currentUserId != null && !currentUserId.equals(game.getCreatorUserId())) {
-                                shouldNotify = true;
+                                isDifferentUser = true;
                                 reason = "different user";
                             } else {
                                 reason = "user is creator";
                             }
                             
-                            if (shouldNotify) {
-                                // Trigger notification for new game
+                            if (isDifferentUser) {
                                 String creatorName = game.getCreatorName() != null ? game.getCreatorName() : "Someone";
                                 double pointValue = parsePointValue(game.getPointValue());
                                 
-                                android.util.Log.d("DashboardViewModel", "🔔 Triggering notification for game " + game.getGameId() + 
+                                android.util.Log.d("DashboardViewModel", "New game from another user: " + game.getGameId() + 
                                     " created by " + creatorName + " (Reason: " + reason + ")");
                                 
                                 gameCreationEvent.setValue(new GameCreationData(
@@ -104,7 +101,7 @@ public class DashboardViewModel extends ViewModel {
                                     pointValue
                                 ));
                             } else {
-                                android.util.Log.d("DashboardViewModel", "❌ Not triggering notification - " + reason + ". " +
+                                android.util.Log.d("DashboardViewModel", "Game created by current user - " + reason + ". " +
                                     "Current user: " + currentUserId + ", Creator: " + game.getCreatorUserId());
                             }
                         }
@@ -272,7 +269,7 @@ public class DashboardViewModel extends ViewModel {
                         // Trigger navigation to the new game with edit access
                         newGameCreated.setValue(gameId);
                         
-                        // Trigger notification event with game ID, creator name, and point value (NOT PIN for security)
+                        // Trigger game creation event with game ID, creator name, and point value (NOT PIN for security)
                         gameCreationEvent.setValue(new GameCreationData(gameId, creatorName, pointValue));
                         
                         android.util.Log.d("GameCreation", "Game created successfully with creator: " + creatorName);
