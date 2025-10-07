@@ -127,14 +127,40 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         }
         
         // Set players count
-        holder.playersText.setText(item.getNumberOfPlayers() + " players");
+        holder.playersText.setText(String.valueOf(item.getNumberOfPlayers()));
         
-        // Set point value
+        // Set point value with color coding
         String pointValue = item.getPointValue();
         if (pointValue == null || pointValue.isEmpty()) {
             holder.pointValueText.setText("₹0.00");
+            holder.pointValueText.setTextColor(holder.itemView.getContext().getColor(R.color.success_green));
         } else {
             holder.pointValueText.setText("₹" + pointValue);
+            
+            // Color code based on point value
+            try {
+                double value = Double.parseDouble(pointValue);
+                int color;
+                
+                if (value <= 0.25) {
+                    // Green for 0 to 0.25
+                    color = holder.itemView.getContext().getColor(R.color.success_green);
+                } else if (value <= 0.50) {
+                    // Yellow for 0.25 to 0.50
+                    color = holder.itemView.getContext().getColor(R.color.warning_orange);
+                } else {
+                    // Red for above 0.50
+                    color = holder.itemView.getContext().getColor(R.color.error_red);
+                }
+                
+                holder.pointValueText.setTextColor(color);
+                holder.pointValueText.setShadowLayer(12, 0, 0, color);
+            } catch (NumberFormatException e) {
+                // Default to blue if parsing fails
+                int defaultColor = holder.itemView.getContext().getColor(R.color.accent_blue);
+                holder.pointValueText.setTextColor(defaultColor);
+                holder.pointValueText.setShadowLayer(12, 0, 0, defaultColor);
+            }
         }
         
         // Set GST percentage
@@ -204,18 +230,23 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             long diffInHours = diffInMillis / (1000 * 60 * 60);
             long diffInDays = diffInMillis / (1000 * 60 * 60 * 24);
             
+            // Format the actual time
+            java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("hh:mm a");
+            String actualTime = timeFormat.format(creationDate);
+            
             if (diffInMinutes < 1) {
-                return "just now";
+                return "just now at " + actualTime;
             } else if (diffInMinutes < 60) {
-                return diffInMinutes + " minutes ago";
+                return diffInMinutes + " minutes ago at " + actualTime;
             } else if (diffInHours < 24) {
-                return diffInHours + " hours ago";
+                return diffInHours + " hours ago at " + actualTime;
             } else if (diffInDays < 7) {
-                return diffInDays + " days ago";
+                java.text.SimpleDateFormat dateTimeFormat = new java.text.SimpleDateFormat("MMM dd 'at' hh:mm a");
+                return dateTimeFormat.format(creationDate);
             } else {
-                // For older dates, show the actual date
-                java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("MMM dd, yyyy");
-                return "on " + displayFormat.format(creationDate);
+                // For older dates, show the actual date and time
+                java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a");
+                return displayFormat.format(creationDate);
             }
         } catch (Exception e) {
             // If parsing fails, try to handle Firebase Timestamp format
@@ -229,14 +260,23 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
                 long diffInHours = diffInMillis / (1000 * 60 * 60);
                 long diffInDays = diffInMillis / (1000 * 60 * 60 * 24);
                 
+                // Format the actual time
+                java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("hh:mm a");
+                java.util.Date date = new java.util.Date(timestamp);
+                String actualTime = timeFormat.format(date);
+                
                 if (diffInMinutes < 1) {
-                    return "just now";
+                    return "just now at " + actualTime;
                 } else if (diffInMinutes < 60) {
-                    return diffInMinutes + " minutes ago";
+                    return diffInMinutes + " minutes ago at " + actualTime;
                 } else if (diffInHours < 24) {
-                    return diffInHours + " hours ago";
+                    return diffInHours + " hours ago at " + actualTime;
+                } else if (diffInDays < 7) {
+                    java.text.SimpleDateFormat dateTimeFormat = new java.text.SimpleDateFormat("MMM dd 'at' hh:mm a");
+                    return dateTimeFormat.format(date);
                 } else {
-                    return diffInDays + " days ago";
+                    java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a");
+                    return displayFormat.format(date);
                 }
             } catch (Exception ex) {
                 return "recently";

@@ -40,10 +40,17 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="₹0.15"
-                android:textSize="24sp"
+                android:textSize="28sp"
                 android:textStyle="bold"
                 android:textColor="@color/accent_blue"
-                android:layout_marginEnd="12dp" />
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/point_value_subtle_background"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:shadowColor="@color/accent_blue"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="8" />
 
             <!-- Total Games -->
             <TextView

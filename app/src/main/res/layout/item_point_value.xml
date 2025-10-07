@@ -12,13 +12,19 @@
     <!-- Point Value -->
     <TextView
         android:id="@+id/text_point_value"
-        android:layout_width="80dp"
+        android:layout_width="90dp"
         android:layout_height="wrap_content"
         android:text="₹0.15"
-        android:textSize="18sp"
+        android:textSize="22sp"
         android:textStyle="bold"
         android:textColor="@color/accent_blue"
-        android:gravity="start" />
+        android:gravity="start"
+        android:shadowColor="@color/accent_blue"
+        android:shadowDx="0"
+        android:shadowDy="0"
+        android:shadowRadius="6"
+        android:background="@drawable/point_value_subtle_background"
+        android:padding="6dp" />
 
     <!-- Games Count -->
     <TextView

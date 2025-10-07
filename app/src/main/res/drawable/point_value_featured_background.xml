@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    
+    <!-- Prominent gradient background for featured point value -->
+    <gradient
+        android:angle="135"
+        android:startColor="#262196F3"
+        android:centerColor="#1A2196F3"
+        android:endColor="#261976D2"
+        android:type="linear" />
+    
+    <!-- Rounded corners -->
+    <corners android:radius="12dp" />
+    
+    <!-- More visible border -->
+    <stroke
+        android:width="2dp"
+        android:color="#602196F3" />
+    
+</shape>
