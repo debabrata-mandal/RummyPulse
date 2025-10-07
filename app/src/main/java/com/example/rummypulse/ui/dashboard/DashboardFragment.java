@@ -44,17 +44,32 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     private void setupRecyclerView() {
-        // Setup active games adapter
+        // Setup active games adapter with custom layout manager that doesn't recycle views
         gameAdapter = new DashboardGameAdapter();
         gameAdapter.setOnGameJoinListener(this);
-        binding.recyclerViewGames.setLayoutManager(new LinearLayoutManager(getContext()));
+        
+        // Use a custom LinearLayoutManager that properly measures all items
+        LinearLayoutManager layoutManager = new LinearLayoutManager(getContext()) {
+            @Override
+            public boolean canScrollVertically() {
+                return false; // Disable vertical scrolling in RecyclerView since parent ScrollView handles it
+            }
+        };
+        binding.recyclerViewGames.setLayoutManager(layoutManager);
         binding.recyclerViewGames.setAdapter(gameAdapter);
         
-        // Setup completed games adapter
+        // Setup completed games adapter with custom layout manager
         completedGameAdapter = new DashboardGameAdapter();
         completedGameAdapter.setIsCompletedGamesAdapter(true);
         completedGameAdapter.setOnGameJoinListener(this);
-        binding.recyclerViewCompletedGames.setLayoutManager(new LinearLayoutManager(getContext()));
+        
+        LinearLayoutManager completedLayoutManager = new LinearLayoutManager(getContext()) {
+            @Override
+            public boolean canScrollVertically() {
+                return false; // Disable vertical scrolling in RecyclerView since parent ScrollView handles it
+            }
+        };
+        binding.recyclerViewCompletedGames.setLayoutManager(completedLayoutManager);
         binding.recyclerViewCompletedGames.setAdapter(completedGameAdapter);
     }
 
