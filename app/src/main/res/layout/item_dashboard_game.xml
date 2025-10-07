@@ -76,32 +76,32 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:background="@drawable/point_value_featured_background"
-            android:padding="16dp"
-            android:layout_marginBottom="16dp"
+            android:padding="12dp"
+            android:layout_marginBottom="12dp"
             android:gravity="center">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="POINT VALUE"
-                android:textSize="12sp"
+                android:textSize="10sp"
                 android:textColor="@color/accent_blue_light"
                 android:textStyle="bold"
                 android:letterSpacing="0.1"
-                android:layout_marginBottom="4dp" />
+                android:layout_marginBottom="2dp" />
 
             <TextView
                 android:id="@+id/text_point_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="₹10.00"
-                android:textSize="32sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
                 android:textColor="@color/accent_blue"
                 android:shadowColor="@color/accent_blue"
                 android:shadowDx="0"
                 android:shadowDy="0"
-                android:shadowRadius="12" />
+                android:shadowRadius="8" />
 
         </LinearLayout>
 
