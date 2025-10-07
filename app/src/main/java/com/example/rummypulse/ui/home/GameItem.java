@@ -16,6 +16,7 @@ public class GameItem {
     private String age;
     private String creatorName;
     private String creatorPhotoUrl;
+    private String creatorUserId;
     private List<Player> players;
 
     public GameItem() {
@@ -95,6 +96,7 @@ public class GameItem {
     public String getAge() { return age; }
     public String getCreatorName() { return creatorName; }
     public String getCreatorPhotoUrl() { return creatorPhotoUrl; }
+    public String getCreatorUserId() { return creatorUserId; }
     public List<Player> getPlayers() { return players; }
 
     // Setters
@@ -110,6 +112,7 @@ public class GameItem {
     public void setAge(String age) { this.age = age; }
     public void setCreatorName(String creatorName) { this.creatorName = creatorName; }
     public void setCreatorPhotoUrl(String creatorPhotoUrl) { this.creatorPhotoUrl = creatorPhotoUrl; }
+    public void setCreatorUserId(String creatorUserId) { this.creatorUserId = creatorUserId; }
     public void setPlayers(List<Player> players) { this.players = players; }
 
     // Helper methods for better data handling

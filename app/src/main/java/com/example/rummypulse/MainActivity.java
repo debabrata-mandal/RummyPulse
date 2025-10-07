@@ -313,10 +313,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Request notification permission for Android 13+
+     */
+    private void requestNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 101);
+            }
+        }
+    }
+    
+    /**
      * Initialize permissions and request them if needed
      */
     private void initializePermissions() {
         permissionManager = new PermissionManager(this);
+        
+        // Request notification permission
+        requestNotificationPermission();
         
         // Check and request all necessary permissions (MANDATORY)
         permissionManager.checkAndRequestAllPermissions(new PermissionManager.PermissionCallback() {

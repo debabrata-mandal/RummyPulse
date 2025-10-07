@@ -24,6 +24,21 @@ public class DashboardViewModel extends ViewModel {
     private final MutableLiveData<String> mActiveGamesCount;
     private final MutableLiveData<String> mCompletedGamesCount;
     private final MutableLiveData<String> newGameCreated;
+    private final MutableLiveData<GameCreationData> gameCreationEvent;
+    private final java.util.Set<String> seenGameIds = new java.util.HashSet<>();
+    
+    // Helper class to hold game creation data
+    public static class GameCreationData {
+        public final String gameId;
+        public final String creatorName;
+        public final double pointValue;
+        
+        public GameCreationData(String gameId, String creatorName, double pointValue) {
+            this.gameId = gameId;
+            this.creatorName = creatorName;
+            this.pointValue = pointValue;
+        }
+    }
 
     public DashboardViewModel() {
         gameRepository = new GameRepository();
@@ -32,6 +47,7 @@ public class DashboardViewModel extends ViewModel {
         mActiveGamesCount = new MutableLiveData<>();
         mCompletedGamesCount = new MutableLiveData<>();
         newGameCreated = new MutableLiveData<>();
+        gameCreationEvent = new MutableLiveData<>();
         
         // Observe all games and filter for in-progress and completed ones
         gameRepository.getGameItems().observeForever(allGames -> {
@@ -39,11 +55,35 @@ public class DashboardViewModel extends ViewModel {
                 List<GameItem> inProgressGames = new ArrayList<>();
                 List<GameItem> completedGames = new ArrayList<>();
                 
+                // Get current user ID
+                String currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null 
+                    ? FirebaseAuth.getInstance().getCurrentUser().getUid() 
+                    : null;
+                
                 for (GameItem game : allGames) {
                     if (game.isCompleted() || "Completed".equals(game.getGameStatus())) {
                         completedGames.add(game);
                     } else {
                         inProgressGames.add(game);
+                        
+                        // Check if this is a new game that the current user did NOT create
+                        if (!seenGameIds.contains(game.getGameId())) {
+                            // Mark as seen
+                            seenGameIds.add(game.getGameId());
+                            
+                            // Only notify if current user is NOT the creator
+                            if (currentUserId != null && game.getCreatorUserId() != null 
+                                && !currentUserId.equals(game.getCreatorUserId())) {
+                                // Trigger notification for new game created by someone else
+                                String creatorName = game.getCreatorName() != null ? game.getCreatorName() : "Someone";
+                                double pointValue = parsePointValue(game.getPointValue());
+                                gameCreationEvent.setValue(new GameCreationData(
+                                    game.getGameId(), 
+                                    creatorName, 
+                                    pointValue
+                                ));
+                            }
+                        }
                     }
                 }
                 
@@ -105,6 +145,14 @@ public class DashboardViewModel extends ViewModel {
     
     public void clearNewGameCreated() {
         newGameCreated.setValue(null);
+    }
+    
+    public LiveData<GameCreationData> getGameCreationEvent() {
+        return gameCreationEvent;
+    }
+    
+    public void clearGameCreationEvent() {
+        gameCreationEvent.setValue(null);
     }
 
     public void loadGames() {
@@ -200,6 +248,9 @@ public class DashboardViewModel extends ViewModel {
                         // Trigger navigation to the new game with edit access
                         newGameCreated.setValue(gameId);
                         
+                        // Trigger notification event with game ID, creator name, and point value (NOT PIN for security)
+                        gameCreationEvent.setValue(new GameCreationData(gameId, creatorName, pointValue));
+                        
                         android.util.Log.d("GameCreation", "Game created successfully with creator: " + creatorName);
                     })
                     .addOnFailureListener(e -> {
@@ -233,6 +284,22 @@ public class DashboardViewModel extends ViewModel {
         } while ("0000".equals(pin));
         
         return pin;
+    }
+    
+    /**
+     * Parse point value from string to double
+     */
+    private double parsePointValue(String pointValueStr) {
+        if (pointValueStr == null || pointValueStr.isEmpty()) {
+            return 0.0;
+        }
+        try {
+            // Remove currency symbol if present
+            String cleaned = pointValueStr.replace("₹", "").trim();
+            return Double.parseDouble(cleaned);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
     }
     
     @Override

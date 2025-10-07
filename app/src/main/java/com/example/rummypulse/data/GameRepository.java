@@ -192,7 +192,7 @@ public class GameRepository {
                                                             if (userSnapshot.exists()) {
                                                                 creatorPhotoUrl = userSnapshot.getString("photoUrl");
                                                             }
-                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl);
+                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId);
                                                             
                                                             if (gameItem != null) {
                                                                 gameItemsMap.put(gameId, gameItem);
@@ -201,7 +201,7 @@ public class GameRepository {
                                                         })
                                                         .addOnFailureListener(e -> {
                                                             // If fetching photo fails, create game item without photo
-                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null);
+                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId);
                                                             if (gameItem != null) {
                                                                 gameItemsMap.put(gameId, gameItem);
                                                                 updateGameItemsList();
@@ -209,7 +209,7 @@ public class GameRepository {
                                                         });
                                             } else {
                                                 // No creator user ID, create game item without photo
-                                                GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null);
+                                                GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null);
                                                 if (gameItem != null) {
                                                     gameItemsMap.put(gameId, gameItem);
                                                     updateGameItemsList();
@@ -242,7 +242,7 @@ public class GameRepository {
         gameItemsLiveData.setValue(gameItems);
     }
 
-    private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt, String creatorName, String creatorPhotoUrl) {
+    private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt, String creatorName, String creatorPhotoUrl, String creatorUserId) {
         // Calculate total score
         int totalScore = gameData.getTotalScore();
         
@@ -279,8 +279,9 @@ public class GameRepository {
                 gameData.getPlayers()
         );
         
-        // Set creator photo URL
+        // Set creator photo URL and user ID
         gameItem.setCreatorPhotoUrl(creatorPhotoUrl);
+        gameItem.setCreatorUserId(creatorUserId);
         
         return gameItem;
     }

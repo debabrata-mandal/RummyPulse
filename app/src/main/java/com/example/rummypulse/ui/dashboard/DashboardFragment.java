@@ -120,6 +120,20 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             updateEmptyStateVisibility();
         });
 
+        // Observe game creation event for notifications (only for games created by others)
+        dashboardViewModel.getGameCreationEvent().observe(getViewLifecycleOwner(), gameCreationData -> {
+            if (gameCreationData != null && getContext() != null) {
+                // Show notification for games created by other users
+                com.example.rummypulse.utils.NotificationHelper.showGameCreatedNotification(
+                    getContext(), 
+                    gameCreationData.gameId, 
+                    gameCreationData.creatorName,
+                    gameCreationData.pointValue
+                );
+                dashboardViewModel.clearGameCreationEvent();
+            }
+        });
+        
         // Observe new game creation
         dashboardViewModel.getNewGameCreated().observe(getViewLifecycleOwner(), gameId -> {
             if (gameId != null) {

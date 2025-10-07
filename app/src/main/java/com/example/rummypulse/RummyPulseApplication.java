@@ -8,6 +8,7 @@ import androidx.annotation.NonNull;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.example.rummypulse.utils.AuthStateManager;
+import com.example.rummypulse.utils.NotificationHelper;
 
 /**
  * Custom Application class to initialize Firebase and configure authentication persistence
@@ -76,6 +77,10 @@ public class RummyPulseApplication extends Application {
         
         // Handle post-force-stop recovery
         authStateManager.handlePostForceStopRecovery();
+        
+        // Initialize notification channel
+        NotificationHelper.createNotificationChannel(this);
+        Log.d(TAG, "Notification channel created");
         
         Log.d(TAG, "RummyPulse Application initialized with Firebase Auth persistence");
     }
