@@ -123,6 +123,9 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         // Observe game creation event for notifications (only for games created by others)
         dashboardViewModel.getGameCreationEvent().observe(getViewLifecycleOwner(), gameCreationData -> {
             if (gameCreationData != null && getContext() != null) {
+                android.util.Log.d("DashboardFragment", "📱 Received game creation event, showing notification for game: " + 
+                    gameCreationData.gameId + " by " + gameCreationData.creatorName);
+                
                 // Show notification for games created by other users
                 com.example.rummypulse.utils.NotificationHelper.showGameCreatedNotification(
                     getContext(), 

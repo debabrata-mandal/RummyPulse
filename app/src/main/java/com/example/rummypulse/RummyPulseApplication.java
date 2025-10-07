@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.NotificationHelper;
 
@@ -81,6 +82,12 @@ public class RummyPulseApplication extends Application {
         // Initialize notification channel
         NotificationHelper.createNotificationChannel(this);
         Log.d(TAG, "Notification channel created");
+        
+        // Initialize GameRepository with context for background notifications
+        GameRepository gameRepository = new GameRepository();
+        gameRepository.setContext(this);
+        gameRepository.loadAllGames(); // Start listening for games immediately
+        Log.d(TAG, "GameRepository initialized for background notifications");
         
         Log.d(TAG, "RummyPulse Application initialized with Firebase Auth persistence");
     }

@@ -18,6 +18,8 @@ public class NotificationHelper {
     private static final String CHANNEL_NAME = "Game Notifications";
     private static final String CHANNEL_DESCRIPTION = "Notifications for game creation and updates";
     private static final int NOTIFICATION_ID_BASE = 1000;
+    private static final String GROUP_KEY = "com.example.rummypulse.GAME_NOTIFICATIONS";
+    private static int notificationCounter = 0;
     
     /**
      * Create notification channel (required for Android 8.0+)
@@ -44,6 +46,8 @@ public class NotificationHelper {
      * Show notification when a new game is created
      */
     public static void showGameCreatedNotification(Context context, String gameId, String creatorName, double pointValue) {
+        android.util.Log.d("NotificationHelper", "🔔 Showing notification for game: " + gameId + 
+            " created by: " + creatorName + " value: ₹" + pointValue);
         // Create intent to open the game when notification is tapped
         Intent intent = new Intent(context, JoinGameActivity.class);
         intent.putExtra("GAME_ID", gameId);
@@ -65,7 +69,7 @@ public class NotificationHelper {
             pointValueStr = String.format("₹%.2f", pointValue);
         }
         
-        // Build the notification
+        // Build the notification with grouping support
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notifications)
             .setContentTitle("🎮 New Game Created!")
@@ -76,14 +80,44 @@ public class NotificationHelper {
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .setVibrate(new long[]{0, 500, 200, 500})
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setGroup(GROUP_KEY)
+            .setGroupSummary(false);
         
-        // Show the notification
+        // Create a unique notification ID for each game
+        int notificationId = NOTIFICATION_ID_BASE + (notificationCounter++);
+        
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
         try {
-            notificationManager.notify(NOTIFICATION_ID_BASE + gameId.hashCode(), builder.build());
+            notificationManager.notify(notificationId, builder.build());
+            android.util.Log.d("NotificationHelper", "✅ Notification posted successfully with ID: " + notificationId);
+            
+            // Show summary notification if multiple notifications exist
+            showSummaryNotification(context, notificationManager);
         } catch (SecurityException e) {
-            android.util.Log.e("NotificationHelper", "Permission denied for notification", e);
+            android.util.Log.e("NotificationHelper", "❌ Permission denied for notification", e);
+        }
+    }
+    
+    /**
+     * Show a summary notification when multiple game notifications exist
+     */
+    private static void showSummaryNotification(Context context, NotificationManagerCompat notificationManager) {
+        if (notificationCounter > 1) {
+            NotificationCompat.Builder summaryBuilder = new NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notifications)
+                .setContentTitle("🎮 New Games")
+                .setContentText(notificationCounter + " new games created")
+                .setGroup(GROUP_KEY)
+                .setGroupSummary(true)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH);
+            
+            try {
+                notificationManager.notify(0, summaryBuilder.build());
+            } catch (SecurityException e) {
+                android.util.Log.e("NotificationHelper", "❌ Permission denied for summary notification", e);
+            }
         }
     }
     

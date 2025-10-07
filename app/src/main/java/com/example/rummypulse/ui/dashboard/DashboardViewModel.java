@@ -68,20 +68,44 @@ public class DashboardViewModel extends ViewModel {
                         
                         // Check if this is a new game that the current user did NOT create
                         if (!seenGameIds.contains(game.getGameId())) {
+                            android.util.Log.d("DashboardViewModel", "New game detected: " + game.getGameId() + 
+                                " created by: " + game.getCreatorName() + " (ID: " + game.getCreatorUserId() + ")");
+                            
                             // Mark as seen
                             seenGameIds.add(game.getGameId());
                             
-                            // Only notify if current user is NOT the creator
-                            if (currentUserId != null && game.getCreatorUserId() != null 
-                                && !currentUserId.equals(game.getCreatorUserId())) {
-                                // Trigger notification for new game created by someone else
+                            // Show notification if:
+                            // 1. Creator ID is missing (null) - can't verify, so show notification
+                            // 2. Current user is NOT the creator
+                            boolean shouldNotify = false;
+                            String reason = "";
+                            
+                            if (game.getCreatorUserId() == null) {
+                                shouldNotify = true;
+                                reason = "creator ID is missing";
+                            } else if (currentUserId != null && !currentUserId.equals(game.getCreatorUserId())) {
+                                shouldNotify = true;
+                                reason = "different user";
+                            } else {
+                                reason = "user is creator";
+                            }
+                            
+                            if (shouldNotify) {
+                                // Trigger notification for new game
                                 String creatorName = game.getCreatorName() != null ? game.getCreatorName() : "Someone";
                                 double pointValue = parsePointValue(game.getPointValue());
+                                
+                                android.util.Log.d("DashboardViewModel", "🔔 Triggering notification for game " + game.getGameId() + 
+                                    " created by " + creatorName + " (Reason: " + reason + ")");
+                                
                                 gameCreationEvent.setValue(new GameCreationData(
                                     game.getGameId(), 
                                     creatorName, 
                                     pointValue
                                 ));
+                            } else {
+                                android.util.Log.d("DashboardViewModel", "❌ Not triggering notification - " + reason + ". " +
+                                    "Current user: " + currentUserId + ", Creator: " + game.getCreatorUserId());
                             }
                         }
                     }

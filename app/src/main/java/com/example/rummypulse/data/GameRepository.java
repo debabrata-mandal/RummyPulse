@@ -1,17 +1,22 @@
 package com.example.rummypulse.data;
 
+import android.content.Context;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.example.rummypulse.ui.home.GameItem;
+import com.example.rummypulse.utils.NotificationHelper;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class GameRepository {
     private static final String GAMES_COLLECTION = "games";
@@ -33,6 +38,10 @@ public class GameRepository {
     // Store game items and game IDs order for maintaining consistency
     private java.util.Map<String, GameItem> gameItemsMap = new java.util.HashMap<>();
     private List<String> gameIdsOrder = new ArrayList<>();
+    
+    // Track seen games for notifications
+    private Set<String> seenGameIds = new HashSet<>();
+    private Context appContext;
 
     public GameRepository() {
         db = FirebaseFirestore.getInstance();
@@ -41,6 +50,13 @@ public class GameRepository {
         totalApprovedGstLiveData = new MutableLiveData<>();
         approvedGamesCountLiveData = new MutableLiveData<>();
         approvedGamesForReportsLiveData = new MutableLiveData<>();
+    }
+    
+    /**
+     * Set application context for notifications
+     */
+    public void setContext(Context context) {
+        this.appContext = context.getApplicationContext();
     }
 
     public LiveData<List<GameItem>> getGameItems() {
@@ -196,6 +212,10 @@ public class GameRepository {
                                                             
                                                             if (gameItem != null) {
                                                                 gameItemsMap.put(gameId, gameItem);
+                                                                
+                                                                // Check if this is a new game and trigger notification
+                                                                checkAndNotifyNewGame(gameItem);
+                                                                
                                                                 updateGameItemsList();
                                                             }
                                                         })
@@ -204,6 +224,10 @@ public class GameRepository {
                                                             GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId);
                                                             if (gameItem != null) {
                                                                 gameItemsMap.put(gameId, gameItem);
+                                                                
+                                                                // Check if this is a new game and trigger notification
+                                                                checkAndNotifyNewGame(gameItem);
+                                                                
                                                                 updateGameItemsList();
                                                             }
                                                         });
@@ -212,6 +236,10 @@ public class GameRepository {
                                                 GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null);
                                                 if (gameItem != null) {
                                                     gameItemsMap.put(gameId, gameItem);
+                                                    
+                                                    // Check if this is a new game and trigger notification
+                                                    checkAndNotifyNewGame(gameItem);
+                                                    
                                                     updateGameItemsList();
                                                 }
                                             }
@@ -294,6 +322,81 @@ public class GameRepository {
         java.util.Date date = timestamp.toDate();
         java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         return sdf.format(date);
+    }
+    
+    /**
+     * Check if a game is new and trigger notification if needed
+     */
+    private void checkAndNotifyNewGame(GameItem game) {
+        // Skip if no context available or game is completed
+        if (appContext == null || game.isCompleted() || "Completed".equals(game.getGameStatus())) {
+            return;
+        }
+        
+        // Check if this is a new game we haven't seen before
+        if (!seenGameIds.contains(game.getGameId())) {
+            android.util.Log.d("GameRepository", "New game detected in repository: " + game.getGameId() + 
+                " created by: " + game.getCreatorName() + " (ID: " + game.getCreatorUserId() + ")");
+            
+            // Mark as seen
+            seenGameIds.add(game.getGameId());
+            
+            // Get current user ID
+            String currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null 
+                ? FirebaseAuth.getInstance().getCurrentUser().getUid() 
+                : null;
+            
+            // Show notification if:
+            // 1. Creator ID is missing (null) - can't verify, so show notification
+            // 2. Current user is NOT the creator
+            boolean shouldNotify = false;
+            String reason = "";
+            
+            if (game.getCreatorUserId() == null) {
+                shouldNotify = true;
+                reason = "creator ID is missing";
+            } else if (currentUserId != null && !currentUserId.equals(game.getCreatorUserId())) {
+                shouldNotify = true;
+                reason = "different user";
+            } else {
+                reason = "user is creator";
+            }
+            
+            if (shouldNotify) {
+                // Trigger notification for new game
+                String creatorName = game.getCreatorName() != null ? game.getCreatorName() : "Someone";
+                double pointValue = parsePointValue(game.getPointValue());
+                
+                android.util.Log.d("GameRepository", "🔔 Triggering notification from repository for game " + game.getGameId() + 
+                    " created by " + creatorName + " (Reason: " + reason + ")");
+                
+                NotificationHelper.showGameCreatedNotification(
+                    appContext, 
+                    game.getGameId(), 
+                    creatorName, 
+                    pointValue
+                );
+            } else {
+                android.util.Log.d("GameRepository", "❌ Not triggering notification - " + reason + ". " +
+                    "Current user: " + currentUserId + ", Creator: " + game.getCreatorUserId());
+            }
+        }
+    }
+    
+    /**
+     * Parse point value from string to double
+     */
+    private double parsePointValue(String pointValueStr) {
+        if (pointValueStr == null || pointValueStr.isEmpty()) {
+            return 0.0;
+        }
+        try {
+            // Remove currency symbol if present
+            String cleaned = pointValueStr.replace("₹", "").trim();
+            return Double.parseDouble(cleaned);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
     }
 
     public void deleteGame(String gameId) {
