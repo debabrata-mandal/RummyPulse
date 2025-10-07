@@ -119,8 +119,24 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         // Set GST Percentage
         holder.gstPercentageText.setText(item.getGstPercentage());
         
-            // Set GST Amount with currency symbol
-            holder.gstAmountText.setText("₹" + item.getGstAmount());
+        // Set GST Amount with currency symbol and null handling
+        String gstAmount = item.getGstAmount();
+        System.out.println("TableAdapter: Game " + item.getGameId() + " - gstAmount = '" + gstAmount + "'");
+        System.out.println("TableAdapter: holder.gstAmountText is " + (holder.gstAmountText == null ? "NULL" : "NOT NULL"));
+        
+        if (holder.gstAmountText != null) {
+            if (gstAmount == null || gstAmount.isEmpty()) {
+                System.out.println("TableAdapter: gstAmount is null or empty, setting to ₹0");
+                holder.gstAmountText.setText("₹0");
+                holder.gstAmountText.setVisibility(android.view.View.VISIBLE);
+            } else {
+                System.out.println("TableAdapter: Setting gstAmount to ₹" + gstAmount);
+                holder.gstAmountText.setText("₹" + gstAmount);
+                holder.gstAmountText.setVisibility(android.view.View.VISIBLE);
+            }
+        } else {
+            System.out.println("TableAdapter: ERROR - gstAmountText TextView is NULL!");
+        }
 
             // Set Age
             String age = item.getAge();

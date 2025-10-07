@@ -286,7 +286,7 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.textPointValueInfo.setText("₹0.00 per point");
         binding.textGstRateInfo.setText("0%");
         binding.textCurrentRoundInfo.setText("Round 1");
-        binding.textTotalGstInfo.setText("Total GST: ₹0");
+        binding.textTotalGstInfo.setText("Total Contribution: ₹0");
         
         // Set placeholder game ID if not already set
         if (currentGameId != null) {
@@ -1657,10 +1657,10 @@ public class JoinGameActivity extends AppCompatActivity {
                 formulaText.setText("Formula: (Total All Scores - Your Score × " + playerCount + ") × " + pointValueText);
             }
             
-            // Update GST Rule
+            // Update Contribution Rule
             TextView gstRule = findViewById(R.id.text_settlement_gst_rule);
             if (gstRule != null) {
-                gstRule.setText("GST: Only winners pay " + gstPercentText + " on positive amounts");
+                gstRule.setText("Contribution: Only winners pay " + gstPercentText + " on positive amounts");
             }
             
             // Update Example Description

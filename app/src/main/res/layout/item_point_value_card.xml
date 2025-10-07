@@ -82,19 +82,20 @@
                 android:orientation="vertical"
                 android:layout_marginEnd="8dp">
 
-                <!-- GST Collected -->
+                <!-- Total Contribution -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:background="@drawable/professional_row_background"
                     android:padding="12dp"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="💰 GST Collected"
+                        android:text="💰 Total Contribution"
                         android:textSize="12sp"
                         android:textColor="@color/text_secondary"
                         android:textStyle="bold" />
@@ -111,18 +112,19 @@
 
                 </LinearLayout>
 
-                <!-- Average GST per Game -->
+                <!-- Average Contribution per Game -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:background="@drawable/professional_row_background"
-                    android:padding="12dp">
+                    android:padding="12dp"
+                    android:gravity="center">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="📊 Avg GST/Game"
+                        android:text="📊 Contribution/Game"
                         android:textSize="12sp"
                         android:textColor="@color/text_secondary"
                         android:textStyle="bold" />
@@ -156,7 +158,8 @@
                     android:orientation="vertical"
                     android:background="@drawable/professional_row_background"
                     android:padding="12dp"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -184,12 +187,13 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:background="@drawable/professional_row_background"
-                    android:padding="12dp">
+                    android:padding="12dp"
+                    android:gravity="center">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="🎯 Avg Players/Game"
+                        android:text="🎯 Players/Game"
                         android:textSize="12sp"
                         android:textColor="@color/text_secondary"
                         android:textStyle="bold" />

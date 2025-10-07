@@ -8,7 +8,7 @@
     android:layout_marginTop="8dp"
     android:gravity="center_vertical">
 
-    <!-- GST Icon -->
+    <!-- Contribution Icon -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -16,17 +16,17 @@
         android:textSize="20sp"
         android:layout_marginEnd="12dp" />
 
-    <!-- GST Label -->
+    <!-- Contribution Label -->
     <TextView
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="Total GST Collected:"
+        android:text="Total Contribution Collected:"
         android:textColor="@color/text_primary"
         android:textSize="16sp"
         android:textStyle="bold" />
 
-    <!-- GST Amount -->
+    <!-- Contribution Amount -->
     <TextView
         android:id="@+id/text_total_gst"
         android:layout_width="wrap_content"

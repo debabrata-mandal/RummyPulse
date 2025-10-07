@@ -329,7 +329,7 @@
 
             </LinearLayout>
 
-            <!-- Fourth Row: GST Information -->
+            <!-- Fourth Row: Contribution Information -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -337,7 +337,7 @@
                 android:padding="16dp"
                 android:background="@drawable/professional_row_background">
 
-                <!-- GST % Section -->
+                <!-- Contribution % Section -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -349,7 +349,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="GST %:"
+                        android:text="Contribution %:"
                         android:textSize="14sp"
                         android:textColor="@color/text_secondary"
                         android:textStyle="bold"
@@ -368,34 +368,33 @@
 
                 </LinearLayout>
 
-                <!-- GST Amount Section -->
+                <!-- Contribution Amount Section -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:gravity="start"
                     android:layout_marginStart="8dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="GST Amount:"
+                        android:text="Contribution:"
                         android:textSize="14sp"
                         android:textColor="@color/text_secondary"
                         android:textStyle="bold"
-                        android:layout_marginEnd="8dp" />
+                        android:layout_marginBottom="4dp" />
 
                     <TextView
                         android:id="@+id/text_gst_amount"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="₹441"
-                        android:textSize="16sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@color/accent_orange"
-                        android:maxLines="1"
-                        android:ellipsize="end" />
+                        android:textColor="#4CAF50"
+                        android:visibility="visible" />
 
                 </LinearLayout>
 
@@ -419,7 +418,7 @@
             android:padding="16dp"
             android:background="@drawable/action_buttons_background">
 
-            <!-- Approve GST Button -->
+            <!-- Approve Contribution Button -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"

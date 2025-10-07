@@ -60,25 +60,12 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         });
 
         // Observe and update metric tiles
-        homeViewModel.getApprovedGamesCount().observe(getViewLifecycleOwner(), approvedGames -> {
-            binding.textApprovedGames.setText(String.valueOf(approvedGames));
-        });
-
         homeViewModel.getCompletedGames().observe(getViewLifecycleOwner(), completedGames -> {
             binding.textCompletedGames.setText(String.valueOf(completedGames));
         });
 
         homeViewModel.getInProgressGames().observe(getViewLifecycleOwner(), inProgressGames -> {
             binding.textInProgressGames.setText(String.valueOf(inProgressGames));
-        });
-
-        // Observe total GST amount from approved games
-        homeViewModel.getTotalGstAmount().observe(getViewLifecycleOwner(), totalGst -> {
-            if (totalGst != null) {
-                binding.textTotalGstAmount.setText("₹" + String.format("%.0f", totalGst));
-            } else {
-                binding.textTotalGstAmount.setText("₹0");
-            }
         });
 
         // Setup swipe refresh
@@ -95,15 +82,6 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
         // Setup floating action button for refresh
         binding.btnRefresh.setOnClickListener(v -> refreshGames());
-
-        // Observe approved games count for the "From X approved games" text
-        homeViewModel.getApprovedGamesCount().observe(getViewLifecycleOwner(), approvedCount -> {
-            if (approvedCount != null) {
-                binding.textApprovedGamesCount.setText("From " + approvedCount + " approved games");
-            } else {
-                binding.textApprovedGamesCount.setText("From 0 approved games");
-            }
-        });
 
         // Observe errors
         homeViewModel.getError().observe(getViewLifecycleOwner(), error -> {

@@ -62,7 +62,7 @@
                 android:orientation="vertical"
                 android:layout_marginEnd="8dp">
 
-                <!-- GST Collected -->
+                <!-- Contribution Collected -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -74,7 +74,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="💰 GST Collected"
+                        android:text="💰 Contribution Collected"
                         android:textSize="12sp"
                         android:textColor="@color/text_secondary"
                         android:textStyle="bold" />
@@ -91,7 +91,7 @@
 
                 </LinearLayout>
 
-                <!-- Average GST per Game -->
+                <!-- Average Contribution per Game -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -102,7 +102,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="📊 Avg GST/Game"
+                        android:text="📊 Avg Contribution/Game"
                         android:textSize="12sp"
                         android:textColor="@color/text_secondary"
                         android:textStyle="bold" />

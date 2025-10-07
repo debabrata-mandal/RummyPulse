@@ -243,7 +243,7 @@
                                         <TextView
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
-                                            android:text="GST Rate"
+                                            android:text="Contribution %"
                                             android:textColor="@color/text_secondary"
                                             android:textSize="11sp" />
 
@@ -536,7 +536,7 @@
                                             <TextView
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
-                                                android:text="GST Rate"
+                                                android:text="Contribution %"
                                                 android:textColor="@color/text_secondary"
                                                 android:textSize="11sp" />
 
@@ -595,7 +595,7 @@
                                             <TextView
                                                 android:layout_width="wrap_content"
                                                 android:layout_height="wrap_content"
-                                                android:text="Total GST"
+                                                android:text="Total Contribution"
                                                 android:textColor="@color/text_secondary"
                                                 android:textSize="11sp" />
 
@@ -771,7 +771,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Losers (Red): Pay money, no GST required"
+                            android:text="Losers (Red): Pay money, no contribution required"
                             android:textColor="#F44336"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -804,7 +804,7 @@
 
                     </LinearLayout>
 
-                    <!-- GST Rule -->
+                    <!-- Contribution Rule -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -823,7 +823,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:id="@+id/text_settlement_gst_rule"
-                            android:text="GST: Only winners pay 55% on positive amounts"
+                            android:text="Contribution: Only winners pay 55% on positive amounts"
                             android:textColor="#FF9800"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -848,7 +848,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Net Amount: Gross Amount - GST (for winners) or just Gross Amount (for losers)"
+                            android:text="Net Amount: Gross Amount - Contribution (for winners) or just Gross Amount (for losers)"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />

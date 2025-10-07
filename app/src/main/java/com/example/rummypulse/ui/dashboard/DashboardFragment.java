@@ -192,7 +192,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             }
 
             if (TextUtils.isEmpty(gstPercentageStr)) {
-                editGstPercentage.setError("GST percentage is required");
+                editGstPercentage.setError("Contribution percentage is required");
                 return;
             }
 
@@ -216,14 +216,14 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                     return;
                 }
 
-                // Validate GST Percentage
+                // Validate Contribution Percentage
                 if (gstPercentage < 0) {
-                    editGstPercentage.setError("GST percentage cannot be negative");
+                    editGstPercentage.setError("Contribution percentage cannot be negative");
                     return;
                 }
 
                 if (gstPercentage > 100) {
-                    editGstPercentage.setError("GST percentage cannot be more than 100%");
+                    editGstPercentage.setError("Contribution percentage cannot be more than 100%");
                     return;
                 }
 

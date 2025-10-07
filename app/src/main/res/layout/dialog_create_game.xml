@@ -76,7 +76,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📊 GST Percentage"
+            android:text="📊 Contribution Percentage"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
@@ -85,7 +85,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Tax percentage applied on winnings"
+            android:text="Contribution percentage applied on winnings"
             android:textSize="12sp"
             android:textColor="@color/text_secondary"
             android:layout_marginBottom="12dp" />
@@ -93,7 +93,7 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="GST Percentage (%)"
+            android:hint="Contribution Percentage (%)"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -134,7 +134,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Point Value: ₹0.15 means each point = 15 paise\nGST: 25% means winners pay 25% tax on winnings\n\nExample: If you win ₹100, you pay ₹25 GST and get ₹75"
+            android:text="Point Value: ₹0.15 means each point = 15 paise\nContribution: 25% means winners pay 25% on winnings\n\nExample: If you win ₹100, you pay ₹25 contribution and get ₹75"
             android:textSize="12sp"
             android:textColor="@color/text_secondary"
             android:lineSpacingExtra="2dp" />
