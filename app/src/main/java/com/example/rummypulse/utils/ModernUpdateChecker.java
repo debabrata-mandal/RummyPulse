@@ -40,8 +40,8 @@ import java.util.concurrent.Executors;
 public class ModernUpdateChecker {
     
     private static final String TAG = "ModernUpdateChecker";
-    // GitHub repository URL for debabrata-mandal
-    private static final String GITHUB_API_URL = "https://api.github.com/repos/debabrata-mandal/RummyPulse/releases/latest";
+    // GitHub repository URL
+    private static final String GITHUB_API_URL = "https://api.github.com/repos/YOUR_USERNAME/RummyPulse/releases/latest";
     private static final int REQUEST_INSTALL_PERMISSION = 1001;
     
     private final Context context;
