@@ -424,7 +424,9 @@ public class JoinGameActivity extends AppCompatActivity {
                 }
                 
                 // Show online/offline indicator when edit access is granted
-                updateOnlineOfflineIndicators();
+                runOnUiThread(() -> {
+                    updateOnlineOfflineIndicators();
+                });
                 
                 // Remove real-time listener when in edit mode (to avoid conflicts)
                 if (gameDataListener != null) {
@@ -2202,23 +2204,41 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     /**
-     * Update online/offline indicators based on current network status
+     * Update online/offline indicators based on network status
+     * @param connected Current network connection status
      */
-    private void updateOnlineOfflineIndicators() {
-        if (binding.editOnlineIndicator == null || binding.editOfflineIndicator == null) {
+    private void updateOnlineOfflineIndicators(boolean connected) {
+        if (binding == null || binding.editOnlineIndicator == null || binding.editOfflineIndicator == null) {
+            System.out.println("updateOnlineOfflineIndicators: Binding or indicators are null, skipping update");
             return;
         }
         
-        // Check current network status
-        boolean isConnected = isNetworkAvailable();
+        // Check if we're in edit mode
+        Boolean editAccess = viewModel != null ? viewModel.getEditAccessGranted().getValue() : null;
+        if (editAccess == null || !editAccess) {
+            // Not in edit mode - hide both indicators
+            System.out.println("updateOnlineOfflineIndicators: Not in edit mode, hiding indicators");
+            binding.editOnlineIndicator.setVisibility(View.GONE);
+            binding.editOfflineIndicator.setVisibility(View.GONE);
+            return;
+        }
         
-        if (isConnected) {
+        System.out.println("updateOnlineOfflineIndicators: Edit mode active, network connected: " + connected);
+        
+        if (connected) {
             binding.editOnlineIndicator.setVisibility(View.VISIBLE);
             binding.editOfflineIndicator.setVisibility(View.GONE);
         } else {
             binding.editOnlineIndicator.setVisibility(View.GONE);
             binding.editOfflineIndicator.setVisibility(View.VISIBLE);
         }
+    }
+    
+    /**
+     * Update online/offline indicators - convenience method that checks network status
+     */
+    private void updateOnlineOfflineIndicators() {
+        updateOnlineOfflineIndicators(isNetworkAvailable());
     }
     
     /**
@@ -2246,10 +2266,12 @@ public class JoinGameActivity extends AppCompatActivity {
             statusIndicator.setBackgroundResource(R.drawable.status_badge_background);
             
             // Update online/offline indicators for edit mode
-            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-            if (editAccess != null && editAccess) {
-                updateOnlineOfflineIndicators();
-            }
+            runOnUiThread(() -> {
+                Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+                if (editAccess != null && editAccess) {
+                    updateOnlineOfflineIndicators(connected);
+                }
+            });
         } else {
             // Show "Offline" status
             statusText.setText("Offline");
@@ -2270,10 +2292,12 @@ public class JoinGameActivity extends AppCompatActivity {
             statusIndicator.setBackground(badgeDrawable);
             
             // Update online/offline indicators for edit mode
-            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-            if (editAccess != null && editAccess) {
-                updateOnlineOfflineIndicators();
-            }
+            runOnUiThread(() -> {
+                Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+                if (editAccess != null && editAccess) {
+                    updateOnlineOfflineIndicators(connected);
+                }
+            });
         }
     }
     

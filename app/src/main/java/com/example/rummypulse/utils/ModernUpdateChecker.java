@@ -41,7 +41,7 @@ public class ModernUpdateChecker {
     
     private static final String TAG = "ModernUpdateChecker";
     // GitHub repository URL
-    private static final String GITHUB_API_URL = "https://api.github.com/repos/YOUR_USERNAME/RummyPulse/releases/latest";
+    private static final String GITHUB_API_URL = "https://api.github.com/repos/debabrata-mandal/RummyPulse/releases/latest";
     private static final int REQUEST_INSTALL_PERMISSION = 1001;
     
     private final Context context;
@@ -158,11 +158,18 @@ public class ModernUpdateChecker {
                 
                 return parseUpdateInfo(response.toString());
             } else {
-                Log.e(TAG, "HTTP error code: " + responseCode);
+                Log.e(TAG, "HTTP error code: " + responseCode + " for URL: " + GITHUB_API_URL);
+                if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                    Log.e(TAG, "GitHub repository or release not found. Please check the repository URL.");
+                }
             }
             
+        } catch (java.net.UnknownHostException e) {
+            Log.e(TAG, "No internet connection or unable to reach GitHub", e);
+        } catch (java.net.SocketTimeoutException e) {
+            Log.e(TAG, "Connection timeout while checking for updates", e);
         } catch (Exception e) {
-            Log.e(TAG, "Error checking for updates", e);
+            Log.e(TAG, "Error checking for updates: " + e.getMessage(), e);
         }
         
         return null;
