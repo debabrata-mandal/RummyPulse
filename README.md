@@ -14,7 +14,7 @@ A modern Android application for Rummy game management and player tracking. Buil
 - **Game Status Management**: Track game states and status
 - **Player Management**: Manage players and their game participation
 - **Game History**: View and manage game records
-
+- **Real-time Sync**: Multi-user game synchronization via Firebase
 
 ### 🎨 Modern UI/UX
 - **Material Design**: Clean, modern interface following Material Design principles
@@ -22,6 +22,12 @@ A modern Android application for Rummy game management and player tracking. Buil
 - **Navigation Drawer**: Intuitive navigation with drawer menu
 - **Responsive Layout**: Optimized for various screen sizes
 - **Card-based Design**: Beautiful card layouts for better data presentation
+
+### 🔄 Auto-Update System
+- **Automatic Update Checks**: Checks GitHub releases for new versions
+- **One-Click Updates**: Download and install updates directly from the app
+- **Version Management**: Semantic versioning with automatic CI/CD releases
+- **Update Notifications**: Smart notifications for available updates
 
 ## 🚀 Automatic Builds & Releases
 
@@ -113,9 +119,10 @@ The app uses **Semantic Versioning** based on commit messages:
 
 ### Firebase Setup
 1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com)
-2. Add your Android app to the project
+2. Add your Android app to the project (package: `com.example.rummypulse`)
 3. Download `google-services.json` and place it in the `app/` directory
 4. Enable Firestore Database in Firebase Console
+5. Configure Firebase Authentication (Email/Password)
 
 **Note**: The `google-services.json` file is gitignored for security. For local development, you need to add your own Firebase configuration file. For CI/CD builds to work with real Firebase, you need to set up a GitHub Secret.
 
@@ -137,6 +144,38 @@ To make your CI/CD builds work with real Firebase:
    - Click "Add secret"
 
 3. **Now your CI/CD builds will use real Firebase** and the released APK will work properly!
+
+### Configuring Auto-Update Feature
+
+The app includes an auto-update feature that checks for new releases on GitHub:
+
+1. **Update GitHub Repository URL**:
+   - Open `app/src/main/java/com/example/rummypulse/utils/ModernUpdateChecker.java`
+   - Find line 44: `private static final String GITHUB_API_URL`
+   - Replace `YOUR_USERNAME` with your actual GitHub username
+   - Example: `"https://api.github.com/repos/your-username/RummyPulse/releases/latest"`
+
+2. **Publish Releases**:
+   - The app will automatically check for updates from your GitHub releases
+   - Make sure to attach APK files to your GitHub releases
+   - Users will be notified when updates are available
+
+### App Signing Configuration
+
+For release builds, you need to create signing keys:
+
+1. **Generate Release Keystore**:
+   ```bash
+   keytool -genkey -v -keystore app/release.keystore -alias release -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+2. **Configure Signing in build.gradle.kts**:
+   - Update the signing configuration with your keystore details
+   - Store keystore passwords securely (use environment variables or gradle.properties)
+
+3. **Debug Keystore**:
+   - Android Studio generates `debug.keystore` automatically for debug builds
+   - Located in `~/.android/debug.keystore` by default
 
 ## 🏗️ Architecture
 
@@ -165,6 +204,8 @@ app/
 - **HomeViewModel**: Manages game data and business logic
 - **TableAdapter**: RecyclerView adapter for game lists
 - **GameItem**: Data model for game information
+- **ModernUpdateChecker**: Automatic update checker using GitHub releases
+- **LoginActivity**: Firebase authentication integration
 
 ## 📊 Screenshots
 
