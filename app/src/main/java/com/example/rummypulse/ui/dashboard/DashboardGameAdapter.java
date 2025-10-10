@@ -169,9 +169,11 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         // Set created time
         holder.createdTimeText.setText("Started " + formatDateTime(item.getCreationDateTime()));
         
-        // Set creator section if available
+        // Set creator section - always visible
+        holder.creatorSection.setVisibility(View.VISIBLE);
+        
+        // Set creator name or default to Unknown
         if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
-            holder.creatorSection.setVisibility(View.VISIBLE);
             holder.creatorNameText.setText(item.getCreatorName());
             
             // Load creator profile image with Glide
@@ -192,7 +194,11 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
                 holder.creatorProfileImage.setPadding(8, 8, 8, 8);
             }
         } else {
-            holder.creatorSection.setVisibility(View.GONE);
+            // No creator info - show unknown user
+            holder.creatorNameText.setText("Unknown");
+            holder.creatorProfileImage.setImageResource(R.drawable.ic_person);
+            holder.creatorProfileImage.setScaleType(android.widget.ImageView.ScaleType.CENTER);
+            holder.creatorProfileImage.setPadding(8, 8, 8, 8);
         }
         
         // Set card click behavior based on game status

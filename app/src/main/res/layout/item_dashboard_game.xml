@@ -203,23 +203,23 @@
 
         </LinearLayout>
 
-        <!-- Creator Section -->
+        <!-- Creator & Time Section -->
         <LinearLayout
             android:id="@+id/creator_section"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="start|center_vertical"
+            android:gravity="center_vertical"
             android:paddingVertical="8dp"
             android:layout_marginBottom="8dp"
-            android:visibility="gone">
+            android:visibility="visible">
 
             <!-- Profile Image Container with Border -->
             <androidx.cardview.widget.CardView
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:layout_marginEnd="10dp"
-                app:cardCornerRadius="16dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="12dp"
+                app:cardCornerRadius="18dp"
                 app:cardElevation="2dp"
                 app:cardBackgroundColor="@color/card_background">
 
@@ -233,46 +233,52 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- Creator Info -->
+            <!-- Creator Info & Time -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Created by"
-                    android:textSize="10sp"
-                    android:textColor="@color/text_secondary"
-                    android:textStyle="normal"
-                    android:letterSpacing="0.05" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Created by "
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"
+                        android:textStyle="normal" />
+
+                    <TextView
+                        android:id="@+id/text_creator_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="John Doe"
+                        android:textSize="12sp"
+                        android:textColor="@color/text_primary"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                </LinearLayout>
 
                 <TextView
-                    android:id="@+id/text_creator_name"
+                    android:id="@+id/text_created_time"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="John Doe"
-                    android:textSize="13sp"
-                    android:textColor="@color/text_primary"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end"
+                    android:text="Started 2 hours ago"
+                    android:textSize="11sp"
+                    android:textColor="@color/text_secondary"
                     android:layout_marginTop="2dp" />
 
             </LinearLayout>
 
         </LinearLayout>
-
-        <!-- Created Time -->
-        <TextView
-            android:id="@+id/text_created_time"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Started 2 hours ago"
-            android:textSize="12sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="8dp" />
 
 
     </LinearLayout>
