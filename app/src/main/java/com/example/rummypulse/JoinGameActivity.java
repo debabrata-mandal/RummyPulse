@@ -2014,11 +2014,11 @@ public class JoinGameActivity extends AppCompatActivity {
         
         System.out.println("Setting up real-time listener for game: " + currentGameId);
         
-        // Set up Firestore listener
+        // Set up Firestore listener with metadata changes to track cache vs server data
         com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
         gameDataListener = db.collection("gameData")
             .document(currentGameId)
-            .addSnapshotListener((documentSnapshot, error) -> {
+            .addSnapshotListener(com.google.firebase.firestore.MetadataChanges.INCLUDE, (documentSnapshot, error) -> {
                 if (error != null) {
                     System.err.println("Error listening to game data: " + error.getMessage());
                     return;
@@ -2026,8 +2026,16 @@ public class JoinGameActivity extends AppCompatActivity {
                 
                 if (documentSnapshot != null && documentSnapshot.exists()) {
                     try {
-                        System.out.println("Real-time update received for game: " + currentGameId);
+                        // Check if data is from cache or server
+                        String dataSource = documentSnapshot.getMetadata().isFromCache() ? "LOCAL CACHE" : "SERVER";
+                        System.out.println("Real-time update received for game: " + currentGameId + " [Source: " + dataSource + "]");
                         System.out.println("Raw document data keys: " + documentSnapshot.getData().keySet());
+                        
+                        // If data is from cache and we're online, skip this update and wait for server data
+                        if (documentSnapshot.getMetadata().isFromCache() && isConnected && isNetworkAvailable()) {
+                            System.out.println("Skipping cached data - waiting for server update...");
+                            return;
+                        }
                         
                         // The actual game data is nested inside the 'data' field
                         Object dataField = documentSnapshot.get("data");
@@ -2277,7 +2285,7 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         
-        System.out.println("Network restored, attempting to reconnect Firebase listener...");
+        System.out.println("Network restored, attempting to reconnect and refresh data...");
         
         // Remove old listener if exists
         if (gameDataListener != null) {
@@ -2292,6 +2300,11 @@ public class JoinGameActivity extends AppCompatActivity {
                 Boolean editAccess = viewModel.getEditAccessGranted().getValue();
                 if (editAccess == null || !editAccess) {
                     System.out.println("Reconnecting Firebase listener for game: " + currentGameId + " (VIEW MODE)");
+                    
+                    // Force fetch fresh data from server first
+                    fetchFreshGameData();
+                    
+                    // Then setup real-time listener
                     setupRealtimeListener();
                 } else {
                     System.out.println("NOT reconnecting Firebase listener - currently in EDIT MODE (user has edit access)");
@@ -2299,6 +2312,118 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Network status indicator already shows connection state, no need for toast
             }
         }, 1000); // 1 second delay
+    }
+    
+    /**
+     * Force fetch fresh game data from server (not cache) when network reconnects
+     */
+    private void fetchFreshGameData() {
+        if (currentGameId == null) {
+            return;
+        }
+        
+        System.out.println("Fetching fresh game data from server...");
+        
+        com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
+        db.collection("gameData")
+            .document(currentGameId)
+            .get(com.google.firebase.firestore.Source.SERVER) // Force server fetch, not cache
+            .addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot != null && documentSnapshot.exists()) {
+                    System.out.println("Fresh data fetched from server successfully");
+                    try {
+                        Object dataField = documentSnapshot.get("data");
+                        if (dataField instanceof java.util.Map) {
+                            @SuppressWarnings("unchecked")
+                            java.util.Map<String, Object> dataMap = (java.util.Map<String, Object>) dataField;
+                            
+                            // Convert to GameData object (same logic as in listener)
+                            com.example.rummypulse.data.GameData gameData = parseGameDataFromMap(dataMap);
+                            
+                            // Update UI with fresh data
+                            runOnUiThread(() -> {
+                                if (gameData != null && gameData.getPlayers() != null && !gameData.getPlayers().isEmpty()) {
+                                    System.out.println("Updating UI with fresh server data");
+                                    updateStandings(gameData);
+                                    updateStandingsInfo(gameData);
+                                    updatePlayersInfo(gameData);
+                                }
+                            });
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error parsing fresh game data: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.err.println("Fresh data fetch: document does not exist");
+                }
+            })
+            .addOnFailureListener(e -> {
+                System.err.println("Failed to fetch fresh data from server: " + e.getMessage());
+            });
+    }
+    
+    /**
+     * Parse game data from Firestore map
+     */
+    private com.example.rummypulse.data.GameData parseGameDataFromMap(java.util.Map<String, Object> dataMap) {
+        try {
+            com.example.rummypulse.data.GameData gameData = new com.example.rummypulse.data.GameData();
+            
+            // Map basic fields
+            if (dataMap.get("numPlayers") instanceof Number) {
+                gameData.setNumPlayers(((Number) dataMap.get("numPlayers")).intValue());
+            }
+            if (dataMap.get("pointValue") instanceof Number) {
+                gameData.setPointValue(((Number) dataMap.get("pointValue")).doubleValue());
+            }
+            if (dataMap.get("gstPercent") instanceof Number) {
+                gameData.setGstPercent(((Number) dataMap.get("gstPercent")).doubleValue());
+            }
+            
+            // Handle players array
+            Object playersField = dataMap.get("players");
+            if (playersField instanceof java.util.List) {
+                @SuppressWarnings("unchecked")
+                java.util.List<java.util.Map<String, Object>> playersMapList = (java.util.List<java.util.Map<String, Object>>) playersField;
+                
+                java.util.List<com.example.rummypulse.data.Player> players = new java.util.ArrayList<>();
+                for (java.util.Map<String, Object> playerMap : playersMapList) {
+                    com.example.rummypulse.data.Player player = new com.example.rummypulse.data.Player();
+                    
+                    if (playerMap.get("name") instanceof String) {
+                        player.setName((String) playerMap.get("name"));
+                    }
+                    if (playerMap.get("randomNumber") instanceof Number) {
+                        player.setRandomNumber(((Number) playerMap.get("randomNumber")).intValue());
+                    }
+                    
+                    // Handle scores array
+                    Object scoresField = playerMap.get("scores");
+                    if (scoresField instanceof java.util.List) {
+                        @SuppressWarnings("unchecked")
+                        java.util.List<Object> scoresObjectList = (java.util.List<Object>) scoresField;
+                        java.util.List<Integer> scores = new java.util.ArrayList<>();
+                        for (Object scoreObj : scoresObjectList) {
+                            if (scoreObj instanceof Number) {
+                                scores.add(((Number) scoreObj).intValue());
+                            } else {
+                                scores.add(-1);
+                            }
+                        }
+                        player.setScores(scores);
+                    }
+                    
+                    players.add(player);
+                }
+                gameData.setPlayers(players);
+            }
+            
+            return gameData;
+        } catch (Exception e) {
+            System.err.println("Error in parseGameDataFromMap: " + e.getMessage());
+            return null;
+        }
     }
 
     // Helper class for standings
