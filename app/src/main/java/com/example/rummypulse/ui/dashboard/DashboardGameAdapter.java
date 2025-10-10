@@ -172,21 +172,24 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         // Set creator section if available
         if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
             holder.creatorSection.setVisibility(View.VISIBLE);
-            holder.creatorNameText.setText("Created by: " + item.getCreatorName());
+            holder.creatorNameText.setText(item.getCreatorName());
             
             // Load creator profile image with Glide
             if (item.getCreatorPhotoUrl() != null && !item.getCreatorPhotoUrl().isEmpty()) {
                 Glide.with(holder.itemView.getContext())
                     .load(item.getCreatorPhotoUrl())
                     .apply(new RequestOptions()
-                        .circleCrop()
+                        .centerCrop()
                         .placeholder(R.drawable.ic_person)
                         .error(R.drawable.ic_person)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL))
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .timeout(10000))
                     .into(holder.creatorProfileImage);
             } else {
-                // No photo URL, show default icon
+                // No photo URL, show default icon with proper styling
                 holder.creatorProfileImage.setImageResource(R.drawable.ic_person);
+                holder.creatorProfileImage.setScaleType(android.widget.ImageView.ScaleType.CENTER);
+                holder.creatorProfileImage.setPadding(8, 8, 8, 8);
             }
         } else {
             holder.creatorSection.setVisibility(View.GONE);
