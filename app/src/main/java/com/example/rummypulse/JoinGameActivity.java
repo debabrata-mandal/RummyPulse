@@ -283,12 +283,6 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     private void showLoadingGameInfo() {
-        // Set placeholder values for game info in standings section
-        binding.textPointValueInfo.setText("₹0.00 per point");
-        binding.textGstRateInfo.setText("0%");
-        binding.textCurrentRoundInfo.setText("Round 1");
-        binding.textTotalGstInfo.setText("Total Contribution: ₹0");
-        
         // Set placeholder game ID if not already set
         if (currentGameId != null) {
             binding.textGameIdHeader.setText(currentGameId);
@@ -318,12 +312,6 @@ public class JoinGameActivity extends AppCompatActivity {
             
             binding.playersContainer.addView(playerCardView);
         }
-        
-        // Set placeholder values for players info
-        binding.textPlayersPointValue.setText("₹0.00 per point");
-        binding.textPlayersGstRate.setText("0%");
-        binding.textPlayersCurrentRound.setText("Round 1");
-        binding.textNumberOfPlayers.setText("2 Players");
     }
 
     private void setupClickListeners() {
@@ -494,9 +482,7 @@ public class JoinGameActivity extends AppCompatActivity {
         viewModel.getGamePin().observe(this, pin -> {
             if (pin != null) {
                 currentGamePin = pin;
-                // Update PIN display if game data is already loaded
-                updateGamePinDisplay();
-                // Update header PIN display as well
+                // Update header PIN display
                 updateHeaderPinVisibility();
             }
         });
@@ -1501,64 +1487,8 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void updatePlayersInfo(com.example.rummypulse.data.GameData gameData) {
-        // Update Players & Scores information card
-        binding.textPlayersPointValue.setText("₹" + formatPointValue(gameData.getPointValue()) + " per point");
-        binding.textPlayersGstRate.setText(String.format("%.0f", gameData.getGstPercent()) + "%");
-        
-        int currentRound = calculateCurrentRound(gameData);
-        if (currentRound == 10 && isGameCompleted(gameData)) {
-            binding.textPlayersCurrentRound.setText("Game Over");
-        } else {
-            binding.textPlayersCurrentRound.setText("Round " + currentRound);
-        }
-        
-        int numberOfPlayers = gameData.getPlayers().size();
-        binding.textNumberOfPlayers.setText(numberOfPlayers + " Players");
-        
-        // Setup Game PIN display and masking
-        setupGamePinDisplay(gameData);
-    }
-
-    private void setupGamePinDisplay(com.example.rummypulse.data.GameData gameData) {
-        // This method is called when game data is loaded
-        // The actual PIN setup is done in updateGamePinDisplay() when PIN is available
-        updateGamePinDisplay();
-    }
-
-    private void updateGamePinDisplay() {
-        TextView gamePinText = findViewById(R.id.text_players_game_pin);
-        if (gamePinText != null && currentGamePin != null) {
-            String maskedPin = "••••••";
-            
-            // Initially show masked PIN
-            gamePinText.setText(maskedPin);
-            gamePinText.setTag(false); // false = masked, true = revealed
-            
-            // Set click listener to toggle between masked and revealed
-            gamePinText.setOnClickListener(v -> {
-                boolean isRevealed = (Boolean) gamePinText.getTag();
-                if (isRevealed) {
-                    // Currently revealed, mask it
-                    gamePinText.setText(maskedPin);
-                    gamePinText.setTag(false);
-                    // No toast needed - user can see the PIN is now masked
-                } else {
-                    // Currently masked, reveal it
-                    gamePinText.setText(currentGamePin);
-                    gamePinText.setTag(true);
-                    // No toast needed - user can see the PIN is now revealed
-                    
-                    // Auto-mask after 8 seconds for security
-                    gamePinText.postDelayed(() -> {
-                        if (gamePinText.getTag() != null && (Boolean) gamePinText.getTag()) {
-                            gamePinText.setText(maskedPin);
-                            gamePinText.setTag(false);
-                            // PIN auto-masked silently for security
-                        }
-                    }, 8000);
-                }
-            });
-        }
+        // Players info card has been removed - all info now shown in top header
+        // This method is kept for compatibility but does nothing
     }
 
     private void setupCollapsibleSections() {
@@ -1702,20 +1632,8 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void updateStandingsInfo(com.example.rummypulse.data.GameData gameData) {
-        // Update Standings information card
-        binding.textPointValueInfo.setText("₹" + String.format("%.2f", gameData.getPointValue()) + " per point");
-        binding.textGstRateInfo.setText(String.format("%.0f", gameData.getGstPercent()) + "%");
-        
-        int currentRound = calculateCurrentRound(gameData);
-        if (currentRound == 10 && isGameCompleted(gameData)) {
-            binding.textCurrentRoundInfo.setText("Game Over");
-        } else {
-            binding.textCurrentRoundInfo.setText("Round " + currentRound);
-        }
-        
-        // Calculate total GST collected
-        double totalGST = calculateTotalGST(gameData);
-        binding.textTotalGstInfo.setText("₹" + String.format("%.0f", totalGST));
+        // Standings info card has been removed - all info now shown in top header
+        // This method is kept for compatibility but does nothing
     }
 
     private void updateSettlementExplanation(com.example.rummypulse.data.GameData gameData) {
