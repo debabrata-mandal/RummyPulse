@@ -244,4 +244,21 @@ public class JoinGameViewModel extends AndroidViewModel {
         successMessage.setValue(null);
         editAccessGranted.setValue(false);
     }
+
+    /**
+     * Refresh game data from Firebase
+     * This method is used in view mode to fetch the latest data
+     */
+    public void refreshGameData(String gameId) {
+        if (TextUtils.isEmpty(gameId)) {
+            errorMessage.setValue("Invalid game ID");
+            return;
+        }
+
+        // Start loading
+        isLoading.setValue(true);
+
+        // Fetch the latest game data from Firebase
+        fetchGameData(gameId, false);
+    }
 }

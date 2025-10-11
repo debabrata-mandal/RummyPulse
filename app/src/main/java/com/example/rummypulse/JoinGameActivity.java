@@ -235,7 +235,8 @@ public class JoinGameActivity extends AppCompatActivity {
         // Initially hide the cards and FAB
         binding.playersSection.setVisibility(View.GONE);
         binding.standingsCard.setVisibility(View.GONE);
-        binding.btnAddPlayer.setVisibility(View.GONE); // Hide FAB in view mode
+        binding.btnAddPlayer.setVisibility(View.GONE); // Hide Add Player FAB in view mode
+        binding.btnRefresh.setVisibility(View.GONE); // Hide Refresh FAB initially
     }
     
     private void showLoadingState() {
@@ -331,6 +332,14 @@ public class JoinGameActivity extends AppCompatActivity {
             addNewPlayerDirectly();
         });
         
+        // Setup refresh button click listener (View Mode Only)
+        binding.btnRefresh.setOnClickListener(v -> {
+            if (currentGameId != null) {
+                ModernToast.info(this, "Refreshing game data...");
+                viewModel.refreshGameData(currentGameId);
+            }
+        });
+        
         // Setup QR code click listener
         binding.iconQrCodeHeader.setOnClickListener(v -> {
             if (currentGameId != null) {
@@ -403,9 +412,11 @@ public class JoinGameActivity extends AppCompatActivity {
         viewModel.getEditAccessGranted().observe(this, granted -> {
             if (granted) {
                 binding.textAdminMode.setVisibility(View.VISIBLE);
-                // Show Players section and FAB when edit access is granted
+                // Show Players section and Add Player FAB when edit access is granted
                 binding.playersSection.setVisibility(View.VISIBLE);
                 binding.btnAddPlayer.setVisibility(View.VISIBLE);
+                // Hide Refresh FAB in edit mode
+                binding.btnRefresh.setVisibility(View.GONE);
                 
                 // Always show loading placeholders when switching to edit mode
                 // The real player cards will be generated when fresh data arrives in the gameData observer
@@ -444,6 +455,10 @@ public class JoinGameActivity extends AppCompatActivity {
                 if (binding.editOnlineIndicator != null && binding.editOfflineIndicator != null) {
                     binding.editOnlineIndicator.setVisibility(View.GONE);
                     binding.editOfflineIndicator.setVisibility(View.GONE);
+                }
+                // Show Refresh FAB in view mode (only when standings are visible)
+                if (binding.standingsCard != null && binding.standingsCard.getVisibility() == View.VISIBLE) {
+                    binding.btnRefresh.setVisibility(View.VISIBLE);
                 }
             }
         });
@@ -651,6 +666,8 @@ public class JoinGameActivity extends AppCompatActivity {
         Boolean editAccess = viewModel.getEditAccessGranted().getValue();
         if (editAccess == null || !editAccess) {
             binding.playersSection.setVisibility(View.GONE); // Hidden in view mode only
+            // Show Refresh FAB in view mode
+            binding.btnRefresh.setVisibility(View.VISIBLE);
         }
         binding.standingsCard.setVisibility(View.VISIBLE);
 

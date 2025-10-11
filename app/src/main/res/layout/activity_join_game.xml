@@ -901,7 +901,7 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Floating Add Player Button -->
+    <!-- Floating Add Player Button (Edit Mode Only) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btn_add_player"
         android:layout_width="wrap_content"
@@ -911,6 +911,19 @@
         android:src="@drawable/ic_add_person"
         android:contentDescription="Add Player"
         app:backgroundTint="#2196F3"
+        app:tint="@android:color/white" />
+
+    <!-- Floating Refresh Button (View Mode Only) -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_refresh"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:src="@drawable/ic_refresh"
+        android:contentDescription="Refresh"
+        android:visibility="gone"
+        app:backgroundTint="#4CAF50"
         app:tint="@android:color/white" />
 
     <!-- Loading Spinner Overlay - Must be last to appear on top -->
