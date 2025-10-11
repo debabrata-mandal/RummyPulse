@@ -717,6 +717,11 @@ public class JoinGameActivity extends AppCompatActivity {
         // Show the header
         binding.gameInfoHeader.setVisibility(View.VISIBLE);
         
+        // Setup Share button click listener (set up each time header is updated)
+        binding.btnShareHeader.setOnClickListener(v -> {
+            ModernToast.info(this, "Coming Soon!");
+        });
+        
         // Update Point Value
         binding.textHeaderPointValue.setText("₹" + formatPointValue(gameData.getPointValue()));
         
