@@ -724,16 +724,20 @@ public class JoinGameActivity extends AppCompatActivity {
         int numberOfPlayers = gameData.getPlayers() != null ? gameData.getPlayers().size() : 0;
         binding.textHeaderPlayers.setText(String.valueOf(numberOfPlayers));
         
-        // Update Current Round
+        // Update Current Round (or "Game Over" if completed)
         int currentRound = calculateCurrentRound(gameData);
-        binding.textHeaderCurrentRound.setText(String.valueOf(currentRound));
+        if (currentRound == 10 && isGameCompleted(gameData)) {
+            binding.textHeaderCurrentRound.setText("Game Over");
+        } else {
+            binding.textHeaderCurrentRound.setText(String.valueOf(currentRound));
+        }
         
         // Update Contribution %
         binding.textHeaderContribution.setText(String.format("%.0f", gameData.getGstPercent()));
         
-        // Update Total Contribution Amount
+        // Update Total Contribution Amount (rounded, no decimals)
         double totalContribution = calculateTotalContribution(gameData);
-        binding.textHeaderTotalContribution.setText("₹" + formatPointValue(totalContribution));
+        binding.textHeaderTotalContribution.setText("₹" + Math.round(totalContribution));
         
         // Update Game PIN visibility (show masked in edit mode)
         updateHeaderPinVisibility();
@@ -1180,44 +1184,18 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     private boolean isGameCompleted(com.example.rummypulse.data.GameData gameData) {
-        // Check if all players have completed round 10
-        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-        
-        if (editAccess != null && editAccess) {
-            // Edit mode: check input fields for round 10
-            for (int playerIndex = 0; playerIndex < gameData.getPlayers().size(); playerIndex++) {
-                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r10");
-                if (scoreInput != null) {
-                    try {
-                        String text = scoreInput.getText().toString();
-                        if (text.isEmpty()) {
-                            return false; // Player hasn't completed round 10
-                        }
-                        int score = Integer.parseInt(text);
-                        if (score < 0) { // -1 means not played
-                            return false;
-                        }
-                    } catch (NumberFormatException e) {
-                        return false; // Invalid score means not completed
-                    }
-                } else {
-                    return false; // Input field not found
-                }
+        // Always check game data directly for round 10 completion
+        // This works reliably in both edit and view modes
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            if (player.getScores() == null || player.getScores().size() < 10) {
+                return false; // Player doesn't have 10 rounds
             }
-            return true; // All players have completed round 10
-        } else {
-            // View mode: check game data for round 10 (index 9)
-            for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
-                if (player.getScores() == null || player.getScores().size() < 10) {
-                    return false; // Player doesn't have 10 rounds
-                }
-                Integer round10Score = player.getScores().get(9); // Round 10 is index 9
-                if (round10Score == null || round10Score < 0) {
-                    return false; // Round 10 not completed
-                }
+            Integer round10Score = player.getScores().get(9); // Round 10 is index 9
+            if (round10Score == null || round10Score < 0) {
+                return false; // Round 10 not completed
             }
-            return true; // All players have completed round 10
         }
+        return true; // All players have completed round 10
     }
 
     private void generateStandingsTable(com.example.rummypulse.data.GameData gameData) {

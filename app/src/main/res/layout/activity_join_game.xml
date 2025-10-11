@@ -73,49 +73,12 @@
         android:layout_marginBottom="8dp"
         android:visibility="gone">
 
-        <!-- First Row: Point Value | Round | Players | Game PIN (Edit Mode Only) -->
+        <!-- First Row: Round | Players | Game PIN (Edit Mode Only) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical">
-
-            <!-- Point Value Section -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="POINT VALUE"
-                    android:textSize="9sp"
-                    android:textColor="@color/text_secondary"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1" />
-
-                <TextView
-                    android:id="@+id/text_header_point_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹10.00"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/accent_blue"
-                    android:layout_marginTop="2dp" />
-
-            </LinearLayout>
-
-            <!-- Divider -->
-            <View
-                android:layout_width="1dp"
-                android:layout_height="match_parent"
-                android:background="@color/divider_color"
-                android:layout_marginHorizontal="8dp"
-                android:layout_marginVertical="4dp" />
 
             <!-- Current Round -->
             <LinearLayout
@@ -233,14 +196,14 @@
             android:background="@color/divider_color"
             android:layout_marginVertical="12dp" />
 
-        <!-- Second Row: Contribution % | Total Contribution -->
+        <!-- Second Row: Point Value | Contribution (merged) | Share Button -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <!-- Contribution % Section -->
+            <!-- Point Value Section -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -251,7 +214,44 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="CONTRIBUTION %"
+                    android:text="POINT VALUE"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <TextView
+                    android:id="@+id/text_header_point_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="₹10.00"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/accent_blue"
+                    android:layout_marginTop="2dp" />
+
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="@color/divider_color"
+                android:layout_marginHorizontal="8dp"
+                android:layout_marginVertical="4dp" />
+
+            <!-- Contribution (Merged) -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CONTRIBUTION"
                     android:textSize="9sp"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
@@ -281,6 +281,24 @@
                         android:textStyle="bold"
                         android:textColor="@color/text_primary" />
 
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=" • "
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_secondary"
+                        android:layout_marginHorizontal="4dp" />
+
+                    <TextView
+                        android:id="@+id/text_header_total_contribution"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₹0"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#F44336" />
+
                 </LinearLayout>
 
             </LinearLayout>
@@ -293,32 +311,35 @@
                 android:layout_marginHorizontal="8dp"
                 android:layout_marginVertical="4dp" />
 
-            <!-- Total Contribution Amount -->
+            <!-- Share Button -->
             <LinearLayout
+                android:id="@+id/btn_share_header"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:gravity="center">
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?android:attr/selectableItemBackground"
+                android:padding="8dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/ic_menu_share"
+                    android:tint="@color/accent_blue"
+                    android:contentDescription="Share" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="TOTAL CONTRIBUTION"
+                    android:text="SHARE"
                     android:textSize="9sp"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
-                    android:letterSpacing="0.1" />
-
-                <TextView
-                    android:id="@+id/text_header_total_contribution"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹0"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="#F44336"
-                    android:layout_marginTop="2dp" />
+                    android:letterSpacing="0.1"
+                    android:layout_marginTop="4dp" />
 
             </LinearLayout>
 
