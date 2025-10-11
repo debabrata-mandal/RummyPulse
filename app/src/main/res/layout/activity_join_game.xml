@@ -59,12 +59,280 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
+    <!-- Compact Info Header (Dashboard Style) - Two Rows -->
+    <LinearLayout
+        android:id="@+id/game_info_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/info_section_background"
+        android:padding="12dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="72dp"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone">
+
+        <!-- First Row: Point Value | Round | Players | Game PIN (Edit Mode Only) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Point Value Section -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="POINT VALUE"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <TextView
+                    android:id="@+id/text_header_point_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="₹10.00"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/accent_blue"
+                    android:layout_marginTop="2dp" />
+
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="@color/divider_color"
+                android:layout_marginHorizontal="8dp"
+                android:layout_marginVertical="4dp" />
+
+            <!-- Current Round -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ROUND"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <TextView
+                    android:id="@+id/text_header_current_round"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginTop="2dp" />
+
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="@color/divider_color"
+                android:layout_marginHorizontal="8dp"
+                android:layout_marginVertical="4dp" />
+
+            <!-- Number of Players -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PLAYERS"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <TextView
+                    android:id="@+id/text_header_players"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginTop="2dp" />
+
+            </LinearLayout>
+
+            <!-- Divider (Edit Mode Only) -->
+            <View
+                android:id="@+id/header_pin_divider"
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="@color/divider_color"
+                android:layout_marginHorizontal="8dp"
+                android:layout_marginVertical="4dp"
+                android:visibility="gone" />
+
+            <!-- Game PIN (Edit Mode Only) -->
+            <LinearLayout
+                android:id="@+id/header_pin_section"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GAME PIN"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <TextView
+                    android:id="@+id/text_header_game_pin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/accent_blue"
+                    android:layout_marginTop="2dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Horizontal Divider between rows -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/divider_color"
+            android:layout_marginVertical="12dp" />
+
+        <!-- Second Row: Contribution % | Total Contribution -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Contribution % Section -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CONTRIBUTION %"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginTop="2dp">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_percent"
+                        android:tint="@color/success_green"
+                        android:layout_marginEnd="4dp"
+                        android:contentDescription="Percent" />
+
+                    <TextView
+                        android:id="@+id/text_header_contribution"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="10"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="@color/divider_color"
+                android:layout_marginHorizontal="8dp"
+                android:layout_marginVertical="4dp" />
+
+            <!-- Total Contribution Amount -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TOTAL CONTRIBUTION"
+                    android:textSize="9sp"
+                    android:textColor="@color/text_secondary"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1" />
+
+                <TextView
+                    android:id="@+id/text_header_total_contribution"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="₹0"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#F44336"
+                    android:layout_marginTop="2dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
     <!-- Main Content Area -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:paddingTop="160dp">
 
         <LinearLayout
             android:layout_width="match_parent"

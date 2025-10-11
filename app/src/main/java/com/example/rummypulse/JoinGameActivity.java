@@ -439,6 +439,9 @@ public class JoinGameActivity extends AppCompatActivity {
                     updateOnlineOfflineIndicators();
                 });
                 
+                // Update header PIN visibility (show masked in edit mode)
+                updateHeaderPinVisibility();
+                
                 // Remove real-time listener when in edit mode (to avoid conflicts)
                 if (gameDataListener != null) {
                     System.out.println("EDIT ACCESS GRANTED - Removing existing real-time listener to avoid conflicts");
@@ -460,6 +463,8 @@ public class JoinGameActivity extends AppCompatActivity {
                 if (binding.standingsCard != null && binding.standingsCard.getVisibility() == View.VISIBLE) {
                     binding.btnRefresh.setVisibility(View.VISIBLE);
                 }
+                // Update header PIN visibility (hide in view mode)
+                updateHeaderPinVisibility();
             }
         });
 
@@ -491,6 +496,8 @@ public class JoinGameActivity extends AppCompatActivity {
                 currentGamePin = pin;
                 // Update PIN display if game data is already loaded
                 updateGamePinDisplay();
+                // Update header PIN display as well
+                updateHeaderPinVisibility();
             }
         });
     }
@@ -681,6 +688,9 @@ public class JoinGameActivity extends AppCompatActivity {
         // Update header with game ID
         binding.textGameIdHeader.setText(gameId);
 
+        // Update compact info header (dashboard style)
+        updateGameInfoHeader(gameData);
+
         // Update game info in standings section only
         updateStandingsInfo(gameData);
 
@@ -701,6 +711,78 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Update settlement explanation with dynamic values
         updateSettlementExplanation(gameData);
+    }
+
+    private void updateGameInfoHeader(com.example.rummypulse.data.GameData gameData) {
+        // Show the header
+        binding.gameInfoHeader.setVisibility(View.VISIBLE);
+        
+        // Update Point Value
+        binding.textHeaderPointValue.setText("₹" + formatPointValue(gameData.getPointValue()));
+        
+        // Update Number of Players
+        int numberOfPlayers = gameData.getPlayers() != null ? gameData.getPlayers().size() : 0;
+        binding.textHeaderPlayers.setText(String.valueOf(numberOfPlayers));
+        
+        // Update Current Round
+        int currentRound = calculateCurrentRound(gameData);
+        binding.textHeaderCurrentRound.setText(String.valueOf(currentRound));
+        
+        // Update Contribution %
+        binding.textHeaderContribution.setText(String.format("%.0f", gameData.getGstPercent()));
+        
+        // Update Total Contribution Amount
+        double totalContribution = calculateTotalContribution(gameData);
+        binding.textHeaderTotalContribution.setText("₹" + formatPointValue(totalContribution));
+        
+        // Update Game PIN visibility (show masked in edit mode)
+        updateHeaderPinVisibility();
+    }
+    
+    private void updateHeaderPinVisibility() {
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        
+        if (editAccess != null && editAccess && currentGamePin != null) {
+            // Show PIN section in edit mode
+            binding.headerPinSection.setVisibility(View.VISIBLE);
+            binding.headerPinDivider.setVisibility(View.VISIBLE);
+            
+            // Display the PIN directly
+            binding.textHeaderGamePin.setText(currentGamePin);
+        } else {
+            // Hide PIN section in view mode
+            binding.headerPinSection.setVisibility(View.GONE);
+            binding.headerPinDivider.setVisibility(View.GONE);
+        }
+    }
+    
+    private double calculateTotalContribution(com.example.rummypulse.data.GameData gameData) {
+        if (gameData == null || gameData.getPlayers() == null) {
+            return 0.0;
+        }
+        
+        double totalContribution = 0.0;
+        int numPlayers = gameData.getPlayers().size();
+        
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            // Calculate settlement for each player
+            int totalScore = 0;
+            for (com.example.rummypulse.data.Player p : gameData.getPlayers()) {
+                totalScore += p.getTotalScore();
+            }
+            
+            // Calculate gross amount
+            int playerScore = player.getTotalScore();
+            double grossAmount = (totalScore - (playerScore * numPlayers)) * gameData.getPointValue();
+            
+            // Only winners pay GST (positive gross amount)
+            if (grossAmount > 0) {
+                double gstAmount = grossAmount * (gameData.getGstPercent() / 100.0);
+                totalContribution += gstAmount;
+            }
+        }
+        
+        return totalContribution;
     }
 
     private void generatePlayerCards(com.example.rummypulse.data.GameData gameData) {
@@ -2129,6 +2211,7 @@ public class JoinGameActivity extends AppCompatActivity {
                                         System.out.println("Real-time update in EDIT MODE - updating standings only, preserving input fields");
                                         updateStandings(gameData);
                                         updateStandingsInfo(gameData);
+                                        updateGameInfoHeader(gameData);
                                         // DO NOT call updatePlayersInfo or generatePlayerCards in edit mode
                                     } else {
                                         // VIEW MODE: Update everything including player cards
@@ -2136,6 +2219,7 @@ public class JoinGameActivity extends AppCompatActivity {
                                         updateStandings(gameData);
                                         updateStandingsInfo(gameData);
                                         updatePlayersInfo(gameData);
+                                        updateGameInfoHeader(gameData);
                                     }
                                 } else {
                                     System.err.println("Real-time update received but players data is null or empty");
@@ -2388,6 +2472,7 @@ public class JoinGameActivity extends AppCompatActivity {
                                     updateStandings(gameData);
                                     updateStandingsInfo(gameData);
                                     updatePlayersInfo(gameData);
+                                    updateGameInfoHeader(gameData);
                                 }
                             });
                         }
