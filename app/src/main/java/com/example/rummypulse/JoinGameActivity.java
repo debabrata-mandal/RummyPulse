@@ -335,6 +335,11 @@ public class JoinGameActivity extends AppCompatActivity {
             }
         });
         
+        // Setup share button click listener
+        binding.btnShareHeader.setOnClickListener(v -> {
+            shareStandingsToWhatsApp();
+        });
+        
         // Setup collapsible sections
         setupCollapsibleSections();
     }
@@ -705,7 +710,7 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Setup Share button click listener (set up each time header is updated)
         binding.btnShareHeader.setOnClickListener(v -> {
-            ModernToast.info(this, "Coming Soon!");
+            shareStandingsToWhatsApp();
         });
         
         // Update Point Value
@@ -2454,6 +2459,131 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     // Helper class for standings
+    private void shareStandingsToWhatsApp() {
+        com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+        
+        if (gameData == null) {
+            ModernToast.error(this, "No game data available to share");
+            return;
+        }
+        
+        // Format the standings data as text
+        String shareText = formatStandingsText(gameData);
+        
+        // Create share intent
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+        
+        // Create chooser to allow user to select WhatsApp or other apps
+        Intent chooserIntent = Intent.createChooser(shareIntent, "Share Standings via");
+        
+        try {
+            startActivity(chooserIntent);
+        } catch (android.content.ActivityNotFoundException e) {
+            ModernToast.error(this, "No app available to share");
+        }
+    }
+    
+    private String formatStandingsText(com.example.rummypulse.data.GameData gameData) {
+        StringBuilder text = new StringBuilder();
+        
+        // Add game header
+        text.append("🎮 *RUMMY PULSE - GAME STANDINGS* 🎮\n");
+        // Calculate standings
+        java.util.List<PlayerStanding> standings = calculateStandings(gameData);
+        
+        // Calculate total contribution
+        double totalContribution = 0;
+        for (PlayerStanding standing : standings) {
+            totalContribution += standing.gstPaid;
+        }
+        
+        // Add game info
+        if (currentGameId != null) {
+            text.append("🎯 *Game ID:* ").append(currentGameId).append("\n");
+        }
+        text.append("👥 *Players:* ").append(gameData.getNumPlayers()).append("\n");
+        text.append("💰 *Point Value:* ₹").append(String.format("%.2f", gameData.getPointValue())).append("\n");
+        text.append("📊 *Contribution %:* ").append(String.format("%.0f", gameData.getGstPercent())).append("%\n");
+        text.append("💵 *Total Contribution:* ₹").append(String.format("%.0f", totalContribution)).append("\n");
+        text.append("━━━━━━━━━━━━━━━━━━━━━━\n");
+        
+        // Sort by total score (ascending - lower is better)
+        standings.sort((a, b) -> Integer.compare(a.totalScore, b.totalScore));
+        
+        // Add standings header
+        text.append("🏆 *STANDINGS* 🏆\n");
+        
+        // Add each player's standing (compact format)
+        for (int i = 0; i < standings.size(); i++) {
+            PlayerStanding standing = standings.get(i);
+            
+            // Rank emoji
+            String rankEmoji;
+            if (i == 0) rankEmoji = "🥇";
+            else if (i == 1) rankEmoji = "🥈";
+            else if (i == 2) rankEmoji = "🥉";
+            else rankEmoji = String.valueOf(i + 1) + ".";
+            
+            // Compact format: Rank Name • Score: X • Net: ₹Y
+            text.append(rankEmoji).append(" *").append(standing.player.getName()).append("*");
+            text.append(" • Score: ").append(standing.totalScore);
+            text.append(" • Net: ₹").append(String.format("%.0f", standing.netAmount));
+            text.append("\n");
+        }
+        
+        text.append("━━━━━━━━━━━━━━━━━━━━━━\n");
+        text.append("📱 *Shared from RummyPulse App*\n");
+        
+        return text.toString();
+    }
+    
+    private java.util.List<PlayerStanding> calculateStandings(com.example.rummypulse.data.GameData gameData) {
+        java.util.List<PlayerStanding> standings = new java.util.ArrayList<>();
+        int totalAllScores = 0;
+        
+        // First pass: collect all scores
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            int totalScore = 0;
+            
+            // Get scores from game data
+            if (player.getScores() != null) {
+                for (Integer score : player.getScores()) {
+                    if (score != null && score > 0) {
+                        totalScore += score;
+                    }
+                }
+            }
+            
+            PlayerStanding standing = new PlayerStanding();
+            standing.player = player;
+            standing.totalScore = totalScore;
+            standings.add(standing);
+            totalAllScores += totalScore;
+        }
+        
+        // Second pass: calculate amounts using Rummy formula
+        for (PlayerStanding standing : standings) {
+            double grossAmount = (totalAllScores - standing.totalScore * gameData.getNumPlayers()) * gameData.getPointValue();
+            
+            // Calculate GST (only for winners with positive gross amount)
+            double gstPaid = 0;
+            if (grossAmount > 0) {
+                gstPaid = (grossAmount * gameData.getGstPercent()) / 100.0;
+            }
+            
+            // Calculate net amount
+            double netAmount = grossAmount - gstPaid;
+            
+            standing.grossAmount = grossAmount;
+            standing.gstPaid = gstPaid;
+            standing.netAmount = netAmount;
+        }
+        
+        return standings;
+    }
+    
     private static class PlayerStanding {
         com.example.rummypulse.data.Player player;
         int totalScore;
