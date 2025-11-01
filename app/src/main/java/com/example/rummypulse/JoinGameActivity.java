@@ -133,17 +133,9 @@ public class JoinGameActivity extends AppCompatActivity {
         dialog.setCancelable(true);
         
         // Get views
-        TextView pinDisplay = dialog.findViewById(R.id.text_pin_display);
         android.widget.CheckBox checkboxForgetPin = dialog.findViewById(R.id.checkbox_forget_pin);
         Button btnStay = dialog.findViewById(R.id.btn_stay);
         Button btnExit = dialog.findViewById(R.id.btn_exit);
-        
-        // Set PIN
-        if (currentGamePin != null) {
-            pinDisplay.setText(currentGamePin);
-        } else {
-            pinDisplay.setText("****");
-        }
         
         // Set up buttons
         btnStay.setOnClickListener(v -> dialog.dismiss());

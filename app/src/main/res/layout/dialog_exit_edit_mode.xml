@@ -60,29 +60,7 @@
             android:text="• You will lose edit access\n• You'll need the PIN again to edit"
             android:textColor="@color/text_secondary"
             android:textSize="13sp"
-            android:lineSpacingExtra="4dp"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Current PIN:"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:id="@+id/text_pin_display"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="1234"
-            android:textColor="@color/accent_blue"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:padding="12dp"
-            android:background="@drawable/professional_row_background" />
+            android:lineSpacingExtra="4dp" />
 
     </LinearLayout>
 
