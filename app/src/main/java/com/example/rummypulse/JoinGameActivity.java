@@ -46,6 +46,16 @@ public class JoinGameActivity extends AppCompatActivity {
     private android.net.ConnectivityManager.NetworkCallback networkCallback;
     private boolean isConnected = true;
     private android.os.Handler reconnectHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    
+    // Text-to-Speech
+    private android.speech.tts.TextToSpeech textToSpeech;
+    private boolean ttsInitialized = false;
+    private android.os.Handler ttsHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private java.util.Map<String, Runnable> announcementRunnables = new java.util.HashMap<>();
+    
+    // Track previous scores for view mode announcements
+    private java.util.Map<String, java.util.List<Integer>> previousPlayerScores = new java.util.HashMap<>();
+    private boolean gameCompletionAnnounced = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,6 +82,9 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Setup network monitoring
         setupNetworkMonitoring();
+        
+        // Initialize Text-to-Speech
+        initializeTextToSpeech();
 
         // Get game ID from intent if available
         Intent intent = getIntent();
@@ -171,6 +184,200 @@ public class JoinGameActivity extends AppCompatActivity {
         }
     }
     
+    /**
+     * Initialize Text-to-Speech engine
+     */
+    private void initializeTextToSpeech() {
+        textToSpeech = new android.speech.tts.TextToSpeech(this, status -> {
+            if (status == android.speech.tts.TextToSpeech.SUCCESS) {
+                int result = textToSpeech.setLanguage(java.util.Locale.US);
+                if (result != android.speech.tts.TextToSpeech.LANG_MISSING_DATA && 
+                    result != android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED) {
+                    ttsInitialized = true;
+                    System.out.println("TTS initialized successfully");
+                } else {
+                    System.out.println("TTS language not supported");
+                }
+            } else {
+                System.out.println("TTS initialization failed");
+            }
+        });
+    }
+    
+    /**
+     * Announce player name and score with 4-second debounce
+     * @param playerName Name of the player
+     * @param score Score entered
+     * @param playerIndex Index of the player (for unique key)
+     * @param round Round number (1-based)
+     */
+    private void announceScoreWithDebounce(String playerName, int score, int playerIndex, int round) {
+        if (!ttsInitialized || textToSpeech == null) {
+            return;
+        }
+        
+        // Create unique key for this player
+        String key = "player_" + playerIndex;
+        
+        // Cancel any pending announcement for this player
+        Runnable existingRunnable = announcementRunnables.get(key);
+        if (existingRunnable != null) {
+            ttsHandler.removeCallbacks(existingRunnable);
+        }
+        
+        // Create new announcement runnable
+        Runnable announcementRunnable = () -> {
+            announceScore(playerName, score, round);
+            announcementRunnables.remove(key);
+        };
+        
+        // Store and schedule the announcement for 4 seconds later
+        announcementRunnables.put(key, announcementRunnable);
+        ttsHandler.postDelayed(announcementRunnable, 4000);
+    }
+    
+    /**
+     * Announce player name and score using TTS
+     * @param playerName Name of the player
+     * @param score Score to announce
+     * @param round Round number (1-based)
+     */
+    private void announceScore(String playerName, int score, int round) {
+        if (!ttsInitialized || textToSpeech == null) {
+            return;
+        }
+        
+        // Skip announcement for -1 (placeholder value)
+        if (score == -1) {
+            return;
+        }
+        
+        // Create announcement text: "Player X score xxx point in round X"
+        String announcement = playerName + " score " + score + " point in round " + round;
+        
+        // Speak the announcement
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            textToSpeech.speak(announcement, android.speech.tts.TextToSpeech.QUEUE_ADD, null, null);
+        } else {
+            textToSpeech.speak(announcement, android.speech.tts.TextToSpeech.QUEUE_ADD, null);
+        }
+        
+        System.out.println("TTS Announcement: " + announcement);
+    }
+    
+    /**
+     * Check for score changes and announce them in view mode (for real-time updates)
+     * @param gameData Current game data with updated scores
+     */
+    private void announceScoreChangesInViewMode(com.example.rummypulse.data.GameData gameData) {
+        if (!ttsInitialized || textToSpeech == null || gameData == null || gameData.getPlayers() == null) {
+            return;
+        }
+        
+        // Check each player for score changes
+        for (int i = 0; i < gameData.getPlayers().size(); i++) {
+            com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
+            String playerKey = "player_" + i + "_" + player.getName();
+            
+            java.util.List<Integer> currentScores = player.getScores();
+            java.util.List<Integer> previousScores = previousPlayerScores.get(playerKey);
+            
+            if (currentScores != null) {
+                if (previousScores == null) {
+                    // First time seeing this player - store scores but don't announce
+                    previousPlayerScores.put(playerKey, new java.util.ArrayList<>(currentScores));
+                } else {
+                    // Check for differences
+                    for (int round = 0; round < Math.min(currentScores.size(), previousScores.size()); round++) {
+                        Integer currentScore = currentScores.get(round);
+                        Integer previousScore = previousScores.get(round);
+                        
+                        // If score changed and is valid (not -1)
+                        if (currentScore != null && !currentScore.equals(previousScore) && currentScore != -1) {
+                            // Announce the new score with debounce
+                            final int playerIndex = i;
+                            final int scoreToAnnounce = currentScore;
+                            final int roundNumber = round + 1; // Convert to 1-based
+                            announceScoreWithDebounce(player.getName(), scoreToAnnounce, playerIndex, roundNumber);
+                        }
+                    }
+                    
+                    // Update stored scores
+                    previousPlayerScores.put(playerKey, new java.util.ArrayList<>(currentScores));
+                }
+            }
+        }
+    }
+    
+    /**
+     * Announce game completion results when all 10 rounds are finished
+     * @param gameData Game data with all scores
+     */
+    private void announceGameCompletion(com.example.rummypulse.data.GameData gameData) {
+        if (!ttsInitialized || textToSpeech == null || gameData == null || gameCompletionAnnounced) {
+            return;
+        }
+        
+        // Check if game is actually completed
+        if (!isGameCompleted(gameData)) {
+            return;
+        }
+        
+        System.out.println("TTS: Scheduling game completion announcement (delayed 5 seconds to allow score announcements to finish)");
+        gameCompletionAnnounced = true;
+        
+        // Delay the game completion announcement by 5 seconds to ensure all score announcements 
+        // (which have 4-second debounce) complete first
+        ttsHandler.postDelayed(() -> {
+            // Calculate standings
+            java.util.List<PlayerStanding> standings = calculateStandings(gameData);
+            
+            // Calculate total contribution
+            double totalContribution = calculateTotalContribution(gameData);
+            
+            // Sort by total score (ascending - lower is better)
+            standings.sort((a, b) -> Integer.compare(a.totalScore, b.totalScore));
+            
+            // Build announcement
+            StringBuilder announcement = new StringBuilder("Game over. Final results. ");
+            
+            // Announce each player's results
+            for (int i = 0; i < standings.size(); i++) {
+                PlayerStanding standing = standings.get(i);
+                String playerName = standing.player.getName();
+                int totalScore = standing.totalScore;
+                double netAmount = standing.netAmount;
+                
+                announcement.append(playerName).append(" total score ").append(totalScore).append(" point. ");
+                
+                if (netAmount > 0) {
+                    announcement.append("Will receive ").append(String.format("%.0f", netAmount)).append(" rupees. ");
+                } else if (netAmount < 0) {
+                    announcement.append("Will pay ").append(String.format("%.0f", Math.abs(netAmount))).append(" rupees. ");
+                } else {
+                    announcement.append("No payment. ");
+                }
+            }
+            
+            // Announce total contribution
+            if (totalContribution > 0) {
+                announcement.append("Total contribution collected is ")
+                           .append(String.format("%.0f", totalContribution))
+                           .append(" rupees.");
+            }
+            
+            // Speak the announcement
+            final String announcementText = announcement.toString();
+            System.out.println("TTS Game Completion: " + announcementText);
+            
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                textToSpeech.speak(announcementText, android.speech.tts.TextToSpeech.QUEUE_ADD, null, null);
+            } else {
+                textToSpeech.speak(announcementText, android.speech.tts.TextToSpeech.QUEUE_ADD, null);
+            }
+        }, 5000); // 5 second delay (4 seconds for score debounce + 1 second buffer)
+    }
+    
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -196,6 +403,19 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Remove any pending reconnect tasks
         reconnectHandler.removeCallbacksAndMessages(null);
+        
+        // Clean up Text-to-Speech
+        if (textToSpeech != null) {
+            textToSpeech.stop();
+            textToSpeech.shutdown();
+            textToSpeech = null;
+        }
+        
+        // Remove any pending TTS announcements
+        ttsHandler.removeCallbacksAndMessages(null);
+        
+        // Clear previous scores tracking
+        previousPlayerScores.clear();
     }
 
     @Override
@@ -961,6 +1181,9 @@ public class JoinGameActivity extends AppCompatActivity {
                                 
                                 // Save the updated game data to Firebase (with debouncing)
                                 saveGameDataWithDebounce(gameData);
+                                
+                                // Announce player name and score with 4-second debounce
+                                announceScoreWithDebounce(player.getName(), score, finalPlayerIndex, finalRound + 1);
                                 
                                 updateScoreColor(scoreInput);
                                 updateStandings(gameData);
@@ -2153,6 +2376,9 @@ public class JoinGameActivity extends AppCompatActivity {
                                         updateStandings(gameData);
                                         updateStandingsInfo(gameData);
                                         updateGameInfoHeader(gameData);
+                                        
+                                        // Check if game is completed and announce results (edit mode)
+                                        announceGameCompletion(gameData);
                                         // DO NOT call updatePlayersInfo or generatePlayerCards in edit mode
                                     } else {
                                         // VIEW MODE: Update everything including player cards
@@ -2161,6 +2387,12 @@ public class JoinGameActivity extends AppCompatActivity {
                                         updateStandingsInfo(gameData);
                                         updatePlayersInfo(gameData);
                                         updateGameInfoHeader(gameData);
+                                        
+                                        // Announce score changes in view mode
+                                        announceScoreChangesInViewMode(gameData);
+                                        
+                                        // Check if game is completed and announce results
+                                        announceGameCompletion(gameData);
                                     }
                                 } else {
                                     System.err.println("Real-time update received but players data is null or empty");
