@@ -1189,6 +1189,9 @@ public class JoinGameActivity extends AppCompatActivity {
                                 updateStandings(gameData);
                                 updateCurrentRound(gameData);
                                 updateRoundValidation(gameData);
+                                
+                                // Check if game is completed and announce results (edit mode)
+                                announceGameCompletion(gameData);
                             } else {
                                 // Field is empty - just update color, don't save to DB
                                 updateScoreColor(scoreInput);
