@@ -176,15 +176,34 @@
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
 
-                <TextView
-                    android:id="@+id/text_header_game_pin"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text=""
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/accent_blue"
-                    android:layout_marginTop="2dp" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="2dp">
+
+                    <TextView
+                        android:id="@+id/text_header_game_pin"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/accent_blue"
+                        android:layout_marginEnd="6dp" />
+
+                    <ImageView
+                        android:id="@+id/icon_toggle_pin"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_visibility"
+                        android:background="@drawable/icon_background"
+                        android:padding="3dp"
+                        android:clickable="true"
+                        android:focusable="true" />
+
+                </LinearLayout>
 
             </LinearLayout>
 

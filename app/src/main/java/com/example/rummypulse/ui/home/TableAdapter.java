@@ -71,11 +71,11 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 holder.gamePinText.setText(actualPin);
                 holder.gamePinText.setTextColor(holder.itemView.getContext().getColor(R.color.accent_orange));
                 
-                // Hide PIN after 30 seconds
+                // Hide PIN after 10 seconds
                 holder.gamePinText.postDelayed(() -> {
                     holder.gamePinText.setText("****");
                     holder.gamePinText.setTextColor(holder.itemView.getContext().getColor(R.color.accent_orange));
-                }, 30000);
+                }, 10000);
             });
 
             // Set up Game ID click to copy to clipboard

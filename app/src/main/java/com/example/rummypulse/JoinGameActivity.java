@@ -747,8 +747,29 @@ public class JoinGameActivity extends AppCompatActivity {
             binding.headerPinSection.setVisibility(View.VISIBLE);
             binding.headerPinDivider.setVisibility(View.VISIBLE);
             
-            // Display the PIN directly
-            binding.textHeaderGamePin.setText(currentGamePin);
+            // Display the PIN as masked initially
+            binding.textHeaderGamePin.setText("****");
+            binding.textHeaderGamePin.setTag(currentGamePin); // Store actual PIN in tag
+            
+            // Set up PIN visibility toggle
+            binding.iconTogglePin.setOnClickListener(v -> {
+                String currentText = binding.textHeaderGamePin.getText().toString();
+                if (currentText.equals("****")) {
+                    // Show the actual PIN
+                    binding.textHeaderGamePin.setText(currentGamePin);
+                    binding.iconTogglePin.setImageResource(R.drawable.ic_visibility_off);
+                    
+                    // Auto-hide PIN after 10 seconds
+                    binding.textHeaderGamePin.postDelayed(() -> {
+                        binding.textHeaderGamePin.setText("****");
+                        binding.iconTogglePin.setImageResource(R.drawable.ic_visibility);
+                    }, 10000);
+                } else {
+                    // Hide the PIN
+                    binding.textHeaderGamePin.setText("****");
+                    binding.iconTogglePin.setImageResource(R.drawable.ic_visibility);
+                }
+            });
         } else {
             // Hide PIN section in view mode
             binding.headerPinSection.setVisibility(View.GONE);
