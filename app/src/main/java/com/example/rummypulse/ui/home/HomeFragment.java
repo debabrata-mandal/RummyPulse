@@ -116,8 +116,8 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             return;
         }
         
-        // Show confirmation dialog
-        new androidx.appcompat.app.AlertDialog.Builder(getContext())
+        // Show confirmation dialog with custom theme
+        new androidx.appcompat.app.AlertDialog.Builder(getContext(), com.example.rummypulse.R.style.DarkDialogTheme)
                 .setTitle("Approve Game")
                 .setMessage("Are you sure you want to approve this completed game? This will finalize the game and move it to the approved games list.")
                 .setPositiveButton("Approve", (dialog, which) -> {
@@ -134,8 +134,8 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
     @Override
     public void onDeleteGame(GameItem game, int position) {
-        // Show confirmation dialog
-        new androidx.appcompat.app.AlertDialog.Builder(getContext())
+        // Show confirmation dialog with custom theme
+        new androidx.appcompat.app.AlertDialog.Builder(getContext(), com.example.rummypulse.R.style.DarkDialogTheme)
                 .setTitle("Delete Game")
                 .setMessage("Are you sure you want to delete this game? This action cannot be undone.")
                 .setPositiveButton("Delete", (dialog, which) -> {
