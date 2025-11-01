@@ -1527,6 +1527,11 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.standingsHeader.setOnClickListener(v -> {
             toggleSection(binding.standingsContent, binding.standingsCollapseIcon);
         });
+        
+        // Setup Settlement section collapsible
+        binding.settlementHeader.setOnClickListener(v -> {
+            toggleSection(binding.settlementContent, binding.settlementToggleIcon);
+        });
     }
     
     private void toggleSection(View contentView, ImageView arrowIcon) {

@@ -707,7 +707,7 @@
 
             </androidx.cardview.widget.CardView>
 
-            <!-- Settlement Rules Content (Always Visible) -->
+            <!-- Settlement Rules Content (Collapsible) -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -719,17 +719,47 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <!-- Collapsible Header -->
+                    <LinearLayout
+                        android:id="@+id/settlement_header"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="💡 How Settlement Works:"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="12dp" />
+                        android:orientation="horizontal"
+                        android:padding="16dp"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="💡 How Settlement Works"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <ImageView
+                            android:id="@+id/settlement_toggle_icon"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_expand_more"
+                            android:tint="@color/text_secondary" />
+
+                    </LinearLayout>
+
+                    <!-- Collapsible Content -->
+                    <LinearLayout
+                        android:id="@+id/settlement_content"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:paddingTop="0dp"
+                        android:visibility="gone">
 
                     <!-- Winners Rule -->
                     <LinearLayout
@@ -894,6 +924,8 @@
                             android:textColor="@color/accent_blue"
                             android:textSize="13sp"
                             android:textStyle="bold" />
+
+                    </LinearLayout>
 
                     </LinearLayout>
 
