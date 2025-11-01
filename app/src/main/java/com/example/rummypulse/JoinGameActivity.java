@@ -814,8 +814,12 @@ public class JoinGameActivity extends AppCompatActivity {
             
             // Add text change listener for player name
             playerName.addTextChangedListener(new android.text.TextWatcher() {
+                private String previousName = player.getName();
+                
                 @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    previousName = s.toString();
+                }
 
                 @Override
                 public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -831,6 +835,7 @@ public class JoinGameActivity extends AppCompatActivity {
                         // Update standings table to reflect name change
                         generateStandingsTable(gameData);
                     }
+                    // Note: If name is empty, we don't update - user can still type
                 }
             });
 
@@ -845,6 +850,18 @@ public class JoinGameActivity extends AppCompatActivity {
                     return true;
                 }
                 return false;
+            });
+            
+            // Handle focus change to restore name if left empty
+            playerName.setOnFocusChangeListener((v, hasFocus) -> {
+                if (!hasFocus) {
+                    // When focus is lost, if field is empty, restore the player's name
+                    String currentText = playerName.getText().toString().trim();
+                    if (currentText.isEmpty()) {
+                        // Restore the saved name from player object
+                        playerName.setText(player.getName());
+                    }
+                }
             });
 
             // Set player ID if available (for games with more than 2 players)
