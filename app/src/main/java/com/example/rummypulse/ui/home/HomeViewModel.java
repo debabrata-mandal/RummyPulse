@@ -131,6 +131,7 @@ public class HomeViewModel extends ViewModel {
 
     public void refreshGames() {
         gameRepository.loadAllGames();
+        gameRepository.loadApprovedGames();
     }
 
     public void deleteGame(String gameId) {

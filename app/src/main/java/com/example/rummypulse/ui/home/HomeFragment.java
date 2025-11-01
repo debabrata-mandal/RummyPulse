@@ -68,19 +68,10 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             binding.textInProgressGames.setText(String.valueOf(inProgressGames));
         });
 
-        // Setup swipe refresh
-        binding.swipeRefresh.setOnRefreshListener(() -> {
-            refreshGames();
-        });
-        
-        // Set swipe refresh colors
-        binding.swipeRefresh.setColorSchemeResources(
-                com.example.rummypulse.R.color.accent_blue,
-                com.example.rummypulse.R.color.accent_blue_dark,
-                com.example.rummypulse.R.color.accent_blue_light
-        );
+        // Disable swipe refresh (only manual button refresh)
+        binding.swipeRefresh.setEnabled(false);
 
-        // Setup floating action button for refresh
+        // Setup floating action button for manual refresh
         binding.btnRefresh.setOnClickListener(v -> refreshGames());
 
         // Observe errors
@@ -88,12 +79,6 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             if (error != null && !error.isEmpty()) {
                 com.example.rummypulse.utils.ModernToast.error(getContext(), error);
             }
-        });
-
-        // Setup refresh button
-        binding.btnRefresh.setOnClickListener(v -> {
-            com.example.rummypulse.utils.ModernToast.progress(getContext(), "Refreshing data...");
-            homeViewModel.refreshGames();
         });
     }
 
@@ -168,10 +153,9 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         com.example.rummypulse.utils.ModernToast.progress(getContext(), "Refreshing games...");
         homeViewModel.refreshGames();
         
-        // Stop the refresh animation after a short delay
-        binding.swipeRefresh.postDelayed(() -> {
-            binding.swipeRefresh.setRefreshing(false);
+        // Show success message after refresh (data will update via LiveData observers)
+        binding.btnRefresh.postDelayed(() -> {
             com.example.rummypulse.utils.ModernToast.success(getContext(), "Games refreshed successfully!");
-        }, 2000);
+        }, 1500);
     }
 }

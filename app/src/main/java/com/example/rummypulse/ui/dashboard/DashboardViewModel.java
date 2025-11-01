@@ -177,7 +177,7 @@ public class DashboardViewModel extends ViewModel {
     }
 
     public void loadGames() {
-        gameRepository.loadAllGames();
+        gameRepository.loadAllGamesWithRealtimeListener();
     }
 
     public void joinGame(GameItem game) {
