@@ -56,6 +56,28 @@ public class JoinGameActivity extends AppCompatActivity {
     // Track previous scores for view mode announcements
     private java.util.Map<String, java.util.List<Integer>> previousPlayerScores = new java.util.HashMap<>();
     private boolean gameCompletionAnnounced = false;
+    
+    // Anti-spam: Track last announced values per player-round to prevent duplicate announcements
+    private java.util.Map<String, Integer> lastAnnouncedScores = new java.util.HashMap<>();
+    
+    // Announcement queue management
+    private java.util.Queue<Runnable> announcementQueue = new java.util.LinkedList<>();
+    private boolean isAnnouncementInProgress = false;
+    private static final long ANNOUNCEMENT_GAP_MS = 1000; // 1 second gap between announcements
+    
+    // Timing constants
+    private static final long EDIT_MODE_DEBOUNCE_MS = 4000; // 4 seconds for edit mode
+    private static final long VIEW_MODE_DEBOUNCE_MS = 2000; // 2 seconds for view mode
+    private static final long BULK_UPDATE_DEBOUNCE_MS = 6000; // 6 seconds for bulk updates
+    private static final long GAME_COMPLETION_BUFFER_MS = 2000; // 2 seconds buffer after pending announcements
+    private static final long MAX_GAME_COMPLETION_DELAY_MS = 10000; // Maximum 10 seconds delay
+    
+    // Bulk update detection
+    private long lastScoreChangeTime = 0;
+    private int scoreChangesInWindow = 0;
+    
+    // Utterance ID counter for TTS tracking
+    private int utteranceIdCounter = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -194,6 +216,37 @@ public class JoinGameActivity extends AppCompatActivity {
                 if (result != android.speech.tts.TextToSpeech.LANG_MISSING_DATA && 
                     result != android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED) {
                     ttsInitialized = true;
+                    
+                    // Set up utterance progress listener to know when speech completes
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
+                        textToSpeech.setOnUtteranceProgressListener(new android.speech.tts.UtteranceProgressListener() {
+                            @Override
+                            public void onStart(String utteranceId) {
+                                System.out.println("TTS: Started speaking utterance: " + utteranceId);
+                            }
+                            
+                            @Override
+                            public void onDone(String utteranceId) {
+                                System.out.println("TTS: Finished speaking utterance: " + utteranceId);
+                                // Process next announcement after this one completes
+                                ttsHandler.postDelayed(() -> {
+                                    isAnnouncementInProgress = false;
+                                    processAnnouncementQueue();
+                                }, ANNOUNCEMENT_GAP_MS);
+                            }
+                            
+                            @Override
+                            public void onError(String utteranceId) {
+                                System.err.println("TTS: Error speaking utterance: " + utteranceId);
+                                // Still process next announcement on error
+                                ttsHandler.postDelayed(() -> {
+                                    isAnnouncementInProgress = false;
+                                    processAnnouncementQueue();
+                                }, ANNOUNCEMENT_GAP_MS);
+                            }
+                        });
+                    }
+                    
                     System.out.println("TTS initialized successfully");
                 } else {
                     System.out.println("TTS language not supported");
@@ -205,14 +258,23 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     /**
-     * Announce player name and score with 4-second debounce
+     * Announce player name and score with context-aware debounce and anti-spam
      * @param playerName Name of the player
      * @param score Score entered
      * @param playerIndex Index of the player (for unique key)
      * @param round Round number (1-based)
+     * @param isEditMode True if in edit mode, false if in view mode
      */
-    private void announceScoreWithDebounce(String playerName, int score, int playerIndex, int round) {
+    private void announceScoreWithDebounce(String playerName, int score, int playerIndex, int round, boolean isEditMode) {
         if (!ttsInitialized || textToSpeech == null) {
+            return;
+        }
+        
+        // Anti-spam: Check if this exact score was already announced for this player-round
+        String scoreKey = "player_" + playerIndex + "_round_" + round;
+        Integer lastAnnouncedScore = lastAnnouncedScores.get(scoreKey);
+        if (lastAnnouncedScore != null && lastAnnouncedScore == score) {
+            System.out.println("TTS: Skipping duplicate announcement for " + playerName + " round " + round + " score " + score);
             return;
         }
         
@@ -225,19 +287,53 @@ public class JoinGameActivity extends AppCompatActivity {
             ttsHandler.removeCallbacks(existingRunnable);
         }
         
+        // Detect bulk updates: multiple score changes within 1 second
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastScoreChangeTime < 1000) {
+            scoreChangesInWindow++;
+        } else {
+            scoreChangesInWindow = 1;
+        }
+        lastScoreChangeTime = currentTime;
+        
+        // Determine debounce delay based on context
+        long debounceDelay;
+        if (scoreChangesInWindow > 2) {
+            // Bulk update detected: use longer delay
+            debounceDelay = BULK_UPDATE_DEBOUNCE_MS;
+            System.out.println("TTS: Bulk update detected, using " + debounceDelay + "ms delay");
+        } else if (isEditMode) {
+            // Edit mode: user is actively typing
+            debounceDelay = EDIT_MODE_DEBOUNCE_MS;
+        } else {
+            // View mode: Firebase update, faster response
+            debounceDelay = VIEW_MODE_DEBOUNCE_MS;
+        }
+        
         // Create new announcement runnable
         Runnable announcementRunnable = () -> {
             announceScore(playerName, score, round);
             announcementRunnables.remove(key);
+            // Update last announced score for anti-spam
+            lastAnnouncedScores.put(scoreKey, score);
         };
         
-        // Store and schedule the announcement for 4 seconds later
+        // Store and schedule the announcement
         announcementRunnables.put(key, announcementRunnable);
-        ttsHandler.postDelayed(announcementRunnable, 4000);
+        ttsHandler.postDelayed(announcementRunnable, debounceDelay);
+        
+        System.out.println("TTS: Scheduled announcement for " + playerName + " round " + round + " with " + debounceDelay + "ms delay");
     }
     
     /**
-     * Announce player name and score using TTS
+     * Overloaded method for backward compatibility (defaults to edit mode)
+     */
+    private void announceScoreWithDebounce(String playerName, int score, int playerIndex, int round) {
+        announceScoreWithDebounce(playerName, score, playerIndex, round, true);
+    }
+    
+    /**
+     * Announce player name and score using TTS with queue management
      * @param playerName Name of the player
      * @param score Score to announce
      * @param round Round number (1-based)
@@ -255,14 +351,60 @@ public class JoinGameActivity extends AppCompatActivity {
         // Create announcement text: "Player X score xxx point in round X"
         String announcement = playerName + " score " + score + " point in round " + round;
         
-        // Speak the announcement
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            textToSpeech.speak(announcement, android.speech.tts.TextToSpeech.QUEUE_ADD, null, null);
-        } else {
-            textToSpeech.speak(announcement, android.speech.tts.TextToSpeech.QUEUE_ADD, null);
+        // Add to queue instead of speaking directly
+        queueAnnouncement(() -> {
+            String utteranceId = "score_" + (utteranceIdCounter++);
+            
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                android.os.Bundle params = new android.os.Bundle();
+                textToSpeech.speak(announcement, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params, utteranceId);
+            } else {
+                java.util.HashMap<String, String> params = new java.util.HashMap<>();
+                params.put(android.speech.tts.TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId);
+                textToSpeech.speak(announcement, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params);
+            }
+            System.out.println("TTS Speaking: " + announcement);
+        });
+    }
+    
+    /**
+     * Queue an announcement with minimum gap between announcements
+     * @param announcementRunnable The runnable that performs the TTS speak
+     */
+    private void queueAnnouncement(Runnable announcementRunnable) {
+        announcementQueue.offer(announcementRunnable);
+        processAnnouncementQueue();
+    }
+    
+    /**
+     * Process the announcement queue with gaps between announcements
+     * The UtteranceProgressListener will trigger processing of the next announcement
+     * when the current one completes
+     */
+    private void processAnnouncementQueue() {
+        if (isAnnouncementInProgress || announcementQueue.isEmpty()) {
+            return;
         }
         
-        System.out.println("TTS Announcement: " + announcement);
+        isAnnouncementInProgress = true;
+        Runnable nextAnnouncement = announcementQueue.poll();
+        
+        if (nextAnnouncement != null) {
+            // Execute the announcement (which will call textToSpeech.speak with utterance ID)
+            // The UtteranceProgressListener.onDone will be called when speech completes,
+            // which will then call processAnnouncementQueue again for the next announcement
+            nextAnnouncement.run();
+        } else {
+            isAnnouncementInProgress = false;
+        }
+    }
+    
+    /**
+     * Clear all pending announcements (used when TTS is disabled or activity destroyed)
+     */
+    private void clearAnnouncementQueue() {
+        announcementQueue.clear();
+        isAnnouncementInProgress = false;
     }
     
     /**
@@ -294,11 +436,11 @@ public class JoinGameActivity extends AppCompatActivity {
                         
                         // If score changed and is valid (not -1)
                         if (currentScore != null && !currentScore.equals(previousScore) && currentScore != -1) {
-                            // Announce the new score with debounce
+                            // Announce the new score with VIEW MODE debounce (2 seconds - faster)
                             final int playerIndex = i;
                             final int scoreToAnnounce = currentScore;
                             final int roundNumber = round + 1; // Convert to 1-based
-                            announceScoreWithDebounce(player.getName(), scoreToAnnounce, playerIndex, roundNumber);
+                            announceScoreWithDebounce(player.getName(), scoreToAnnounce, playerIndex, roundNumber, false);
                         }
                     }
                     
@@ -323,11 +465,14 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         
-        System.out.println("TTS: Scheduling game completion announcement (delayed 5 seconds to allow score announcements to finish)");
         gameCompletionAnnounced = true;
         
-        // Delay the game completion announcement by 5 seconds to ensure all score announcements 
-        // (which have 4-second debounce) complete first
+        // Calculate dynamic delay based on pending announcements
+        long calculatedDelay = calculateGameCompletionDelay();
+        
+        System.out.println("TTS: Scheduling game completion announcement with dynamic delay of " + calculatedDelay + "ms");
+        
+        // Delay the game completion announcement to ensure all score announcements complete first
         ttsHandler.postDelayed(() -> {
             // Calculate standings
             java.util.List<PlayerStanding> standings = calculateStandings(gameData);
@@ -366,16 +511,51 @@ public class JoinGameActivity extends AppCompatActivity {
                            .append(" rupees.");
             }
             
-            // Speak the announcement
+            // Queue the announcement (don't speak directly)
             final String announcementText = announcement.toString();
             System.out.println("TTS Game Completion: " + announcementText);
             
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                textToSpeech.speak(announcementText, android.speech.tts.TextToSpeech.QUEUE_ADD, null, null);
-            } else {
-                textToSpeech.speak(announcementText, android.speech.tts.TextToSpeech.QUEUE_ADD, null);
-            }
-        }, 5000); // 5 second delay (4 seconds for score debounce + 1 second buffer)
+            queueAnnouncement(() -> {
+                String utteranceId = "game_completion_" + (utteranceIdCounter++);
+                
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                    android.os.Bundle params = new android.os.Bundle();
+                    textToSpeech.speak(announcementText, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params, utteranceId);
+                } else {
+                    java.util.HashMap<String, String> params = new java.util.HashMap<>();
+                    params.put(android.speech.tts.TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId);
+                    textToSpeech.speak(announcementText, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params);
+                }
+            });
+        }, calculatedDelay);
+    }
+    
+    /**
+     * Calculate dynamic delay for game completion announcement
+     * Checks pending score announcements and adds buffer
+     * @return Delay in milliseconds (capped at MAX_GAME_COMPLETION_DELAY_MS)
+     */
+    private long calculateGameCompletionDelay() {
+        // Count pending score announcements
+        int pendingAnnouncements = announcementRunnables.size();
+        
+        if (pendingAnnouncements == 0) {
+            // No pending announcements, use minimum buffer
+            return GAME_COMPLETION_BUFFER_MS;
+        }
+        
+        // Calculate delay: longest debounce time + buffer
+        // We use the maximum possible debounce (BULK_UPDATE or EDIT_MODE) + buffer
+        long maxDebounceTime = Math.max(EDIT_MODE_DEBOUNCE_MS, BULK_UPDATE_DEBOUNCE_MS);
+        long calculatedDelay = maxDebounceTime + GAME_COMPLETION_BUFFER_MS;
+        
+        // Cap at maximum delay
+        long finalDelay = Math.min(calculatedDelay, MAX_GAME_COMPLETION_DELAY_MS);
+        
+        System.out.println("TTS: Pending announcements: " + pendingAnnouncements + 
+                          ", calculated delay: " + calculatedDelay + "ms, final delay: " + finalDelay + "ms");
+        
+        return finalDelay;
     }
     
     @Override
@@ -411,11 +591,16 @@ public class JoinGameActivity extends AppCompatActivity {
             textToSpeech = null;
         }
         
+        // Clear announcement queue
+        clearAnnouncementQueue();
+        
         // Remove any pending TTS announcements
         ttsHandler.removeCallbacksAndMessages(null);
         
-        // Clear previous scores tracking
+        // Clear tracking maps
         previousPlayerScores.clear();
+        lastAnnouncedScores.clear();
+        announcementRunnables.clear();
     }
 
     @Override
