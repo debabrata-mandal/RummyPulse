@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/dialog_background"
+    android:padding="24dp">
+
+    <!-- Close Button - Outside, Top Right -->
+    <ImageButton
+        android:id="@+id/btn_close"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="-8dp"
+        android:layout_marginEnd="-8dp"
+        android:background="@drawable/dialog_background"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:tint="#F44336"
+        android:padding="6dp"
+        android:contentDescription="Close"
+        android:elevation="4dp" />
+
+    <!-- Content Container -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Header Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/professional_row_background"
+            android:padding="20dp"
+            android:layout_marginBottom="20dp"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/ic_voice"
+                android:tint="@color/accent_blue"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔊 Announcements"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/text_current_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Currently: Bengali | Enabled"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:gravity="center" />
+
+        </LinearLayout>
+
+        <!-- Language Options Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/professional_row_background"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Select Language"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Bengali Button -->
+            <Button
+                android:id="@+id/btn_bengali"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="বাংলা (Bengali)"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:background="@drawable/approve_button_background"
+                android:backgroundTint="@color/accent_blue"
+                android:gravity="center"
+                android:layout_marginBottom="12dp" />
+
+            <!-- English Button -->
+            <Button
+                android:id="@+id/btn_english"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="English"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:background="@drawable/approve_button_background"
+                android:backgroundTint="@color/accent_blue"
+                android:gravity="center" />
+
+        </LinearLayout>
+
+        <!-- Mute/Unmute Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/example_background"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Volume Control"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Mute/Unmute Button -->
+            <Button
+                android:id="@+id/btn_mute_toggle"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="🔇 Mute Voice"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:background="@drawable/approve_button_background"
+                android:backgroundTint="#FF6B6B"
+                android:gravity="center" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</RelativeLayout>

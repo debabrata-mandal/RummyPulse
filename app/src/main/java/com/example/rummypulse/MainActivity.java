@@ -11,10 +11,12 @@ import android.widget.TextView;
 import android.widget.ImageView;
 
 import java.util.List;
+import java.util.Locale;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.RequestOptions;
+import com.example.rummypulse.utils.LanguagePreferenceManager;
 import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -112,6 +114,10 @@ public class MainActivity extends AppCompatActivity {
         navigationView.setNavigationItemSelectedListener(item -> {
             if (item.getItemId() == R.id.nav_sign_out) {
                 signOut();
+                return true;
+            } else if (item.getItemId() == R.id.nav_voice_settings) {
+                showVoiceSettingsDialog();
+                drawer.closeDrawers();
                 return true;
             } else if (item.getItemId() == R.id.nav_app_info) {
                 showAppInfoDialog();
@@ -249,86 +255,6 @@ public class MainActivity extends AppCompatActivity {
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
                 || super.onSupportNavigateUp();
     }
-    
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-    
-    @Override
-    public boolean onPrepareOptionsMenu(Menu menu) {
-        // Update mute option text to show current state
-        android.view.MenuItem muteItem = menu.findItem(R.id.action_language_mute);
-        if (muteItem != null) {
-            boolean isMuted = com.example.rummypulse.utils.LanguagePreferenceManager.isMuted(this);
-            if (isMuted) {
-                muteItem.setTitle("🔊 Unmute Voice");
-            } else {
-                muteItem.setTitle("🔇 Mute Voice");
-            }
-        }
-        return super.onPrepareOptionsMenu(menu);
-    }
-    
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.action_language_bengali) {
-            switchLanguage(new java.util.Locale("bn", "IN"));
-            return true;
-        } else if (item.getItemId() == R.id.action_language_english) {
-            switchLanguage(java.util.Locale.US);
-            return true;
-        } else if (item.getItemId() == R.id.action_language_mute) {
-            toggleMuteVoice();
-            return true;
-        } else if (item.getItemId() == R.id.action_sign_out) {
-            signOut();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-    
-    /**
-     * Switch TTS language globally
-     */
-    private void switchLanguage(java.util.Locale locale) {
-        // Save the preference (also unmutes)
-        com.example.rummypulse.utils.LanguagePreferenceManager.saveLanguagePreference(this, locale);
-        
-        // Show confirmation
-        String languageName = locale.getDisplayLanguage();
-        com.example.rummypulse.utils.ModernToast.success(this, 
-            "🔊 Voice announcements: " + languageName);
-        
-        // Refresh menu to update the mute option text
-        invalidateOptionsMenu();
-    }
-    
-    /**
-     * Toggle mute/unmute voice announcements globally
-     */
-    private void toggleMuteVoice() {
-        boolean currentlyMuted = com.example.rummypulse.utils.LanguagePreferenceManager.isMuted(this);
-        boolean newMutedState = !currentlyMuted;
-        
-        // Toggle muted state
-        com.example.rummypulse.utils.LanguagePreferenceManager.setMuted(this, newMutedState);
-        
-        // Show confirmation with current language info
-        if (newMutedState) {
-            com.example.rummypulse.utils.ModernToast.success(this, 
-                "🔇 Voice announcements muted");
-        } else {
-            java.util.Locale currentLocale = com.example.rummypulse.utils.LanguagePreferenceManager.loadLanguagePreference(this);
-            String languageName = currentLocale.getDisplayLanguage();
-            com.example.rummypulse.utils.ModernToast.success(this, 
-                "🔊 Voice announcements enabled (" + languageName + ")");
-        }
-        
-        // Refresh menu to update the mute option text
-        invalidateOptionsMenu();
-    }
 
     private void updateNavigationHeader(NavigationView navigationView, FirebaseUser user) {
         android.view.View headerView = navigationView.getHeaderView(0);
@@ -459,6 +385,89 @@ public class MainActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    /**
+     * Show voice settings dialog with language and mute options
+     */
+    private void showVoiceSettingsDialog() {
+        boolean isMuted = LanguagePreferenceManager.isMuted(this);
+        String currentLanguage = LanguagePreferenceManager.loadLanguagePreference(this).getLanguage();
+        
+        // Create custom dialog
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        dialog.setContentView(R.layout.dialog_announcements);
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        dialog.setCancelable(true);
+        
+        // Get views
+        android.widget.TextView textCurrentStatus = dialog.findViewById(R.id.text_current_status);
+        android.widget.ImageButton btnClose = dialog.findViewById(R.id.btn_close);
+        android.widget.Button btnBengali = dialog.findViewById(R.id.btn_bengali);
+        android.widget.Button btnEnglish = dialog.findViewById(R.id.btn_english);
+        android.widget.Button btnMuteToggle = dialog.findViewById(R.id.btn_mute_toggle);
+        
+        // Update current status
+        String languageText = currentLanguage.equals("bn") ? "Bengali" : "English";
+        String muteText = isMuted ? "Muted" : "Enabled";
+        textCurrentStatus.setText("Currently: " + languageText + " | " + muteText);
+        
+        // Highlight selected language
+        if (currentLanguage.equals("bn")) {
+            btnBengali.setText("✓ বাংলা (Bengali)");
+            btnBengali.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // Green
+        } else {
+            btnEnglish.setText("✓ English");
+            btnEnglish.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // Green
+        }
+        
+        // Update mute button text
+        if (isMuted) {
+            btnMuteToggle.setText("🔊 Unmute Voice");
+            btnMuteToggle.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // Green
+        } else {
+            btnMuteToggle.setText("🔇 Mute Voice");
+            btnMuteToggle.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFFF6B6B)); // Red
+        }
+        
+        // Set button listeners
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+        
+        btnBengali.setOnClickListener(v -> {
+            switchLanguage(new Locale("bn", "IN"));
+            dialog.dismiss();
+        });
+        
+        btnEnglish.setOnClickListener(v -> {
+            switchLanguage(Locale.US);
+            dialog.dismiss();
+        });
+        
+        btnMuteToggle.setOnClickListener(v -> {
+            toggleMuteVoice();
+            dialog.dismiss();
+        });
+        
+        dialog.show();
+    }
+
+    /**
+     * Switch TTS language globally
+     */
+    private void switchLanguage(Locale locale) {
+        // Save the preference (also unmutes)
+        LanguagePreferenceManager.saveLanguagePreference(this, locale);
+    }
+    
+    /**
+     * Toggle mute/unmute voice announcements globally
+     */
+    private void toggleMuteVoice() {
+        boolean currentlyMuted = LanguagePreferenceManager.isMuted(this);
+        boolean newMutedState = !currentlyMuted;
+        
+        // Toggle muted state
+        LanguagePreferenceManager.setMuted(this, newMutedState);
     }
 
     /**

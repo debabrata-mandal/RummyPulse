@@ -23,6 +23,11 @@
     </group>
 
     <item
+        android:id="@+id/nav_voice_settings"
+        android:icon="@drawable/ic_voice"
+        android:title="Announcements" />
+    
+    <item
         android:id="@+id/nav_app_info"
         android:icon="@drawable/ic_info"
         android:title="App Info" />
