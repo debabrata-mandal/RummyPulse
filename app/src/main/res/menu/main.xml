@@ -1,6 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    
+    <item
+        android:id="@+id/action_voice_settings"
+        android:title="Voice Announcements"
+        android:icon="@drawable/ic_voice"
+        app:showAsAction="never">
+        <menu>
+            <item
+                android:id="@+id/action_language_bengali"
+                android:title="বাংলা (Bengali)" />
+            <item
+                android:id="@+id/action_language_english"
+                android:title="English" />
+            <item
+                android:id="@+id/action_language_mute"
+                android:title="🔇 Mute Voice" />
+        </menu>
+    </item>
+    
     <item
         android:id="@+id/action_sign_out"
         android:title="Sign Out"

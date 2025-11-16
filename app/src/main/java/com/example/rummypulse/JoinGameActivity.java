@@ -52,6 +52,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private boolean ttsInitialized = false;
     private android.os.Handler ttsHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private java.util.Map<String, Runnable> announcementRunnables = new java.util.HashMap<>();
+    private java.util.Locale currentTtsLocale; // Will be loaded from preferences
     
     // Track previous scores for view mode announcements
     private java.util.Map<String, java.util.List<Integer>> previousPlayerScores = new java.util.HashMap<>();
@@ -104,6 +105,9 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Setup network monitoring
         setupNetworkMonitoring();
+        
+        // Load saved language preference
+        currentTtsLocale = loadLanguagePreference();
         
         // Initialize Text-to-Speech
         initializeTextToSpeech();
@@ -207,15 +211,27 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     /**
-     * Initialize Text-to-Speech engine
+     * Initialize Text-to-Speech engine with Bengali language support
      */
     private void initializeTextToSpeech() {
         textToSpeech = new android.speech.tts.TextToSpeech(this, status -> {
             if (status == android.speech.tts.TextToSpeech.SUCCESS) {
-                int result = textToSpeech.setLanguage(java.util.Locale.US);
+                // Try Bengali first, fall back to English if not available
+                int result = textToSpeech.setLanguage(currentTtsLocale);
+                
+                if (result == android.speech.tts.TextToSpeech.LANG_MISSING_DATA || 
+                    result == android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED) {
+                    // Bengali not available, fall back to English
+                    System.out.println("Bengali TTS not available, falling back to English");
+                    currentTtsLocale = java.util.Locale.US;
+                    result = textToSpeech.setLanguage(currentTtsLocale);
+                }
+                
                 if (result != android.speech.tts.TextToSpeech.LANG_MISSING_DATA && 
                     result != android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED) {
                     ttsInitialized = true;
+                    System.out.println("TTS initialized successfully with locale: " + currentTtsLocale.getDisplayLanguage());
+                    System.out.println("TTS initialized successfully with locale: " + currentTtsLocale.getDisplayLanguage());
                     
                     // Set up utterance progress listener to know when speech completes
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
@@ -246,8 +262,6 @@ public class JoinGameActivity extends AppCompatActivity {
                             }
                         });
                     }
-                    
-                    System.out.println("TTS initialized successfully");
                 } else {
                     System.out.println("TTS language not supported");
                 }
@@ -266,6 +280,11 @@ public class JoinGameActivity extends AppCompatActivity {
      * @param isEditMode True if in edit mode, false if in view mode
      */
     private void announceScoreWithDebounce(String playerName, int score, int playerIndex, int round, boolean isEditMode) {
+        // Check if muted
+        if (com.example.rummypulse.utils.LanguagePreferenceManager.isMuted(this)) {
+            return;
+        }
+        
         if (!ttsInitialized || textToSpeech == null) {
             return;
         }
@@ -334,6 +353,7 @@ public class JoinGameActivity extends AppCompatActivity {
     
     /**
      * Announce player name and score using TTS with queue management
+     * Supports Bengali and English announcements
      * @param playerName Name of the player
      * @param score Score to announce
      * @param round Round number (1-based)
@@ -348,8 +368,15 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         
-        // Create announcement text: "Player X score xxx point in round X"
-        String announcement = playerName + " score " + score + " point in round " + round;
+        // Create announcement text based on current locale
+        String announcement;
+        if (currentTtsLocale.getLanguage().equals("bn")) {
+            // Bengali announcement: "খেলোয়াড় X রাউন্ড X এ xxx পয়েন্ট স্কোর করেছে"
+            announcement = playerName + " রাউন্ড " + round + " এ " + score + " পয়েন্ট স্কোর করেছে";
+        } else {
+            // English announcement: "Player X score xxx point in round X"
+            announcement = playerName + " score " + score + " point in round " + round;
+        }
         
         // Add to queue instead of speaking directly
         queueAnnouncement(() -> {
@@ -456,6 +483,11 @@ public class JoinGameActivity extends AppCompatActivity {
      * @param gameData Game data with all scores
      */
     private void announceGameCompletion(com.example.rummypulse.data.GameData gameData) {
+        // Check if muted
+        if (com.example.rummypulse.utils.LanguagePreferenceManager.isMuted(this)) {
+            return;
+        }
+        
         if (!ttsInitialized || textToSpeech == null || gameData == null || gameCompletionAnnounced) {
             return;
         }
@@ -483,32 +515,65 @@ public class JoinGameActivity extends AppCompatActivity {
             // Sort by total score (ascending - lower is better)
             standings.sort((a, b) -> Integer.compare(a.totalScore, b.totalScore));
             
-            // Build announcement
-            StringBuilder announcement = new StringBuilder("Game over. Final results. ");
+            // Build announcement based on current locale
+            StringBuilder announcement = new StringBuilder();
             
-            // Announce each player's results
-            for (int i = 0; i < standings.size(); i++) {
-                PlayerStanding standing = standings.get(i);
-                String playerName = standing.player.getName();
-                int totalScore = standing.totalScore;
-                double netAmount = standing.netAmount;
+            if (currentTtsLocale.getLanguage().equals("bn")) {
+                // Bengali announcement
+                announcement.append("খেলা শেষ। চূড়ান্ত ফলাফল। ");
                 
-                announcement.append(playerName).append(" total score ").append(totalScore).append(" point. ");
-                
-                if (netAmount > 0) {
-                    announcement.append("Will receive ").append(String.format("%.0f", netAmount)).append(" rupees. ");
-                } else if (netAmount < 0) {
-                    announcement.append("Will pay ").append(String.format("%.0f", Math.abs(netAmount))).append(" rupees. ");
-                } else {
-                    announcement.append("No payment. ");
+                // Announce each player's results
+                for (int i = 0; i < standings.size(); i++) {
+                    PlayerStanding standing = standings.get(i);
+                    String playerName = standing.player.getName();
+                    int totalScore = standing.totalScore;
+                    double netAmount = standing.netAmount;
+                    
+                    announcement.append(playerName).append(" মোট স্কোর ").append(totalScore).append(" পয়েন্ট। ");
+                    
+                    if (netAmount > 0) {
+                        announcement.append("পাবেন ").append(String.format("%.0f", netAmount)).append(" টাকা। ");
+                    } else if (netAmount < 0) {
+                        announcement.append("দিতে হবে ").append(String.format("%.0f", Math.abs(netAmount))).append(" টাকা। ");
+                    } else {
+                        announcement.append("কোন পেমেন্ট নেই। ");
+                    }
                 }
-            }
-            
-            // Announce total contribution
-            if (totalContribution > 0) {
-                announcement.append("Total contribution collected is ")
-                           .append(String.format("%.0f", totalContribution))
-                           .append(" rupees.");
+                
+                // Announce total contribution
+                if (totalContribution > 0) {
+                    announcement.append("মোট অবদান সংগৃহীত ")
+                               .append(String.format("%.0f", totalContribution))
+                               .append(" টাকা।");
+                }
+            } else {
+                // English announcement
+                announcement.append("Game over. Final results. ");
+                
+                // Announce each player's results
+                for (int i = 0; i < standings.size(); i++) {
+                    PlayerStanding standing = standings.get(i);
+                    String playerName = standing.player.getName();
+                    int totalScore = standing.totalScore;
+                    double netAmount = standing.netAmount;
+                    
+                    announcement.append(playerName).append(" total score ").append(totalScore).append(" point. ");
+                    
+                    if (netAmount > 0) {
+                        announcement.append("Will receive ").append(String.format("%.0f", netAmount)).append(" rupees. ");
+                    } else if (netAmount < 0) {
+                        announcement.append("Will pay ").append(String.format("%.0f", Math.abs(netAmount))).append(" rupees. ");
+                    } else {
+                        announcement.append("No payment. ");
+                    }
+                }
+                
+                // Announce total contribution
+                if (totalContribution > 0) {
+                    announcement.append("Total contribution collected is ")
+                               .append(String.format("%.0f", totalContribution))
+                               .append(" rupees.");
+                }
             }
             
             // Queue the announcement (don't speak directly)
@@ -626,6 +691,68 @@ public class JoinGameActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+    
+    /**
+     * Switch TTS language dynamically
+     * @param locale New locale to use for TTS
+     */
+    private void switchLanguage(java.util.Locale locale) {
+        if (textToSpeech == null || !ttsInitialized) {
+            ModernToast.error(this, "Text-to-Speech not initialized");
+            return;
+        }
+        
+        int result = textToSpeech.setLanguage(locale);
+        
+        if (result == android.speech.tts.TextToSpeech.LANG_MISSING_DATA || 
+            result == android.speech.tts.TextToSpeech.LANG_NOT_SUPPORTED) {
+            // Language not available
+            String languageName = locale.getDisplayLanguage();
+            ModernToast.error(this, languageName + " voice not available. Please install language data.");
+            
+            // Show dialog to install language data
+            showInstallLanguageDialog(locale);
+        } else {
+            // Language switched successfully
+            currentTtsLocale = locale;
+            String languageName = locale.getDisplayLanguage();
+            ModernToast.success(this, "Voice language changed to " + languageName);
+            System.out.println("TTS language switched to: " + languageName);
+            
+            // Save preference using utility class
+            com.example.rummypulse.utils.LanguagePreferenceManager.saveLanguagePreference(this, locale);
+        }
+    }
+    
+    /**
+     * Show dialog to guide user to install TTS language data
+     */
+    private void showInstallLanguageDialog(java.util.Locale locale) {
+        String languageName = locale.getDisplayLanguage();
+        
+        new android.app.AlertDialog.Builder(this, R.style.DarkDialogTheme)
+            .setTitle("Language Data Missing")
+            .setMessage(languageName + " voice is not installed on your device. Would you like to install it from Google Play Store?")
+            .setPositiveButton("Install", (dialog, which) -> {
+                // Open TTS settings or Play Store
+                try {
+                    Intent intent = new Intent();
+                    intent.setAction(android.speech.tts.TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+                    startActivity(intent);
+                } catch (Exception e) {
+                    ModernToast.error(this, "Could not open TTS settings");
+                }
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+    
+    /**
+     * Load language preference from utility class
+     */
+    private java.util.Locale loadLanguagePreference() {
+        return com.example.rummypulse.utils.LanguagePreferenceManager.loadLanguagePreference(this);
     }
 
     private void initializeViews() {

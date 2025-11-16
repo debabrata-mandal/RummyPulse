@@ -249,6 +249,86 @@ public class MainActivity extends AppCompatActivity {
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
                 || super.onSupportNavigateUp();
     }
+    
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+    
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        // Update mute option text to show current state
+        android.view.MenuItem muteItem = menu.findItem(R.id.action_language_mute);
+        if (muteItem != null) {
+            boolean isMuted = com.example.rummypulse.utils.LanguagePreferenceManager.isMuted(this);
+            if (isMuted) {
+                muteItem.setTitle("🔊 Unmute Voice");
+            } else {
+                muteItem.setTitle("🔇 Mute Voice");
+            }
+        }
+        return super.onPrepareOptionsMenu(menu);
+    }
+    
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.action_language_bengali) {
+            switchLanguage(new java.util.Locale("bn", "IN"));
+            return true;
+        } else if (item.getItemId() == R.id.action_language_english) {
+            switchLanguage(java.util.Locale.US);
+            return true;
+        } else if (item.getItemId() == R.id.action_language_mute) {
+            toggleMuteVoice();
+            return true;
+        } else if (item.getItemId() == R.id.action_sign_out) {
+            signOut();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+    
+    /**
+     * Switch TTS language globally
+     */
+    private void switchLanguage(java.util.Locale locale) {
+        // Save the preference (also unmutes)
+        com.example.rummypulse.utils.LanguagePreferenceManager.saveLanguagePreference(this, locale);
+        
+        // Show confirmation
+        String languageName = locale.getDisplayLanguage();
+        com.example.rummypulse.utils.ModernToast.success(this, 
+            "🔊 Voice announcements: " + languageName);
+        
+        // Refresh menu to update the mute option text
+        invalidateOptionsMenu();
+    }
+    
+    /**
+     * Toggle mute/unmute voice announcements globally
+     */
+    private void toggleMuteVoice() {
+        boolean currentlyMuted = com.example.rummypulse.utils.LanguagePreferenceManager.isMuted(this);
+        boolean newMutedState = !currentlyMuted;
+        
+        // Toggle muted state
+        com.example.rummypulse.utils.LanguagePreferenceManager.setMuted(this, newMutedState);
+        
+        // Show confirmation with current language info
+        if (newMutedState) {
+            com.example.rummypulse.utils.ModernToast.success(this, 
+                "🔇 Voice announcements muted");
+        } else {
+            java.util.Locale currentLocale = com.example.rummypulse.utils.LanguagePreferenceManager.loadLanguagePreference(this);
+            String languageName = currentLocale.getDisplayLanguage();
+            com.example.rummypulse.utils.ModernToast.success(this, 
+                "🔊 Voice announcements enabled (" + languageName + ")");
+        }
+        
+        // Refresh menu to update the mute option text
+        invalidateOptionsMenu();
+    }
 
     private void updateNavigationHeader(NavigationView navigationView, FirebaseUser user) {
         android.view.View headerView = navigationView.getHeaderView(0);
