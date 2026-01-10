@@ -261,4 +261,13 @@ public class JoinGameViewModel extends AndroidViewModel {
         // Fetch the latest game data from Firebase
         fetchGameData(gameId, false);
     }
+    
+    /**
+     * Update game data (used by real-time listener to sync local state)
+     */
+    public void updateGameData(GameData newGameData) {
+        if (newGameData != null) {
+            gameData.setValue(newGameData);
+        }
+    }
 }

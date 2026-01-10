@@ -25,6 +25,8 @@ import com.example.rummypulse.databinding.ActivityJoinGameBinding;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
 import com.example.rummypulse.utils.ModernToast;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
@@ -690,6 +692,10 @@ public class JoinGameActivity extends AppCompatActivity {
             requestEditAccess();
             return true;
         }
+        if (item.getItemId() == R.id.action_join) {
+            joinCurrentUserToGame();
+            return true;
+        }
         return super.onOptionsItemSelected(item);
     }
     
@@ -959,13 +965,14 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Update header PIN visibility (show masked in edit mode)
                 updateHeaderPinVisibility();
                 
-                // Remove real-time listener when in edit mode (to avoid conflicts)
-                if (gameDataListener != null) {
-                    System.out.println("EDIT ACCESS GRANTED - Removing existing real-time listener to avoid conflicts");
-                    gameDataListener.remove();
-                    gameDataListener = null;
+                // Keep real-time listener active in edit mode to detect player additions/removals
+                // The listener will intelligently update only when players are added/removed
+                // and preserve user's input fields when only scores change
+                if (gameDataListener == null) {
+                    System.out.println("EDIT ACCESS GRANTED - Setting up real-time listener for edit mode");
+                    setupRealtimeListener();
                 } else {
-                    System.out.println("EDIT ACCESS GRANTED - No existing real-time listener to remove");
+                    System.out.println("EDIT ACCESS GRANTED - Real-time listener already active (will handle updates intelligently)");
                 }
             } else {
                 // In view mode - set up real-time listener for game data updates
@@ -2410,6 +2417,11 @@ public class JoinGameActivity extends AppCompatActivity {
         com.example.rummypulse.data.Player newPlayer = new com.example.rummypulse.data.Player();
         newPlayer.setName(playerName);
         
+        // Set userId to null for manually added players (not linked to a user account)
+        newPlayer.setUserId(null);
+        // Set isCreator to false for manually added players
+        newPlayer.setIsCreator(false);
+        
         // Initialize scores with -1 for all rounds
         java.util.List<Integer> scores = new java.util.ArrayList<>();
         for (int i = 0; i < 10; i++) {
@@ -2452,6 +2464,157 @@ public class JoinGameActivity extends AppCompatActivity {
         displayGameData(gameData);
         
         ModernToast.success(this, "Player '" + playerName + "' added successfully!");
+    }
+    
+    /**
+     * Joins the current user to the game as a player
+     */
+    private void joinCurrentUserToGame() {
+        // Get current user
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            ModernToast.error(this, "You must be logged in to join a game");
+            return;
+        }
+        
+        if (currentGameId == null) {
+            ModernToast.error(this, "Game ID not available");
+            return;
+        }
+        
+        String currentUserId = currentUser.getUid();
+        
+        // Fetch fresh game data from Firestore to ensure we have the latest data
+        // This is important because a player might have been deleted but local cache hasn't updated
+        ModernToast.info(this, "Checking game status...");
+        
+        com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
+        db.collection("gameData")
+            .document(currentGameId)
+            .get(com.google.firebase.firestore.Source.SERVER) // Force server fetch, not cache
+            .addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot != null && documentSnapshot.exists()) {
+                    try {
+                        Object dataField = documentSnapshot.get("data");
+                        if (dataField instanceof java.util.Map) {
+                            @SuppressWarnings("unchecked")
+                            java.util.Map<String, Object> dataMap = (java.util.Map<String, Object>) dataField;
+                            
+                            // Parse fresh game data
+                            com.example.rummypulse.data.GameData gameData = parseGameDataFromMap(dataMap);
+                            
+                            if (gameData == null || gameData.getPlayers() == null) {
+                                ModernToast.error(this, "Failed to load game data");
+                                return;
+                            }
+                            
+                            // Check if user is already in the game (using fresh data)
+                            for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+                                if (currentUserId.equals(player.getUserId())) {
+                                    ModernToast.info(this, "You are already in this game");
+                                    return;
+                                }
+                            }
+                            
+                            // User is not in the game, proceed with joining
+                            proceedWithJoin(currentUser, gameData);
+                        } else {
+                            ModernToast.error(this, "Invalid game data format");
+                        }
+                    } catch (Exception e) {
+                        ModernToast.error(this, "Failed to parse game data: " + e.getMessage());
+                    }
+                } else {
+                    ModernToast.error(this, "Game not found");
+                }
+            })
+            .addOnFailureListener(e -> {
+                ModernToast.error(this, "Failed to fetch game data: " + e.getMessage());
+            });
+    }
+    
+    /**
+     * Proceeds with adding the user to the game after verifying they're not already in it
+     */
+    private void proceedWithJoin(FirebaseUser currentUser, com.example.rummypulse.data.GameData gameData) {
+        String currentUserId = currentUser.getUid();
+        
+        // Check maximum player limit
+        if (gameData.getPlayers().size() >= 15) {
+            ModernToast.warning(this, "Cannot join. Maximum 15 players allowed.");
+            return;
+        }
+        
+        // Get user's display name or email
+        String userName = currentUser.getDisplayName();
+        if (userName == null || userName.isEmpty()) {
+            userName = currentUser.getEmail();
+        }
+        if (userName == null || userName.isEmpty()) {
+            userName = "Player " + (gameData.getPlayers().size() + 1);
+        }
+        
+        // Check if name already exists and make it unique
+        java.util.Set<String> existingNames = new java.util.HashSet<>();
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            existingNames.add(player.getName().toLowerCase());
+        }
+        
+        String finalName = userName;
+        int counter = 1;
+        while (existingNames.contains(finalName.toLowerCase())) {
+            counter++;
+            finalName = userName + " " + counter;
+        }
+        
+        // Create new player for current user
+        com.example.rummypulse.data.Player newPlayer = new com.example.rummypulse.data.Player();
+        newPlayer.setName(finalName);
+        newPlayer.setUserId(currentUserId); // Set user ID for joined user
+        newPlayer.setIsCreator(false); // Not the creator
+        
+        // Initialize scores with -1 for all rounds
+        java.util.List<Integer> scores = new java.util.ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            scores.add(-1);
+        }
+        newPlayer.setScores(scores);
+        
+        // Generate random number for player ID (if more than 2 players)
+        if (gameData.getPlayers().size() >= 2) {
+            // Generate a unique random number
+            java.util.Set<Integer> existingNumbers = new java.util.HashSet<>();
+            for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+                if (player.getRandomNumber() != null) {
+                    existingNumbers.add(player.getRandomNumber());
+                }
+            }
+            
+            int randomNumber;
+            do {
+                randomNumber = 10 + new java.util.Random().nextInt(90); // 10-99
+            } while (existingNumbers.contains(randomNumber));
+            
+            newPlayer.setRandomNumber(randomNumber);
+        }
+        
+        // Add player to game data
+        gameData.getPlayers().add(newPlayer);
+        gameData.setNumPlayers(gameData.getPlayers().size());
+        
+        // Save the updated game data to Firebase
+        viewModel.saveGameData(currentGameId, gameData);
+        
+        // Refresh player cards UI immediately
+        generatePlayerCards(gameData);
+        
+        // Update players info section
+        updatePlayersInfo(gameData);
+        
+        // Refresh standings and chart
+        displayGameData(gameData);
+        
+        ModernToast.success(this, "You have joined the game as '" + finalName + "'!");
     }
     
     private void showDeletePlayerConfirmation(com.example.rummypulse.data.Player player, com.example.rummypulse.data.GameData gameData) {
@@ -2654,6 +2817,20 @@ public class JoinGameActivity extends AppCompatActivity {
                                         player.setRandomNumber(((Number) playerMap.get("randomNumber")).intValue());
                                     }
                                     
+                                    // Handle userId (nullable - may not exist in older games)
+                                    if (playerMap.get("userId") instanceof String) {
+                                        player.setUserId((String) playerMap.get("userId"));
+                                    } else {
+                                        player.setUserId(null); // Default to null for backward compatibility
+                                    }
+                                    
+                                    // Handle isCreator (nullable - may not exist in older games)
+                                    if (playerMap.get("isCreator") instanceof Boolean) {
+                                        player.setIsCreator((Boolean) playerMap.get("isCreator"));
+                                    } else {
+                                        player.setIsCreator(null); // Default to null for backward compatibility
+                                    }
+                                    
                                     // Handle scores array
                                     Object scoresField = playerMap.get("scores");
                                     if (scoresField instanceof java.util.List) {
@@ -2685,16 +2862,79 @@ public class JoinGameActivity extends AppCompatActivity {
                                     Boolean editAccess = viewModel.getEditAccessGranted().getValue();
                                     
                                     if (editAccess != null && editAccess) {
-                                        // EDIT MODE: Only update standings (read-only display)
-                                        // DO NOT update player cards to avoid destroying focused input fields
-                                        System.out.println("Real-time update in EDIT MODE - updating standings only, preserving input fields");
-                                        updateStandings(gameData);
-                                        updateStandingsInfo(gameData);
-                                        updateGameInfoHeader(gameData);
+                                        // EDIT MODE: Smart update based on what changed
+                                        com.example.rummypulse.data.GameData currentGameData = viewModel.getGameData().getValue();
                                         
-                                        // Check if game is completed and announce results (edit mode)
-                                        announceGameCompletion(gameData);
-                                        // DO NOT call updatePlayersInfo or generatePlayerCards in edit mode
+                                        // Check if player list changed (players added/removed)
+                                        boolean playerListChanged = hasPlayerListChanged(currentGameData, gameData);
+                                        
+                                        if (playerListChanged) {
+                                            // Players were added/removed - need to update player cards
+                                            System.out.println("Real-time update in EDIT MODE - player list changed, updating player cards");
+                                            
+                                            // Save current input values before regenerating cards
+                                            java.util.Map<String, java.util.Map<Integer, String>> savedInputs = saveCurrentInputValues(currentGameData);
+                                            
+                                            // Update ViewModel with fresh data first
+                                            viewModel.updateGameData(gameData);
+                                            
+                                            // Regenerate player cards with new player list
+                                            generatePlayerCards(gameData);
+                                            
+                                            // Restore saved input values (best effort)
+                                            restoreInputValues(savedInputs, gameData);
+                                            
+                                            // Update other UI elements
+                                            updatePlayersInfo(gameData);
+                                            updateStandings(gameData);
+                                            updateStandingsInfo(gameData);
+                                            updateGameInfoHeader(gameData);
+                                            
+                                            // Check if game is completed and announce results
+                                            announceGameCompletion(gameData);
+                                            
+                                            ModernToast.info(this, "Player list updated");
+                                        } else {
+                                            // Only scores changed - preserve input fields, update standings only
+                                            System.out.println("Real-time update in EDIT MODE - scores changed only, updating standings, preserving input fields");
+                                            
+                                            // Update ViewModel with fresh scores (but keep same player list structure)
+                                            if (currentGameData != null) {
+                                                // Merge fresh scores into current gameData
+                                                java.util.List<com.example.rummypulse.data.Player> currentPlayers = currentGameData.getPlayers();
+                                                java.util.List<com.example.rummypulse.data.Player> freshPlayers = gameData.getPlayers();
+                                                
+                                                if (currentPlayers != null && freshPlayers != null && currentPlayers.size() == freshPlayers.size()) {
+                                                    // Update scores for existing players
+                                                    for (int i = 0; i < currentPlayers.size() && i < freshPlayers.size(); i++) {
+                                                        com.example.rummypulse.data.Player currentPlayer = currentPlayers.get(i);
+                                                        com.example.rummypulse.data.Player freshPlayer = freshPlayers.get(i);
+                                                        
+                                                        // Only update scores if player matches (by name or userId)
+                                                        if (currentPlayer.getName().equals(freshPlayer.getName()) ||
+                                                            (currentPlayer.getUserId() != null && currentPlayer.getUserId().equals(freshPlayer.getUserId()))) {
+                                                            currentPlayer.setScores(freshPlayer.getScores());
+                                                        }
+                                                    }
+                                                    
+                                                    // Update other fields
+                                                    currentGameData.setPointValue(gameData.getPointValue());
+                                                    currentGameData.setGstPercent(gameData.getGstPercent());
+                                                    currentGameData.setNumPlayers(gameData.getNumPlayers());
+                                                    
+                                                    // Update ViewModel
+                                                    viewModel.updateGameData(currentGameData);
+                                                }
+                                            }
+                                            
+                                            // Update standings and other read-only displays
+                                            updateStandings(gameData);
+                                            updateStandingsInfo(gameData);
+                                            updateGameInfoHeader(gameData);
+                                            
+                                            // Check if game is completed and announce results
+                                            announceGameCompletion(gameData);
+                                        }
                                     } else {
                                         // VIEW MODE: Update everything including player cards
                                         System.out.println("Real-time update in VIEW MODE - updating all UI elements");
@@ -2909,22 +3149,157 @@ public class JoinGameActivity extends AppCompatActivity {
         // Wait a bit before reconnecting to ensure network is stable
         reconnectHandler.postDelayed(() -> {
             if (isConnected && isNetworkAvailable()) {
-                // Only reconnect if NOT in edit mode
+                // Reconnect listener in both view and edit mode (listener is now active in edit mode too)
                 Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-                if (editAccess == null || !editAccess) {
-                    System.out.println("Reconnecting Firebase listener for game: " + currentGameId + " (VIEW MODE)");
-                    
-                    // Force fetch fresh data from server first
-                    fetchFreshGameData();
-                    
-                    // Then setup real-time listener
-                    setupRealtimeListener();
-                } else {
-                    System.out.println("NOT reconnecting Firebase listener - currently in EDIT MODE (user has edit access)");
-                }
+                String mode = (editAccess != null && editAccess) ? "EDIT MODE" : "VIEW MODE";
+                System.out.println("Reconnecting Firebase listener for game: " + currentGameId + " (" + mode + ")");
+                
+                // Force fetch fresh data from server first
+                fetchFreshGameData();
+                
+                // Then setup real-time listener (will not create duplicate if already exists)
+                setupRealtimeListener();
+                
                 // Network status indicator already shows connection state, no need for toast
             }
         }, 1000); // 1 second delay
+    }
+    
+    /**
+     * Checks if the player list has changed (players added or removed)
+     * Compares current local gameData with incoming fresh gameData
+     */
+    private boolean hasPlayerListChanged(com.example.rummypulse.data.GameData currentData, com.example.rummypulse.data.GameData freshData) {
+        if (currentData == null || freshData == null) {
+            return true; // If either is null, consider it changed
+        }
+        
+        java.util.List<com.example.rummypulse.data.Player> currentPlayers = currentData.getPlayers();
+        java.util.List<com.example.rummypulse.data.Player> freshPlayers = freshData.getPlayers();
+        
+        if (currentPlayers == null || freshPlayers == null) {
+            return true;
+        }
+        
+        // Check if player count changed
+        if (currentPlayers.size() != freshPlayers.size()) {
+            System.out.println("Player list changed: count " + currentPlayers.size() + " -> " + freshPlayers.size());
+            return true;
+        }
+        
+        // Check if any players were added/removed by comparing userId and name combinations
+        // Create sets of player identifiers for comparison
+        java.util.Set<String> currentPlayerIds = new java.util.HashSet<>();
+        for (com.example.rummypulse.data.Player player : currentPlayers) {
+            String identifier = (player.getUserId() != null ? player.getUserId() : "") + "|" + player.getName();
+            currentPlayerIds.add(identifier);
+        }
+        
+        java.util.Set<String> freshPlayerIds = new java.util.HashSet<>();
+        for (com.example.rummypulse.data.Player player : freshPlayers) {
+            String identifier = (player.getUserId() != null ? player.getUserId() : "") + "|" + player.getName();
+            freshPlayerIds.add(identifier);
+        }
+        
+        // If sets don't match, players were added/removed
+        boolean changed = !currentPlayerIds.equals(freshPlayerIds);
+        if (changed) {
+            System.out.println("Player list changed: players added or removed");
+        }
+        return changed;
+    }
+    
+    /**
+     * Saves current input field values from player cards
+     * Returns a map: playerIdentifier -> (round -> value)
+     * playerIdentifier is "userId|name" or just "name" if userId is null
+     */
+    private java.util.Map<String, java.util.Map<Integer, String>> saveCurrentInputValues(com.example.rummypulse.data.GameData currentGameData) {
+        java.util.Map<String, java.util.Map<Integer, String>> savedValues = new java.util.HashMap<>();
+        
+        if (currentGameData == null || currentGameData.getPlayers() == null) {
+            return savedValues;
+        }
+        
+        java.util.List<com.example.rummypulse.data.Player> players = currentGameData.getPlayers();
+        int playerCount = Math.min(binding.playersContainer.getChildCount(), players.size());
+        
+        for (int playerIndex = 0; playerIndex < playerCount; playerIndex++) {
+            View playerCard = binding.playersContainer.getChildAt(playerIndex);
+            if (playerCard == null) continue;
+            
+            com.example.rummypulse.data.Player player = players.get(playerIndex);
+            // Create unique identifier: userId|name or just name
+            String playerIdentifier = (player.getUserId() != null ? player.getUserId() : "") + "|" + player.getName();
+            
+            java.util.Map<Integer, String> playerValues = new java.util.HashMap<>();
+            
+            // Save values for all 10 rounds
+            for (int round = 1; round <= 10; round++) {
+                int scoreInputId = getResources().getIdentifier("edit_score_r" + round, "id", getPackageName());
+                if (scoreInputId != 0) {
+                    EditText scoreInput = playerCard.findViewById(scoreInputId);
+                    if (scoreInput != null) {
+                        String value = scoreInput.getText().toString().trim();
+                        if (!value.isEmpty()) {
+                            playerValues.put(round, value);
+                        }
+                    }
+                }
+            }
+            
+            if (!playerValues.isEmpty()) {
+                savedValues.put(playerIdentifier, playerValues);
+            }
+        }
+        
+        System.out.println("Saved input values for " + savedValues.size() + " players");
+        return savedValues;
+    }
+    
+    /**
+     * Restores saved input field values to player cards after regeneration
+     * savedValues: playerIdentifier -> (round -> value)
+     * Matches players by identifier (userId|name) to handle index changes
+     */
+    private void restoreInputValues(java.util.Map<String, java.util.Map<Integer, String>> savedValues, com.example.rummypulse.data.GameData gameData) {
+        if (savedValues == null || savedValues.isEmpty() || gameData == null || gameData.getPlayers() == null) {
+            return;
+        }
+        
+        java.util.List<com.example.rummypulse.data.Player> players = gameData.getPlayers();
+        int playerCount = binding.playersContainer.getChildCount();
+        
+        // Match saved values by player identifier
+        for (int newPlayerIndex = 0; newPlayerIndex < playerCount && newPlayerIndex < players.size(); newPlayerIndex++) {
+            View playerCard = binding.playersContainer.getChildAt(newPlayerIndex);
+            if (playerCard == null) continue;
+            
+            com.example.rummypulse.data.Player player = players.get(newPlayerIndex);
+            // Create identifier to match saved values
+            String playerIdentifier = (player.getUserId() != null ? player.getUserId() : "") + "|" + player.getName();
+            
+            // Find matching saved values
+            java.util.Map<Integer, String> playerValues = savedValues.get(playerIdentifier);
+            
+            if (playerValues != null && !playerValues.isEmpty()) {
+                // Restore values for this player
+                for (java.util.Map.Entry<Integer, String> roundEntry : playerValues.entrySet()) {
+                    int round = roundEntry.getKey();
+                    String value = roundEntry.getValue();
+                    
+                    int scoreInputId = getResources().getIdentifier("edit_score_r" + round, "id", getPackageName());
+                    if (scoreInputId != 0) {
+                        EditText scoreInput = playerCard.findViewById(scoreInputId);
+                        if (scoreInput != null) {
+                            scoreInput.setText(value);
+                        }
+                    }
+                }
+            }
+        }
+        
+        System.out.println("Restored input values for players");
     }
     
     /**
@@ -3010,6 +3385,20 @@ public class JoinGameActivity extends AppCompatActivity {
                     }
                     if (playerMap.get("randomNumber") instanceof Number) {
                         player.setRandomNumber(((Number) playerMap.get("randomNumber")).intValue());
+                    }
+                    
+                    // Handle userId (nullable - may not exist in older games)
+                    if (playerMap.get("userId") instanceof String) {
+                        player.setUserId((String) playerMap.get("userId"));
+                    } else {
+                        player.setUserId(null); // Default to null for backward compatibility
+                    }
+                    
+                    // Handle isCreator (nullable - may not exist in older games)
+                    if (playerMap.get("isCreator") instanceof Boolean) {
+                        player.setIsCreator((Boolean) playerMap.get("isCreator"));
+                    } else {
+                        player.setIsCreator(null); // Default to null for backward compatibility
                     }
                     
                     // Handle scores array

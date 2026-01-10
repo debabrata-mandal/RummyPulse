@@ -6,6 +6,8 @@ public class Player {
     private String name;
     private List<Integer> scores;
     private Integer randomNumber;
+    private String userId; // User ID of the player (null for manually added players)
+    private Boolean isCreator; // True if this player is the game creator
 
     public Player() {
         // Default constructor required for Firestore
@@ -40,6 +42,22 @@ public class Player {
 
     public void setRandomNumber(Integer randomNumber) {
         this.randomNumber = randomNumber;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public Boolean getIsCreator() {
+        return isCreator;
+    }
+
+    public void setIsCreator(Boolean isCreator) {
+        this.isCreator = isCreator;
     }
 
     // Helper method to calculate total score
