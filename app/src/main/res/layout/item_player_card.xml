@@ -117,6 +117,22 @@
 
         </LinearLayout>
 
+        <!-- Drag Handle (visible in edit mode only) -->
+        <ImageView
+            android:id="@+id/drag_handle"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_drag_handle"
+            android:tint="#CCCCCC"
+            android:background="?android:attr/selectableItemBackground"
+            android:padding="8dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Drag to reorder"
+            android:layout_marginStart="4dp"
+            android:scaleType="centerInside"
+            android:visibility="gone" />
+
     </LinearLayout>
 
     <!-- Score Inputs Section -->

@@ -1423,6 +1423,16 @@ public class JoinGameActivity extends AppCompatActivity {
                 showDeletePlayerConfirmation(player, gameData);
             });
 
+            // Setup drag handle and drag-and-drop functionality (edit mode only)
+            ImageView dragHandle = playerCardView.findViewById(R.id.drag_handle);
+            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+            if (editAccess != null && editAccess) {
+                dragHandle.setVisibility(View.VISIBLE);
+                setupDragAndDrop(playerCardView, playerIndex, gameData);
+            } else {
+                dragHandle.setVisibility(View.GONE);
+            }
+
             // Set up score inputs
             EditText[] scoreInputs = {
                 playerCardView.findViewById(R.id.edit_score_r1),
@@ -1527,6 +1537,244 @@ public class JoinGameActivity extends AppCompatActivity {
 
             binding.playersContainer.addView(playerCardView);
         }
+    }
+
+    // Drag and drop variables
+    private View draggedView = null;
+    private int draggedIndex = -1;
+    private float dragStartY = 0;
+    private View placeholderView = null;
+    private boolean isDragging = false;
+
+    private void setupDragAndDrop(View playerCardView, int playerIndex, com.example.rummypulse.data.GameData gameData) {
+        ImageView dragHandle = playerCardView.findViewById(R.id.drag_handle);
+        
+        // Set up touch listener on drag handle
+        dragHandle.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, android.view.MotionEvent event) {
+                return handleDragTouch(playerCardView, playerIndex, gameData, event, v);
+            }
+        });
+    }
+    
+    private boolean handleDragTouch(View playerCardView, int playerIndex, com.example.rummypulse.data.GameData gameData, android.view.MotionEvent event, View touchView) {
+        switch (event.getAction()) {
+            case android.view.MotionEvent.ACTION_DOWN:
+                // Request parent to not intercept touch events
+                if (playerCardView.getParent() != null) {
+                    playerCardView.getParent().requestDisallowInterceptTouchEvent(true);
+                }
+                
+                // Start drag
+                draggedView = playerCardView;
+                draggedIndex = playerIndex;
+                dragStartY = event.getRawY();
+                isDragging = true;
+                
+                // Create placeholder view at the same position
+                createPlaceholderView();
+                
+                // Make the dragged view semi-transparent and elevated for visual feedback
+                playerCardView.setAlpha(0.6f);
+                playerCardView.setElevation(12f);
+                
+                // Set up touch listener on the entire card to continue dragging if finger moves off handle
+                playerCardView.setOnTouchListener(new View.OnTouchListener() {
+                    @Override
+                    public boolean onTouch(View v, android.view.MotionEvent e) {
+                        // Only handle if we're already dragging this card
+                        if (isDragging && draggedView == playerCardView) {
+                            return handleDragTouch(playerCardView, playerIndex, gameData, e, v);
+                        }
+                        return false;
+                    }
+                });
+                
+                // Vibrate for haptic feedback
+                try {
+                    android.os.Vibrator vibrator = (android.os.Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                    if (vibrator != null && vibrator.hasVibrator()) {
+                        vibrator.vibrate(50); // 50ms vibration
+                    }
+                } catch (Exception e) {
+                    // Ignore vibration errors
+                }
+                
+                return true;
+                
+            case android.view.MotionEvent.ACTION_MOVE:
+                if (isDragging && draggedView == playerCardView) {
+                    // Continue to request parent to not intercept
+                    if (playerCardView.getParent() != null) {
+                        playerCardView.getParent().requestDisallowInterceptTouchEvent(true);
+                    }
+                    
+                    // Update placeholder position based on touch Y
+                    float currentY = event.getRawY();
+                    updatePlaceholderPosition(currentY);
+                }
+                return true;
+                
+            case android.view.MotionEvent.ACTION_UP:
+            case android.view.MotionEvent.ACTION_CANCEL:
+                // Allow parent to intercept touch events again
+                if (playerCardView.getParent() != null) {
+                    playerCardView.getParent().requestDisallowInterceptTouchEvent(false);
+                }
+                
+                // Remove touch listener from card to restore normal interactions
+                playerCardView.setOnTouchListener(null);
+                
+                if (isDragging && draggedView == playerCardView) {
+                    // Complete drag
+                    completeDrag(gameData);
+                }
+                return true;
+        }
+        return false;
+    }
+
+    private void createPlaceholderView() {
+        if (placeholderView != null) {
+            binding.playersContainer.removeView(placeholderView);
+        }
+        
+        // Create a placeholder view with same dimensions as player card
+        placeholderView = new View(this);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            draggedView.getHeight()
+        );
+        params.setMargins(0, 0, 0, 12); // Match the marginBottom from player card
+        placeholderView.setLayoutParams(params);
+        placeholderView.setBackgroundColor(0x33FFFFFF); // Semi-transparent white
+        placeholderView.setMinimumHeight(draggedView.getHeight());
+        
+        // Insert placeholder at dragged position
+        int insertIndex = binding.playersContainer.indexOfChild(draggedView);
+        if (insertIndex >= 0) {
+            binding.playersContainer.addView(placeholderView, insertIndex);
+        } else {
+            binding.playersContainer.addView(placeholderView);
+        }
+    }
+
+    private void updatePlaceholderPosition(float touchY) {
+        if (placeholderView == null || draggedView == null) return;
+        
+        // Get container location on screen
+        int[] containerLocation = new int[2];
+        binding.playersContainer.getLocationOnScreen(containerLocation);
+        float containerTop = containerLocation[1];
+        float relativeY = touchY - containerTop;
+        
+        int childCount = binding.playersContainer.getChildCount();
+        int targetIndex = draggedIndex; // Default to original position
+        
+        // Find which child the touch is over (excluding placeholder and dragged view)
+        for (int i = 0; i < childCount; i++) {
+            View child = binding.playersContainer.getChildAt(i);
+            if (child == placeholderView || child == draggedView) continue;
+            
+            // Get child location relative to container
+            float childTop = child.getY();
+            float childBottom = childTop + child.getHeight();
+            float childCenter = childTop + child.getHeight() / 2;
+            
+            // Check if touch is within this child's bounds
+            if (relativeY >= childTop && relativeY <= childBottom) {
+                // Determine target index based on whether touch is above or below center
+                if (relativeY < childCenter) {
+                    targetIndex = i;
+                } else {
+                    targetIndex = i + 1;
+                }
+                break;
+            } else if (relativeY < childTop) {
+                // Touch is above this child, insert before it
+                targetIndex = i;
+                break;
+            }
+        }
+        
+        // If touch is below all children, insert at end
+        if (relativeY > binding.playersContainer.getHeight()) {
+            targetIndex = childCount;
+        }
+        
+        // Adjust target index to account for placeholder and dragged view
+        int currentPlaceholderIndex = binding.playersContainer.indexOfChild(placeholderView);
+        if (currentPlaceholderIndex >= 0) {
+            // Adjust target based on placeholder position
+            if (targetIndex > currentPlaceholderIndex && targetIndex > draggedIndex) {
+                targetIndex--;
+            } else if (targetIndex < currentPlaceholderIndex && targetIndex < draggedIndex) {
+                // No adjustment needed
+            }
+        }
+        
+        // Ensure target index is valid
+        targetIndex = Math.max(0, Math.min(targetIndex, childCount - 1));
+        
+        // Move placeholder if position changed
+        int currentIndex = binding.playersContainer.indexOfChild(placeholderView);
+        if (currentIndex != targetIndex && targetIndex >= 0) {
+            binding.playersContainer.removeView(placeholderView);
+            binding.playersContainer.addView(placeholderView, targetIndex);
+        }
+    }
+
+    private void completeDrag(com.example.rummypulse.data.GameData gameData) {
+        if (draggedView == null) return;
+        
+        // Get target index from placeholder position
+        int targetIndex = draggedIndex; // Default to original position
+        if (placeholderView != null) {
+            int placeholderIndex = binding.playersContainer.indexOfChild(placeholderView);
+            if (placeholderIndex >= 0) {
+                // Calculate actual target index in players list
+                // The placeholder shows where the dragged view should go
+                // We need to account for the fact that dragged view is still in the list
+                if (placeholderIndex < draggedIndex) {
+                    // Moving up: target is the placeholder index
+                    targetIndex = placeholderIndex;
+                } else if (placeholderIndex > draggedIndex) {
+                    // Moving down: target is placeholder index - 1 (because dragged view is still counted)
+                    targetIndex = placeholderIndex - 1;
+                }
+                // If placeholderIndex == draggedIndex, no change needed
+            }
+            // Remove placeholder
+            binding.playersContainer.removeView(placeholderView);
+            placeholderView = null;
+        }
+        
+        // Restore dragged view appearance
+        draggedView.setAlpha(1.0f);
+        draggedView.setElevation(2f);
+        
+        // Reorder if position changed
+        if (targetIndex != draggedIndex && targetIndex >= 0 && targetIndex < gameData.getPlayers().size()) {
+            // Reorder players list
+            com.example.rummypulse.data.Player draggedPlayer = gameData.getPlayers().get(draggedIndex);
+            gameData.getPlayers().remove(draggedIndex);
+            
+            // Insert at target position (no adjustment needed since we already removed)
+            gameData.getPlayers().add(targetIndex, draggedPlayer);
+            
+            // Save to Firebase
+            saveGameDataWithDebounce(gameData);
+            
+            // Regenerate player cards to reflect new order
+            generatePlayerCards(gameData);
+        }
+        
+        // Reset drag state
+        draggedView = null;
+        draggedIndex = -1;
+        dragStartY = 0;
+        isDragging = false;
     }
 
     private void setupSequentialRoundValidation(EditText scoreInput, int round, int playerIndex, com.example.rummypulse.data.GameData gameData) {
