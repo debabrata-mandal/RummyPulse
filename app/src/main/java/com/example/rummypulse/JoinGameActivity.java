@@ -841,10 +841,14 @@ public class JoinGameActivity extends AppCompatActivity {
             playerNameText.setText("Player " + (i + 1));
             playerNameText.setEnabled(false); // Disable during loading
             
-            // Set placeholder round badge
+            // Hide round badge (removed - redundant with top panel info)
             TextView roundBadge = playerCardView.findViewById(R.id.text_current_round_badge);
             if (roundBadge != null) {
-                roundBadge.setText("Round#1");
+                // Hide the parent LinearLayout that contains the round badge
+                View parent = (View) roundBadge.getParent();
+                if (parent != null) {
+                    parent.setVisibility(View.GONE);
+                }
             }
             
             binding.playersContainer.addView(playerCardView);
@@ -1417,11 +1421,14 @@ public class JoinGameActivity extends AppCompatActivity {
                 playerId.setVisibility(View.VISIBLE);
             }
 
-            // Set current round badge
+            // Hide current round badge (removed - redundant with top panel info)
             TextView roundBadge = playerCardView.findViewById(R.id.text_current_round_badge);
             if (roundBadge != null) {
-                int currentRound = calculateCurrentRound(gameData);
-                roundBadge.setText("Round#" + currentRound);
+                // Hide the parent LinearLayout that contains the round badge
+                View parent = (View) roundBadge.getParent();
+                if (parent != null) {
+                    parent.setVisibility(View.GONE);
+                }
             }
 
             // Setup delete player button
@@ -1873,39 +1880,8 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     private void updateRoundColors(com.example.rummypulse.data.GameData gameData) {
-        // Update round badge colors based on completion status
-        for (int playerIndex = 0; playerIndex < gameData.getPlayers().size(); playerIndex++) {
-            View playerCardView = binding.playersContainer.getChildAt(playerIndex);
-            if (playerCardView != null) {
-                TextView roundBadge = playerCardView.findViewById(R.id.text_current_round_badge);
-                if (roundBadge != null) {
-                           // Get the current round number
-                           String badgeText = roundBadge.getText().toString();
-                           if (badgeText.startsWith("Round#")) {
-                               try {
-                                   int currentRound = Integer.parseInt(badgeText.substring(6));
-                            boolean isRoundComplete = isRoundComplete(currentRound, gameData);
-                            
-                            // Update badge text and icon color based on completion
-                            LinearLayout badgeContainer = (LinearLayout) roundBadge.getParent();
-                            TextView iconText = (TextView) badgeContainer.getChildAt(0); // Icon is first child
-                            
-                            if (isRoundComplete) {
-                                // Green text and icon for completed rounds
-                                roundBadge.setTextColor(getResources().getColor(android.R.color.holo_green_light));
-                                iconText.setTextColor(getResources().getColor(android.R.color.holo_green_light));
-                            } else {
-                                // Red text and icon for incomplete rounds
-                                roundBadge.setTextColor(getResources().getColor(android.R.color.holo_red_light));
-                                iconText.setTextColor(getResources().getColor(android.R.color.holo_red_light));
-                            }
-                        } catch (NumberFormatException e) {
-                            // Ignore invalid round numbers
-                        }
-                    }
-                }
-            }
-        }
+        // Round badge removed - no longer updating colors (redundant with top panel info)
+        // This method is kept for potential future use but currently does nothing
     }
     
     private boolean isRoundComplete(int round, com.example.rummypulse.data.GameData gameData) {
@@ -1987,14 +1963,8 @@ public class JoinGameActivity extends AppCompatActivity {
         updatePlayersInfo(gameData);
         updateStandingsInfo(gameData);
         
-        // Update all player cards' round badges
-        for (int i = 0; i < binding.playersContainer.getChildCount(); i++) {
-            View playerCardView = binding.playersContainer.getChildAt(i);
-            TextView roundBadge = playerCardView.findViewById(R.id.text_current_round_badge);
-            if (roundBadge != null) {
-                roundBadge.setText("Round#" + currentRound);
-            }
-        }
+        // Round badge removed - no longer updating (redundant with top panel info)
+        // All player cards' round badges are hidden
     }
 
     private int calculateCurrentRound(com.example.rummypulse.data.GameData gameData) {
