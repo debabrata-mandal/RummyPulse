@@ -965,14 +965,14 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Update header PIN visibility (show masked in edit mode)
                 updateHeaderPinVisibility();
                 
-                // Keep real-time listener active in edit mode to detect player additions/removals
-                // The listener will intelligently update only when players are added/removed
-                // and preserve user's input fields when only scores change
-                if (gameDataListener == null) {
-                    System.out.println("EDIT ACCESS GRANTED - Setting up real-time listener for edit mode");
-                    setupRealtimeListener();
+                // Remove real-time listener in edit mode to prevent interference with score updates
+                // The listener causes issues with score updates in standings for users in edit mode
+                if (gameDataListener != null) {
+                    System.out.println("EDIT ACCESS GRANTED - Removing real-time listener in edit mode");
+                    gameDataListener.remove();
+                    gameDataListener = null;
                 } else {
-                    System.out.println("EDIT ACCESS GRANTED - Real-time listener already active (will handle updates intelligently)");
+                    System.out.println("EDIT ACCESS GRANTED - No listener to remove (already in edit mode or listener was not active)");
                 }
             } else {
                 // In view mode - set up real-time listener for game data updates
@@ -2990,10 +2990,18 @@ public class JoinGameActivity extends AppCompatActivity {
     /**
      * Set up real-time Firestore listener for game data updates in view mode
      * This ensures the standings update automatically when other players modify scores or names
+     * Note: Listener is NOT set up in edit mode to prevent interference with score updates
      */
     private void setupRealtimeListener() {
         if (currentGameId == null) {
             System.out.println("Cannot setup listener: currentGameId is null");
+            return;
+        }
+        
+        // Don't set up listener in edit mode (causes issues with score updates)
+        Boolean editAccess = viewModel != null ? viewModel.getEditAccessGranted().getValue() : null;
+        if (editAccess != null && editAccess) {
+            System.out.println("Cannot setup listener: Currently in EDIT MODE (listener disabled in edit mode)");
             return;
         }
         
@@ -3106,10 +3114,10 @@ public class JoinGameActivity extends AppCompatActivity {
                             runOnUiThread(() -> {
                                 // Validate game data before updating UI
                                 if (gameData.getPlayers() != null && !gameData.getPlayers().isEmpty()) {
-                                    // Check if we're in edit mode
-                                    Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+                                    // Check if we're in edit mode (though listener should not be active in edit mode)
+                                    Boolean isEditMode = viewModel.getEditAccessGranted().getValue();
                                     
-                                    if (editAccess != null && editAccess) {
+                                    if (isEditMode != null && isEditMode) {
                                         // EDIT MODE: Smart update based on what changed
                                         com.example.rummypulse.data.GameData currentGameData = viewModel.getGameData().getValue();
                                         
@@ -3397,16 +3405,24 @@ public class JoinGameActivity extends AppCompatActivity {
         // Wait a bit before reconnecting to ensure network is stable
         reconnectHandler.postDelayed(() -> {
             if (isConnected && isNetworkAvailable()) {
-                // Reconnect listener in both view and edit mode (listener is now active in edit mode too)
+                // Only reconnect listener in view mode (not in edit mode)
                 Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-                String mode = (editAccess != null && editAccess) ? "EDIT MODE" : "VIEW MODE";
-                System.out.println("Reconnecting Firebase listener for game: " + currentGameId + " (" + mode + ")");
-                
-                // Force fetch fresh data from server first
-                fetchFreshGameData();
-                
-                // Then setup real-time listener (will not create duplicate if already exists)
-                setupRealtimeListener();
+                if (editAccess == null || !editAccess) {
+                    // View mode - reconnect listener
+                    System.out.println("Reconnecting Firebase listener for game: " + currentGameId + " (VIEW MODE)");
+                    
+                    // Force fetch fresh data from server first
+                    fetchFreshGameData();
+                    
+                    // Then setup real-time listener (will not create duplicate if already exists)
+                    setupRealtimeListener();
+                } else {
+                    // Edit mode - do not reconnect listener
+                    System.out.println("Network restored in EDIT MODE - listener will not be reconnected (edit mode does not use listener)");
+                    
+                    // Force fetch fresh data from server to update UI
+                    fetchFreshGameData();
+                }
                 
                 // Network status indicator already shows connection state, no need for toast
             }
