@@ -682,6 +682,13 @@ public class JoinGameActivity extends AppCompatActivity {
         Boolean editAccess = viewModel.getEditAccessGranted().getValue();
         if (editAccess != null && editAccess) {
             menu.clear(); // Remove all menu items when in edit mode
+        } else {
+            // Disable Join menu item (temporarily disabled due to issues)
+            // Keep it visible but disabled so users can see it
+            android.view.MenuItem joinItem = menu.findItem(R.id.action_join);
+            if (joinItem != null) {
+                joinItem.setEnabled(false);
+            }
         }
         return super.onPrepareOptionsMenu(menu);
     }
