@@ -38,7 +38,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:minHeight="20dp">
 
                 <EditText
                     android:id="@+id/text_player_name"
@@ -63,17 +64,18 @@
                 <!-- Small Delete Button -->
                 <ImageView
                     android:id="@+id/btn_delete_player"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
                     android:src="@drawable/ic_delete"
                     android:background="@drawable/small_delete_button_background"
-                    android:padding="4dp"
+                    android:padding="3dp"
                     android:tint="#FFFFFF"
                     android:clickable="true"
                     android:focusable="true"
                     android:contentDescription="Delete Player"
                     android:layout_marginStart="8dp"
-                    android:layout_marginEnd="4dp" />
+                    android:layout_marginEnd="4dp"
+                    android:scaleType="centerInside" />
 
             </LinearLayout>
 
@@ -125,12 +127,12 @@
             android:src="@drawable/ic_drag_handle"
             android:tint="#CCCCCC"
             android:background="?android:attr/selectableItemBackground"
-            android:padding="8dp"
+            android:padding="2dp"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="Drag to reorder"
             android:layout_marginStart="4dp"
-            android:scaleType="centerInside"
+            android:scaleType="fitCenter"
             android:visibility="gone" />
 
     </LinearLayout>
