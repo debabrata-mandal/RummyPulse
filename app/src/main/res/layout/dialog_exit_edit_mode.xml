@@ -6,19 +6,18 @@
     android:background="@drawable/dialog_background"
     android:padding="24dp">
 
-    <!-- Header Section -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="@drawable/professional_row_background"
-        android:padding="20dp"
-        android:layout_marginBottom="24dp">
+        android:padding="18dp"
+        android:layout_marginBottom="16dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="⚠️ Exit Edit Mode?"
+            android:text="Leave game screen?"
             android:textColor="@color/text_primary"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -28,7 +27,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="You are currently in Edit Mode. If you exit now, you will need the PIN again to edit."
+            android:text="Saved edit access stays on this device."
             android:textColor="@color/text_secondary"
             android:textSize="14sp"
             android:gravity="center"
@@ -36,42 +35,13 @@
 
     </LinearLayout>
 
-    <!-- Warning Section -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/example_background"
-        android:padding="16dp"
-        android:layout_marginBottom="24dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="⚠️ Important:"
-            android:textColor="@color/warning_orange"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="• You will lose edit access\n• You'll need the PIN again to edit"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp"
-            android:lineSpacingExtra="4dp" />
-
-    </LinearLayout>
-
-    <!-- Transfer access (clear saved PIN on this device) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:background="@drawable/professional_row_background"
-        android:padding="16dp"
-        android:layout_marginBottom="16dp"
+        android:padding="14dp"
+        android:layout_marginBottom="20dp"
         android:gravity="center_vertical">
 
         <CheckBox
@@ -80,18 +50,34 @@
             android:layout_height="wrap_content"
             android:buttonTint="@color/accent_blue" />
 
-        <TextView
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Transfer access"
-            android:textColor="@color/text_primary"
-            android:textSize="14sp"
-            android:layout_marginStart="8dp" />
+            android:orientation="vertical"
+            android:layout_marginStart="8dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Reveal game secret PIN"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Clears the PIN stored on this phone, then shows the full PIN so you can pass it on. This phone will ask for the PIN again before you can edit."
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3dp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
-    <!-- Buttons Section -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -116,7 +102,7 @@
             android:layout_width="0dp"
             android:layout_height="50dp"
             android:layout_weight="1"
-            android:text="Exit"
+            android:text="Leave"
             android:textColor="@android:color/white"
             android:textSize="16sp"
             android:textStyle="bold"
@@ -126,4 +112,3 @@
     </LinearLayout>
 
 </LinearLayout>
-

@@ -18,7 +18,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🔑 Transfer access"
+            android:text="🔑 Reveal game secret PIN"
             android:textColor="@color/text_primary"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -28,7 +28,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Editing access has been reset on this device. Give the PIN below to whoever will edit next."
+            android:text="The saved PIN was removed on this device. Share the code below with whoever should manage scores next."
             android:textColor="@color/text_secondary"
             android:textSize="14sp"
             android:gravity="center"
@@ -64,34 +64,6 @@
             android:textSize="28sp"
             android:textStyle="bold"
             android:letterSpacing="0.15" />
-
-    </LinearLayout>
-
-    <!-- Notice -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/example_background"
-        android:padding="16dp"
-        android:layout_marginBottom="24dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="⚠️ Important:"
-            android:textColor="@color/warning_orange"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="• Anyone with this PIN can request edit access.This device will ask for the PIN again next time you edit"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp"
-            android:lineSpacingExtra="4dp" />
 
     </LinearLayout>
 
