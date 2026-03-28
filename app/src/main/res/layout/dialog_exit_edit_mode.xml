@@ -64,7 +64,7 @@
 
     </LinearLayout>
 
-    <!-- Forget PIN Option -->
+    <!-- Transfer access (clear saved PIN on this device) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -75,7 +75,7 @@
         android:gravity="center_vertical">
 
         <CheckBox
-            android:id="@+id/checkbox_forget_pin"
+            android:id="@+id/checkbox_transfer_access"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:buttonTint="@color/accent_blue" />
@@ -84,7 +84,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Forget PIN (require PIN next time)"
+            android:text="Transfer access"
             android:textColor="@color/text_primary"
             android:textSize="14sp"
             android:layout_marginStart="8dp" />

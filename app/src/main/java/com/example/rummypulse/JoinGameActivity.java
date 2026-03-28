@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,7 +36,6 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private JoinGameViewModel viewModel;
     private ActivityJoinGameBinding binding;
-    private String currentGamePin;
     private String currentGameId;
     
     // Track previous ranks for animation
@@ -174,7 +174,7 @@ public class JoinGameActivity extends AppCompatActivity {
         dialog.setCancelable(true);
         
         // Get views
-        android.widget.CheckBox checkboxForgetPin = dialog.findViewById(R.id.checkbox_forget_pin);
+        android.widget.CheckBox checkboxTransferAccess = dialog.findViewById(R.id.checkbox_transfer_access);
         Button btnStay = dialog.findViewById(R.id.btn_stay);
         Button btnExit = dialog.findViewById(R.id.btn_exit);
         
@@ -182,16 +182,84 @@ public class JoinGameActivity extends AppCompatActivity {
         btnStay.setOnClickListener(v -> dialog.dismiss());
         
         btnExit.setOnClickListener(v -> {
-            // Check if user wants to forget the PIN
-            if (checkboxForgetPin.isChecked() && currentGameId != null) {
-                clearSavedPin(currentGameId);
-                ModernToast.info(this, "PIN forgotten. You'll need to enter it again next time.");
-            }
             dialog.dismiss();
-            finish();
+            boolean transferAccess = checkboxTransferAccess.isChecked() && currentGameId != null;
+            if (transferAccess) {
+                clearSavedPin(currentGameId);
+                String pin = viewModel.getGamePin().getValue();
+                if (!TextUtils.isEmpty(pin)) {
+                    showTransferAccessPinDialog(pin);
+                } else {
+                    ModernToast.info(this, "Access cleared on this device. PIN was not available to show.");
+                    finish();
+                }
+            } else {
+                finish();
+            }
         });
         
         dialog.show();
+    }
+
+    private static final long TRANSFER_PIN_DONE_COUNTDOWN_MS = 20_000L;
+
+    private void showTransferAccessPinDialog(String pin) {
+        android.app.Dialog dialog = new android.app.Dialog(this);
+        dialog.setContentView(R.layout.dialog_transfer_access_pin);
+        dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        dialog.setCancelable(false);
+
+        TextView textPin = dialog.findViewById(R.id.text_transfer_pin);
+        textPin.setText(pin);
+
+        Button btnDone = dialog.findViewById(R.id.btn_transfer_pin_done);
+        int totalSec = (int) (TRANSFER_PIN_DONE_COUNTDOWN_MS / 1000);
+        btnDone.setText(getString(R.string.transfer_pin_done_countdown, totalSec));
+
+        final CountDownTimer[] timerRef = new CountDownTimer[1];
+        final boolean[] completed = {false};
+        Runnable complete = () -> {
+            synchronized (completed) {
+                if (completed[0]) {
+                    return;
+                }
+                completed[0] = true;
+            }
+            if (timerRef[0] != null) {
+                timerRef[0].cancel();
+            }
+            if (dialog.isShowing()) {
+                dialog.dismiss();
+            }
+            if (!isFinishing() && !isDestroyed()) {
+                finish();
+            }
+        };
+
+        timerRef[0] = new CountDownTimer(TRANSFER_PIN_DONE_COUNTDOWN_MS, 1000L) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                int sec = Math.max(1, (int) ((millisUntilFinished + 999) / 1000));
+                btnDone.setText(getString(R.string.transfer_pin_done_countdown, sec));
+            }
+
+            @Override
+            public void onFinish() {
+                btnDone.setText(R.string.transfer_pin_done);
+                complete.run();
+            }
+        };
+
+        dialog.setOnDismissListener(d -> {
+            if (timerRef[0] != null) {
+                timerRef[0].cancel();
+            }
+        });
+
+        btnDone.setOnClickListener(v -> complete.run());
+
+        dialog.show();
+        timerRef[0].start();
     }
     
     @Override
@@ -1024,15 +1092,6 @@ public class JoinGameActivity extends AppCompatActivity {
                 }
             }
         });
-
-        // Observe game PIN
-        viewModel.getGamePin().observe(this, pin -> {
-            if (pin != null) {
-                currentGamePin = pin;
-                // Update header PIN display
-                updateHeaderPinVisibility();
-            }
-        });
     }
 
     private void joinGame(String gameId) {
@@ -1277,46 +1336,13 @@ public class JoinGameActivity extends AppCompatActivity {
         double totalContribution = calculateTotalContribution(gameData);
         binding.textHeaderTotalContribution.setText("₹" + Math.round(totalContribution));
         
-        // Update Game PIN visibility (show masked in edit mode)
+        // Game PIN is not shown in the compact header (same layout in edit and view mode)
         updateHeaderPinVisibility();
     }
     
     private void updateHeaderPinVisibility() {
-        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-        
-        if (editAccess != null && editAccess && currentGamePin != null) {
-            // Show PIN section in edit mode
-            binding.headerPinSection.setVisibility(View.VISIBLE);
-            binding.headerPinDivider.setVisibility(View.VISIBLE);
-            
-            // Display the PIN as masked initially
-            binding.textHeaderGamePin.setText("****");
-            binding.textHeaderGamePin.setTag(currentGamePin); // Store actual PIN in tag
-            
-            // Set up PIN visibility toggle
-            binding.iconTogglePin.setOnClickListener(v -> {
-                String currentText = binding.textHeaderGamePin.getText().toString();
-                if (currentText.equals("****")) {
-                    // Show the actual PIN
-                    binding.textHeaderGamePin.setText(currentGamePin);
-                    binding.iconTogglePin.setImageResource(R.drawable.ic_visibility_off);
-                    
-                    // Auto-hide PIN after 10 seconds
-                    binding.textHeaderGamePin.postDelayed(() -> {
-                        binding.textHeaderGamePin.setText("****");
-                        binding.iconTogglePin.setImageResource(R.drawable.ic_visibility);
-                    }, 10000);
-                } else {
-                    // Hide the PIN
-                    binding.textHeaderGamePin.setText("****");
-                    binding.iconTogglePin.setImageResource(R.drawable.ic_visibility);
-                }
-            });
-        } else {
-            // Hide PIN section in view mode
-            binding.headerPinSection.setVisibility(View.GONE);
-            binding.headerPinDivider.setVisibility(View.GONE);
-        }
+        binding.headerPinSection.setVisibility(View.GONE);
+        binding.headerPinDivider.setVisibility(View.GONE);
     }
     
     private double calculateTotalContribution(com.example.rummypulse.data.GameData gameData) {

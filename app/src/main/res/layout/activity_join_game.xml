@@ -74,7 +74,7 @@
         android:elevation="8dp"
         android:visibility="gone">
 
-        <!-- First Row: Round | Players | Game PIN (Edit Mode Only) -->
+        <!-- First Row: Round | Players -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -147,7 +147,7 @@
 
             </LinearLayout>
 
-            <!-- Divider (Edit Mode Only) -->
+            <!-- Divider (hidden; no PIN column in header) -->
             <View
                 android:id="@+id/header_pin_divider"
                 android:layout_width="1dp"
@@ -157,7 +157,7 @@
                 android:layout_marginVertical="4dp"
                 android:visibility="gone" />
 
-            <!-- Game PIN (Edit Mode Only) -->
+            <!-- Game PIN block (always hidden) -->
             <LinearLayout
                 android:id="@+id/header_pin_section"
                 android:layout_width="0dp"
