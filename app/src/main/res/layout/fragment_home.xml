@@ -121,6 +121,19 @@
 
         </LinearLayout>
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_approve_all"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginBottom="4dp"
+                android:text="Approve all"
+                android:textAllCaps="false"
+                android:enabled="false"
+                app:backgroundTint="@color/accent_blue"
+                android:textColor="@color/white"
+                style="@style/Widget.MaterialComponents.Button" />
+
             <!-- Table Content with Card Container -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"

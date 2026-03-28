@@ -61,7 +61,9 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
         // Observe and update metric tiles
         homeViewModel.getCompletedGames().observe(getViewLifecycleOwner(), completedGames -> {
-            binding.textCompletedGames.setText(String.valueOf(completedGames));
+            int c = completedGames != null ? completedGames : 0;
+            binding.textCompletedGames.setText(String.valueOf(c));
+            binding.btnApproveAll.setEnabled(c > 0);
         });
 
         homeViewModel.getInProgressGames().observe(getViewLifecycleOwner(), inProgressGames -> {
@@ -73,6 +75,8 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
         // Setup floating action button for manual refresh
         binding.btnRefresh.setOnClickListener(v -> refreshGames());
+
+        binding.btnApproveAll.setOnClickListener(v -> onApproveAllClicked());
 
         // Observe errors
         homeViewModel.getError().observe(getViewLifecycleOwner(), error -> {
@@ -87,6 +91,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         binding.recyclerViewTable.setVisibility(View.GONE);
         binding.swipeRefresh.setVisibility(View.GONE);
         binding.btnRefresh.setVisibility(View.GONE);
+        binding.btnApproveAll.setVisibility(View.GONE);
         
         // Show locked message
         TextView lockedMessage = new TextView(getContext());
@@ -146,6 +151,38 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 .setNegativeButton("Cancel", (dialog, which) -> {
                     // Do nothing
                 })
+                .show();
+    }
+
+    private void onApproveAllClicked() {
+        List<GameItem> items = homeViewModel.getGameItems().getValue();
+        if (items == null) {
+            return;
+        }
+        int count = 0;
+        for (GameItem g : items) {
+            if (g != null && g.isCompleted()) {
+                count++;
+            }
+        }
+        if (count == 0) {
+            com.example.rummypulse.utils.ModernToast.warning(getContext(), "No completed games to approve");
+            return;
+        }
+        final int approvedCount = count;
+        new androidx.appcompat.app.AlertDialog.Builder(getContext(), com.example.rummypulse.R.style.DarkDialogTheme)
+                .setTitle("Approve all completed games")
+                .setMessage("Approve " + approvedCount + " completed game(s)? Each will be finalized and moved to the approved games list.")
+                .setPositiveButton("Approve all", (dialog, which) -> {
+                    homeViewModel.approveAllCompletedGames(items, () -> {
+                        if (!isAdded() || getContext() == null) {
+                            return;
+                        }
+                        com.example.rummypulse.utils.ModernToast.success(getContext(),
+                                approvedCount == 1 ? "1 game approved." : approvedCount + " games approved.");
+                    });
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> { })
                 .show();
     }
 

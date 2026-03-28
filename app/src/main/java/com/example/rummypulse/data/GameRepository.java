@@ -12,6 +12,7 @@ import com.google.firebase.firestore.QuerySnapshot;
 import com.example.rummypulse.ui.home.GameItem;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -549,6 +550,13 @@ public class GameRepository {
     }
 
     public void approveGame(GameItem gameItem) {
+        approveGame(gameItem, null);
+    }
+
+    /**
+     * @param onAfterFullSuccess optional; runs after game is written to approvedGames and removed from games/gameData
+     */
+    public void approveGame(GameItem gameItem, Runnable onAfterFullSuccess) {
         // Get the original game data to extract player information
         db.collection(GAME_DATA_COLLECTION)
                 .document(gameItem.getGameId())
@@ -561,7 +569,7 @@ public class GameRepository {
                                 GameData gameData = gameDataWrapper.getData();
                                 
                                 // Create simplified player scores map (name -> total score)
-                                Map<String, Integer> playerScores = new java.util.HashMap<>();
+                                Map<String, Integer> playerScores = new HashMap<>();
                                 if (gameData.getPlayers() != null) {
                                     for (Player player : gameData.getPlayers()) {
                                         playerScores.put(player.getName(), player.getTotalScore());
@@ -587,8 +595,7 @@ public class GameRepository {
                                         .document(gameItem.getGameId())
                                         .set(approvedGameData)
                                         .addOnSuccessListener(aVoid -> {
-                                            // Delete from both original collections after successful approval
-                                            deleteApprovedGame(gameItem.getGameId());
+                                            deleteApprovedGame(gameItem.getGameId(), onAfterFullSuccess);
                                         })
                                         .addOnFailureListener(e -> {
                                             errorLiveData.setValue("Failed to approve game: " + e.getMessage());
@@ -608,7 +615,40 @@ public class GameRepository {
                 });
     }
 
-    private void deleteApprovedGame(String gameId) {
+    /**
+     * Approve every completed game in the list, one after another (avoids overlapping reloads).
+     */
+    public void approveAllCompletedGames(List<GameItem> games, Runnable onAllComplete) {
+        if (games == null || games.isEmpty()) {
+            if (onAllComplete != null) {
+                onAllComplete.run();
+            }
+            return;
+        }
+        List<GameItem> completed = new ArrayList<>();
+        for (GameItem g : games) {
+            if (g != null && g.isCompleted()) {
+                completed.add(g);
+            }
+        }
+        if (completed.isEmpty()) {
+            errorLiveData.setValue("No completed games to approve.");
+            return;
+        }
+        approveSequentially(completed, 0, onAllComplete);
+    }
+
+    private void approveSequentially(List<GameItem> list, int index, Runnable onAllComplete) {
+        if (index >= list.size()) {
+            if (onAllComplete != null) {
+                onAllComplete.run();
+            }
+            return;
+        }
+        approveGame(list.get(index), () -> approveSequentially(list, index + 1, onAllComplete));
+    }
+
+    private void deleteApprovedGame(String gameId, Runnable onAfterSuccess) {
         // Delete from both collections after successful approval
         db.collection(GAMES_COLLECTION).document(gameId).delete()
                 .addOnSuccessListener(aVoid -> {
@@ -620,6 +660,9 @@ public class GameRepository {
                                 // Reload approved games to update total GST
                                 loadApprovedGames();
                                 System.out.println("Successfully approved and deleted game: " + gameId);
+                                if (onAfterSuccess != null) {
+                                    onAfterSuccess.run();
+                                }
                             })
                             .addOnFailureListener(e -> {
                                 errorLiveData.setValue("Failed to delete approved game data: " + e.getMessage());
