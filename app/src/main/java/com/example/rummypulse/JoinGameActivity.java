@@ -201,7 +201,7 @@ public class JoinGameActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private static final long TRANSFER_PIN_DONE_COUNTDOWN_MS = 20_000L;
+    private static final long TRANSFER_PIN_DONE_COUNTDOWN_MS = 10_000L;
 
     private void showTransferAccessPinDialog(String pin) {
         android.app.Dialog dialog = new android.app.Dialog(this);

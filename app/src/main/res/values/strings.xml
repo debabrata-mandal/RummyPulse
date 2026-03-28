@@ -16,6 +16,6 @@
     <!-- Authentication strings -->
     <string name="default_web_client_id">740379545501-g1h84gk3d1hrq0egmpp78tulcuk0igbc.apps.googleusercontent.com</string>
 
-    <string name="transfer_pin_done_countdown">Done (%1$ds)</string>
+    <string name="transfer_pin_done_countdown">Done (%1$d)</string>
     <string name="transfer_pin_done">Done</string>
 </resources>
