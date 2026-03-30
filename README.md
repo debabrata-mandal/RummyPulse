@@ -113,9 +113,78 @@ The app uses **Semantic Versioning** based on commit messages:
    # Build debug APK (for development)
    ./gradlew assembleDebug
 
+   # Install debug APK on a running emulator or USB device and launch the app
+   ./gradlew deployDebug
+   # Windows: gradlew.bat deployDebug
+
    # Install on connected device/emulator
    adb install app/build/outputs/apk/release/app-release.apk
    ```
+
+### Optional: AI-suggested game names (Groq, free tier)
+
+The app calls **[Groq](https://groq.com/)**’s OpenAI-compatible **`/chat/completions`** API. Code: `GroqGameNameService`.
+
+**Free tier:** Sign up at [console.groq.com](https://console.groq.com/) and create an API key. You do **not** need a paid “Developer” plan for the default model below—limits are per [rate limits](https://console.groq.com/docs/rate-limits) and your org’s [Settings → Limits](https://console.groq.com/settings/limits). This app uses **one short Groq request when you tap Create Game** (if `GROQ_API_KEY` is set at build time).
+
+**Free-tier model IDs** (chat; set as **`GROQ_MODEL_ID`** when building; quotas are org-wide and can change):
+
+| Model ID | Good for this app | Typical free-tier headroom (see Groq docs) |
+|----------|-------------------|---------------------------------------------|
+| **`llama-3.1-8b-instant`** | **Default in the project** — fast, cheap output | High daily requests (e.g. ~14.4K RPD in public tables) |
+| `allam-2-7b` | Lighter model | Lower RPD than Llama 3.1 8B in some tables |
+| `openai/gpt-oss-20b` | Alternative | Often ~1K RPD class in tables |
+
+Avoid models your account marks as paid-only; check [Models](https://console.groq.com/docs/models) and your dashboard.
+
+**Why Groq (e.g. for India):** Alibaba **Qwen / Model Studio** has **no India region** and is often hard to use from India. Groq usually works with a normal internet connection.
+
+#### Groq setup (build-time: properties, env, or `local.properties`)
+
+Gradle reads **`GROQ_API_KEY`** and **`GROQ_MODEL_ID`** at **build time** and puts them in `BuildConfig`. Resolution order: **Gradle property** → **OS environment** → **`local.properties`** in the project root (same file as `sdk.dir`; **gitignored**).
+
+**Important:** **GitHub repository secrets** are only available when **GitHub Actions** runs Gradle. They are **not** sent to your PC. For **Android Studio** debug builds, putting the key in **`local.properties`** is usually the least fragile (Studio often does not pass shell env vars into the Gradle daemon).
+
+1. Sign up at **[console.groq.com](https://console.groq.com/)** and create an API key.
+2. **Recommended (local dev, not committed):** edit the project’s **`local.properties`** (next to `sdk.dir`) and add:
+
+   ```properties
+   GROQ_API_KEY=gsk_your_key_here
+   GROQ_MODEL_ID=llama-3.1-8b-instant
+   ```
+
+   Then **File → Sync Project with Gradle Files** (or **Rebuild**).
+
+3. **Alternative — user** `gradle.properties` (also not in the repo):
+
+   - **macOS / Linux:** `~/.gradle/gradle.properties`
+   - **Windows:** `%USERPROFILE%\.gradle\gradle.properties`
+
+   Same `GROQ_*` keys as above.
+
+4. **Alternative — environment variables** (same names everywhere: **local machine, IDE, CI**):
+
+   | Variable | Required | Example |
+   |----------|----------|---------|
+   | **`GROQ_API_KEY`** | Yes, for auto-generated names on create | Your `gsk_…` key |
+   | **`GROQ_MODEL_ID`** | No | `llama-3.1-8b-instant` (default if unset) |
+
+5. **Windows (PowerShell)** before Gradle or Android Studio’s terminal:
+   ```powershell
+   $env:GROQ_API_KEY = "gsk_your_key_here"
+   $env:GROQ_MODEL_ID = "llama-3.1-8b-instant"
+   .\gradlew.bat assembleDebug
+   ```
+6. **Android Studio:** **Run → Edit Configurations…** → your app run config → **Environment variables** → add `GROQ_API_KEY` (and optionally `GROQ_MODEL_ID`). Then **Build → Rebuild Project** so dependent tasks see the vars, or build from a terminal where those vars are set.
+7. **GitHub Actions:** Add repository secrets **`GROQ_API_KEY`** and optional **`GROQ_MODEL_ID`**. The workflow passes them as `env` into `./gradlew assembleRelease` (see `.github/workflows/android-build.yml`). **Install that CI-built release APK** (or any build produced on the runner with those secrets) if you want auto-generated names without local keys. If `GROQ_API_KEY` is missing on the runner, the APK still builds but new games are created without a Groq name.
+
+8. Run the app → **Create New Game** → **CREATE GAME** (device needs internet if Groq is configured).
+
+**Security:** The key is still compiled into the APK; for public store apps, prefer a backend proxy.
+
+**Note:** `local.properties` holds **`sdk.dir`** and may also hold **`GROQ_*`** for local builds; it stays out of git via `.gitignore`.
+
+**Note on Qwen:** This repo does not ship Qwen.
 
 ### Firebase Setup
 1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com)

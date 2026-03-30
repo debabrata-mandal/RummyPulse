@@ -8,7 +8,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -18,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.rummypulse.JoinGameActivity;
 import com.example.rummypulse.R;
 import com.example.rummypulse.databinding.FragmentDashboardBinding;
+import com.example.rummypulse.service.GroqGameNameService;
 import com.example.rummypulse.ui.home.GameItem;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -237,11 +237,41 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                     return;
                 }
 
-                // Create the game
-                dashboardViewModel.createNewGame(pointValue, gstPercentage);
-                dialog.dismiss();
-                
-                com.example.rummypulse.utils.ModernToast.success(getContext(), "🎮 Creating new game with you as Player 1...");
+                if (GroqGameNameService.isConfigured()) {
+                    btnCreate.setEnabled(false);
+                    com.example.rummypulse.utils.ModernToast.progress(getContext(), "Creating game…");
+                    GroqGameNameService.suggestName(new GroqGameNameService.Callback() {
+                        @Override
+                        public void onSuccess(String name) {
+                            if (!isAdded() || getContext() == null) {
+                                return;
+                            }
+                            btnCreate.setEnabled(true);
+                            String dn = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
+                            dashboardViewModel.createNewGame(pointValue, gstPercentage, dn);
+                            dialog.dismiss();
+                            com.example.rummypulse.utils.ModernToast.success(getContext(),
+                                    "🎮 Creating new game with you as Player 1...");
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            if (!isAdded() || getContext() == null) {
+                                return;
+                            }
+                            btnCreate.setEnabled(true);
+                            dashboardViewModel.createNewGame(pointValue, gstPercentage, null);
+                            dialog.dismiss();
+                            com.example.rummypulse.utils.ModernToast.success(getContext(),
+                                    "🎮 Creating new game with you as Player 1...");
+                        }
+                    });
+                } else {
+                    dashboardViewModel.createNewGame(pointValue, gstPercentage, null);
+                    dialog.dismiss();
+                    com.example.rummypulse.utils.ModernToast.success(getContext(),
+                            "🎮 Creating new game with you as Player 1...");
+                }
 
             } catch (NumberFormatException e) {
                 com.example.rummypulse.utils.ModernToast.error(getContext(), "Please enter valid numbers");

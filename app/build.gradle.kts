@@ -1,6 +1,37 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     id("com.google.gms.google-services")
+}
+
+fun escapeForBuildConfig(value: String): String =
+    value.replace("\\", "\\\\").replace("\"", "\\\"")
+
+fun readGroqFromLocalProperties(key: String): String {
+    val f = rootProject.file("local.properties")
+    if (!f.isFile) return ""
+    return runCatching {
+        val p = Properties()
+        f.reader(Charsets.UTF_8).use { reader -> p.load(reader) }
+        p.getProperty(key)?.trim().orEmpty()
+    }.getOrDefault("")
+}
+
+/**
+ * Groq for BuildConfig (first match wins):
+ * 1. Gradle property (project `gradle.properties` or `~/.gradle/gradle.properties` or `-P`)
+ * 2. OS environment (CI / VS Code task / shell)
+ * 3. Root `local.properties` (gitignored; reliable when Android Studio does not pass env to Gradle)
+ */
+fun groqConfig(propAndEnvName: String, default: String = ""): String {
+    val fromProp = project.findProperty(propAndEnvName)?.toString()?.trim()
+    if (!fromProp.isNullOrBlank()) return fromProp
+    val fromEnv = System.getenv(propAndEnvName)?.trim()
+    if (!fromEnv.isNullOrBlank()) return fromEnv
+    val fromLocal = readGroqFromLocalProperties(propAndEnvName)
+    if (fromLocal.isNotBlank()) return fromLocal
+    return default
 }
 
 android {
@@ -14,6 +45,13 @@ android {
         versionCode = 3
         versionName = "1.0.2"
 
+        // Groq: see groqConfig() — properties, env, or local.properties (not committed).
+        val groqKey = escapeForBuildConfig(groqConfig("GROQ_API_KEY"))
+        val groqModel = escapeForBuildConfig(
+            groqConfig("GROQ_MODEL_ID", "llama-3.1-8b-instant"),
+        )
+        buildConfigField("String", "GROQ_API_KEY", "\"$groqKey\"")
+        buildConfigField("String", "GROQ_MODEL_ID", "\"$groqModel\"")
     }
 
     signingConfigs {
@@ -49,6 +87,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 

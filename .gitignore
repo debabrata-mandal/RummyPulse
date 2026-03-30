@@ -5,6 +5,10 @@ build/
 # Local configuration file (sdk path, etc)
 local.properties
 
+# Local env files (e.g. API keys for local scripts — never commit)
+.env
+.env.*
+
 # Log/OS Files
 *.log
 

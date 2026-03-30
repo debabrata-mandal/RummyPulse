@@ -1,0 +1,16 @@
+---
+description: Deploy RummyPulse to emulator after Android app changes
+globs: app/**/*
+alwaysApply: false
+---
+
+After you finish edits under `app/` (Java, XML, Gradle for the Android module), run a deploy so the app is installed and launched on the emulator:
+
+- **Windows (PowerShell):** `.\gradlew.bat deployDebug`
+- **macOS/Linux:** `./gradlew deployDebug`
+
+To test **Groq name generation on create game**, Gradle must see **`GROQ_API_KEY`** at build time: **`local.properties`** (project root, gitignored), **`~/.gradle/gradle.properties`**, or env vars when you run Gradle (see README).
+
+Requirements: one Android emulator running **or** a device connected with USB debugging; `adb` on PATH (Android SDK `platform-tools`). If no device is connected, the install step fails with a clear adb error.
+
+Do not skip this when the user asked for implementation or fixes that affect the running app.

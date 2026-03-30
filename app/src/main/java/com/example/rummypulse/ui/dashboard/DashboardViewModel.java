@@ -194,6 +194,10 @@ public class DashboardViewModel extends ViewModel {
     }
 
     public void createNewGame(double pointValue, double gstPercentage) {
+        createNewGame(pointValue, gstPercentage, null);
+    }
+
+    public void createNewGame(double pointValue, double gstPercentage, String optionalDisplayName) {
         // Generate Game ID (9 characters, uppercase)
         String gameId = generateGameId();
         
@@ -236,6 +240,11 @@ public class DashboardViewModel extends ViewModel {
         
         initialGameData.put("players", players);
 
+        String displayLabel = optionalDisplayName != null ? optionalDisplayName.trim() : "";
+        if (!displayLabel.isEmpty()) {
+            initialGameData.put("displayName", displayLabel);
+        }
+
         // Save to Firebase Firestore
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         
@@ -247,6 +256,9 @@ public class DashboardViewModel extends ViewModel {
         authData.put("creatorUserId", creatorUserId);
         authData.put("creatorName", creatorName);
         authData.put("version", "1.0");
+        if (!displayLabel.isEmpty()) {
+            authData.put("displayName", displayLabel);
+        }
         
         // Add creation timestamp to game data as well for easy access
         initialGameData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());

@@ -112,8 +112,16 @@ jobs:
         # Verify the changes
         grep -E "(versionName|versionCode)" app/build.gradle.kts
 
+    # Groq: optional secrets GROQ_API_KEY / GROQ_MODEL_ID passed as env (same names as local Gradle builds).
     - name: Build with Gradle
-      run: ./gradlew assembleRelease
+      env:
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        GROQ_MODEL_ID: ${{ secrets.GROQ_MODEL_ID }}
+      run: |
+        if [ -z "$GROQ_API_KEY" ]; then
+          echo "GROQ_API_KEY secret not set — create-game name generation will be skipped in this APK."
+        fi
+        ./gradlew assembleRelease
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
