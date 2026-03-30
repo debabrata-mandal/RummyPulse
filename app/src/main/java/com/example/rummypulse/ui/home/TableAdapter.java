@@ -55,11 +55,10 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         public void onBindViewHolder(@NonNull TableViewHolder holder, int position) {
             GameItem item = gameItems.get(position);
 
-            // Set Game ID Header
-            holder.gameIdHeaderText.setText(item.getGameId());
-            
-            // Set Game ID in created text
-            holder.gameIdInCreatedText.setText(item.getGameId());
+            String rowTitle = titleForGameRow(item);
+
+            holder.gameIdHeaderText.setText(rowTitle);
+            holder.gameCreatedSummaryText.setText(buildGameCreatedSummary(item));
 
             // Set Game PIN (initially masked)
             holder.gamePinText.setText("****");
@@ -83,7 +82,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 copyToClipboard(holder.itemView.getContext(), item.getGameId(), "Game ID");
             });
             
-            holder.gameIdInCreatedText.setOnClickListener(v -> {
+            holder.gameCreatedSummaryText.setOnClickListener(v -> {
                 copyToClipboard(holder.itemView.getContext(), item.getGameId(), "Game ID");
             });
 
@@ -95,17 +94,6 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             } else {
                 holder.pointValueText.setText("₹" + pointValue);
                 System.out.println("Setting point value for game " + item.getGameId() + ": ₹" + pointValue);
-            }
-        
-            // Set Creation DateTime
-            holder.creationDateText.setText(formatDateTime(item.getCreationDateTime()));
-            
-            // Set creator name if available
-            if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
-                holder.creatorNameText.setText("Created by: " + item.getCreatorName());
-                holder.creatorNameText.setVisibility(View.VISIBLE);
-            } else {
-                holder.creatorNameText.setVisibility(View.GONE);
             }
         
         // Set Number of Players
@@ -205,24 +193,72 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         }
     }
 
-    private String formatDateTime(String dateTime) {
-        // Convert from "2024-01-15 14:30:00" to "15 Jan 2024 at 14:30"
-        if (dateTime.length() >= 19) {
-            String date = dateTime.substring(0, 10);
-            String time = dateTime.substring(11, 16);
-            
-            String[] parts = date.split("-");
-            if (parts.length == 3) {
-                String year = parts[0];
-                String month = parts[1];
-                String day = parts[2];
-                
-                String[] months = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-                int monthIndex = Integer.parseInt(month) - 1;
-                
-                return day + " " + months[monthIndex] + " " + year + " at " + time;
+    /** Visible title: {@code games.displayName} when non-empty, else game ID. */
+    private static String titleForGameRow(GameItem item) {
+        if (item == null) {
+            return "";
+        }
+        String dn = item.getGameDisplayName();
+        if (dn != null && !dn.trim().isEmpty()) {
+            return dn.trim();
+        }
+        return item.getGameId() != null ? item.getGameId() : "";
+    }
+
+    /** First whitespace-separated token of display name (e.g. email local-part before @ if no space). */
+    private static String creatorFirstName(String creatorName) {
+        if (creatorName == null) {
+            return "";
+        }
+        String t = creatorName.trim();
+        if (t.isEmpty()) {
+            return "";
+        }
+        int at = t.indexOf('@');
+        if (at > 0 && !t.contains(" ")) {
+            t = t.substring(0, at);
+            int dot = t.indexOf('.');
+            if (dot > 0) {
+                t = t.substring(0, dot);
             }
+        }
+        int sp = t.indexOf(' ');
+        if (sp < 0) {
+            return t;
+        }
+        return t.substring(0, sp);
+    }
+
+    private static String buildGameCreatedSummary(GameItem item) {
+        String title = titleForGameRow(item);
+        String rawWhen = item.getCreationDateTime();
+        String when = (rawWhen != null) ? formatDateTime(rawWhen) : "";
+        if (when.isEmpty()) {
+            when = "unknown date";
+        }
+        String first = creatorFirstName(item.getCreatorName());
+        if (!first.isEmpty()) {
+            return title + " created by " + first + " on " + when;
+        }
+        return title + " on " + when;
+    }
+
+    private static String formatDateTime(String dateTime) {
+        if (dateTime == null || dateTime.length() < 19) {
+            return dateTime == null ? "" : dateTime;
+        }
+        // Convert from "2024-01-15 14:30:00" to "15 Jan 2024 at 14:30"
+        String date = dateTime.substring(0, 10);
+        String time = dateTime.substring(11, 16);
+        String[] parts = date.split("-");
+        if (parts.length == 3) {
+            String year = parts[0];
+            String month = parts[1];
+            String day = parts[2];
+            String[] months = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+            int monthIndex = Integer.parseInt(month) - 1;
+            return day + " " + months[monthIndex] + " " + year + " at " + time;
         }
         return dateTime;
     }
@@ -401,18 +437,16 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     }
 
         public static class TableViewHolder extends RecyclerView.ViewHolder {
-            TextView gameIdHeaderText, gameIdInCreatedText, gamePinText, pointValueText, creationDateText, creatorNameText, playersText, gstPercentageText, gstAmountText, ageText, statusText;
+            TextView gameIdHeaderText, gameCreatedSummaryText, gamePinText, pointValueText, playersText, gstPercentageText, gstAmountText, ageText, statusText;
             ImageView iconViewPin;
             View btnApproveGst, btnDeleteGame;
 
             public TableViewHolder(@NonNull View itemView) {
                 super(itemView);
                 gameIdHeaderText = itemView.findViewById(R.id.text_game_id_header);
-                gameIdInCreatedText = itemView.findViewById(R.id.text_game_id_in_created);
+                gameCreatedSummaryText = itemView.findViewById(R.id.text_game_created_summary);
                 gamePinText = itemView.findViewById(R.id.text_game_pin);
                 pointValueText = itemView.findViewById(R.id.text_point_value);
-                creationDateText = itemView.findViewById(R.id.text_creation_date);
-                creatorNameText = itemView.findViewById(R.id.text_creator_name_table);
                 playersText = itemView.findViewById(R.id.text_players);
                 gstPercentageText = itemView.findViewById(R.id.text_gst_percentage);
                 gstAmountText = itemView.findViewById(R.id.text_gst_amount);

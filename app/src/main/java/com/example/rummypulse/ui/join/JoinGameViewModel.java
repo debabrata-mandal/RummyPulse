@@ -28,6 +28,8 @@ public class JoinGameViewModel extends AndroidViewModel {
     private MutableLiveData<Boolean> editAccessGranted = new MutableLiveData<>();
     private MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
     private MutableLiveData<String> gamePin = new MutableLiveData<>();
+    /** From {@code games.displayName}; empty means show game ID in UI. */
+    private MutableLiveData<String> gameDisplayName = new MutableLiveData<>();
 
     public JoinGameViewModel(@NonNull Application application) {
         super(application);
@@ -58,6 +60,10 @@ public class JoinGameViewModel extends AndroidViewModel {
         return gamePin;
     }
 
+    public LiveData<String> getGameDisplayName() {
+        return gameDisplayName;
+    }
+
     public void grantEditAccess() {
         editAccessGranted.setValue(true);
     }
@@ -80,6 +86,7 @@ public class JoinGameViewModel extends AndroidViewModel {
         // Start loading
         System.out.println("Starting loading for game: " + gameId);
         isLoading.setValue(true);
+        gameDisplayName.setValue(null);
 
         // Add a small delay to make spinner visible for testing
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
@@ -91,6 +98,11 @@ public class JoinGameViewModel extends AndroidViewModel {
                         // Game exists, extract PIN and fetch the game data
                         try {
                             GameAuth gameAuth = documentSnapshot.toObject(GameAuth.class);
+                            String display = "";
+                            if (gameAuth != null && gameAuth.getDisplayName() != null) {
+                                display = gameAuth.getDisplayName().trim();
+                            }
+                            gameDisplayName.setValue(display);
                             if (gameAuth != null && gameAuth.getPin() != null) {
                                 gamePin.setValue(gameAuth.getPin());
                                 
@@ -116,11 +128,13 @@ public class JoinGameViewModel extends AndroidViewModel {
                         fetchGameData(gameId, requestEditAccess);
                     } else {
                         isLoading.setValue(false);
+                        gameDisplayName.setValue(null);
                         errorMessage.setValue("Game not found. Please check the Game ID.");
                     }
                 })
                 .addOnFailureListener(e -> {
                     isLoading.setValue(false);
+                    gameDisplayName.setValue(null);
                     errorMessage.setValue("Failed to connect to server. Please try again.");
                 });
         }, 500); // 500ms delay to make spinner visible

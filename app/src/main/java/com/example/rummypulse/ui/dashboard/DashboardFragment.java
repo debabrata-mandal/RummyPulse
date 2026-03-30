@@ -240,34 +240,18 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 if (GroqGameNameService.isConfigured()) {
                     btnCreate.setEnabled(false);
                     com.example.rummypulse.utils.ModernToast.progress(getContext(), "Creating game…");
-                    GroqGameNameService.suggestName(new GroqGameNameService.Callback() {
-                        @Override
-                        public void onSuccess(String name) {
-                            if (!isAdded() || getContext() == null) {
-                                return;
-                            }
-                            btnCreate.setEnabled(true);
-                            String dn = (name != null && !name.trim().isEmpty()) ? name.trim() : null;
-                            dashboardViewModel.createNewGame(pointValue, gstPercentage, dn);
-                            dialog.dismiss();
-                            com.example.rummypulse.utils.ModernToast.success(getContext(),
-                                    "🎮 Creating new game with you as Player 1...");
+                    GroqGameNameService.suggestNameWithRetries(displayName -> {
+                        if (!isAdded() || getContext() == null) {
+                            return;
                         }
-
-                        @Override
-                        public void onError(String message) {
-                            if (!isAdded() || getContext() == null) {
-                                return;
-                            }
-                            btnCreate.setEnabled(true);
-                            dashboardViewModel.createNewGame(pointValue, gstPercentage, null);
-                            dialog.dismiss();
-                            com.example.rummypulse.utils.ModernToast.success(getContext(),
-                                    "🎮 Creating new game with you as Player 1...");
-                        }
+                        btnCreate.setEnabled(true);
+                        dashboardViewModel.createNewGame(pointValue, gstPercentage, displayName);
+                        dialog.dismiss();
+                        com.example.rummypulse.utils.ModernToast.success(getContext(),
+                                "🎮 Creating new game with you as Player 1...");
                     });
                 } else {
-                    dashboardViewModel.createNewGame(pointValue, gstPercentage, null);
+                    dashboardViewModel.createNewGame(pointValue, gstPercentage, "");
                     dialog.dismiss();
                     com.example.rummypulse.utils.ModernToast.success(getContext(),
                             "🎮 Creating new game with you as Player 1...");

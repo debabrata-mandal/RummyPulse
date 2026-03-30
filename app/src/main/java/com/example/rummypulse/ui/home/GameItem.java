@@ -17,6 +17,8 @@ public class GameItem {
     private String creatorName;
     private String creatorPhotoUrl;
     private String creatorUserId;
+    /** From {@code games.displayName}; may be empty. */
+    private String gameDisplayName;
     private List<Player> players;
 
     public GameItem() {
@@ -97,6 +99,18 @@ public class GameItem {
     public String getCreatorName() { return creatorName; }
     public String getCreatorPhotoUrl() { return creatorPhotoUrl; }
     public String getCreatorUserId() { return creatorUserId; }
+    public String getGameDisplayName() { return gameDisplayName; }
+
+    /**
+     * Dashboard card title: {@code games.displayName} when set, otherwise {@code Game #} + id (legacy style).
+     */
+    public String getDashboardPrimaryLabel() {
+        if (gameDisplayName != null && !gameDisplayName.trim().isEmpty()) {
+            return gameDisplayName.trim();
+        }
+        return "Game #" + (gameId != null ? gameId : "");
+    }
+
     public List<Player> getPlayers() { return players; }
 
     // Setters
@@ -113,6 +127,7 @@ public class GameItem {
     public void setCreatorName(String creatorName) { this.creatorName = creatorName; }
     public void setCreatorPhotoUrl(String creatorPhotoUrl) { this.creatorPhotoUrl = creatorPhotoUrl; }
     public void setCreatorUserId(String creatorUserId) { this.creatorUserId = creatorUserId; }
+    public void setGameDisplayName(String gameDisplayName) { this.gameDisplayName = gameDisplayName; }
     public void setPlayers(List<Player> players) { this.players = players; }
 
     // Helper methods for better data handling

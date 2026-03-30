@@ -9,6 +9,8 @@ public class GameAuth {
     private String version;
     private String creatorName;
     private String creatorUserId;
+    /** AI or user-facing game title; stored only on {@code games} documents. May be empty string. */
+    private String displayName;
 
     public GameAuth() {
         // Default constructor required for Firestore
@@ -68,5 +70,13 @@ public class GameAuth {
 
     public void setCreatorUserId(String creatorUserId) {
         this.creatorUserId = creatorUserId;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
     }
 }

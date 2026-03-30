@@ -125,7 +125,7 @@ The app uses **Semantic Versioning** based on commit messages:
 
 The app calls **[Groq](https://groq.com/)**’s OpenAI-compatible **`/chat/completions`** API. Code: `GroqGameNameService`.
 
-**Free tier:** Sign up at [console.groq.com](https://console.groq.com/) and create an API key. You do **not** need a paid “Developer” plan for the default model below—limits are per [rate limits](https://console.groq.com/docs/rate-limits) and your org’s [Settings → Limits](https://console.groq.com/settings/limits). This app uses **one short Groq request when you tap Create Game** (if `GROQ_API_KEY` is set at build time).
+**Free tier:** Sign up at [console.groq.com](https://console.groq.com/) and create an API key. You do **not** need a paid “Developer” plan for the default model below—limits are per [rate limits](https://console.groq.com/docs/rate-limits) and your org’s [Settings → Limits](https://console.groq.com/settings/limits). With a key configured at build time, **Create New Game** can suggest a short title automatically (device needs internet).
 
 **Free-tier model IDs** (chat; set as **`GROQ_MODEL_ID`** when building; quotas are org-wide and can change):
 
@@ -176,7 +176,7 @@ Gradle reads **`GROQ_API_KEY`** and **`GROQ_MODEL_ID`** at **build time** and pu
    .\gradlew.bat assembleDebug
    ```
 6. **Android Studio:** **Run → Edit Configurations…** → your app run config → **Environment variables** → add `GROQ_API_KEY` (and optionally `GROQ_MODEL_ID`). Then **Build → Rebuild Project** so dependent tasks see the vars, or build from a terminal where those vars are set.
-7. **GitHub Actions:** Add repository secrets **`GROQ_API_KEY`** and optional **`GROQ_MODEL_ID`**. The workflow passes them as `env` into `./gradlew assembleRelease` (see `.github/workflows/android-build.yml`). **Install that CI-built release APK** (or any build produced on the runner with those secrets) if you want auto-generated names without local keys. If `GROQ_API_KEY` is missing on the runner, the APK still builds but new games are created without a Groq name.
+7. **GitHub Actions:** Add repository secrets **`GROQ_API_KEY`** and optional **`GROQ_MODEL_ID`**. The workflow passes them as `env` into `./gradlew assembleRelease` (see `.github/workflows/android-build.yml`). **Install that CI-built release APK** (or any build produced on the runner with those secrets) if you want auto-generated names without local keys. If `GROQ_API_KEY` is missing on the runner, the APK still builds but automatic naming is skipped.
 
 8. Run the app → **Create New Game** → **CREATE GAME** (device needs internet if Groq is configured).
 

@@ -48,11 +48,69 @@ public final class GroqGameNameService {
         void onError(String message);
     }
 
+    /**
+     * Delivers a trimmed name or {@code ""} after up to {@link #MAX_NAME_ATTEMPTS} tries (initial + 2 retries).
+     * Runs on a background thread; callback is always invoked on the main thread.
+     */
+    public interface NameResultCallback {
+        void onComplete(String displayName);
+    }
+
+    private static final int MAX_NAME_ATTEMPTS = 3;
+
+    private static final long RETRY_DELAY_MS = 400L;
+
     private GroqGameNameService() {
     }
 
     public static boolean isConfigured() {
         return BuildConfig.GROQ_API_KEY != null && !BuildConfig.GROQ_API_KEY.isEmpty();
+    }
+
+    /**
+     * Up to three attempts with short delay between failures. {@link NameResultCallback#onComplete} receives
+     * a non-null string: trimmed model output, or {@code ""} if Groq is not configured, misconfigured, or all attempts fail.
+     */
+    public static void suggestNameWithRetries(NameResultCallback callback) {
+        if (!isConfigured()) {
+            Log.w(TAG, "Game name generation skipped: BuildConfig.GROQ_API_KEY is empty (add GROQ_API_KEY to local.properties or Gradle env; GitHub secrets only on CI).");
+            MAIN.post(() -> callback.onComplete(""));
+            return;
+        }
+        String modelId = BuildConfig.GROQ_MODEL_ID;
+        if (modelId == null || modelId.isEmpty()) {
+            Log.e(TAG, "Groq model id is not configured.");
+            MAIN.post(() -> callback.onComplete(""));
+            return;
+        }
+
+        IO.execute(() -> {
+            String apiKey = BuildConfig.GROQ_API_KEY;
+            for (int attempt = 1; attempt <= MAX_NAME_ATTEMPTS; attempt++) {
+                if (attempt > 1) {
+                    try {
+                        Thread.sleep(RETRY_DELAY_MS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        MAIN.post(() -> callback.onComplete(""));
+                        return;
+                    }
+                }
+                try {
+                    String name = requestNameSync(modelId, apiKey);
+                    if (name != null && !name.trim().isEmpty()) {
+                        String trimmed = name.trim();
+                        MAIN.post(() -> callback.onComplete(trimmed));
+                        return;
+                    }
+                } catch (Exception e) {
+                    String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                    Log.w(TAG, "Groq name attempt " + attempt + "/" + MAX_NAME_ATTEMPTS + " failed: " + msg);
+                }
+            }
+            Log.w(TAG, "Groq name generation exhausted after " + MAX_NAME_ATTEMPTS + " attempts.");
+            MAIN.post(() -> callback.onComplete(""));
+        });
     }
 
     public static void suggestName(Callback callback) {

@@ -107,8 +107,8 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         }
         
         // Full bind
-        // Set game ID
-        holder.gameIdText.setText("Game #" + item.getGameId());
+        // Title: display name when set, else "Game #" + id
+        holder.gameIdText.setText(item.getDashboardPrimaryLabel());
         
         // Set game status
         String status = item.getGameStatus();

@@ -240,10 +240,8 @@ public class DashboardViewModel extends ViewModel {
         
         initialGameData.put("players", players);
 
+        // Human-readable title lives only on games/{gameId}; always set (empty string if no Groq name).
         String displayLabel = optionalDisplayName != null ? optionalDisplayName.trim() : "";
-        if (!displayLabel.isEmpty()) {
-            initialGameData.put("displayName", displayLabel);
-        }
 
         // Save to Firebase Firestore
         FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -256,9 +254,7 @@ public class DashboardViewModel extends ViewModel {
         authData.put("creatorUserId", creatorUserId);
         authData.put("creatorName", creatorName);
         authData.put("version", "1.0");
-        if (!displayLabel.isEmpty()) {
-            authData.put("displayName", displayLabel);
-        }
+        authData.put("displayName", displayLabel);
         
         // Add creation timestamp to game data as well for easy access
         initialGameData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());

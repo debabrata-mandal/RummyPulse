@@ -123,7 +123,8 @@ public class JoinGameActivity extends AppCompatActivity {
             
             if (gameId != null) {
                 currentGameId = gameId; // Store the game ID
-                
+                applyGameHeaderText();
+
                 // Keep toolbar title as "Game View" only
                 if (getSupportActionBar() != null) {
                     getSupportActionBar().setTitle("Game View");
@@ -887,13 +888,24 @@ public class JoinGameActivity extends AppCompatActivity {
         showLoadingGameInfo();
     }
     
-    private void showLoadingGameInfo() {
-        // Set placeholder game ID if not already set
-        if (currentGameId != null) {
-            binding.textGameIdHeader.setText(currentGameId);
-        } else {
+    /**
+     * Toolbar header: show {@code games.displayName} when non-empty, otherwise game ID.
+     */
+    private void applyGameHeaderText() {
+        if (currentGameId == null) {
             binding.textGameIdHeader.setText("Loading...");
+            return;
         }
+        String name = viewModel.getGameDisplayName().getValue();
+        if (name != null && !name.isEmpty()) {
+            binding.textGameIdHeader.setText(name);
+        } else {
+            binding.textGameIdHeader.setText(currentGameId);
+        }
+    }
+
+    private void showLoadingGameInfo() {
+        applyGameHeaderText();
     }
     
     private void showLoadingPlayerCards() {
@@ -954,6 +966,8 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void observeViewModel() {
+        viewModel.getGameDisplayName().observe(this, ignored -> applyGameHeaderText());
+
         viewModel.getGameData().observe(this, gameData -> {
             if (gameData != null) {
                 displayGameData(gameData);
@@ -1106,7 +1120,8 @@ public class JoinGameActivity extends AppCompatActivity {
         }
 
         currentGameId = gameId;
-        
+        applyGameHeaderText();
+
         // Check if user had edit access for this game previously
         String savedPin = getSavedPin(gameId);
         if (savedPin != null) {
@@ -1270,15 +1285,8 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         binding.standingsCard.setVisibility(View.VISIBLE);
 
-        // Get the game ID from intent
-        Intent intent = getIntent();
-        String gameId = "";
-        if (intent != null && intent.hasExtra("GAME_ID")) {
-            gameId = intent.getStringExtra("GAME_ID");
-        }
-
-        // Update header with game ID
-        binding.textGameIdHeader.setText(gameId);
+        // Header: name from games.displayName when set, else game ID
+        applyGameHeaderText();
 
         // Update compact info header (dashboard style)
         updateGameInfoHeader(gameData);

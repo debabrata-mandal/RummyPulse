@@ -243,6 +243,7 @@ public class GameRepository {
                                             String pin = gameAuth != null ? gameAuth.getPin() : "0000";
                                             String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
                                             String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
+                                            String gameDisplayName = gameDisplayNameFromAuth(gameAuth);
                                             
                                             // Use createdAt from games collection instead of lastUpdated from gameData collection
                                             com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
@@ -257,7 +258,7 @@ public class GameRepository {
                                                             if (userSnapshot.exists()) {
                                                                 creatorPhotoUrl = userSnapshot.getString("photoUrl");
                                                             }
-                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId);
+                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
                                                             
                                                             if (gameItem != null) {
                                                                 gameItemsMap.put(gameId, gameItem);
@@ -266,7 +267,7 @@ public class GameRepository {
                                                         })
                                                         .addOnFailureListener(e -> {
                                                             // If fetching photo fails, create game item without photo
-                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId);
+                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId, gameDisplayName);
                                                             if (gameItem != null) {
                                                                 gameItemsMap.put(gameId, gameItem);
                                                                 updateGameItemsList();
@@ -274,7 +275,7 @@ public class GameRepository {
                                                         });
                                             } else {
                                                 // No creator user ID, create game item without photo
-                                                GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null);
+                                                GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null, gameDisplayName);
                                                 if (gameItem != null) {
                                                     gameItemsMap.put(gameId, gameItem);
                                                     updateGameItemsList();
@@ -329,6 +330,7 @@ public class GameRepository {
                                             String pin = gameAuth != null ? gameAuth.getPin() : "0000";
                                             String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
                                             String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
+                                            String gameDisplayName = gameDisplayNameFromAuth(gameAuth);
                                             
                                             // Use createdAt from games collection instead of lastUpdated from gameData collection
                                             com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
@@ -343,7 +345,7 @@ public class GameRepository {
                                                             if (userSnapshot.exists()) {
                                                                 creatorPhotoUrl = userSnapshot.getString("photoUrl");
                                                             }
-                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId);
+                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
                                                             
                                                             if (gameItem != null) {
                                                                 gameItemsMap.put(gameId, gameItem);
@@ -356,7 +358,7 @@ public class GameRepository {
                                                         })
                                                         .addOnFailureListener(e -> {
                                                             // If fetching photo fails, create game item without photo
-                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId);
+                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId, gameDisplayName);
                                                             if (gameItem != null) {
                                                                 gameItemsMap.put(gameId, gameItem);
                                                                 
@@ -368,7 +370,7 @@ public class GameRepository {
                                                         });
                                             } else {
                                                 // No creator user ID, create game item without photo
-                                                GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null);
+                                                GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null, gameDisplayName);
                                                 if (gameItem != null) {
                                                     gameItemsMap.put(gameId, gameItem);
                                                     
@@ -405,7 +407,14 @@ public class GameRepository {
         gameItemsLiveData.setValue(gameItems);
     }
 
-    private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt, String creatorName, String creatorPhotoUrl, String creatorUserId) {
+    private static String gameDisplayNameFromAuth(GameAuth auth) {
+        if (auth == null || auth.getDisplayName() == null) {
+            return "";
+        }
+        return auth.getDisplayName();
+    }
+
+    private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt, String creatorName, String creatorPhotoUrl, String creatorUserId, String gameDisplayName) {
         // Calculate total score
         int totalScore = gameData.getTotalScore();
         
@@ -445,6 +454,7 @@ public class GameRepository {
         // Set creator photo URL and user ID
         gameItem.setCreatorPhotoUrl(creatorPhotoUrl);
         gameItem.setCreatorUserId(creatorUserId);
+        gameItem.setGameDisplayName(gameDisplayName != null ? gameDisplayName : "");
         
         return gameItem;
     }
