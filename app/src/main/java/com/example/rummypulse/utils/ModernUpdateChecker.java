@@ -20,6 +20,7 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
+import androidx.annotation.Nullable;
 import androidx.core.content.FileProvider;
 import com.example.rummypulse.R;
 
@@ -45,6 +46,8 @@ public class ModernUpdateChecker {
     private static final int REQUEST_INSTALL_PERMISSION = 1001;
     
     private final Context context;
+    /** Used for DownloadManager, broadcasts, and APK path so downloads survive activity destroy (e.g. MinimumVersionActivity). */
+    private final Context appContext;
     private final ExecutorService executor;
     private DownloadManager downloadManager;
     private long downloadId = -1;
@@ -54,8 +57,9 @@ public class ModernUpdateChecker {
     
     public ModernUpdateChecker(Context context) {
         this.context = context;
+        this.appContext = context.getApplicationContext();
         this.executor = Executors.newSingleThreadExecutor();
-        this.downloadManager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
+        this.downloadManager = (DownloadManager) appContext.getSystemService(Context.DOWNLOAD_SERVICE);
         setupDownloadReceiver();
     }
     
@@ -96,6 +100,36 @@ public class ModernUpdateChecker {
         });
     }
     
+    /**
+     * Fetches the latest GitHub release and starts the same APK download + install flow as the soft
+     * update path. If the API returns no APK asset or fails, runs {@code onFallback} on the UI thread
+     * (e.g. open the releases page in a browser).
+     */
+    public void downloadLatestReleaseApkOrFallback(@Nullable Runnable onFallback) {
+        if (!(context instanceof Activity)) {
+            Log.w(TAG, "downloadLatestReleaseApkOrFallback: context is not an Activity");
+            if (onFallback != null) {
+                new Handler(Looper.getMainLooper()).post(onFallback);
+            }
+            return;
+        }
+        final Activity activity = (Activity) context;
+        executor.execute(() -> {
+            UpdateInfo updateInfo = fetchLatestVersionInfo();
+            if (updateInfo != null && updateInfo.downloadUrl != null) {
+                activity.runOnUiThread(() -> downloadUpdate(updateInfo.downloadUrl));
+            } else {
+                activity.runOnUiThread(() -> {
+                    if (onFallback != null) {
+                        onFallback.run();
+                    } else {
+                        openGitHubReleases();
+                    }
+                });
+            }
+        });
+    }
+
     /**
      * Force check for updates regardless of admin status (for manual checks)
      */
@@ -412,8 +446,8 @@ public class ModernUpdateChecker {
      */
     private boolean isNetworkAvailable() {
         try {
-            ConnectivityManager connectivityManager = 
-                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            ConnectivityManager connectivityManager =
+                (ConnectivityManager) appContext.getSystemService(Context.CONNECTIVITY_SERVICE);
             
             if (connectivityManager == null) {
                 return false;
@@ -451,18 +485,17 @@ public class ModernUpdateChecker {
             cleanupPreviousDownload();
             
             // Store download URL for retry purposes
-            context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+            appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
                 .edit()
                 .putString("last_download_url", downloadUrl)
                 .apply();
 
-            // Register download receiver with Android 15 compatibility
+            // Register with application context so completion still delivers if the Activity is destroyed
             IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // Android 13+ requires explicit export flag
-                context.registerReceiver(downloadReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+                appContext.registerReceiver(downloadReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
             } else {
-                context.registerReceiver(downloadReceiver, filter);
+                appContext.registerReceiver(downloadReceiver, filter);
             }
 
             // Create download request
@@ -475,7 +508,7 @@ public class ModernUpdateChecker {
             String fileName = "RummyPulse_update_" + System.currentTimeMillis() + ".apk";
             
             // Always use internal app directory - no permissions needed on any Android version
-            request.setDestinationInExternalFilesDir(context, null, fileName);
+            request.setDestinationInExternalFilesDir(appContext, null, fileName);
             Log.d(TAG, "Download destination (API " + Build.VERSION.SDK_INT + "): Internal app directory/" + fileName);
             
             // Allow download over mobile data and WiFi
@@ -496,7 +529,7 @@ public class ModernUpdateChecker {
 
             Log.d(TAG, "DownloadManager request configured for API " + Build.VERSION.SDK_INT);
             Log.d(TAG, "Download URL: " + downloadUrl);
-            Log.d(TAG, "Download destination: " + context.getExternalFilesDir(null) + "/" + fileName);
+            Log.d(TAG, "Download destination: " + appContext.getExternalFilesDir(null) + "/" + fileName);
 
             // Start download
             downloadId = downloadManager.enqueue(request);
@@ -706,7 +739,7 @@ public class ModernUpdateChecker {
         } finally {
             // Unregister receiver
             try {
-                context.unregisterReceiver(downloadReceiver);
+                appContext.unregisterReceiver(downloadReceiver);
             } catch (Exception e) {
                 Log.w(TAG, "Error unregistering receiver", e);
             }
@@ -853,7 +886,7 @@ public class ModernUpdateChecker {
             if (showRetryOption) {
                 builder.setPositiveButton("Try Again", (dialog, which) -> {
                     // Get the last download URL from shared preferences if available
-                    String lastUrl = context.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                    String lastUrl = appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
                         .getString("last_download_url", null);
                     if (lastUrl != null) {
                         startApkDownload(lastUrl);
@@ -897,16 +930,15 @@ public class ModernUpdateChecker {
             Uri apkUri;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 // Use FileProvider for Android 7.0+
-                apkUri = FileProvider.getUriForFile(context, 
-                    context.getPackageName() + ".fileprovider", apkFile);
+                apkUri = FileProvider.getUriForFile(appContext,
+                    appContext.getPackageName() + ".fileprovider", apkFile);
             } else {
                 apkUri = Uri.fromFile(apkFile);
             }
 
             installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
             
-            // Start installation
-            context.startActivity(installIntent);
+            appContext.startActivity(installIntent);
             
             ModernToast.info(context, 
                 "🚀 Opening installer... APK will be auto-deleted after installation");
@@ -958,7 +990,7 @@ public class ModernUpdateChecker {
             
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(releasesUrl));
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
+            appContext.startActivity(intent);
             
             ModernToast.info(context, 
                 "🌐 Opening GitHub releases page");
@@ -976,11 +1008,14 @@ public class ModernUpdateChecker {
         if (executor != null && !executor.isShutdown()) {
             executor.shutdown();
         }
-        
-        // Unregister download receiver if still registered
+
+        // Do not unregister while a download is in flight — handleDownloadComplete does that.
+        if (downloadId != -1) {
+            return;
+        }
         try {
             if (downloadReceiver != null) {
-                context.unregisterReceiver(downloadReceiver);
+                appContext.unregisterReceiver(downloadReceiver);
             }
         } catch (Exception e) {
             Log.w(TAG, "Error unregistering receiver during cleanup", e);

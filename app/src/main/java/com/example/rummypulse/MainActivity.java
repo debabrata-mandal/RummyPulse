@@ -25,6 +25,7 @@ import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.ModernUpdateChecker;
 import com.example.rummypulse.utils.PermissionManager;
+import com.example.rummypulse.utils.VersionGate;
 
 import androidx.annotation.NonNull;
 import androidx.navigation.NavController;
@@ -48,10 +49,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_version_gate_loading);
+        VersionGate.runWhenAllowed(this, () -> continueMainOnCreateAfterVersionGate(savedInstanceState));
+    }
 
+    private void continueMainOnCreateAfterVersionGate(Bundle savedInstanceState) {
         // Initialize Firebase Auth
         mAuth = FirebaseAuth.getInstance();
-        
+
         // Create auth state listener
         mAuthListener = new FirebaseAuth.AuthStateListener() {
             @Override
@@ -69,21 +74,21 @@ public class MainActivity extends AppCompatActivity {
         // Check if user is authenticated with force stop detection
         FirebaseUser currentUser = mAuth.getCurrentUser();
         AuthStateManager authStateManager = AuthStateManager.getInstance(this);
-        
+
         if (currentUser == null) {
             // Check if this might be due to force stop
             if (authStateManager.shouldBeAuthenticated()) {
                 android.util.Log.w("MainActivity", "User should be authenticated but Firebase Auth shows null");
-                android.util.Log.w("MainActivity", "This might be due to force stop - expected user: " + 
+                android.util.Log.w("MainActivity", "This might be due to force stop - expected user: " +
                     authStateManager.getBackedUpUserEmail());
-                
+
                 // Show a toast to inform user about session restoration
-                com.example.rummypulse.utils.ModernToast.warning(this, 
+                com.example.rummypulse.utils.ModernToast.warning(this,
                     "Session was interrupted. Please sign in again.");
             } else {
                 android.util.Log.d("MainActivity", "No current user found, redirecting to login");
             }
-            
+
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;

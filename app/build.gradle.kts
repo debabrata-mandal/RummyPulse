@@ -42,8 +42,8 @@ android {
         applicationId = "com.example.rummypulse"
         minSdk = 28
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 97
+        versionName = "4.5.1"
 
         // Groq: see groqConfig() — properties, env, or local.properties (not committed).
         val groqKey = escapeForBuildConfig(groqConfig("GROQ_API_KEY"))
@@ -111,6 +111,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-config")
     
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.0.0")

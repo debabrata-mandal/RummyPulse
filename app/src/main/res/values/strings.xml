@@ -18,4 +18,12 @@
 
     <string name="transfer_pin_done_countdown">Done (%1$d)</string>
     <string name="transfer_pin_done">Done</string>
+
+    <string name="version_gate_loading">Checking for updates…</string>
+    <string name="minimum_version_title">Update required</string>
+    <string name="minimum_version_message">This version of RummyPulse is no longer supported. Tap Update app to download and install the latest APK (same as Check for updates). If that isn’t available, the releases page will open in your browser.</string>
+    <!-- Official APK distribution (app is not on Play Store). Used when Remote Config update_url is empty. -->
+    <string name="default_apk_download_page" translatable="false">https://github.com/debabrata-mandal/RummyPulse/releases</string>
+    <string name="minimum_version_update">Update app</string>
+    <string name="minimum_version_exit">Exit</string>
 </resources>

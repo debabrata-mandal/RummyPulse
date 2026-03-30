@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,6 +24,7 @@ import com.google.firebase.auth.GoogleAuthProvider;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.utils.AuthStateManager;
+import com.example.rummypulse.utils.VersionGate;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -39,7 +39,11 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+        setContentView(R.layout.activity_version_gate_loading);
+        VersionGate.runWhenAllowed(this, () -> setupLoginUi(savedInstanceState));
+    }
+
+    private void setupLoginUi(Bundle savedInstanceState) {
         binding = ActivityLoginBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
