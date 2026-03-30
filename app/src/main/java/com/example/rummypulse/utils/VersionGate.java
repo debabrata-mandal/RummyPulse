@@ -12,7 +12,6 @@ import com.example.rummypulse.R;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
-import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -37,11 +36,6 @@ public final class VersionGate {
      */
     public static void runWhenAllowed(@NonNull final AppCompatActivity activity, @NonNull final Runnable onAllowed) {
         final FirebaseRemoteConfig rc = FirebaseRemoteConfig.getInstance();
-        long fetchIntervalSec = BuildConfig.DEBUG ? 0L : 3600L;
-        rc.setConfigSettingsAsync(
-                new FirebaseRemoteConfigSettings.Builder()
-                        .setMinimumFetchIntervalInSeconds(fetchIntervalSec)
-                        .build());
 
         Map<String, Object> defaults = new HashMap<>();
         defaults.put(KEY_MIN_SUPPORTED_VERSION_CODE, 0L);
@@ -54,33 +48,51 @@ public final class VersionGate {
                         if (!task.isSuccessful()) {
                             Log.w(TAG, "Remote Config setDefaults failed; continuing with fetch", task.getException());
                         }
-                        rc.fetchAndActivate()
-                                .addOnCompleteListener(activity, new OnCompleteListener<Boolean>() {
+                        // fetch(0) ignores the SDK throttle (e.g. 3600s in release). Without this, a device can keep
+                        // an old min_supported_version_code for up to an hour after you publish a higher minimum.
+                        rc.fetch(0L)
+                                .addOnCompleteListener(activity, new OnCompleteListener<Void>() {
                                     @Override
-                                    public void onComplete(@NonNull Task<Boolean> task) {
-                                        if (!task.isSuccessful()) {
-                                            Log.w(TAG, "Remote Config fetch/activate failed; allowing app", task.getException());
+                                    public void onComplete(@NonNull Task<Void> fetchTask) {
+                                        if (!fetchTask.isSuccessful()) {
+                                            Log.w(TAG, "Remote Config fetch failed; allowing app", fetchTask.getException());
                                             activity.runOnUiThread(onAllowed);
                                             return;
                                         }
-                                        long minCode = rc.getLong(KEY_MIN_SUPPORTED_VERSION_CODE);
-                                        String updateUrl = rc.getString(KEY_UPDATE_URL);
-                                        int current = BuildConfig.VERSION_CODE;
-                                        Log.d(TAG, "Resolved: app versionCode=" + current
-                                                + " remote min_supported_version_code=" + minCode);
-                                        if (minCode > 0 && current < minCode) {
-                                            Log.w(TAG, "Version blocked: current=" + current + " min=" + minCode);
-                                            Intent intent = new Intent(activity, MinimumVersionActivity.class);
-                                            intent.putExtra(MinimumVersionActivity.EXTRA_UPDATE_URL, updateUrl);
-                                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                            activity.startActivity(intent);
-                                            activity.finish();
-                                            return;
-                                        }
-                                        activity.runOnUiThread(onAllowed);
+                                        rc.activate()
+                                                .addOnCompleteListener(activity, new OnCompleteListener<Boolean>() {
+                                                    @Override
+                                                    public void onComplete(@NonNull Task<Boolean> activateTask) {
+                                                        if (!activateTask.isSuccessful()) {
+                                                            Log.w(TAG, "Remote Config activate failed; allowing app",
+                                                                    activateTask.getException());
+                                                            activity.runOnUiThread(onAllowed);
+                                                            return;
+                                                        }
+                                                        applyGate(activity, rc, onAllowed);
+                                                    }
+                                                });
                                     }
                                 });
                     }
                 });
+    }
+
+    private static void applyGate(@NonNull AppCompatActivity activity, FirebaseRemoteConfig rc, @NonNull Runnable onAllowed) {
+        long minCode = rc.getLong(KEY_MIN_SUPPORTED_VERSION_CODE);
+        String updateUrl = rc.getString(KEY_UPDATE_URL);
+        int current = BuildConfig.VERSION_CODE;
+        Log.d(TAG, "Resolved: app versionCode=" + current
+                + " remote min_supported_version_code=" + minCode);
+        if (minCode > 0 && current < minCode) {
+            Log.w(TAG, "Version blocked: current=" + current + " min=" + minCode);
+            Intent intent = new Intent(activity, MinimumVersionActivity.class);
+            intent.putExtra(MinimumVersionActivity.EXTRA_UPDATE_URL, updateUrl);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            activity.startActivity(intent);
+            activity.finish();
+            return;
+        }
+        activity.runOnUiThread(onAllowed);
     }
 }

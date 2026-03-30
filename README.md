@@ -147,6 +147,8 @@ You can use `~/.gradle/gradle.properties`, shell env vars, or **GitHub Actions**
 
 **Note**: The `google-services.json` file is gitignored for security. For local development, you need to add your own Firebase configuration file. For CI/CD builds to work with real Firebase, you need to set up a GitHub Secret.
 
+**Forced minimum `versionCode` (Remote Config):** In **Remote Config**, add a **Number** parameter `min_supported_version_code` (not Text), publish it, and ensure it matches the same Firebase project as `google-services.json`. The app compares it to `versionCode` in Gradle on each cold start.
+
 ### Setting up GitHub Secret for CI/CD
 
 To make your CI/CD builds work with real Firebase:
