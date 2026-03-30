@@ -42,8 +42,8 @@ android {
         applicationId = "com.example.rummypulse"
         minSdk = 28
         targetSdk = 35
-        versionCode = 97
-        versionName = "4.5.1"
+        versionCode = 99
+        versionName = "5.3.0"
 
         // Groq: see groqConfig() — properties, env, or local.properties (not committed).
         val groqKey = escapeForBuildConfig(groqConfig("GROQ_API_KEY"))
