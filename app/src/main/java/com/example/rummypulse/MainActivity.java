@@ -264,17 +264,25 @@ public class MainActivity extends AppCompatActivity {
     private void updateNavigationHeader(NavigationView navigationView, FirebaseUser user) {
         android.view.View headerView = navigationView.getHeaderView(0);
         TextView nameTextView = headerView.findViewById(R.id.nav_header_title);
-        TextView emailTextView = headerView.findViewById(R.id.nav_header_subtitle);
         ImageView profileImageView = headerView.findViewById(R.id.imageView);
-        
+
         if (user != null) {
             String displayName = user.getDisplayName();
             String email = user.getEmail();
-            
-            // Hide email for privacy
-            emailTextView.setVisibility(android.view.View.GONE);
-            
-            // Load user profile image with Glide
+            String phone = user.getPhoneNumber();
+
+            String nameLine;
+            if (displayName != null && !displayName.trim().isEmpty()) {
+                nameLine = displayName.trim();
+            } else if (email != null && email.contains("@")) {
+                nameLine = email.substring(0, email.indexOf('@'));
+            } else if (phone != null && !phone.trim().isEmpty()) {
+                nameLine = phone.trim();
+            } else {
+                nameLine = getString(R.string.nav_header_name_fallback);
+            }
+            nameTextView.setText(nameLine);
+
             if (user.getPhotoUrl() != null) {
                 Glide.with(this)
                     .load(user.getPhotoUrl())
@@ -285,12 +293,11 @@ public class MainActivity extends AppCompatActivity {
                         .diskCacheStrategy(DiskCacheStrategy.ALL))
                     .into(profileImageView);
             } else {
-                // No photo URL, show default game icon
                 profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo);
             }
-            
-            // Hide username for privacy
-            nameTextView.setVisibility(android.view.View.GONE);
+        } else {
+            nameTextView.setText(R.string.nav_header_title);
+            profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo);
         }
     }
     
