@@ -8,11 +8,15 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuthProvider;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.UserInfo;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.Transaction;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,108 +51,46 @@ public class AppUserRepository {
             }
             return;
         }
-        
+
         String userId = firebaseUser.getUid();
         DocumentReference userRef = db.collection(COLLECTION_NAME).document(userId);
-        
-        // Check if user already exists
-        userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                if (task.isSuccessful()) {
-                    DocumentSnapshot document = task.getResult();
-                    if (document.exists()) {
-                        // User exists, update lastLoginAt and photoUrl
-                        updateLastLogin(firebaseUser, callback);
+
+        // Single transaction: avoids race between "get" and "set" and keeps create vs update atomic.
+        db.runTransaction((Transaction transaction) -> {
+                    DocumentSnapshot snapshot = transaction.get(userRef);
+                    if (!snapshot.exists()) {
+                        Map<String, Object> userData = new HashMap<>();
+                        userData.put("userId", userId);
+                        userData.put("provider", provider);
+                        userData.put("role", UserRole.REGULAR_USER.getValue());
+                        userData.put("email", firebaseUser.getEmail());
+                        userData.put("displayName", firebaseUser.getDisplayName());
+                        userData.put("photoUrl", firebaseUser.getPhotoUrl() != null
+                                ? firebaseUser.getPhotoUrl().toString() : null);
+                        userData.put("createdAt", FieldValue.serverTimestamp());
+                        userData.put("lastLoginAt", FieldValue.serverTimestamp());
+                        transaction.set(userRef, userData);
                     } else {
-                        // User doesn't exist, create new user
-                        createNewUser(firebaseUser, provider, callback);
+                        Map<String, Object> updates = new HashMap<>();
+                        updates.put("lastLoginAt", FieldValue.serverTimestamp());
+                        updates.put("photoUrl", firebaseUser.getPhotoUrl() != null
+                                ? firebaseUser.getPhotoUrl().toString() : null);
+                        transaction.update(userRef, updates);
                     }
-                } else {
-                    Log.e(TAG, "Error checking user existence", task.getException());
+                    return null;
+                })
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "appUser transaction succeeded for " + userId);
+                    getUserById(userId, callback);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "appUser create/update failed. Ensure Firestore rules allow authenticated "
+                            + "users to read/write appUser/{theirUid}. Error: " + e.getMessage(), e);
+                    if (e instanceof FirebaseFirestoreException) {
+                        Log.e(TAG, "Firestore error code: " + ((FirebaseFirestoreException) e).getCode());
+                    }
                     if (callback != null) {
-                        callback.onFailure(task.getException());
-                    }
-                }
-            }
-        });
-    }
-    
-    /**
-     * Create a new user in the appUser collection
-     */
-    private void createNewUser(FirebaseUser firebaseUser, String provider, AppUserCallback callback) {
-        String userId = firebaseUser.getUid();
-        String email = firebaseUser.getEmail();
-        String displayName = firebaseUser.getDisplayName();
-        String photoUrl = firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : null;
-        
-        // Create AppUser object
-        AppUser appUser = new AppUser(userId, provider, UserRole.REGULAR_USER, email, displayName, photoUrl);
-        
-        // Convert to Map for Firestore
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("userId", appUser.getUserId());
-        userData.put("provider", appUser.getProvider());
-        userData.put("role", appUser.getRole().getValue());
-        userData.put("email", appUser.getEmail());
-        userData.put("displayName", appUser.getDisplayName());
-        userData.put("photoUrl", appUser.getPhotoUrl());
-        userData.put("createdAt", FieldValue.serverTimestamp());
-        userData.put("lastLoginAt", FieldValue.serverTimestamp());
-        
-        db.collection(COLLECTION_NAME).document(userId)
-                .set(userData)
-                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Log.d(TAG, "New user created successfully: " + userId);
-                        if (callback != null) {
-                            callback.onSuccess(appUser);
-                        }
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.e(TAG, "Error creating new user", e);
-                        if (callback != null) {
-                            callback.onFailure(e);
-                        }
-                    }
-                });
-    }
-    
-    /**
-     * Update lastLoginAt timestamp and photoUrl for existing user
-     */
-    private void updateLastLogin(FirebaseUser firebaseUser, AppUserCallback callback) {
-        String userId = firebaseUser.getUid();
-        String photoUrl = firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : null;
-        
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("lastLoginAt", FieldValue.serverTimestamp());
-        updates.put("photoUrl", photoUrl); // Update photo URL on each login
-        
-        db.collection(COLLECTION_NAME).document(userId)
-                .update(updates)
-                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Log.d(TAG, "User lastLoginAt and photoUrl updated successfully: " + userId);
-                        if (callback != null) {
-                            // Fetch updated user data
-                            getUserById(userId, callback);
-                        }
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.e(TAG, "Error updating lastLoginAt and photoUrl", e);
-                        if (callback != null) {
-                            callback.onFailure(e);
-                        }
+                        callback.onFailure(e);
                     }
                 });
     }
@@ -242,30 +184,34 @@ public class AppUserRepository {
      * Maps Firebase provider IDs to readable names
      */
     public static String getProviderName(FirebaseUser firebaseUser) {
-        if (firebaseUser == null || firebaseUser.getProviderData().isEmpty()) {
+        if (firebaseUser == null) {
             return "unknown";
         }
-        
-        String providerId = firebaseUser.getProviderData().get(1).getProviderId(); // Skip firebase provider
-        
-        switch (providerId) {
-            case "google.com":
-                return "Google";
-            case "microsoft.com":
-                return "Microsoft";
-            case "facebook.com":
-                return "Facebook";
-            case "twitter.com":
-                return "Twitter";
-            case "github.com":
-                return "GitHub";
-            case "apple.com":
-                return "Apple";
-            case "password":
-                return "Email/Password";
-            default:
-                return providerId;
+        for (UserInfo userInfo : firebaseUser.getProviderData()) {
+            String providerId = userInfo.getProviderId();
+            if (FirebaseAuthProvider.PROVIDER_ID.equals(providerId)) {
+                continue;
+            }
+            switch (providerId) {
+                case "google.com":
+                    return "Google";
+                case "microsoft.com":
+                    return "Microsoft";
+                case "facebook.com":
+                    return "Facebook";
+                case "twitter.com":
+                    return "Twitter";
+                case "github.com":
+                    return "GitHub";
+                case "apple.com":
+                    return "Apple";
+                case "password":
+                    return "Email/Password";
+                default:
+                    return providerId;
+            }
         }
+        return "unknown";
     }
     
     /**

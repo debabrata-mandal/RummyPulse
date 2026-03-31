@@ -22,6 +22,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserManager;
+import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.ModernUpdateChecker;
 import com.example.rummypulse.utils.PermissionManager;
@@ -96,6 +97,8 @@ public class MainActivity extends AppCompatActivity {
             // User is authenticated, ensure backup state is updated
             android.util.Log.d("MainActivity", "User authenticated: " + currentUser.getEmail());
             authStateManager.saveAuthState(currentUser);
+            // Retry appUser write if login-time Firestore call failed (e.g. transient error or rules).
+            ensureAppUserDocument(currentUser);
         }
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
@@ -259,6 +262,24 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         return NavigationUI.navigateUp(navController, mAppBarConfiguration)
                 || super.onSupportNavigateUp();
+    }
+
+    private void ensureAppUserDocument(FirebaseUser user) {
+        AppUserRepository repo = new AppUserRepository();
+        String provider = AppUserRepository.getProviderName(user);
+        repo.createOrUpdateUser(user, provider, new AppUserRepository.AppUserCallback() {
+            @Override
+            public void onSuccess(AppUser appUser) {
+                android.util.Log.d("MainActivity", "appUser document synced: " + appUser.getUserId());
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                android.util.Log.w("MainActivity",
+                        "appUser sync failed — user may be missing from Users list until next successful sync",
+                        exception);
+            }
+        });
     }
 
     private void updateNavigationHeader(NavigationView navigationView, FirebaseUser user) {
