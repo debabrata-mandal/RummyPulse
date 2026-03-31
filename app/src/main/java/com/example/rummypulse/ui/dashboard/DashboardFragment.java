@@ -1,7 +1,12 @@
 package com.example.rummypulse.ui.dashboard;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -12,6 +17,8 @@ import android.widget.Button;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.transition.AutoTransition;
+import androidx.transition.TransitionManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.rummypulse.JoinGameActivity;
@@ -19,6 +26,8 @@ import com.example.rummypulse.R;
 import com.example.rummypulse.databinding.FragmentDashboardBinding;
 import com.example.rummypulse.service.GroqGameNameService;
 import com.example.rummypulse.ui.home.GameItem;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.android.material.textfield.TextInputEditText;
 
 public class DashboardFragment extends Fragment implements DashboardGameAdapter.OnGameJoinListener {
@@ -27,6 +36,12 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     private DashboardViewModel dashboardViewModel;
     private DashboardGameAdapter gameAdapter;
     private DashboardGameAdapter completedGameAdapter;
+    private boolean isActiveExpanded = true;
+    private boolean isCompletedExpanded = false;
+    private boolean isNetworkAvailable = false;
+    private boolean hasRealtimeData = false;
+    private ConnectivityManager connectivityManager;
+    private ConnectivityManager.NetworkCallback networkCallback;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -34,11 +49,15 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
         binding = FragmentDashboardBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
+        binding.textDashboardTitle.setText(buildWelcomeTitle());
 
         setupRecyclerView();
         setupSwipeRefresh();
+        setupCollapsibleSections();
+        setupConnectivityMonitoring();
         setupCreateGameButton();
         observeViewModel();
+        updateLiveStatusChip();
         
         return root;
     }
@@ -75,6 +94,8 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
     private void setupSwipeRefresh() {
         binding.swipeRefresh.setOnRefreshListener(() -> {
+            hasRealtimeData = false;
+            updateLiveStatusChip();
             com.example.rummypulse.utils.ModernToast.progress(getContext(), "🔄 Refreshing active games...");
             dashboardViewModel.loadGames();
         });
@@ -88,19 +109,19 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     private void observeViewModel() {
-        // Observe active games count
-        dashboardViewModel.getActiveGamesCount().observe(getViewLifecycleOwner(), count -> {
-            binding.textActiveGamesHeader.setText(count);
-        });
-
-        // Observe completed games count
-        dashboardViewModel.getCompletedGamesCount().observe(getViewLifecycleOwner(), count -> {
-            binding.textCompletedGamesHeader.setText(count);
-        });
+        binding.textActiveGamesHeader.setText("Active Games");
+        binding.textCompletedGamesHeader.setText("Completed Games");
 
         // Observe in-progress games
         dashboardViewModel.getInProgressGames().observe(getViewLifecycleOwner(), games -> {
             gameAdapter.setGameItems(games);
+            hasRealtimeData = true;
+            int activeCount = games != null ? games.size() : 0;
+            binding.textActiveGamesCount.setText(String.valueOf(activeCount));
+            binding.textMetricActive.setText(String.valueOf(activeCount));
+            binding.textActiveEmpty.setVisibility(activeCount == 0 ? View.VISIBLE : View.GONE);
+            updateOverviewTotal();
+            updateLiveStatusChip();
             updateEmptyStateVisibility();
             binding.swipeRefresh.setRefreshing(false);
         });
@@ -108,14 +129,14 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         // Observe completed games
         dashboardViewModel.getCompletedGames().observe(getViewLifecycleOwner(), completedGames -> {
             completedGameAdapter.setGameItems(completedGames);
-            
-            // Show/hide completed games section
-            if (completedGames != null && !completedGames.isEmpty()) {
-                binding.completedGamesSection.setVisibility(View.VISIBLE);
-            } else {
-                binding.completedGamesSection.setVisibility(View.GONE);
-            }
-            
+            hasRealtimeData = true;
+            int completedCount = completedGames != null ? completedGames.size() : 0;
+            binding.textCompletedGamesCount.setText(String.valueOf(completedCount));
+            binding.textMetricCompleted.setText(String.valueOf(completedCount));
+            binding.textCompletedEmpty.setVisibility(completedCount == 0 ? View.VISIBLE : View.GONE);
+            updateOverviewTotal();
+            updateLiveStatusChip();
+
             // Update empty state visibility based on both active and completed games
             updateEmptyStateVisibility();
         });
@@ -154,6 +175,112 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         } else {
             binding.emptyState.setVisibility(View.GONE);
         }
+    }
+
+    private void setupCollapsibleSections() {
+        applySectionState(false);
+        binding.activeHeaderRow.setOnClickListener(v -> {
+            isActiveExpanded = !isActiveExpanded;
+            applySectionState(true);
+        });
+        binding.completedHeaderRow.setOnClickListener(v -> {
+            isCompletedExpanded = !isCompletedExpanded;
+            applySectionState(true);
+        });
+    }
+
+    private void updateOverviewTotal() {
+        int active = gameAdapter != null ? gameAdapter.getItemCount() : 0;
+        int completed = completedGameAdapter != null ? completedGameAdapter.getItemCount() : 0;
+        binding.textMetricTotal.setText(String.valueOf(active + completed));
+    }
+
+    private String buildWelcomeTitle() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            String displayName = user.getDisplayName();
+            if (displayName != null && !displayName.trim().isEmpty()) {
+                return "Welcome " + displayName.trim();
+            }
+            String email = user.getEmail();
+            if (email != null && email.contains("@")) {
+                return "Welcome " + email.substring(0, email.indexOf('@'));
+            }
+        }
+        return "Welcome Player";
+    }
+
+    private void applySectionState(boolean animate) {
+        if (animate) {
+            AutoTransition transition = new AutoTransition();
+            transition.setDuration(220);
+            TransitionManager.beginDelayedTransition((ViewGroup) binding.getRoot(), transition);
+        }
+
+        binding.activeSectionContent.setVisibility(isActiveExpanded ? View.VISIBLE : View.GONE);
+        binding.iconActiveExpand.setImageResource(isActiveExpanded ? R.drawable.ic_expand_less : R.drawable.ic_expand_more);
+
+        binding.completedSectionContent.setVisibility(isCompletedExpanded ? View.VISIBLE : View.GONE);
+        binding.iconCompletedExpand.setImageResource(isCompletedExpanded ? R.drawable.ic_expand_less : R.drawable.ic_expand_more);
+    }
+
+    private void setupConnectivityMonitoring() {
+        connectivityManager = (ConnectivityManager) requireContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        isNetworkAvailable = checkNetworkAvailable();
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                isNetworkAvailable = true;
+                if (isAdded()) {
+                    requireActivity().runOnUiThread(() -> updateLiveStatusChip());
+                }
+            }
+
+            @Override
+            public void onLost(@NonNull Network network) {
+                isNetworkAvailable = checkNetworkAvailable();
+                if (isAdded()) {
+                    requireActivity().runOnUiThread(() -> updateLiveStatusChip());
+                }
+            }
+        };
+    }
+
+    private boolean checkNetworkAvailable() {
+        if (connectivityManager == null) {
+            return false;
+        }
+        Network network = connectivityManager.getActiveNetwork();
+        if (network == null) {
+            return false;
+        }
+        NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(network);
+        return capabilities != null && (
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                        || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                        || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+        );
+    }
+
+    private void updateLiveStatusChip() {
+        if (binding == null) {
+            return;
+        }
+
+        if (!isNetworkAvailable) {
+            binding.textLiveStatus.setText("OFFLINE");
+            binding.textLiveStatus.setAlpha(0.85f);
+            return;
+        }
+
+        if (!hasRealtimeData) {
+            binding.textLiveStatus.setText("SYNCING");
+            binding.textLiveStatus.setAlpha(0.95f);
+            return;
+        }
+
+        binding.textLiveStatus.setText("LIVE");
+        binding.textLiveStatus.setAlpha(1.0f);
     }
 
     @Override
@@ -275,6 +402,30 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         if (completedGameAdapter != null) {
             completedGameAdapter.stopTimeUpdates();
         }
+        if (connectivityManager != null && networkCallback != null) {
+            try {
+                connectivityManager.unregisterNetworkCallback(networkCallback);
+            } catch (Exception ignored) {
+                // No-op: callback may not be registered.
+            }
+        }
         binding = null;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (connectivityManager != null && networkCallback != null) {
+            try {
+                NetworkRequest request = new NetworkRequest.Builder()
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .build();
+                connectivityManager.registerNetworkCallback(request, networkCallback);
+            } catch (Exception ignored) {
+                // Keep last known status if callback registration fails.
+            }
+        }
+        isNetworkAvailable = checkNetworkAvailable();
+        updateLiveStatusChip();
     }
 }

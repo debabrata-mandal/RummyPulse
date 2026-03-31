@@ -21,6 +21,9 @@
         <!-- Navigation bar color -->
         <item name="android:navigationBarColor" tools:targetApi="l">@color/primary_blue_dark</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o">false</item>
+        <item name="alertDialogTheme">@style/DarkAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/DarkAlertDialog</item>
+        <item name="popupMenuStyle">@style/DarkPopupMenuStyle</item>
         <!-- Customize your theme here. -->
     </style>
 
@@ -164,12 +167,12 @@
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
         <item name="colorPrimary">@color/accent_blue</item>
-        <item name="android:windowBackground">@color/background_dark</item>
+        <item name="android:windowBackground">@drawable/bg_app_surface_blue</item>
     </style>
 
     <!-- Dark Popup Menu Theme -->
     <style name="DarkPopupMenuStyle" parent="Widget.MaterialComponents.PopupMenu">
-        <item name="android:popupBackground">@color/card_background_elevated</item>
+        <item name="android:popupBackground">@drawable/bg_app_surface_blue</item>
         <item name="android:textColor">@color/text_primary</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
@@ -183,6 +186,7 @@
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
         <item name="colorPrimary">@color/accent_blue</item>
-        <item name="android:windowBackground">@color/card_background</item>
+        <item name="android:windowBackground">@drawable/bg_app_surface_blue</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/TableRowTextSecondary</item>
     </style>
 </resources>

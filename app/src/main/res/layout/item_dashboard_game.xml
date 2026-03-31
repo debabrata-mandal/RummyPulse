@@ -9,11 +9,12 @@
     android:foreground="?android:attr/selectableItemBackground"
     app:cardCornerRadius="12dp"
     app:cardElevation="6dp"
-    app:cardBackgroundColor="@color/card_background_elevated">
+    app:cardBackgroundColor="@android:color/transparent">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_dashboard_game_card"
         android:orientation="vertical"
         android:padding="16dp">
 
@@ -76,7 +77,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginBottom="12dp"
-            android:background="@drawable/info_section_background"
+            android:background="@drawable/bg_dashboard_info_section_blue"
             android:padding="12dp"
             android:gravity="center_vertical">
 

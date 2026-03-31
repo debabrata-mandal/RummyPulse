@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:background="#2C2C2C">
+    android:background="@drawable/bg_dashboard_game_card">
 
     <!-- Left Composite Column: Rank + Player + Score -->
     <LinearLayout
@@ -12,14 +12,14 @@
         android:layout_weight="1"
         android:orientation="vertical"
         android:gravity="center"
-        android:background="#404040"
+        android:background="@drawable/bg_dashboard_info_section_blue"
         android:padding="8dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Player Details"
-            android:textColor="@android:color/white"
+            android:textColor="@color/text_primary"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -27,7 +27,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Rank • Name • Score"
-            android:textColor="#B0B0B0"
+            android:textColor="@color/text_secondary"
             android:textSize="10sp" />
 
     </LinearLayout>
@@ -39,7 +39,7 @@
         android:layout_weight="1"
         android:orientation="vertical"
         android:gravity="center"
-        android:background="#404040"
+        android:background="@drawable/bg_dashboard_info_section_blue"
         android:padding="8dp"
         android:layout_marginStart="1dp">
 
@@ -47,7 +47,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Amount Details"
-            android:textColor="@android:color/white"
+            android:textColor="@color/text_primary"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -55,7 +55,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Gross • GST • Net"
-            android:textColor="#B0B0B0"
+            android:textColor="@color/text_secondary"
             android:textSize="10sp" />
 
     </LinearLayout>

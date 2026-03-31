@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:background="#2C2C2C">
+    android:background="@drawable/bg_dashboard_game_card">
 
     <!-- Left Composite Column: Rank + Player + Score -->
     <LinearLayout
@@ -12,7 +12,7 @@
         android:layout_weight="1"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="#2C2C2C"
+        android:background="@drawable/bg_dashboard_info_section_blue"
         android:padding="12dp">
 
         <!-- Rank -->
@@ -37,7 +37,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Raja"
-                android:textColor="@android:color/white"
+                android:textColor="@color/text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:maxLines="1"
@@ -49,7 +49,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="(#21)"
-                android:textColor="#6c757d"
+                android:textColor="@color/text_secondary"
                 android:textSize="13sp"
                 android:visibility="gone"
                 android:layout_marginEnd="8dp" />
@@ -79,7 +79,7 @@
         android:layout_weight="1"
         android:orientation="vertical"
         android:gravity="center"
-        android:background="#2C2C2C"
+        android:background="@drawable/bg_dashboard_info_section_blue"
         android:padding="12dp"
         android:layout_marginStart="1dp">
 
@@ -88,7 +88,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="₹0"
-            android:textColor="@android:color/white"
+            android:textColor="@color/text_primary"
             android:textSize="12sp"
             android:textStyle="bold"
             android:singleLine="true"

@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="#2C2C2C"
+    android:background="@drawable/bg_dashboard_game_card"
     android:padding="16dp"
     android:layout_marginBottom="12dp"
     android:elevation="2dp">
@@ -51,7 +51,7 @@
                     android:text="Player Name"
                     android:hint="Tap to enter name"
                     android:textColorHint="@color/text_secondary"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:background="@android:color/transparent"
@@ -84,7 +84,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="#21"
-                android:textColor="#666666"
+                    android:textColor="@color/text_secondary"
                 android:textSize="12sp"
                 android:visibility="gone" />
 
@@ -125,7 +125,7 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:src="@drawable/ic_drag_handle"
-            android:tint="#CCCCCC"
+            android:tint="@color/text_secondary"
             android:background="?android:attr/selectableItemBackground"
             android:padding="2dp"
             android:clickable="true"
@@ -165,7 +165,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="R1"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/text_secondary"
                     android:textSize="10sp"
                     android:layout_marginBottom="4dp" />
 
@@ -175,7 +175,7 @@
                     android:layout_height="32dp"
                     android:inputType="number"
                     android:text="-1"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="11sp"
                     android:gravity="center"
                     android:background="@drawable/score_input_background"
@@ -196,7 +196,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="R2"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/text_secondary"
                     android:textSize="10sp"
                     android:layout_marginBottom="4dp" />
 
@@ -206,7 +206,7 @@
                     android:layout_height="32dp"
                     android:inputType="number"
                     android:text="-1"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="11sp"
                     android:gravity="center"
                     android:background="@drawable/score_input_background"
@@ -227,7 +227,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="R3"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/text_secondary"
                     android:textSize="10sp"
                     android:layout_marginBottom="4dp" />
 
@@ -237,7 +237,7 @@
                     android:layout_height="32dp"
                     android:inputType="number"
                     android:text="-1"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="11sp"
                     android:gravity="center"
                     android:background="@drawable/score_input_background"
@@ -258,7 +258,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="R4"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/text_secondary"
                     android:textSize="10sp"
                     android:layout_marginBottom="4dp" />
 
@@ -268,7 +268,7 @@
                     android:layout_height="32dp"
                     android:inputType="number"
                     android:text="-1"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="11sp"
                     android:gravity="center"
                     android:background="@drawable/score_input_background"
@@ -289,7 +289,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="R5"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/text_secondary"
                     android:textSize="10sp"
                     android:layout_marginBottom="4dp" />
 
@@ -299,7 +299,7 @@
                     android:layout_height="32dp"
                     android:inputType="number"
                     android:text="-1"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="11sp"
                     android:gravity="center"
                     android:background="@drawable/score_input_background"
@@ -328,7 +328,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="R6"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/text_secondary"
                     android:textSize="10sp"
                     android:layout_marginBottom="4dp" />
 
@@ -338,7 +338,7 @@
                     android:layout_height="32dp"
                     android:inputType="number"
                     android:text="-1"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="11sp"
                     android:gravity="center"
                     android:background="@drawable/score_input_background"
@@ -359,7 +359,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="R7"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/text_secondary"
                     android:textSize="10sp"
                     android:layout_marginBottom="4dp" />
 
@@ -369,7 +369,7 @@
                     android:layout_height="32dp"
                     android:inputType="number"
                     android:text="-1"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="11sp"
                     android:gravity="center"
                     android:background="@drawable/score_input_background"
@@ -390,7 +390,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="R8"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/text_secondary"
                     android:textSize="10sp"
                     android:layout_marginBottom="4dp" />
 
@@ -400,7 +400,7 @@
                     android:layout_height="32dp"
                     android:inputType="number"
                     android:text="-1"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="11sp"
                     android:gravity="center"
                     android:background="@drawable/score_input_background"
@@ -421,7 +421,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="R9"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/text_secondary"
                     android:textSize="10sp"
                     android:layout_marginBottom="4dp" />
 
@@ -431,7 +431,7 @@
                     android:layout_height="32dp"
                     android:inputType="number"
                     android:text="-1"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="11sp"
                     android:gravity="center"
                     android:background="@drawable/score_input_background"
@@ -452,7 +452,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="R10"
-                    android:textColor="#CCCCCC"
+                    android:textColor="@color/text_secondary"
                     android:textSize="10sp"
                     android:layout_marginBottom="4dp" />
 
@@ -462,7 +462,7 @@
                     android:layout_height="32dp"
                     android:inputType="number"
                     android:text="-1"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_primary"
                     android:textSize="11sp"
                     android:gravity="center"
                     android:background="@drawable/score_input_background"

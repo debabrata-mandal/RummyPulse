@@ -20,6 +20,9 @@
         <!-- Navigation bar color -->
         <item name="android:navigationBarColor">@color/primary_blue_dark</item>
         <item name="android:windowLightNavigationBar">false</item>
+        <item name="alertDialogTheme">@style/DarkAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/DarkAlertDialog</item>
+        <item name="popupMenuStyle">@style/DarkPopupMenuStyle</item>
         <!-- Customize your theme here. -->
     </style>
 </resources>

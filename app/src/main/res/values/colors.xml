@@ -10,24 +10,24 @@
     <color name="white">#FFFFFFFF</color>
     
     <!-- Dark Financial App Theme Colors -->
-    <color name="primary_blue">#FF1A1A1A</color>
-    <color name="primary_blue_dark">#FF0F0F0F</color>
-    <color name="primary_blue_light">#FF2A2A2A</color>
+    <color name="primary_blue">#FF141B2D</color>
+    <color name="primary_blue_dark">#FF0E1424</color>
+    <color name="primary_blue_light">#FF24324A</color>
     <color name="accent_blue">#FF2196F3</color>
     <color name="accent_blue_dark">#FF1976D2</color>
     <color name="accent_blue_light">#FF64B5F6</color>
     
     <!-- Background Colors - Dark Theme -->
-    <color name="background_primary">#FF121212</color>
-    <color name="background_dark">#FF121212</color>
-    <color name="background_secondary">#FF1E1E1E</color>
-    <color name="background_tertiary">#FF2A2A2A</color>
-    <color name="surface_color">#FF1E1E1E</color>
-    <color name="surface_variant">#FF2A2A2A</color>
+    <color name="background_primary">#FF101827</color>
+    <color name="background_dark">#FF101827</color>
+    <color name="background_secondary">#FF172338</color>
+    <color name="background_tertiary">#FF20324C</color>
+    <color name="surface_color">#FF172338</color>
+    <color name="surface_variant">#FF20324C</color>
     
     <!-- Text Colors - Dark Theme -->
     <color name="text_primary">#FFFFFFFF</color>
-    <color name="text_secondary">#FFB3B3B3</color>
+    <color name="text_secondary">#FFC2CEE2</color>
     <color name="text_hint">#FF808080</color>
     <color name="text_white">#FFFFFFFF</color>
     <color name="text_dark">#FF000000</color>
@@ -52,32 +52,32 @@
     <color name="status_away">#FFFF9800</color>
     
     <!-- Card and Shadow Colors -->
-    <color name="card_background">#FF1E1E1E</color>
-    <color name="card_background_elevated">#FF2A2A2A</color>
-    <color name="divider_color">#FF333333</color>
+    <color name="card_background">#FF1A2940</color>
+    <color name="card_background_elevated">#FF213652</color>
+    <color name="divider_color">#FF325075</color>
     <color name="shadow_color">#40000000</color>
     
     <!-- Header and Navigation Colors -->
-    <color name="header_background">#FF1A1A1A</color>
-    <color name="header_gradient_start">#FF1A1A1A</color>
-    <color name="header_gradient_end">#FF0F0F0F</color>
-    <color name="navigation_background">#FF1A1A1A</color>
+    <color name="header_background">#FF16253A</color>
+    <color name="header_gradient_start">#FF1A2940</color>
+    <color name="header_gradient_end">#FF0E1424</color>
+    <color name="navigation_background">#FF16253A</color>
     <color name="navigation_selected">#FF2196F3</color>
     
     <!-- Search and Input Colors -->
-    <color name="search_background">#FF2A2A2A</color>
+    <color name="search_background">#FF20324C</color>
     <color name="search_hint">#FF808080</color>
-    <color name="input_background">#FF2A2A2A</color>
-    <color name="input_border">#FF333333</color>
+    <color name="input_background">#FF20324C</color>
+    <color name="input_border">#FF325075</color>
     
     <!-- Bottom Navigation Colors -->
-    <color name="bottom_nav_background">#FF1A1A1A</color>
+    <color name="bottom_nav_background">#FF16253A</color>
     <color name="bottom_nav_selected">#FF2196F3</color>
     <color name="bottom_nav_unselected">#FF808080</color>
     
     <!-- Legacy Colors for Existing Drawables -->
-    <color name="background_light">#FF1E1E1E</color>
-    <color name="background_very_light">#FF2A2A2A</color>
+    <color name="background_light">#FF172338</color>
+    <color name="background_very_light">#FF20324C</color>
     <color name="accent_orange">#FF2196F3</color>
     <color name="accent_orange_dark">#FF1976D2</color>
     
