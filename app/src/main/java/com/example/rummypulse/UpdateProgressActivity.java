@@ -105,6 +105,10 @@ public class UpdateProgressActivity extends AppCompatActivity implements ModernU
                     closeOrExit();
                     return;
                 }
+                if (updateChecker != null && updateChecker.isSessionInstallInProgress()) {
+                    ModernToast.warning(UpdateProgressActivity.this, getString(R.string.update_progress_back_blocked_install));
+                    return;
+                }
                 if (workInProgress) {
                     ModernToast.warning(UpdateProgressActivity.this, getString(R.string.update_progress_back_blocked));
                     return;
@@ -257,6 +261,15 @@ public class UpdateProgressActivity extends AppCompatActivity implements ModernU
     }
 
     @Override
+    public void onInstallUserConfirmationRequired() {
+        runOnUiThread(() -> {
+            textStatus.setText(R.string.update_progress_confirm_system);
+            textDetail.setText(R.string.update_progress_confirm_system_detail);
+            progressIndeterminate.setVisibility(View.VISIBLE);
+        });
+    }
+
+    @Override
     public void onOpeningSystemInstaller() {
         runOnUiThread(() -> {
             leavingForInstaller = true;
@@ -274,7 +287,7 @@ public class UpdateProgressActivity extends AppCompatActivity implements ModernU
     protected void onDestroy() {
         if (updateChecker != null) {
             updateChecker.setDownloadUiCallbacks(null);
-            if (!leavingForInstaller) {
+            if (!leavingForInstaller && !updateChecker.isSessionInstallInProgress()) {
                 updateChecker.cleanup();
             }
         }

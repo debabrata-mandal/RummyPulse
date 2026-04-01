@@ -3,11 +3,13 @@ package com.example.rummypulse.utils;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DownloadManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
@@ -30,7 +32,12 @@ import java.io.File;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
@@ -48,12 +55,20 @@ public class ModernUpdateChecker {
         /** {@code percent} is 0–100, or {@code -1} if total size is unknown yet. */
         void onDownloadProgress(int percent, long bytesSoFar, long bytesTotal);
         void onInstalling();
+        /**
+         * Package install session needs the system confirmation UI. Do not finish the hosting activity —
+         * destroying it can unregister the session status receiver and leave the install stuck.
+         */
+        void onInstallUserConfirmationRequired();
         void onOpeningSystemInstaller();
         void onError(String message, boolean allowRetry);
     }
 
     private static final String TAG = "ModernUpdateChecker";
     private static final String PREF_LAST_APK_PATH = "last_download_apk_path";
+    /** Explicit package scope so the session callback is delivered only to this app. */
+    private static final String ACTION_SESSION_INSTALL_STATUS =
+        "com.example.rummypulse.action.SESSION_INSTALL_STATUS";
     // GitHub repository URL
     private static final String GITHUB_API_URL = "https://api.github.com/repos/debabrata-mandal/RummyPulse/releases/latest";
     private static final int REQUEST_INSTALL_PERMISSION = 1001;
@@ -69,8 +84,16 @@ public class ModernUpdateChecker {
     private Runnable pollingRunnable;
     /** Prevents double install when both BroadcastReceiver and polling see completion. */
     private volatile boolean downloadCompletionHandled;
+    /** Stops in-progress HTTP download when starting a new download or cleaning up. */
+    private volatile boolean streamDownloadCancelRequested;
     @Nullable
     private DownloadUiCallbacks downloadUiCallbacks;
+    @Nullable
+    private BroadcastReceiver installResultReceiver;
+    @Nullable
+    private PendingSessionArgs pendingSessionArgs;
+    /** True while a {@link PackageInstaller} session is waiting for callbacks; blocks {@link #cleanup()} from tearing it down. */
+    private volatile boolean sessionInstallInProgress;
 
     public ModernUpdateChecker(Context context) {
         this.context = context;
@@ -82,6 +105,11 @@ public class ModernUpdateChecker {
 
     public void setDownloadUiCallbacks(@Nullable DownloadUiCallbacks callbacks) {
         downloadUiCallbacks = callbacks;
+    }
+
+    /** Call from {@link com.example.rummypulse.UpdateProgressActivity#onDestroy()} to avoid unregistering the session receiver mid-install. */
+    public boolean isSessionInstallInProgress() {
+        return sessionInstallInProgress;
     }
 
     private boolean useDownloadUi() {
@@ -534,15 +562,126 @@ public class ModernUpdateChecker {
 
 
     /**
-     * Start APK download using DownloadManager
+     * Download APK with HttpURLConnection into app-internal storage (no storage runtime permission,
+     * no Android 13+ notification permission required for DownloadManager).
+     */
+    private void startApkDownloadStreaming(String downloadUrl) {
+        try {
+            Log.d(TAG, "Starting streaming APK download to files dir: " + downloadUrl);
+            cleanupPreviousDownload();
+            streamDownloadCancelRequested = false;
+
+            appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .putString("last_download_url", downloadUrl)
+                .apply();
+
+            String fileName = "RummyPulse_update_" + System.currentTimeMillis() + ".apk";
+            File dest = new File(appContext.getFilesDir(), fileName);
+            appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .putString(PREF_LAST_APK_PATH, dest.getAbsolutePath())
+                .apply();
+
+            if (useDownloadUi()) {
+                postToUi(() -> downloadUiCallbacks.onDownloadStarted());
+            }
+
+            executor.execute(() -> {
+                HttpURLConnection conn = null;
+                try {
+                    URL url = new URL(downloadUrl);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setInstanceFollowRedirects(true);
+                    conn.setConnectTimeout(20000);
+                    conn.setReadTimeout(900_000);
+                    conn.setRequestProperty("User-Agent",
+                        "Mozilla/5.0 (Linux; Android) RummyPulse/1.0");
+                    conn.setRequestProperty("Accept",
+                        "application/vnd.android.package-archive,application/octet-stream,*/*");
+                    int code = conn.getResponseCode();
+                    if (code != HttpURLConnection.HTTP_OK) {
+                        throw new IOException("HTTP " + code);
+                    }
+                    long total = conn.getContentLengthLong();
+                    if (total <= 0) {
+                        total = -1L;
+                    }
+                    byte[] buf = new byte[65536];
+                    long done = 0;
+                    long lastUiMs = 0;
+                    try (InputStream in = conn.getInputStream();
+                         FileOutputStream out = new FileOutputStream(dest)) {
+                        int n;
+                        while ((n = in.read(buf)) != -1) {
+                            if (streamDownloadCancelRequested) {
+                                break;
+                            }
+                            out.write(buf, 0, n);
+                            done += n;
+                            long now = System.currentTimeMillis();
+                            if (downloadUiCallbacks != null && (now - lastUiMs >= 200 || (total > 0 && done >= total))) {
+                                lastUiMs = now;
+                                int pct = total > 0 ? (int) Math.min(100L, (done * 100L) / total) : -1;
+                                final int p = pct;
+                                final long d = done;
+                                final long t = total > 0 ? total : 0;
+                                postToUi(() -> downloadUiCallbacks.onDownloadProgress(p, d, t));
+                            }
+                        }
+                    }
+                    if (streamDownloadCancelRequested) {
+                        //noinspection ResultOfMethodCallIgnored
+                        dest.delete();
+                        return;
+                    }
+                    if (!dest.exists() || dest.length() == 0) {
+                        showDownloadError("Downloaded file was empty or missing.", true);
+                        //noinspection ResultOfMethodCallIgnored
+                        dest.delete();
+                        return;
+                    }
+                    final String fileUri = Uri.fromFile(dest).toString();
+                    postToUi(() -> {
+                        if (downloadUiCallbacks != null) {
+                            downloadUiCallbacks.onInstalling();
+                        }
+                        installApk(fileUri, -1);
+                    });
+                } catch (Exception e) {
+                    Log.e(TAG, "Streaming download failed", e);
+                    //noinspection ResultOfMethodCallIgnored
+                    dest.delete();
+                    if (!streamDownloadCancelRequested) {
+                        showDownloadError("Download failed: " + e.getMessage(), true);
+                    }
+                } finally {
+                    if (conn != null) {
+                        conn.disconnect();
+                    }
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting streaming download", e);
+            showDownloadError("Failed to start download: " + e.getMessage(), true);
+        }
+    }
+
+    /**
+     * Start APK download using DownloadManager (toast / non-UI path; may need POST_NOTIFICATIONS on API 33+).
      */
     private void startApkDownload(String downloadUrl) {
         try {
             Log.d(TAG, "Starting APK download from: " + downloadUrl);
-            
+
+            if (useDownloadUi()) {
+                startApkDownloadStreaming(downloadUrl);
+                return;
+            }
+
             // Cancel any previous downloads and polling
             cleanupPreviousDownload();
-            
+
             // Store download URL for retry purposes
             appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
                 .edit()
@@ -615,12 +754,11 @@ public class ModernUpdateChecker {
             startDownloadStatusPolling();
 
         } catch (SecurityException e) {
-            Log.e(TAG, "Security exception starting download - API " + Build.VERSION.SDK_INT, e);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                showDownloadError("Download failed. Using app-specific storage should not require permissions on Android " + Build.VERSION.SDK_INT, true);
-            } else {
-                showDownloadError("Permission denied. Please check storage permissions.", false);
-            }
+            Log.e(TAG, "Security exception starting download", e);
+            String detail = e.getMessage() != null ? e.getMessage() : "";
+            showDownloadError("Download could not start. "
+                + (detail.isEmpty() ? "Check that notifications are allowed for this app (Android 13+), then try again." : detail),
+                true);
         } catch (Exception e) {
             Log.e(TAG, "Error starting download", e);
             showDownloadError("Failed to start download: " + e.getMessage(), true);
@@ -751,6 +889,7 @@ public class ModernUpdateChecker {
      * Clean up any previous download before starting a new one
      */
     private void cleanupPreviousDownload() {
+        streamDownloadCancelRequested = true;
         // Stop any ongoing polling
         stopPolling();
         
@@ -1073,57 +1212,19 @@ public class ModernUpdateChecker {
                 return;
             }
 
-            Intent installIntent = new Intent(Intent.ACTION_VIEW);
-            installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            File fileToDelete = resolveApkFileForDeletion(apkFile);
 
-            if (context instanceof Activity) {
-                ((Activity) context).startActivity(installIntent);
-            } else {
-                installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                appContext.startActivity(installIntent);
+            // Session API (API 31+): same-app updates can complete without ACTION_VIEW. Do not require
+            // canRequestPackageInstalls() here — that gate often forced the legacy installer even when
+            // the session path would work.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                    && apkFile != null
+                    && apkFile.exists()) {
+                startPackageInstallerSession(apkFile, apkUri, fileToDelete);
+                return;
             }
 
-            if (useDownloadUi()) {
-                postToUi(() -> downloadUiCallbacks.onOpeningSystemInstaller());
-            } else {
-                ModernToast.info(context,
-                    "🚀 Opening installer... APK will be auto-deleted after installation");
-            }
-
-            Log.d(TAG, "✅ Installation intent started for: " + apkUri);
-
-            String savedPath = appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
-                .getString(PREF_LAST_APK_PATH, null);
-            File fallbackDelete = savedPath != null ? new File(savedPath) : null;
-            final File fileToDelete;
-            if (apkFile != null && apkFile.exists()) {
-                fileToDelete = apkFile;
-            } else if (fallbackDelete != null && fallbackDelete.exists()) {
-                fileToDelete = fallbackDelete;
-            } else {
-                fileToDelete = null;
-            }
-            if (fileToDelete != null) {
-                executor.execute(() -> {
-                    try {
-                        Thread.sleep(10_000);
-                        if (fileToDelete.exists() && fileToDelete.delete()) {
-                            Log.d(TAG, "APK file deleted successfully: " + fileToDelete.getPath());
-                            appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
-                                .edit()
-                                .remove(PREF_LAST_APK_PATH)
-                                .apply();
-                        } else {
-                            Log.w(TAG, "Failed to delete APK file: " + fileToDelete.getPath());
-                        }
-                    } catch (InterruptedException e) {
-                        Log.w(TAG, "Sleep interrupted", e);
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error deleting APK file", e);
-                    }
-                });
-            }
+            startViewPackageInstaller(apkUri, fileToDelete);
 
         } catch (Exception e) {
             Log.e(TAG, "Error installing APK", e);
@@ -1145,6 +1246,249 @@ public class ModernUpdateChecker {
             } catch (Exception cleanupError) {
                 Log.w(TAG, "Failed to clean up APK after error", cleanupError);
             }
+        }
+    }
+
+    @Nullable
+    private File resolveApkFileForDeletion(@Nullable File apkFile) {
+        String savedPath = appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+            .getString(PREF_LAST_APK_PATH, null);
+        File fallbackDelete = savedPath != null ? new File(savedPath) : null;
+        if (apkFile != null && apkFile.exists()) {
+            return apkFile;
+        }
+        if (fallbackDelete != null && fallbackDelete.exists()) {
+            return fallbackDelete;
+        }
+        return null;
+    }
+
+    /**
+     * Android 12+ (API 31+): install update in-process with {@link PackageInstaller.SessionParams#USER_ACTION_NOT_REQUIRED}
+     * when the OS allows it (same app updating itself). Falls back to the package installer UI if needed.
+     */
+    private void startPackageInstallerSession(File apkFile, Uri fallbackUri, @Nullable File fileToDelete) {
+        unregisterInstallResultReceiver();
+        pendingSessionArgs = new PendingSessionArgs(apkFile, fallbackUri, fileToDelete);
+
+        installResultReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent i) {
+                PendingSessionArgs args = pendingSessionArgs;
+
+                int status = i.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
+                String message = i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
+                Log.d(TAG, "PackageInstaller session status=" + status + " msg=" + message);
+
+                if (status == PackageInstaller.STATUS_SUCCESS) {
+                    unregisterInstallResultReceiver();
+                    scheduleApkDeletionAfterInstall(args != null ? args.fileToDelete : null);
+                    if (useDownloadUi()) {
+                        postToUi(() -> downloadUiCallbacks.onOpeningSystemInstaller());
+                    } else {
+                        ModernToast.success(appContext, "Update installed. Restarting…");
+                    }
+                    return;
+                }
+
+                // Apps with REQUEST_INSTALL_PACKAGES often get this first; must launch EXTRA_INTENT —
+                // not fall back to ACTION_VIEW (wrong flow and duplicate "update this app?" UI).
+                if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+                    Intent confirm = extractConfirmationIntent(i);
+                    if (confirm != null) {
+                        postToUi(() -> launchSessionConfirmationIntent(confirm));
+                        return;
+                    }
+                    logSessionStatusExtras(i);
+                    Log.w(TAG, "PENDING_USER_ACTION but no EXTRA_INTENT; falling back to package installer");
+                }
+
+                unregisterInstallResultReceiver();
+                if (args == null) {
+                    return;
+                }
+                Log.w(TAG, "Session install did not complete; opening standard installer");
+                postToUi(() -> startViewPackageInstaller(args.fallbackUri, args.fileToDelete));
+            }
+        };
+
+        IntentFilter filter = new IntentFilter(ACTION_SESSION_INSTALL_STATUS);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            appContext.registerReceiver(installResultReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            appContext.registerReceiver(installResultReceiver, filter);
+        }
+        sessionInstallInProgress = true;
+
+        executor.execute(() -> {
+            try {
+                PackageInstaller installer = appContext.getPackageManager().getPackageInstaller();
+                PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(
+                    PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+                params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
+                params.setAppPackageName(appContext.getPackageName());
+                params.setSize(apkFile.length());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                    params.setPackageSource(PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE);
+                }
+
+                int sessionId = installer.createSession(params);
+                PackageInstaller.Session session = installer.openSession(sessionId);
+                try (OutputStream out = session.openWrite("base.apk", 0, -1);
+                     InputStream in = new FileInputStream(apkFile)) {
+                    byte[] buf = new byte[65536];
+                    int n;
+                    while ((n = in.read(buf)) > 0) {
+                        out.write(buf, 0, n);
+                    }
+                    session.fsync(out);
+                }
+
+                Intent callback = new Intent(ACTION_SESSION_INSTALL_STATUS)
+                    .setPackage(appContext.getPackageName());
+                int piFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    piFlags |= PendingIntent.FLAG_MUTABLE;
+                }
+                PendingIntent pending = PendingIntent.getBroadcast(appContext, sessionId, callback, piFlags);
+                session.commit(pending.getIntentSender());
+                session.close();
+            } catch (Exception e) {
+                Log.e(TAG, "PackageInstaller session commit failed", e);
+                final PendingSessionArgs args = pendingSessionArgs;
+                postToUi(() -> {
+                    unregisterInstallResultReceiver();
+                    if (args != null) {
+                        startViewPackageInstaller(args.fallbackUri, args.fileToDelete);
+                    }
+                });
+            }
+        });
+    }
+
+    private void logSessionStatusExtras(Intent statusIntent) {
+        try {
+            android.os.Bundle ex = statusIntent.getExtras();
+            Log.d(TAG, "Session status extras: " + (ex != null ? ex.keySet() : "null"));
+        } catch (Exception e) {
+            Log.w(TAG, "logSessionStatusExtras", e);
+        }
+    }
+
+    @Nullable
+    @SuppressWarnings("deprecation")
+    private Intent extractConfirmationIntent(Intent statusIntent) {
+        Intent confirm = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            confirm = statusIntent.getParcelableExtra(Intent.EXTRA_INTENT, Intent.class);
+        } else {
+            confirm = statusIntent.getParcelableExtra(Intent.EXTRA_INTENT);
+        }
+        return confirm;
+    }
+
+    /** Launches the system intent from {@link PackageInstaller#STATUS_PENDING_USER_ACTION}; keep install receiver registered. */
+    private void launchSessionConfirmationIntent(Intent confirm) {
+        try {
+            if (context instanceof Activity) {
+                Activity a = (Activity) context;
+                if (!a.isFinishing()) {
+                    a.startActivity(confirm);
+                    if (useDownloadUi()) {
+                        downloadUiCallbacks.onInstallUserConfirmationRequired();
+                    }
+                    return;
+                }
+            }
+            confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            appContext.startActivity(confirm);
+            if (useDownloadUi()) {
+                downloadUiCallbacks.onInstallUserConfirmationRequired();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Could not launch session confirmation intent", e);
+            PendingSessionArgs args = pendingSessionArgs;
+            unregisterInstallResultReceiver();
+            if (args != null) {
+                startViewPackageInstaller(args.fallbackUri, args.fileToDelete);
+            }
+        }
+    }
+
+    private void unregisterInstallResultReceiver() {
+        sessionInstallInProgress = false;
+        BroadcastReceiver r = installResultReceiver;
+        installResultReceiver = null;
+        pendingSessionArgs = null;
+        if (r != null) {
+            try {
+                appContext.unregisterReceiver(r);
+            } catch (Exception e) {
+                Log.w(TAG, "unregister install receiver", e);
+            }
+        }
+    }
+
+    private void startViewPackageInstaller(Uri apkUri, @Nullable File fileToDelete) {
+        Intent installIntent = new Intent(Intent.ACTION_VIEW);
+        installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+
+        if (context instanceof Activity) {
+            ((Activity) context).startActivity(installIntent);
+        } else {
+            installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            appContext.startActivity(installIntent);
+        }
+
+        if (useDownloadUi()) {
+            postToUi(() -> downloadUiCallbacks.onOpeningSystemInstaller());
+        } else {
+            ModernToast.info(context,
+                "🚀 Opening installer... APK will be auto-deleted after installation");
+        }
+
+        Log.d(TAG, "✅ Package installer (VIEW) started for: " + apkUri);
+        scheduleApkDeletionAfterInstall(fileToDelete);
+    }
+
+    private void scheduleApkDeletionAfterInstall(@Nullable File fileToDelete) {
+        final File toDelete = fileToDelete != null && fileToDelete.exists()
+            ? fileToDelete
+            : resolveApkFileForDeletion(null);
+        if (toDelete == null) {
+            return;
+        }
+        executor.execute(() -> {
+            try {
+                Thread.sleep(10_000);
+                if (toDelete.exists() && toDelete.delete()) {
+                    Log.d(TAG, "APK file deleted successfully: " + toDelete.getPath());
+                    appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                        .edit()
+                        .remove(PREF_LAST_APK_PATH)
+                        .apply();
+                } else {
+                    Log.w(TAG, "Failed to delete APK file: " + toDelete.getPath());
+                }
+            } catch (InterruptedException e) {
+                Log.w(TAG, "Sleep interrupted", e);
+            } catch (Exception e) {
+                Log.e(TAG, "Error deleting APK file", e);
+            }
+        });
+    }
+
+    private static final class PendingSessionArgs {
+        final File apkFile;
+        final Uri fallbackUri;
+        @Nullable
+        final File fileToDelete;
+
+        PendingSessionArgs(File apkFile, Uri fallbackUri, @Nullable File fileToDelete) {
+            this.apkFile = apkFile;
+            this.fallbackUri = fallbackUri;
+            this.fileToDelete = fileToDelete;
         }
     }
     
@@ -1173,6 +1517,12 @@ public class ModernUpdateChecker {
      * Clean up resources
      */
     public void cleanup() {
+        streamDownloadCancelRequested = true;
+        if (sessionInstallInProgress) {
+            Log.d(TAG, "cleanup: skipping unregister/shutdown while session install in progress");
+            return;
+        }
+        unregisterInstallResultReceiver();
         if (executor != null && !executor.isShutdown()) {
             executor.shutdown();
         }
