@@ -27,4 +27,17 @@
     <string name="default_apk_download_page" translatable="false">https://github.com/debabrata-mandal/RummyPulse/releases</string>
     <string name="minimum_version_update">Update app</string>
     <string name="minimum_version_exit">Exit</string>
+
+    <string name="update_progress_title">Updating RummyPulse</string>
+    <string name="update_progress_preparing">Preparing…</string>
+    <string name="update_progress_fetching">Checking for the latest release…</string>
+    <string name="update_progress_downloading">Downloading update…</string>
+    <string name="update_progress_installing">Download complete. Opening installer…</string>
+    <string name="update_progress_back_blocked">Please wait — download in progress.</string>
+    <string name="update_progress_error_title">Update failed</string>
+    <string name="update_progress_retry">Try again</string>
+    <string name="update_progress_open_browser">Open download page</string>
+    <string name="update_progress_close">Close</string>
+    <string name="update_progress_bytes">%1$s / %2$s</string>
+    <string name="update_progress_bytes_unknown">Downloaded: %1$s</string>
 </resources>

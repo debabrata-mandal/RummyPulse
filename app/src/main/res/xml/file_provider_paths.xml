@@ -19,4 +19,9 @@
     <files-path 
         name="files" 
         path="." />
+
+    <!-- App external files dir (DownloadManager setDestinationInExternalFilesDir) -->
+    <external-files-path
+        name="external_files"
+        path="." />
 </paths>

@@ -17,26 +17,31 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
+            android:lineSpacingMultiplier="1.15"
             android:text="@string/minimum_version_title"
-            android:textAppearance="?attr/textAppearanceHeadlineSmall" />
+            android:textColor="@color/text_primary"
+            android:textSize="28sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/text_minimum_version_message"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="18dp"
             android:gravity="center"
-            android:textAppearance="?attr/textAppearanceBodyLarge" />
+            android:lineSpacingMultiplier="1.25"
+            android:textColor="@color/text_primary"
+            android:textSize="19sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_minimum_version_update"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            android:maxWidth="320dp"
-            android:minHeight="52dp"
+            android:maxWidth="360dp"
+            android:minHeight="58dp"
             android:text="@string/minimum_version_update"
-            android:textSize="16sp"
+            android:textSize="18sp"
             app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -45,11 +50,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:maxWidth="320dp"
-            android:minHeight="52dp"
+            android:maxWidth="360dp"
+            android:minHeight="58dp"
             android:text="@string/minimum_version_exit"
             android:textColor="@color/text_primary"
-            android:textSize="16sp"
+            android:textSize="18sp"
             app:cornerRadius="12dp"
             app:strokeColor="@color/text_secondary"
             app:strokeWidth="2dp" />
