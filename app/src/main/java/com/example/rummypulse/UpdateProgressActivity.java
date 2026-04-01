@@ -218,7 +218,7 @@ public class UpdateProgressActivity extends AppCompatActivity implements ModernU
             textStatus.setText(R.string.update_progress_downloading);
             progressIndeterminate.setVisibility(View.VISIBLE);
             progressHorizontal.setVisibility(View.GONE);
-            textDetail.setText("");
+            textDetail.setText(getString(R.string.update_progress_connecting));
         });
     }
 
@@ -240,7 +240,7 @@ public class UpdateProgressActivity extends AppCompatActivity implements ModernU
                     textDetail.setText(getString(R.string.update_progress_bytes_unknown,
                         Formatter.formatFileSize(this, bytesSoFar)));
                 } else {
-                    textDetail.setText("");
+                    textDetail.setText(getString(R.string.update_progress_connecting));
                 }
             }
         });

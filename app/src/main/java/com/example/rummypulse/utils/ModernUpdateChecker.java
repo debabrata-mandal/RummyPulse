@@ -53,6 +53,7 @@ public class ModernUpdateChecker {
     }
 
     private static final String TAG = "ModernUpdateChecker";
+    private static final String PREF_LAST_APK_PATH = "last_download_apk_path";
     // GitHub repository URL
     private static final String GITHUB_API_URL = "https://api.github.com/repos/debabrata-mandal/RummyPulse/releases/latest";
     private static final int REQUEST_INSTALL_PERMISSION = 1001;
@@ -344,44 +345,40 @@ public class ModernUpdateChecker {
     }
     
     /**
-     * Show update available dialog on UI thread
+     * Show update summary; single follow-up screen is {@link UpdateProgressActivity} (no browser/dialog chain).
      */
     private void showUpdateDialog(UpdateInfo updateInfo) {
         if (!(context instanceof Activity)) {
             Log.w(TAG, "Context is not an Activity, cannot show dialog");
             return;
         }
-        
+
         Activity activity = (Activity) context;
-        
+
         activity.runOnUiThread(() -> {
             String currentVersion = getCurrentVersion();
-            
-            // Create custom dialog
+
             android.app.Dialog dialog = new android.app.Dialog(activity);
             dialog.setContentView(R.layout.dialog_update_available);
             dialog.getWindow().setBackgroundDrawable(
                 new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
             dialog.setCancelable(true);
-            
-            // Get views
+
             android.widget.TextView textCurrentVersion = dialog.findViewById(R.id.text_current_version);
             android.widget.TextView textLatestVersion = dialog.findViewById(R.id.text_latest_version);
             android.widget.TextView textReleaseNotes = dialog.findViewById(R.id.text_release_notes);
             android.widget.ImageButton btnClose = dialog.findViewById(R.id.btn_close);
             android.widget.Button btnUpdateNow = dialog.findViewById(R.id.btn_update_now);
-            
-            // Set values
+
             textCurrentVersion.setText("v" + currentVersion);
             textLatestVersion.setText("v" + updateInfo.version);
             textReleaseNotes.setText(formatReleaseNotes(updateInfo.releaseNotes));
-            
-            // Set button listeners
+
             btnClose.setOnClickListener(v -> {
                 dialog.dismiss();
                 ModernToast.info(context, "💡 You can check for updates anytime from App Info");
             });
-            
+
             btnUpdateNow.setOnClickListener(v -> {
                 dialog.dismiss();
                 if (updateInfo.downloadUrl != null) {
@@ -390,7 +387,7 @@ public class ModernUpdateChecker {
                     openGitHubReleases();
                 }
             });
-            
+
             dialog.show();
         });
     }
@@ -565,20 +562,24 @@ public class ModernUpdateChecker {
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(downloadUrl));
             request.setTitle("RummyPulse Update");
             request.setDescription("Downloading latest version...");
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            
-            // Use internal app directory - guaranteed to work without permissions
+            if (useDownloadUi()) {
+                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN);
+            } else {
+                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            }
+
             String fileName = "RummyPulse_update_" + System.currentTimeMillis() + ".apk";
-            
-            // Always use internal app directory - no permissions needed on any Android version
             request.setDestinationInExternalFilesDir(appContext, null, fileName);
+            File destDir = appContext.getExternalFilesDir(null);
+            if (destDir != null) {
+                String absPath = new File(destDir, fileName).getAbsolutePath();
+                appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                    .edit()
+                    .putString(PREF_LAST_APK_PATH, absPath)
+                    .apply();
+                Log.d(TAG, "Saved APK path for cleanup: " + absPath);
+            }
             Log.d(TAG, "Download destination (API " + Build.VERSION.SDK_INT + "): Internal app directory/" + fileName);
-            
-            // Allow download over mobile data and WiFi
-            request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI | 
-                                         DownloadManager.Request.NETWORK_MOBILE);
-            request.setAllowedOverRoaming(false);
-            request.setAllowedOverMetered(true);
 
             // Add headers to mimic browser request
             request.addRequestHeader("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:40.0) Gecko/40.0 Firefox/40.0");
@@ -594,9 +595,12 @@ public class ModernUpdateChecker {
             Log.d(TAG, "Download URL: " + downloadUrl);
             Log.d(TAG, "Download destination: " + appContext.getExternalFilesDir(null) + "/" + fileName);
 
-            // Start download
             downloadId = downloadManager.enqueue(request);
             Log.d(TAG, "Download enqueued with ID: " + downloadId);
+            if (downloadId == -1) {
+                showDownloadError("Could not start download. Please try again.", true);
+                return;
+            }
 
             if (useDownloadUi()) {
                 postToUi(() -> downloadUiCallbacks.onDownloadStarted());
@@ -623,6 +627,22 @@ public class ModernUpdateChecker {
         }
     }
 
+    private static int readDownloadStatus(Cursor cursor) {
+        int idx = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+        if (idx < 0) {
+            return DownloadManager.STATUS_PENDING;
+        }
+        return cursor.getInt(idx);
+    }
+
+    private static long readDownloadLong(Cursor cursor, String column) {
+        int idx = cursor.getColumnIndex(column);
+        if (idx < 0) {
+            return 0L;
+        }
+        return cursor.getLong(idx);
+    }
+
     /**
      * Start polling for download status as backup to BroadcastReceiver
      */
@@ -634,8 +654,8 @@ public class ModernUpdateChecker {
         Log.d(TAG, "Starting download status polling for ID: " + downloadId);
 
         final boolean fastUi = useDownloadUi();
-        final int intervalMs = fastUi ? 450 : 2000;
-        final int maxPolls = fastUi ? 2000 : 60;
+        final int intervalMs = fastUi ? 300 : 2000;
+        final int maxPolls = fastUi ? 4000 : 60;
 
         pollingHandler = new Handler(Looper.getMainLooper());
         pollingRunnable = new Runnable() {
@@ -644,13 +664,11 @@ public class ModernUpdateChecker {
             @Override
             public void run() {
                 pollCount++;
-                Log.d(TAG, "Polling download status... attempt " + pollCount + "/" + maxPolls);
-
                 if (pollCount > maxPolls) {
                     Log.w(TAG, "Download polling timeout reached");
-                    if (fastUi) {
+                    if (fastUi && downloadUiCallbacks != null) {
                         postToUi(() -> downloadUiCallbacks.onError(
-                            "Download is taking too long. Check the system notification, or try again.", true));
+                            "Download is taking too long. Try again or use Open download page.", true));
                     } else {
                         ModernToast.warning(context, "⏰ Download taking too long - check notification");
                     }
@@ -664,14 +682,9 @@ public class ModernUpdateChecker {
                     Cursor cursor = downloadManager.query(query);
 
                     if (cursor.moveToFirst()) {
-                        int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                        int status = cursor.getInt(statusIndex);
-
-                        int bytesDownloadedIndex = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
-                        int bytesTotalIndex = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
-
-                        long bytesDownloaded = cursor.getLong(bytesDownloadedIndex);
-                        long bytesTotal = cursor.getLong(bytesTotalIndex);
+                        int status = readDownloadStatus(cursor);
+                        long bytesDownloaded = readDownloadLong(cursor, DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
+                        long bytesTotal = readDownloadLong(cursor, DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
 
                         Log.d(TAG, "Download status: " + status + ", Progress: " + bytesDownloaded + "/" + bytesTotal);
 
@@ -681,32 +694,26 @@ public class ModernUpdateChecker {
                             stopPolling();
                             handleDownloadComplete();
                             return;
-                        } else if (status == DownloadManager.STATUS_FAILED) {
+                        }
+                        if (status == DownloadManager.STATUS_FAILED) {
                             Log.e(TAG, "❌ Download failed via polling");
                             cursor.close();
                             stopPolling();
                             handleDownloadComplete();
                             return;
-                        } else if (fastUi && downloadUiCallbacks != null) {
+                        }
+                        if (fastUi && downloadUiCallbacks != null) {
                             int percent = -1;
-                            if (bytesTotal > 0) {
-                                percent = (int) ((bytesDownloaded * 100) / bytesTotal);
+                            if (bytesTotal > 0 && bytesDownloaded >= 0) {
+                                percent = (int) Math.min(100L, (bytesDownloaded * 100L) / bytesTotal);
                             }
-                            if (status == DownloadManager.STATUS_PENDING) {
-                                postToUi(() -> downloadUiCallbacks.onDownloadProgress(-1, 0, 0));
-                            } else if (status == DownloadManager.STATUS_RUNNING) {
-                                final int p = percent;
-                                final long soFar = bytesDownloaded;
-                                final long total = bytesTotal;
-                                postToUi(() -> downloadUiCallbacks.onDownloadProgress(p, soFar, total));
-                            } else if (status == DownloadManager.STATUS_PAUSED) {
-                                postToUi(() -> downloadUiCallbacks.onDownloadProgress(-1, bytesDownloaded, bytesTotal));
-                            }
-                        } else if (status == DownloadManager.STATUS_RUNNING) {
-                            if (bytesTotal > 0) {
-                                int progress = (int) ((bytesDownloaded * 100) / bytesTotal);
-                                Log.d(TAG, "📥 Download progress: " + progress + "%");
-                            }
+                            final int p = percent;
+                            final long soFar = bytesDownloaded;
+                            final long total = bytesTotal;
+                            postToUi(() -> downloadUiCallbacks.onDownloadProgress(p, soFar, total));
+                        } else if (status == DownloadManager.STATUS_RUNNING && bytesTotal > 0) {
+                            int progress = (int) ((bytesDownloaded * 100) / bytesTotal);
+                            Log.d(TAG, "📥 Download progress: " + progress + "%");
                         }
                     }
                     cursor.close();
@@ -724,7 +731,7 @@ public class ModernUpdateChecker {
             }
         };
 
-        long initialDelay = fastUi ? 150 : 5000;
+        long initialDelay = fastUi ? 0 : 5000;
         pollingHandler.postDelayed(pollingRunnable, initialDelay);
     }
     
@@ -796,12 +803,11 @@ public class ModernUpdateChecker {
             
             Cursor cursor = downloadManager.query(query);
             if (cursor.moveToFirst()) {
-                int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                int status = cursor.getInt(statusIndex);
-                
+                int status = readDownloadStatus(cursor);
+
                 if (status == DownloadManager.STATUS_SUCCESSFUL) {
                     int uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
-                    String localUri = cursor.getString(uriIndex);
+                    String localUri = uriIndex >= 0 ? cursor.getString(uriIndex) : null;
                     
                     Log.d(TAG, "✅ Download completed successfully! Local URI: " + localUri);
                     if (useDownloadUi()) {
@@ -1067,30 +1073,47 @@ public class ModernUpdateChecker {
                 return;
             }
 
-            if (useDownloadUi()) {
-                postToUi(() -> downloadUiCallbacks.onOpeningSystemInstaller());
-            }
-
             Intent installIntent = new Intent(Intent.ACTION_VIEW);
-            installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
 
-            appContext.startActivity(installIntent);
+            if (context instanceof Activity) {
+                ((Activity) context).startActivity(installIntent);
+            } else {
+                installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                appContext.startActivity(installIntent);
+            }
 
-            if (!useDownloadUi()) {
+            if (useDownloadUi()) {
+                postToUi(() -> downloadUiCallbacks.onOpeningSystemInstaller());
+            } else {
                 ModernToast.info(context,
                     "🚀 Opening installer... APK will be auto-deleted after installation");
             }
 
             Log.d(TAG, "✅ Installation intent started for: " + apkUri);
 
-            final File fileToDelete = apkFile;
-            if (fileToDelete != null && fileToDelete.exists()) {
+            String savedPath = appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                .getString(PREF_LAST_APK_PATH, null);
+            File fallbackDelete = savedPath != null ? new File(savedPath) : null;
+            final File fileToDelete;
+            if (apkFile != null && apkFile.exists()) {
+                fileToDelete = apkFile;
+            } else if (fallbackDelete != null && fallbackDelete.exists()) {
+                fileToDelete = fallbackDelete;
+            } else {
+                fileToDelete = null;
+            }
+            if (fileToDelete != null) {
                 executor.execute(() -> {
                     try {
-                        Thread.sleep(5000);
+                        Thread.sleep(10_000);
                         if (fileToDelete.exists() && fileToDelete.delete()) {
                             Log.d(TAG, "APK file deleted successfully: " + fileToDelete.getPath());
+                            appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+                                .edit()
+                                .remove(PREF_LAST_APK_PATH)
+                                .apply();
                         } else {
                             Log.w(TAG, "Failed to delete APK file: " + fileToDelete.getPath());
                         }
