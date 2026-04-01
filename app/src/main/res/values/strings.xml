@@ -33,7 +33,7 @@
     <string name="update_progress_fetching">Checking for the latest release…</string>
     <string name="update_progress_downloading">Downloading update…</string>
     <string name="update_progress_connecting">Connecting to server…</string>
-    <string name="update_progress_installing">Download complete. Opening installer…</string>
+    <string name="update_progress_installing">Download complete. Opening installer.</string>
     <string name="update_progress_back_blocked">Please wait — download in progress.</string>
     <string name="update_progress_error_title">Update failed</string>
     <string name="update_progress_retry">Try again</string>
