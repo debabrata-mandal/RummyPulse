@@ -176,12 +176,9 @@ public class ModernUpdateChecker {
      */
     public void checkForUpdates(boolean isAdminUser) {
         if (isAdminUser) {
-            Log.d(TAG, "Skipping auto-update check for admin user");
             return;
         }
-        
-        Log.d(TAG, "Checking for app updates...");
-        
+
         executor.execute(() -> {
             UpdateInfo updateInfo = fetchLatestVersionInfo();
             
@@ -189,10 +186,7 @@ public class ModernUpdateChecker {
                 String currentVersion = getCurrentVersion();
                 
                 if (compareVersions(currentVersion, updateInfo.version) < 0) {
-                    Log.d(TAG, "Update available: " + currentVersion + " -> " + updateInfo.version);
                     showUpdateDialog(updateInfo);
-                } else {
-                    Log.d(TAG, "App is up to date: " + currentVersion);
                 }
             } else {
                 Log.w(TAG, "Could not check for updates");
@@ -220,8 +214,6 @@ public class ModernUpdateChecker {
      * Force check for updates regardless of admin status (for manual checks)
      */
     public void forceCheckForUpdates() {
-        Log.d(TAG, "Force checking for app updates (manual check)...");
-        
         executor.execute(() -> {
             UpdateInfo updateInfo = fetchLatestVersionInfo();
             
@@ -229,10 +221,8 @@ public class ModernUpdateChecker {
                 String currentVersion = getCurrentVersion();
                 
                 if (compareVersions(currentVersion, updateInfo.version) < 0) {
-                    Log.d(TAG, "Update available: " + currentVersion + " -> " + updateInfo.version);
                     showUpdateDialog(updateInfo);
                 } else {
-                    Log.d(TAG, "App is up to date: " + currentVersion);
                     // Show a message even when up to date for manual checks
                     if (context instanceof Activity) {
                         ((Activity) context).runOnUiThread(() -> {
@@ -493,9 +483,7 @@ public class ModernUpdateChecker {
             @Override
             public void onReceive(Context context, Intent intent) {
                 long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                Log.d(TAG, "Download broadcast received for ID: " + id + " (our ID: " + downloadId + ")");
                 if (id == downloadId) {
-                    Log.d(TAG, "Download completed for our request - processing...");
                     handleDownloadComplete();
                 }
             }
@@ -518,8 +506,6 @@ public class ModernUpdateChecker {
                 return;
             }
 
-            // Permissions are now handled at app startup, so we can directly start download
-            Log.d(TAG, "Starting download - permissions should already be granted");
             startApkDownload(downloadUrl);
             
         } catch (Exception e) {
@@ -567,7 +553,6 @@ public class ModernUpdateChecker {
      */
     private void startApkDownloadStreaming(String downloadUrl) {
         try {
-            Log.d(TAG, "Starting streaming APK download to files dir: " + downloadUrl);
             cleanupPreviousDownload();
             streamDownloadCancelRequested = false;
 
@@ -672,8 +657,6 @@ public class ModernUpdateChecker {
      */
     private void startApkDownload(String downloadUrl) {
         try {
-            Log.d(TAG, "Starting APK download from: " + downloadUrl);
-
             if (useDownloadUi()) {
                 startApkDownloadStreaming(downloadUrl);
                 return;
@@ -716,9 +699,7 @@ public class ModernUpdateChecker {
                     .edit()
                     .putString(PREF_LAST_APK_PATH, absPath)
                     .apply();
-                Log.d(TAG, "Saved APK path for cleanup: " + absPath);
             }
-            Log.d(TAG, "Download destination (API " + Build.VERSION.SDK_INT + "): Internal app directory/" + fileName);
 
             // Add headers to mimic browser request
             request.addRequestHeader("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:40.0) Gecko/40.0 Firefox/40.0");
@@ -730,12 +711,7 @@ public class ModernUpdateChecker {
                 request.setRequiresDeviceIdle(false);
             }
 
-            Log.d(TAG, "DownloadManager request configured for API " + Build.VERSION.SDK_INT);
-            Log.d(TAG, "Download URL: " + downloadUrl);
-            Log.d(TAG, "Download destination: " + appContext.getExternalFilesDir(null) + "/" + fileName);
-
             downloadId = downloadManager.enqueue(request);
-            Log.d(TAG, "Download enqueued with ID: " + downloadId);
             if (downloadId == -1) {
                 showDownloadError("Could not start download. Please try again.", true);
                 return;
@@ -789,8 +765,6 @@ public class ModernUpdateChecker {
 
         stopPolling();
 
-        Log.d(TAG, "Starting download status polling for ID: " + downloadId);
-
         final boolean fastUi = useDownloadUi();
         final int intervalMs = fastUi ? 300 : 2000;
         final int maxPolls = fastUi ? 4000 : 60;
@@ -824,17 +798,14 @@ public class ModernUpdateChecker {
                         long bytesDownloaded = readDownloadLong(cursor, DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
                         long bytesTotal = readDownloadLong(cursor, DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
 
-                        Log.d(TAG, "Download status: " + status + ", Progress: " + bytesDownloaded + "/" + bytesTotal);
-
                         if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                            Log.d(TAG, "✅ Download completed via polling! Triggering installation...");
                             cursor.close();
                             stopPolling();
                             handleDownloadComplete();
                             return;
                         }
                         if (status == DownloadManager.STATUS_FAILED) {
-                            Log.e(TAG, "❌ Download failed via polling");
+                            Log.e(TAG, "Download failed via polling");
                             cursor.close();
                             stopPolling();
                             handleDownloadComplete();
@@ -849,9 +820,6 @@ public class ModernUpdateChecker {
                             final long soFar = bytesDownloaded;
                             final long total = bytesTotal;
                             postToUi(() -> downloadUiCallbacks.onDownloadProgress(p, soFar, total));
-                        } else if (status == DownloadManager.STATUS_RUNNING && bytesTotal > 0) {
-                            int progress = (int) ((bytesDownloaded * 100) / bytesTotal);
-                            Log.d(TAG, "📥 Download progress: " + progress + "%");
                         }
                     }
                     cursor.close();
@@ -878,7 +846,6 @@ public class ModernUpdateChecker {
      */
     private void stopPolling() {
         if (pollingHandler != null && pollingRunnable != null) {
-            Log.d(TAG, "Stopping download status polling");
             pollingHandler.removeCallbacks(pollingRunnable);
             pollingHandler = null;
             pollingRunnable = null;
@@ -897,7 +864,6 @@ public class ModernUpdateChecker {
         try {
             if (downloadReceiver != null) {
                 appContext.unregisterReceiver(downloadReceiver);
-                Log.d(TAG, "Unregistered previous download receiver");
             }
         } catch (IllegalArgumentException e) {
             // Receiver wasn't registered, ignore
@@ -910,7 +876,6 @@ public class ModernUpdateChecker {
         if (downloadId != -1) {
             try {
                 downloadManager.remove(downloadId);
-                Log.d(TAG, "Cancelled previous download ID: " + downloadId);
             } catch (Exception e) {
                 Log.w(TAG, "Error cancelling previous download", e);
             }
@@ -925,12 +890,10 @@ public class ModernUpdateChecker {
     private void handleDownloadComplete() {
         final long id = downloadId;
         if (id == -1) {
-            Log.d(TAG, "handleDownloadComplete: no active download id");
             return;
         }
         synchronized (this) {
             if (downloadCompletionHandled) {
-                Log.d(TAG, "handleDownloadComplete: already handled, skipping duplicate");
                 return;
             }
             downloadCompletionHandled = true;
@@ -947,8 +910,7 @@ public class ModernUpdateChecker {
                 if (status == DownloadManager.STATUS_SUCCESSFUL) {
                     int uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
                     String localUri = uriIndex >= 0 ? cursor.getString(uriIndex) : null;
-                    
-                    Log.d(TAG, "✅ Download completed successfully! Local URI: " + localUri);
+
                     if (useDownloadUi()) {
                         postToUi(() -> downloadUiCallbacks.onInstalling());
                     } else {
@@ -965,7 +927,7 @@ public class ModernUpdateChecker {
                 } else {
                     // Get detailed error information
                     String errorMessage = getDownloadErrorMessage(cursor, status);
-                    Log.e(TAG, "❌ Download failed with status: " + status + " - " + errorMessage);
+                    Log.e(TAG, "Download failed status=" + status + " " + errorMessage);
                     if (!useDownloadUi()) {
                         ModernToast.error(context, "❌ Download failed: " + getSimpleErrorMessage(status));
                     }
@@ -1004,8 +966,9 @@ public class ModernUpdateChecker {
                 String localUri = cursor.getString(uriIndex);
                 if (localUri != null) {
                     File failedFile = new File(Uri.parse(localUri).getPath());
-                    if (failedFile.exists() && failedFile.delete()) {
-                        Log.d(TAG, "Cleaned up failed download file: " + failedFile.getPath());
+                    if (failedFile.exists()) {
+                        //noinspection ResultOfMethodCallIgnored
+                        failedFile.delete();
                     }
                 }
             }
@@ -1013,7 +976,6 @@ public class ModernUpdateChecker {
             // Also remove from DownloadManager
             if (downloadId != -1) {
                 downloadManager.remove(downloadId);
-                Log.d(TAG, "Removed failed download from DownloadManager");
             }
         } catch (Exception e) {
             Log.w(TAG, "Error cleaning up failed download", e);
@@ -1239,8 +1201,9 @@ public class ModernUpdateChecker {
                 Uri parsed = Uri.parse(localUri);
                 if ("file".equalsIgnoreCase(parsed.getScheme()) && parsed.getPath() != null) {
                     File f = new File(parsed.getPath());
-                    if (f.exists() && f.delete()) {
-                        Log.d(TAG, "Cleaned up APK file after installation error");
+                    if (f.exists()) {
+                        //noinspection ResultOfMethodCallIgnored
+                        f.delete();
                     }
                 }
             } catch (Exception cleanupError) {
@@ -1278,7 +1241,6 @@ public class ModernUpdateChecker {
 
                 int status = i.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
                 String message = i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
-                Log.d(TAG, "PackageInstaller session status=" + status + " msg=" + message);
 
                 if (status == PackageInstaller.STATUS_SUCCESS) {
                     unregisterInstallResultReceiver();
@@ -1299,15 +1261,15 @@ public class ModernUpdateChecker {
                         postToUi(() -> launchSessionConfirmationIntent(confirm));
                         return;
                     }
-                    logSessionStatusExtras(i);
-                    Log.w(TAG, "PENDING_USER_ACTION but no EXTRA_INTENT; falling back to package installer");
+                    android.os.Bundle ex = i.getExtras();
+                    Log.w(TAG, "PENDING_USER_ACTION missing EXTRA_INTENT; extras=" + (ex != null ? ex.keySet() : null));
                 }
 
                 unregisterInstallResultReceiver();
                 if (args == null) {
                     return;
                 }
-                Log.w(TAG, "Session install did not complete; opening standard installer");
+                Log.w(TAG, "Session install status=" + status + " msg=" + message + "; opening VIEW installer");
                 postToUi(() -> startViewPackageInstaller(args.fallbackUri, args.fileToDelete));
             }
         };
@@ -1364,15 +1326,6 @@ public class ModernUpdateChecker {
                 });
             }
         });
-    }
-
-    private void logSessionStatusExtras(Intent statusIntent) {
-        try {
-            android.os.Bundle ex = statusIntent.getExtras();
-            Log.d(TAG, "Session status extras: " + (ex != null ? ex.keySet() : "null"));
-        } catch (Exception e) {
-            Log.w(TAG, "logSessionStatusExtras", e);
-        }
     }
 
     @Nullable
@@ -1448,7 +1401,6 @@ public class ModernUpdateChecker {
                 "🚀 Opening installer... APK will be auto-deleted after installation");
         }
 
-        Log.d(TAG, "✅ Package installer (VIEW) started for: " + apkUri);
         scheduleApkDeletionAfterInstall(fileToDelete);
     }
 
@@ -1463,7 +1415,6 @@ public class ModernUpdateChecker {
             try {
                 Thread.sleep(10_000);
                 if (toDelete.exists() && toDelete.delete()) {
-                    Log.d(TAG, "APK file deleted successfully: " + toDelete.getPath());
                     appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
                         .edit()
                         .remove(PREF_LAST_APK_PATH)
@@ -1519,7 +1470,6 @@ public class ModernUpdateChecker {
     public void cleanup() {
         streamDownloadCancelRequested = true;
         if (sessionInstallInProgress) {
-            Log.d(TAG, "cleanup: skipping unregister/shutdown while session install in progress");
             return;
         }
         unregisterInstallResultReceiver();
