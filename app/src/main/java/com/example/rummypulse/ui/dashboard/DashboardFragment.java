@@ -9,10 +9,13 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.inputmethod.EditorInfo;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -29,6 +32,10 @@ import com.example.rummypulse.ui.home.GameItem;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 public class DashboardFragment extends Fragment implements DashboardGameAdapter.OnGameJoinListener {
 
@@ -309,11 +316,22 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
     private void showCreateGameDialog() {
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_create_game, null);
-        
+
+        TextInputLayout layoutGameDisplayName = dialogView.findViewById(R.id.layout_game_display_name);
+        TextInputEditText editGameDisplayName = dialogView.findViewById(R.id.edit_game_display_name);
+        ImageButton btnGenerateGameName = dialogView.findViewById(R.id.btn_generate_game_name);
+        TextInputLayout layoutPointValue = dialogView.findViewById(R.id.layout_point_value);
         TextInputEditText editPointValue = dialogView.findViewById(R.id.edit_point_value);
-        TextInputEditText editGstPercentage = dialogView.findViewById(R.id.edit_gst_percentage);
+        ImageButton btnPointDecrement = dialogView.findViewById(R.id.btn_point_value_decrement);
+        ImageButton btnPointIncrement = dialogView.findViewById(R.id.btn_point_value_increment);
+        TextInputLayout layoutContributionPercent = dialogView.findViewById(R.id.layout_contribution_percent);
+        TextInputEditText editContributionPercent = dialogView.findViewById(R.id.edit_contribution_percent);
+        ImageButton btnContributionDecrement = dialogView.findViewById(R.id.btn_contribution_decrement);
+        ImageButton btnContributionIncrement = dialogView.findViewById(R.id.btn_contribution_increment);
         Button btnCancel = dialogView.findViewById(R.id.btn_cancel);
         Button btnCreate = dialogView.findViewById(R.id.btn_create);
+
+        CharSequence defaultGameNameHint = getString(R.string.dialog_game_name_hint);
 
         AlertDialog dialog = new AlertDialog.Builder(getContext(), R.style.DarkDialogTheme)
                 .setView(dialogView)
@@ -322,74 +340,170 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
         btnCancel.setOnClickListener(v -> dialog.dismiss());
 
-        btnCreate.setOnClickListener(v -> {
-            String pointValueStr = editPointValue.getText().toString().trim();
-            String gstPercentageStr = editGstPercentage.getText().toString().trim();
-
-            if (TextUtils.isEmpty(pointValueStr)) {
-                editPointValue.setError("Point value is required");
+        btnGenerateGameName.setOnClickListener(v -> {
+            if (!GroqGameNameService.isConfigured()) {
+                com.example.rummypulse.utils.ModernToast.error(getContext(),
+                        getString(R.string.dialog_game_name_groq_missing));
                 return;
             }
-
-            if (TextUtils.isEmpty(gstPercentageStr)) {
-                editGstPercentage.setError("Contribution percentage is required");
-                return;
-            }
-
-            try {
-                double pointValue = Double.parseDouble(pointValueStr);
-                double gstPercentage = Double.parseDouble(gstPercentageStr);
-
-                // Validate Point Value
-                if (pointValue < 0) {
-                    editPointValue.setError("Point value cannot be negative");
+            btnGenerateGameName.setEnabled(false);
+            layoutGameDisplayName.setHint(getString(R.string.dialog_game_name_generating));
+            GroqGameNameService.suggestNameWithRetries(name -> {
+                if (!isAdded() || getContext() == null) {
                     return;
                 }
-                
-                if (pointValue == 0) {
-                    editPointValue.setError("Point value must be greater than 0");
-                    return;
-                }
-
-                if (pointValue > 100) {
-                    editPointValue.setError("Point value cannot be more than ₹100");
-                    return;
-                }
-
-                // Validate Contribution Percentage
-                if (gstPercentage < 0) {
-                    editGstPercentage.setError("Contribution percentage cannot be negative");
-                    return;
-                }
-
-                if (gstPercentage > 100) {
-                    editGstPercentage.setError("Contribution percentage cannot be more than 100%");
-                    return;
-                }
-
-                if (GroqGameNameService.isConfigured()) {
-                    btnCreate.setEnabled(false);
-                    com.example.rummypulse.utils.ModernToast.progress(getContext(), "Creating game…");
-                    GroqGameNameService.suggestNameWithRetries(displayName -> {
-                        if (!isAdded() || getContext() == null) {
-                            return;
-                        }
-                        btnCreate.setEnabled(true);
-                        dashboardViewModel.createNewGame(pointValue, gstPercentage, displayName);
-                        dialog.dismiss();
-                        com.example.rummypulse.utils.ModernToast.success(getContext(),
-                                "🎮 Creating new game with you as Player 1...");
-                    });
+                layoutGameDisplayName.setHint(defaultGameNameHint);
+                btnGenerateGameName.setEnabled(true);
+                if (name != null && !name.isEmpty()) {
+                    editGameDisplayName.setText(name);
                 } else {
-                    dashboardViewModel.createNewGame(pointValue, gstPercentage, "");
-                    dialog.dismiss();
-                    com.example.rummypulse.utils.ModernToast.success(getContext(),
-                            "🎮 Creating new game with you as Player 1...");
+                    com.example.rummypulse.utils.ModernToast.error(getContext(),
+                            getString(R.string.dialog_game_name_generate_failed));
                 }
+            });
+        });
 
-            } catch (NumberFormatException e) {
-                com.example.rummypulse.utils.ModernToast.error(getContext(), "Please enter valid numbers");
+        if (GroqGameNameService.isConfigured()) {
+            btnCreate.setEnabled(false);
+            btnGenerateGameName.setEnabled(false);
+            layoutGameDisplayName.setHint(getString(R.string.dialog_game_name_generating));
+            GroqGameNameService.suggestNameWithRetries(name -> {
+                if (!isAdded() || getContext() == null) {
+                    return;
+                }
+                layoutGameDisplayName.setHint(defaultGameNameHint);
+                if (name != null && !name.isEmpty()) {
+                    editGameDisplayName.setText(name);
+                }
+                btnCreate.setEnabled(true);
+                btnGenerateGameName.setEnabled(true);
+            });
+        } else {
+            editGameDisplayName.setText("");
+        }
+
+        final double[] pointValueState = {0.15};
+        final int[] contributionPercentState = {25};
+
+        Runnable refreshPointFieldUi = () -> {
+            editPointValue.setText(formatPlainDecimalForField(pointValueState[0]));
+            layoutPointValue.setError(null);
+            btnPointDecrement.setEnabled(pointValueState[0] > 0.05 + 1e-9);
+            btnPointIncrement.setEnabled(pointValueState[0] < 100.0 - 1e-9);
+        };
+        Runnable refreshContributionFieldUi = () -> {
+            editContributionPercent.setText(String.valueOf(contributionPercentState[0]));
+            layoutContributionPercent.setError(null);
+            btnContributionDecrement.setEnabled(contributionPercentState[0] > 0);
+            btnContributionIncrement.setEnabled(contributionPercentState[0] < 100);
+        };
+
+        editPointValue.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus || !isAdded()) {
+                return;
             }
+            if (!tryCommitPointField(layoutPointValue, editPointValue, pointValueState)) {
+                editPointValue.setText(formatPlainDecimalForField(pointValueState[0]));
+            }
+            btnPointDecrement.setEnabled(pointValueState[0] > 0.05 + 1e-9);
+            btnPointIncrement.setEnabled(pointValueState[0] < 100.0 - 1e-9);
+        });
+        editPointValue.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                if (tryCommitPointField(layoutPointValue, editPointValue, pointValueState)) {
+                    editPointValue.clearFocus();
+                }
+                btnPointDecrement.setEnabled(pointValueState[0] > 0.05 + 1e-9);
+                btnPointIncrement.setEnabled(pointValueState[0] < 100.0 - 1e-9);
+                return true;
+            }
+            return false;
+        });
+
+        editContributionPercent.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus || !isAdded()) {
+                return;
+            }
+            if (!tryCommitContributionField(layoutContributionPercent, editContributionPercent,
+                    contributionPercentState)) {
+                editContributionPercent.setText(String.valueOf(contributionPercentState[0]));
+            }
+            btnContributionDecrement.setEnabled(contributionPercentState[0] > 0);
+            btnContributionIncrement.setEnabled(contributionPercentState[0] < 100);
+        });
+        editContributionPercent.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                if (tryCommitContributionField(layoutContributionPercent, editContributionPercent,
+                        contributionPercentState)) {
+                    editContributionPercent.clearFocus();
+                }
+                btnContributionDecrement.setEnabled(contributionPercentState[0] > 0);
+                btnContributionIncrement.setEnabled(contributionPercentState[0] < 100);
+                return true;
+            }
+            return false;
+        });
+
+        btnPointDecrement.setOnClickListener(v -> {
+            pointValueState[0] = clampPointValue(pointValueState[0] - 0.05);
+            refreshPointFieldUi.run();
+        });
+        btnPointIncrement.setOnClickListener(v -> {
+            pointValueState[0] = clampPointValue(pointValueState[0] + 0.05);
+            refreshPointFieldUi.run();
+        });
+        btnPointDecrement.setOnLongClickListener(v -> {
+            pointValueState[0] = clampPointValue(pointValueState[0] - 1.0);
+            refreshPointFieldUi.run();
+            return true;
+        });
+        btnPointIncrement.setOnLongClickListener(v -> {
+            pointValueState[0] = clampPointValue(pointValueState[0] + 1.0);
+            refreshPointFieldUi.run();
+            return true;
+        });
+
+        btnContributionDecrement.setOnClickListener(v -> {
+            contributionPercentState[0] = Math.max(0, contributionPercentState[0] - 1);
+            refreshContributionFieldUi.run();
+        });
+        btnContributionIncrement.setOnClickListener(v -> {
+            contributionPercentState[0] = Math.min(100, contributionPercentState[0] + 1);
+            refreshContributionFieldUi.run();
+        });
+        btnContributionDecrement.setOnLongClickListener(v -> {
+            contributionPercentState[0] = Math.max(0, contributionPercentState[0] - 5);
+            refreshContributionFieldUi.run();
+            return true;
+        });
+        btnContributionIncrement.setOnLongClickListener(v -> {
+            contributionPercentState[0] = Math.min(100, contributionPercentState[0] + 5);
+            refreshContributionFieldUi.run();
+            return true;
+        });
+
+        refreshPointFieldUi.run();
+        refreshContributionFieldUi.run();
+
+        btnCreate.setOnClickListener(v -> {
+            if (!tryCommitPointField(layoutPointValue, editPointValue, pointValueState)) {
+                return;
+            }
+            if (!tryCommitContributionField(layoutContributionPercent, editContributionPercent,
+                    contributionPercentState)) {
+                return;
+            }
+
+            double pointValue = pointValueState[0];
+            double gstPercentage = contributionPercentState[0];
+
+            String displayName = editGameDisplayName.getText() != null
+                    ? editGameDisplayName.getText().toString().trim()
+                    : "";
+            dashboardViewModel.createNewGame(pointValue, gstPercentage, displayName);
+            dialog.dismiss();
+            com.example.rummypulse.utils.ModernToast.success(getContext(),
+                    "🎮 Creating new game with you as Player 1...");
         });
 
         dialog.show();
@@ -430,5 +544,69 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         }
         isNetworkAvailable = checkNetworkAvailable();
         updateLiveStatusChip();
+    }
+
+    private static String formatPlainDecimalForField(double v) {
+        BigDecimal bd = BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros();
+        return bd.toPlainString();
+    }
+
+    private boolean tryCommitPointField(TextInputLayout layout, TextInputEditText edit, double[] state) {
+        String s = edit.getText() != null ? edit.getText().toString().trim() : "";
+        if (TextUtils.isEmpty(s)) {
+            layout.setError(getString(R.string.dialog_point_value_required));
+            return false;
+        }
+        try {
+            double raw = Double.parseDouble(s);
+            if (raw <= 0 || raw > 100) {
+                layout.setError(getString(R.string.dialog_point_value_invalid));
+                return false;
+            }
+            state[0] = clampPointValue(snapToFivePaise(raw));
+            edit.setText(formatPlainDecimalForField(state[0]));
+            layout.setError(null);
+            return true;
+        } catch (NumberFormatException e) {
+            layout.setError(getString(R.string.dialog_point_value_invalid));
+            return false;
+        }
+    }
+
+    private boolean tryCommitContributionField(TextInputLayout layout, TextInputEditText edit, int[] state) {
+        String s = edit.getText() != null ? edit.getText().toString().trim() : "";
+        if (TextUtils.isEmpty(s)) {
+            layout.setError(getString(R.string.dialog_contribution_required));
+            return false;
+        }
+        try {
+            int value = Integer.parseInt(s);
+            if (value < 0 || value > 100) {
+                layout.setError(getString(R.string.dialog_contribution_invalid));
+                return false;
+            }
+            state[0] = value;
+            edit.setText(String.valueOf(value));
+            layout.setError(null);
+            return true;
+        } catch (NumberFormatException e) {
+            layout.setError(getString(R.string.dialog_contribution_invalid));
+            return false;
+        }
+    }
+
+    private static double snapToFivePaise(double value) {
+        return Math.round(value * 20.0) / 20.0;
+    }
+
+    private static double clampPointValue(double value) {
+        double s = snapToFivePaise(value);
+        if (s < 0.05) {
+            return 0.05;
+        }
+        if (s > 100.0) {
+            return 100.0;
+        }
+        return s;
     }
 }

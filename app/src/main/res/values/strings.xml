@@ -44,4 +44,26 @@
     <string name="update_progress_close">Close</string>
     <string name="update_progress_bytes">%1$s / %2$s</string>
     <string name="update_progress_bytes_unknown">Downloaded: %1$s</string>
+
+    <!-- Create game dialog -->
+    <string name="dialog_new_game_title">🎮 New Game</string>
+    <string name="dialog_game_name_section_title">✨ Game name</string>
+    <string name="dialog_game_name_section_subtitle">Suggested game name. Tap ✨ to get another.</string>
+    <string name="dialog_point_value_subtitle">Value of each point.</string>
+    <string name="dialog_contribution_subtitle">Percentage of wining player contribute to the pot.</string>
+    <string name="dialog_point_value_field_hint">Amount (₹)</string>
+    <string name="dialog_contribution_field_hint">Contribution (%)</string>
+    <string name="dialog_point_value_required">Enter a point value</string>
+    <string name="dialog_point_value_invalid">Enter a valid amount (max ₹100)</string>
+    <string name="dialog_contribution_required">Enter contribution %</string>
+    <string name="dialog_contribution_invalid">Enter a whole number from 0 to 100</string>
+    <string name="cd_decrease_point_value">Decrease point value</string>
+    <string name="cd_increase_point_value">Increase point value</string>
+    <string name="cd_decrease_contribution">Decrease contribution</string>
+    <string name="cd_increase_contribution">Increase contribution</string>
+    <string name="dialog_game_name_hint">Name</string>
+    <string name="dialog_game_name_generating">Generating…</string>
+    <string name="cd_generate_game_name">Generate game name</string>
+    <string name="dialog_game_name_groq_missing">Add GROQ_API_KEY in local.properties (or Gradle env), then rebuild, to generate names.</string>
+    <string name="dialog_game_name_generate_failed">Could not generate a name. Try again.</string>
 </resources>

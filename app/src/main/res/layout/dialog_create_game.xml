@@ -9,12 +9,81 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="🎮 Create New Game"
+        android:text="@string/dialog_new_game_title"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="@color/text_primary"
         android:gravity="center"
         android:layout_marginBottom="24dp" />
+
+    <!-- Game name (read-only + AI refresh) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/professional_row_background"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/dialog_game_name_section_title"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/dialog_game_name_section_subtitle"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="12dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_game_display_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="@string/dialog_game_name_hint"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_game_display_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"
+                    android:focusable="false"
+                    android:focusableInTouchMode="false"
+                    android:cursorVisible="false"
+                    android:longClickable="false"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <ImageButton
+                android:id="@+id/btn_generate_game_name"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_generate_game_name"
+                android:padding="12dp"
+                android:src="@drawable/ic_ai_generate"
+                android:tint="@color/accent_blue" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
     <!-- Point Value Section -->
     <LinearLayout
@@ -37,30 +106,68 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="How much each point is worth in Rupees"
+            android:text="@string/dialog_point_value_subtitle"
             android:textSize="12sp"
             android:textColor="@color/text_secondary"
             android:layout_marginBottom="12dp" />
 
-        <com.google.android.material.textfield.TextInputLayout
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Point Value (₹)"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/dialog_counter_background"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_point_value"
-                android:layout_width="match_parent"
+            <ImageButton
+                android:id="@+id/btn_point_value_decrement"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_decrease_point_value"
+                android:padding="12dp"
+                android:src="@drawable/ic_counter_minus"
+                android:tint="@color/success_green" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_point_value"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:inputType="numberDecimal"
-                android:text="0.15"
-                android:textColor="@color/success_green"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:digits="0123456789."
-                android:maxLength="6" />
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:hint="@string/dialog_point_value_field_hint"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-        </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_point_value"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="numberDecimal"
+                    android:digits="0123456789."
+                    android:maxLength="8"
+                    android:text="0.15"
+                    android:textColor="@color/success_green"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:imeOptions="actionDone" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <ImageButton
+                android:id="@+id/btn_point_value_increment"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_increase_point_value"
+                android:padding="12dp"
+                android:src="@drawable/ic_add"
+                android:tint="@color/success_green" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -76,7 +183,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📊 Contribution Percentage"
+            android:text="📊 Contribution"
             android:textSize="16sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary"
@@ -85,59 +192,93 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Contribution percentage applied on winnings"
+            android:text="@string/dialog_contribution_subtitle"
             android:textSize="12sp"
             android:textColor="@color/text_secondary"
             android:layout_marginBottom="12dp" />
 
-        <com.google.android.material.textfield.TextInputLayout
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Contribution Percentage (%)"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/dialog_counter_background"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_gst_percentage"
-                android:layout_width="match_parent"
+            <ImageButton
+                android:id="@+id/btn_contribution_decrement"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_decrease_contribution"
+                android:padding="12dp"
+                android:src="@drawable/ic_counter_minus"
+                android:tint="@color/accent_blue" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_contribution_percent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:inputType="numberDecimal"
-                android:text="25"
-                android:textColor="@color/accent_blue"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:digits="0123456789."
-                android:maxLength="6" />
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:hint="@string/dialog_contribution_field_hint"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-        </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_contribution_percent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:digits="0123456789"
+                    android:maxLength="3"
+                    android:text="25"
+                    android:textColor="@color/accent_blue"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:imeOptions="actionDone" />
 
-    </LinearLayout>
+            </com.google.android.material.textfield.TextInputLayout>
 
+            <ImageButton
+                android:id="@+id/btn_contribution_increment"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_increase_contribution"
+                android:padding="12dp"
+                android:src="@drawable/ic_add"
+                android:tint="@color/accent_blue" />
 
-    <!-- Example Section -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/example_background"
-        android:padding="16dp"
-        android:layout_marginBottom="24dp">
+        </LinearLayout>
 
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📋 Example Settings"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/success_green"
-            android:layout_marginBottom="8dp" />
+            android:orientation="horizontal"
+            android:layout_marginTop="6dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Point Value: ₹0.15 means each point = 15 paise\nContribution: 25% means winners pay 25% on winnings\n\nExample: If you win ₹100, you pay ₹25 contribution and get ₹75"
-            android:textSize="12sp"
-            android:textColor="@color/text_secondary"
-            android:lineSpacingExtra="2dp" />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="0%"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:text="100%"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
