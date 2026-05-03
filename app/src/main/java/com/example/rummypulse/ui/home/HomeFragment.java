@@ -5,24 +5,28 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.databinding.FragmentHomeBinding;
-import com.example.rummypulse.data.AppUserManager;
+import com.example.rummypulse.data.AppUserRoleSession;
 
 import java.util.List;
 
 public class HomeFragment extends Fragment implements TableAdapter.OnGameActionListener {
 
+    private static final int LOCKED_OVERLAY_VIEW_ID = View.generateViewId();
+
     private FragmentHomeBinding binding;
     private TableAdapter tableAdapter;
     private HomeViewModel homeViewModel;
+    private boolean adminViewConfigured;
+    private boolean lockedViewConfigured;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -32,14 +36,28 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
-        // Check if user is admin before setting up the screen
-        AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
+        AppUserRoleSession.getInstance().getRole().observe(getViewLifecycleOwner(), new Observer<AppUserRoleSession.Role>() {
             @Override
-            public void onResult(boolean isAdmin) {
-                if (isAdmin) {
-                    setupAdminView();
+            public void onChanged(AppUserRoleSession.Role role) {
+                if (!isAdded() || binding == null) {
+                    return;
+                }
+                if (role == AppUserRoleSession.Role.UNKNOWN) {
+                    showAccessLoading();
+                    return;
+                }
+                hideAccessLoading();
+                if (role == AppUserRoleSession.Role.ADMIN) {
+                    removeLockedOverlayIfPresent();
+                    if (!adminViewConfigured) {
+                        setupAdminView();
+                        adminViewConfigured = true;
+                    }
                 } else {
-                    setupLockedView();
+                    if (!lockedViewConfigured) {
+                        setupLockedView();
+                        lockedViewConfigured = true;
+                    }
                 }
             }
         });
@@ -47,19 +65,37 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         return root;
     }
 
+    private void showAccessLoading() {
+        binding.reviewAccessLoading.setVisibility(View.VISIBLE);
+        binding.swipeRefresh.setAlpha(0.35f);
+    }
+
+    private void hideAccessLoading() {
+        binding.reviewAccessLoading.setVisibility(View.GONE);
+        binding.swipeRefresh.setAlpha(1f);
+    }
+
+    private void removeLockedOverlayIfPresent() {
+        if (binding == null || !(binding.getRoot() instanceof ViewGroup)) {
+            return;
+        }
+        ViewGroup coordinator = (ViewGroup) binding.getRoot();
+        View overlay = coordinator.findViewById(LOCKED_OVERLAY_VIEW_ID);
+        if (overlay != null) {
+            coordinator.removeView(overlay);
+        }
+    }
+
     private void setupAdminView() {
-        // Setup RecyclerView for the table
         RecyclerView recyclerView = binding.recyclerViewTable;
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        
-        // Observe game data and update adapter
+
         homeViewModel.getGameItems().observe(getViewLifecycleOwner(), gameItems -> {
             tableAdapter = new TableAdapter(gameItems);
             tableAdapter.setOnGameActionListener(this);
             recyclerView.setAdapter(tableAdapter);
         });
 
-        // Observe and update metric tiles
         homeViewModel.getCompletedGames().observe(getViewLifecycleOwner(), completedGames -> {
             int c = completedGames != null ? completedGames : 0;
             binding.textCompletedGames.setText(String.valueOf(c));
@@ -70,15 +106,10 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             binding.textInProgressGames.setText(String.valueOf(inProgressGames));
         });
 
-        // Disable swipe refresh (only manual button refresh)
         binding.swipeRefresh.setEnabled(false);
-
-        // Setup floating action button for manual refresh
         binding.btnRefresh.setOnClickListener(v -> refreshGames());
-
         binding.btnApproveAll.setOnClickListener(v -> onApproveAllClicked());
 
-        // Observe errors
         homeViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
                 com.example.rummypulse.utils.ModernToast.error(getContext(), error);
@@ -87,21 +118,19 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
     }
 
     private void setupLockedView() {
-        // Hide all admin-only content
         binding.recyclerViewTable.setVisibility(View.GONE);
         binding.swipeRefresh.setVisibility(View.GONE);
         binding.btnRefresh.setVisibility(View.GONE);
         binding.btnApproveAll.setVisibility(View.GONE);
-        
-        // Show locked message
+
         TextView lockedMessage = new TextView(getContext());
+        lockedMessage.setId(LOCKED_OVERLAY_VIEW_ID);
         lockedMessage.setText("🔒 Access Restricted\n\nThis screen requires administrator privileges.\nPlease contact an admin for access.");
         lockedMessage.setTextSize(18);
         lockedMessage.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
         lockedMessage.setPadding(32, 100, 32, 32);
         lockedMessage.setTextColor(getResources().getColor(com.example.rummypulse.R.color.text_secondary, null));
-        
-        // Add the locked message to the root layout
+
         if (binding.getRoot() instanceof ViewGroup) {
             ((ViewGroup) binding.getRoot()).addView(lockedMessage);
         }
@@ -115,23 +144,19 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
     @Override
     public void onApproveGst(GameItem game, int position) {
-        // Check if game is completed
         if (!"Completed".equals(game.getGameStatus())) {
             com.example.rummypulse.utils.ModernToast.warning(getContext(), "Game must be completed before approval");
             return;
         }
-        
-        // Show confirmation dialog with custom theme
+
         new androidx.appcompat.app.AlertDialog.Builder(getContext(), com.example.rummypulse.R.style.DarkDialogTheme)
                 .setTitle("Approve Game")
                 .setMessage("Are you sure you want to approve this completed game? This will finalize the game and move it to the approved games list.")
                 .setPositiveButton("Approve", (dialog, which) -> {
-                    // Call the approve method
                     homeViewModel.approveGame(game);
                     com.example.rummypulse.utils.ModernToast.success(getContext(), "✅ Game approved successfully!");
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> {
-                    // Do nothing
                 })
                 .show();
     }
@@ -139,17 +164,14 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
     @Override
     public void onDeleteGame(GameItem game, int position) {
-        // Show confirmation dialog with custom theme
         new androidx.appcompat.app.AlertDialog.Builder(getContext(), com.example.rummypulse.R.style.DarkDialogTheme)
                 .setTitle("Delete Game")
                 .setMessage("Are you sure you want to delete this game? This action cannot be undone.")
                 .setPositiveButton("Delete", (dialog, which) -> {
-                    // Delete game from Firebase
                     homeViewModel.deleteGame(game.getGameId());
                     com.example.rummypulse.utils.ModernToast.success(getContext(), "🗑️ Game deleted successfully!");
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> {
-                    // Do nothing
                 })
                 .show();
     }
@@ -182,17 +204,19 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                                 approvedCount == 1 ? "1 game approved." : approvedCount + " games approved.");
                     });
                 })
-                .setNegativeButton("Cancel", (dialog, which) -> { })
+                .setNegativeButton("Cancel", (dialog, which) -> {
+                })
                 .show();
     }
 
     private void refreshGames() {
         com.example.rummypulse.utils.ModernToast.progress(getContext(), "Refreshing games...");
         homeViewModel.refreshGames();
-        
-        // Show success message after refresh (data will update via LiveData observers)
+
         binding.btnRefresh.postDelayed(() -> {
-            com.example.rummypulse.utils.ModernToast.success(getContext(), "Games refreshed successfully!");
+            if (isAdded() && getContext() != null) {
+                com.example.rummypulse.utils.ModernToast.success(getContext(), "Games refreshed successfully!");
+            }
         }, 1500);
     }
 }

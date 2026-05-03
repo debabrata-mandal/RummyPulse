@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.utils.AuthStateManager;
 
@@ -51,6 +52,10 @@ public class RummyPulseApplication extends Application {
         
         // Initialize AuthStateManager
         AuthStateManager authStateManager = AuthStateManager.getInstance(this);
+
+        // GameRepository: load only when a user is signed in (avoids Firestore work while logged out).
+        final GameRepository gameRepository = new GameRepository();
+        gameRepository.setContext(this);
         
         // Add a global auth state listener for debugging and backup
         firebaseAuth.addAuthStateListener(new FirebaseAuth.AuthStateListener() {
@@ -61,8 +66,10 @@ public class RummyPulseApplication extends Application {
                     Log.d(TAG, "Global auth state: User is signed in - " + user.getEmail());
                     // Save authentication state as backup
                     authStateManager.saveAuthState(user);
+                    gameRepository.loadAllGames();
                 } else {
                     Log.d(TAG, "Global auth state: User is signed out");
+                    AppUserRoleSession.getInstance().stop();
                     // Check if this is unexpected (user should be authenticated)
                     if (authStateManager.shouldBeAuthenticated()) {
                         Log.w(TAG, "Unexpected sign out detected - user should be authenticated");
@@ -77,11 +84,6 @@ public class RummyPulseApplication extends Application {
         
         // Handle post-force-stop recovery
         authStateManager.handlePostForceStopRecovery();
-        
-        // Initialize GameRepository
-        GameRepository gameRepository = new GameRepository();
-        gameRepository.setContext(this);
-        gameRepository.loadAllGames(); // Start listening for games immediately
         Log.d(TAG, "GameRepository initialized");
         
         Log.d(TAG, "RummyPulse Application initialized with Firebase Auth persistence");

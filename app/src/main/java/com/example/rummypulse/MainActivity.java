@@ -21,14 +21,15 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.example.rummypulse.data.AppUser;
-import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.data.AppUserRepository;
+import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.ModernUpdateChecker;
 import com.example.rummypulse.utils.PermissionManager;
 import com.example.rummypulse.utils.VersionGate;
 
 import androidx.annotation.NonNull;
+import androidx.lifecycle.Observer;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -46,12 +47,15 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseAuth.AuthStateListener mAuthListener;
     private ModernUpdateChecker updateChecker;
     private PermissionManager permissionManager;
+    private NavigationView navigationView;
+    private DrawerLayout drawerLayout;
+    private NavController navController;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_version_gate_loading);
-        VersionGate.runWhenAllowed(this, () -> continueMainOnCreateAfterVersionGate(savedInstanceState));
+        VersionGate.runWhenAllowed(this, () -> continueMainOnCreateAfterVersionGate(savedInstanceState), true);
     }
 
     private void continueMainOnCreateAfterVersionGate(Bundle savedInstanceState) {
@@ -64,8 +68,8 @@ public class MainActivity extends AppCompatActivity {
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 if (user == null) {
-                    // User is signed out, redirect to login
                     android.util.Log.d("MainActivity", "User signed out, redirecting to login");
+                    AppUserRoleSession.getInstance().stop();
                     startActivity(new Intent(MainActivity.this, LoginActivity.class));
                     finish();
                 }
@@ -94,10 +98,9 @@ public class MainActivity extends AppCompatActivity {
             finish();
             return;
         } else {
-            // User is authenticated, ensure backup state is updated
             android.util.Log.d("MainActivity", "User authenticated: " + currentUser.getEmail());
             authStateManager.saveAuthState(currentUser);
-            // Retry appUser write if login-time Firestore call failed (e.g. transient error or rules).
+            AppUserRoleSession.getInstance().startForCurrentUser();
             ensureAppUserDocument(currentUser);
         }
 
@@ -105,18 +108,24 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         setSupportActionBar(binding.appBarMain.toolbar);
-        // Floating Action Button removed
-        DrawerLayout drawer = binding.drawerLayout;
-        NavigationView navigationView = binding.navView;
+        drawerLayout = binding.drawerLayout;
+        navigationView = binding.navView;
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         mAppBarConfiguration = new AppBarConfiguration.Builder(
                 R.id.nav_dashboard, R.id.nav_home, R.id.nav_reports)
-                .setOpenableLayout(drawer)
+                .setOpenableLayout(drawerLayout)
                 .build();
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
+        navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
         NavigationUI.setupWithNavController(navigationView, navController);
+
+        AppUserRoleSession.getInstance().getRole().observe(this, new Observer<AppUserRoleSession.Role>() {
+            @Override
+            public void onChanged(AppUserRoleSession.Role role) {
+                applyReviewMenuIconsFromRole(role);
+            }
+        });
         
         // Handle navigation item clicks
         navigationView.setNavigationItemSelectedListener(item -> {
@@ -125,45 +134,39 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             } else if (item.getItemId() == R.id.nav_voice_settings) {
                 showVoiceSettingsDialog();
-                drawer.closeDrawers();
+                drawerLayout.closeDrawers();
                 return true;
             } else if (item.getItemId() == R.id.nav_app_info) {
                 showAppInfoDialog();
-                drawer.closeDrawers();
+                drawerLayout.closeDrawers();
                 return true;
             } else if (item.getItemId() == R.id.nav_home) {
-                // Check admin status before allowing access to Review screen
-                AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
-                    @Override
-                    public void onResult(boolean isAdmin) {
-                        if (isAdmin) {
-                            // Admin user - allow access
-                            boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
-                            if (handled) {
-                                drawer.closeDrawers();
-                            }
-                        } else {
-                            // Non-admin user - show access denied message
-                            drawer.closeDrawers();
-                            com.example.rummypulse.utils.ModernToast.error(MainActivity.this, 
-                                "🔒 Access Denied: Admin privileges required for Review screen");
-                        }
+                AppUserRoleSession.Role r = AppUserRoleSession.getInstance().peekRole();
+                if (r == AppUserRoleSession.Role.ADMIN) {
+                    boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
+                    if (handled) {
+                        drawerLayout.closeDrawers();
                     }
-                });
+                } else if (r == AppUserRoleSession.Role.NON_ADMIN) {
+                    drawerLayout.closeDrawers();
+                    com.example.rummypulse.utils.ModernToast.error(MainActivity.this,
+                            "🔒 Access Denied: Admin privileges required for Review screen");
+                } else {
+                    drawerLayout.closeDrawers();
+                    com.example.rummypulse.utils.ModernToast.warning(MainActivity.this,
+                            "Still checking your access. Try again in a moment.");
+                }
                 return true;
             } else if (item.getItemId() == R.id.nav_user_management) {
-                // Allow all users to access the Users screen
-                // Role change buttons will be hidden for non-admin users in the adapter
                 boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
                 if (handled) {
-                    drawer.closeDrawers();
+                    drawerLayout.closeDrawers();
                 }
                 return handled;
             } else {
-                // Handle other navigation items with default behavior
                 boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
                 if (handled) {
-                    drawer.closeDrawers();
+                    drawerLayout.closeDrawers();
                 }
                 return handled;
             }
@@ -171,10 +174,7 @@ public class MainActivity extends AppCompatActivity {
         
         // Update navigation header with user info
         updateNavigationHeader(navigationView, currentUser);
-        
-        // Update menu icons based on admin status
-        updateMenuIcons(navigationView);
-        
+
         // Initialize permission manager and request permissions
         initializePermissions();
     }
@@ -322,33 +322,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     
-    private void updateMenuIcons(NavigationView navigationView) {
-        AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
-            @Override
-            public void onResult(boolean isAdmin) {
-                android.view.Menu menu = navigationView.getMenu();
-                android.view.MenuItem reviewMenuItem = menu.findItem(R.id.nav_home);
-                android.view.MenuItem userManagementMenuItem = menu.findItem(R.id.nav_user_management);
-                
-                if (reviewMenuItem != null) {
-                    if (isAdmin) {
-                        // Admin user - show normal games dashboard icon
-                        reviewMenuItem.setIcon(R.drawable.ic_games_dashboard);
-                        reviewMenuItem.setTitle("Review");
-                    } else {
-                        // Non-admin user - show lock icon
-                        reviewMenuItem.setIcon(R.drawable.ic_lock);
-                        reviewMenuItem.setTitle("Review 🔒");
-                    }
-                }
-                
-                if (userManagementMenuItem != null) {
-                    // Users menu is accessible to everyone - always show people icon
-                    userManagementMenuItem.setIcon(R.drawable.ic_people);
-                    userManagementMenuItem.setTitle("Users");
-                }
+    private void applyReviewMenuIconsFromRole(AppUserRoleSession.Role role) {
+        if (navigationView == null) {
+            return;
+        }
+        android.view.Menu menu = navigationView.getMenu();
+        android.view.MenuItem reviewMenuItem = menu.findItem(R.id.nav_home);
+        android.view.MenuItem userManagementMenuItem = menu.findItem(R.id.nav_user_management);
+
+        if (reviewMenuItem != null) {
+            if (role == AppUserRoleSession.Role.ADMIN) {
+                reviewMenuItem.setIcon(R.drawable.ic_games_dashboard);
+                reviewMenuItem.setTitle("Review");
+            } else {
+                reviewMenuItem.setIcon(R.drawable.ic_lock);
+                reviewMenuItem.setTitle("Review 🔒");
             }
-        });
+        }
+
+        if (userManagementMenuItem != null) {
+            userManagementMenuItem.setIcon(R.drawable.ic_people);
+            userManagementMenuItem.setTitle("Users");
+        }
     }
 
     /**
@@ -385,30 +380,23 @@ public class MainActivity extends AppCompatActivity {
      */
     private void initializeUpdateChecker() {
         updateChecker = new ModernUpdateChecker(this);
-        
-        // Check for updates with a slight delay to not interfere with app startup
+
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             android.util.Log.d("MainActivity", "Checking for app updates...");
-            
-            // Check if current user is admin before running auto-update
-            AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
-                @Override
-                public void onResult(boolean isAdmin) {
-                    if (isAdmin) {
-                        android.util.Log.d("MainActivity", "Admin user detected - skipping auto-update check");
-                    } else {
-                        android.util.Log.d("MainActivity", "Regular user - proceeding with auto-update check");
-                    }
-                    updateChecker.checkForUpdates(isAdmin);
-                }
-            });
-        }, 2000); // 2 second delay
+            boolean isAdmin = AppUserRoleSession.getInstance().peekRole() == AppUserRoleSession.Role.ADMIN;
+            if (isAdmin) {
+                android.util.Log.d("MainActivity", "Admin user detected - skipping auto-update check");
+            } else {
+                android.util.Log.d("MainActivity", "Regular user - proceeding with auto-update check");
+            }
+            updateChecker.checkForUpdates(isAdmin);
+        }, 2000);
     }
 
     private void signOut() {
-        // Clear authentication backup state
+        AppUserRoleSession.getInstance().stop();
         AuthStateManager.getInstance(this).clearAuthState();
-        
+
         mAuth.signOut();
         
         android.util.Log.d("MainActivity", "User signed out manually");

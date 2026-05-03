@@ -13,6 +13,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -21,8 +22,6 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
-import com.example.rummypulse.data.AppUser;
-import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.VersionGate;
 
@@ -34,7 +33,6 @@ public class LoginActivity extends AppCompatActivity {
     private ActivityLoginBinding binding;
     private FirebaseAuth mAuth;
     private GoogleSignInClient mGoogleSignInClient;
-    private AppUserRepository appUserRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,12 +48,9 @@ public class LoginActivity extends AppCompatActivity {
         // Initialize Firebase Auth
         mAuth = FirebaseAuth.getInstance();
         
-        // Initialize AppUser Repository
-        appUserRepository = new AppUserRepository();
-
-        // Configure Google Sign In
+        // Web client ID must match Firebase (merged from app/google-services.json).
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken("740379545501-g1h84gk3d1hrq0egmpp78tulcuk0igbc.apps.googleusercontent.com")
+                .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
 
@@ -75,25 +70,8 @@ public class LoginActivity extends AppCompatActivity {
         
         if (currentUser != null) {
             Log.d(TAG, "User already signed in: " + currentUser.getEmail());
-            // Save current auth state
             authStateManager.saveAuthState(currentUser);
-            
-            // User is already signed in, update appUser and go to main activity
-            String provider = AppUserRepository.getProviderName(currentUser);
-            appUserRepository.createOrUpdateUser(currentUser, provider, new AppUserRepository.AppUserCallback() {
-                @Override
-                public void onSuccess(AppUser appUser) {
-                    Log.d(TAG, "AppUser updated on app startup: " + appUser.toString());
-                    startMainActivity();
-                }
-                
-                @Override
-                public void onFailure(Exception exception) {
-                    Log.e(TAG, "Failed to update AppUser on app startup", exception);
-                    // Still proceed to main activity
-                    startMainActivity();
-                }
-            });
+            startMainActivity();
         } else {
             Log.d(TAG, "No user currently signed in");
             
@@ -129,11 +107,17 @@ public class LoginActivity extends AppCompatActivity {
                 // Google Sign In was successful, authenticate with Firebase
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 Log.d(TAG, "firebaseAuthWithGoogle:" + account.getId());
-                firebaseAuthWithGoogle(account.getIdToken());
+                String idToken = account.getIdToken();
+                if (idToken == null || idToken.isEmpty()) {
+                    Log.e(TAG, "Google account has no ID token (check Web client / SHA-1 in Firebase).");
+                    showError("Sign-in could not get a secure token. Check network or Firebase app setup.");
+                    resetUI();
+                    return;
+                }
+                firebaseAuthWithGoogle(idToken);
             } catch (ApiException e) {
-                // Google Sign In failed, update UI appropriately
-                Log.w(TAG, "Google sign in failed", e);
-                showError("Google Sign-In failed. Please try again.");
+                Log.w(TAG, "Google sign in failed status=" + e.getStatusCode(), e);
+                showError(messageForGoogleSignInFailure(e.getStatusCode()));
                 resetUI();
             }
         }
@@ -152,46 +136,18 @@ public class LoginActivity extends AppCompatActivity {
                             
                             if (user != null) {
                                 Log.d(TAG, "Firebase Auth successful for user: " + user.getEmail());
-                                // Create or update user in appUser collection
-                                String provider = AppUserRepository.getProviderName(user);
-                                appUserRepository.createOrUpdateUser(user, provider, new AppUserRepository.AppUserCallback() {
-                                    @Override
-                                    public void onSuccess(AppUser appUser) {
-                                        Log.d(TAG, "AppUser created/updated successfully: " + appUser.toString());
-                                        Log.d(TAG, "Authentication state should now persist");
-                                        
-                                        // Save authentication state backup
-                                        AuthStateManager.getInstance(LoginActivity.this).saveAuthState(user);
-                                        
-                                        // Welcome message
-                                        com.example.rummypulse.utils.ModernToast.success(LoginActivity.this, 
-                                            "Welcome, " + user.getDisplayName() + "!");
-                                        
-                                        // Go to main activity
-                                        startMainActivity();
-                                    }
-                                    
-                                    @Override
-                                    public void onFailure(Exception exception) {
-                                        Log.e(TAG, "Failed to create/update AppUser", exception);
-                                        
-                                        // Still proceed to main activity even if appUser creation fails
-                                        // Welcome message
-                                        com.example.rummypulse.utils.ModernToast.success(LoginActivity.this, 
-                                            "Welcome, " + user.getDisplayName() + "!");
-                                        
-                                        // Go to main activity
-                                        startMainActivity();
-                                    }
-                                });
+                                AuthStateManager.getInstance(LoginActivity.this).saveAuthState(user);
+                                com.example.rummypulse.utils.ModernToast.success(LoginActivity.this,
+                                        "Welcome, " + user.getDisplayName() + "!");
+                                startMainActivity();
                             } else {
-                                // Go to main activity even if user is null (shouldn't happen)
                                 startMainActivity();
                             }
                         } else {
-                            // If sign in fails, display a message to the user.
-                            Log.w(TAG, "signInWithCredential:failure", task.getException());
-                            showError("Authentication failed. Please try again.");
+                            Exception ex = task.getException();
+                            Log.w(TAG, "signInWithCredential:failure", ex);
+                            String detail = ex != null && ex.getMessage() != null ? ex.getMessage() : "unknown";
+                            showError("Sign-in failed: " + truncateForToast(detail));
                             resetUI();
                         }
                     }
@@ -212,5 +168,32 @@ public class LoginActivity extends AppCompatActivity {
     private void resetUI() {
         binding.signInButton.setEnabled(true);
         binding.progressBar.setVisibility(View.GONE);
+    }
+
+    private static String truncateForToast(String message) {
+        if (message == null) {
+            return "";
+        }
+        int max = 180;
+        return message.length() <= max ? message : message.substring(0, max) + "…";
+    }
+
+    /**
+     * User-visible hint for {@link ApiException#getStatusCode()} from Google Sign-In.
+     */
+    private static String messageForGoogleSignInFailure(int statusCode) {
+        // Status codes: https://developers.google.com/android/reference/com/google/android/gms/common/api/CommonStatusCodes
+        switch (statusCode) {
+            case 12501: // SIGN_IN_CANCELLED
+                return "Sign-in was cancelled.";
+            case com.google.android.gms.common.api.CommonStatusCodes.NETWORK_ERROR:
+                return "Network error. Check connection and try again.";
+            case ConnectionResult.DEVELOPER_ERROR:
+                return "Sign-in setup error (code 10). Add this app’s SHA-1 in Firebase Console → Project settings → Your apps.";
+            case com.google.android.gms.common.api.CommonStatusCodes.INTERNAL_ERROR:
+                return "Google Play services error. Update Play services and try again.";
+            default:
+                return "Google Sign-In failed (code " + statusCode + "). Try again or check Firebase / network.";
+        }
     }
 }
