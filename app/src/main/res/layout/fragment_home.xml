@@ -164,6 +164,14 @@
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
+    <ProgressBar
+        android:id="@+id/review_access_loading"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
     <!-- Floating Action Button for Refresh -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btn_refresh"
