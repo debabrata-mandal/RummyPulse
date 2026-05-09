@@ -941,6 +941,19 @@
 
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Enter round scores (edit mode, game in progress) — bottom start so it does not overlap Add player FAB -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btn_enter_round_scores"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="16dp"
+        android:contentDescription="@string/cd_enter_round_scores"
+        android:visibility="gone"
+        android:src="@drawable/ic_enter_round_scores"
+        app:backgroundTint="@color/accent_blue"
+        app:tint="@android:color/white" />
+
     <!-- Floating Add Player Button (Edit Mode Only) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btn_add_player"

@@ -69,4 +69,23 @@
     <string name="cd_generate_game_name">Generate game name</string>
     <string name="dialog_game_name_groq_missing">Add GROQ_API_KEY in local.properties (or Gradle env), then rebuild, to generate names.</string>
     <string name="dialog_game_name_generate_failed">Could not generate a name. Try again.</string>
+
+    <!-- Sequential round score entry (edit mode) -->
+    <string name="btn_enter_round_scores">Enter round scores</string>
+    <string name="cd_enter_round_scores">Enter round scores one player at a time</string>
+    <string name="dialog_enter_round_score_title">Round %1$d</string>
+    <string name="dialog_enter_round_score_section_player">Player</string>
+    <string name="dialog_enter_round_score_player_progress">Player %1$d of %2$d</string>
+    <string name="dialog_enter_round_score_field_label">Points this round</string>
+    <string name="dialog_enter_round_score_helper">Digits only. Zero is allowed for a winning round.</string>
+    <string name="dialog_enter_round_score_invalid">Enter a valid whole number (0 or higher).</string>
+    <string name="dialog_enter_round_score_next">Next</string>
+    <string name="dialog_enter_round_score_done">Done</string>
+    <string name="enter_round_scores_all_done">Everyone has a score for this round.</string>
+    <string name="enter_round_scores_game_over">Game is complete — use the score boxes to fix earlier rounds if needed.</string>
+
+    <!-- Add player confirmation when scores already exist -->
+    <string name="add_player_confirm_title">Add another player?</string>
+    <string name="add_player_confirm_message">Adding a player changes the game for everyone. Do you want to continue?</string>
+    <string name="add_player_confirm_add">Add player</string>
 </resources>

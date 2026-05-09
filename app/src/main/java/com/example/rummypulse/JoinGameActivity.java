@@ -82,6 +82,12 @@ public class JoinGameActivity extends AppCompatActivity {
     // Utterance ID counter for TTS tracking
     private int utteranceIdCounter = 0;
 
+    /** Sequential score-entry dialog; dismissed in {@link #onPause()} to avoid leaks. */
+    private AlertDialog activeSequentialScoreDialog;
+
+    /** When true, score {@link EditText} watchers skip persistence (programmatic sync from dialog). */
+    private boolean suppressScoreTextWatcherPersistence = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -693,7 +699,16 @@ public class JoinGameActivity extends AppCompatActivity {
         
         return finalDelay;
     }
-    
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (activeSequentialScoreDialog != null && activeSequentialScoreDialog.isShowing()) {
+            activeSequentialScoreDialog.dismiss();
+        }
+        activeSequentialScoreDialog = null;
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -937,9 +952,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void setupClickListeners() {
         binding.btnClose.setOnClickListener(v -> handleBackPress());
-        binding.btnAddPlayer.setOnClickListener(v -> {
-            addNewPlayerDirectly();
-        });
+        binding.btnAddPlayer.setOnClickListener(v -> onAddPlayerFabClicked());
         
         // Setup refresh button click listener (View Mode Only)
         binding.btnRefresh.setOnClickListener(v -> {
@@ -960,6 +973,8 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.btnShareHeader.setOnClickListener(v -> {
             shareStandingsToWhatsApp();
         });
+
+        binding.btnEnterRoundScores.setOnClickListener(v -> startSequentialRoundScoreEntryFlow());
         
         // Setup collapsible sections
         setupCollapsibleSections();
@@ -1083,6 +1098,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Update header PIN visibility (hide in view mode)
                 updateHeaderPinVisibility();
             }
+            updateEnterRoundScoresButtonVisibility(viewModel.getGameData().getValue());
         });
 
         // Observe loading state
@@ -1346,6 +1362,26 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Game PIN is not shown in the compact header (same layout in edit and view mode)
         updateHeaderPinVisibility();
+
+        updateEnterRoundScoresButtonVisibility(gameData);
+    }
+
+    /**
+     * Shows the header action to open the one-player-at-a-time score wizard when in edit mode
+     * and the game still has at least one incomplete round.
+     */
+    private void updateEnterRoundScoresButtonVisibility(com.example.rummypulse.data.GameData gameData) {
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        if (editAccess == null || !editAccess) {
+            binding.btnEnterRoundScores.setVisibility(View.GONE);
+            return;
+        }
+        if (gameData == null || gameData.getPlayers() == null || gameData.getPlayers().isEmpty()) {
+            binding.btnEnterRoundScores.setVisibility(View.GONE);
+            return;
+        }
+        boolean show = !isGameCompleted(gameData);
+        binding.btnEnterRoundScores.setVisibility(show ? View.VISIBLE : View.GONE);
     }
     
     private void updateHeaderPinVisibility() {
@@ -1543,6 +1579,9 @@ public class JoinGameActivity extends AppCompatActivity {
 
                     @Override
                     public void afterTextChanged(android.text.Editable s) {
+                        if (suppressScoreTextWatcherPersistence) {
+                            return;
+                        }
                         // Update the score in the player's data
                         try {
                             String text = s.toString().trim();
@@ -1826,10 +1865,15 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void setupSequentialRoundValidation(EditText scoreInput, int round, int playerIndex, com.example.rummypulse.data.GameData gameData) {
-        // Enable only if previous rounds are completed
         boolean isEnabled = isRoundEnabled(round, playerIndex, gameData);
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        int roundWithRedBorder = getActiveIncompleteRound1BasedOrZero(gameData);
+        if (editAccess != null && editAccess && roundWithRedBorder > 0 && (round + 1) == roundWithRedBorder) {
+            isEnabled = false;
+        }
         scoreInput.setEnabled(isEnabled);
-        scoreInput.setAlpha(isEnabled ? 1.0f : 0.5f);
+        boolean isReadOnlyWizardCell = roundWithRedBorder > 0 && (round + 1) == roundWithRedBorder && !isEnabled;
+        scoreInput.setAlpha(isEnabled ? 1.0f : (isReadOnlyWizardCell ? 1.0f : 0.5f));
     }
 
     private boolean isRoundEnabled(int round, int playerIndex, com.example.rummypulse.data.GameData gameData) {
@@ -1876,33 +1920,250 @@ public class JoinGameActivity extends AppCompatActivity {
         return true;
     }
 
-    private void updateRoundValidation(com.example.rummypulse.data.GameData gameData) {
-        // Find the round that should have the red border
-        int roundWithRedBorder = 1; // Start with round 1
-        
-        // Check each round to find the first incomplete round
+    /**
+     * First round (1..10) where not every player has a valid score; {@code 0} if every round is complete.
+     */
+    private int getActiveIncompleteRound1BasedOrZero(com.example.rummypulse.data.GameData gameData) {
         for (int round = 1; round <= 10; round++) {
             if (!isRoundComplete(round, gameData)) {
-                roundWithRedBorder = round;
-                break;
+                return round;
             }
         }
-        
+        return 0;
+    }
+
+    private boolean isPlayerRoundCompleteForRound(int playerIndex, int round1Based, com.example.rummypulse.data.GameData gameData) {
+        if (gameData.getPlayers() == null || playerIndex < 0 || playerIndex >= gameData.getPlayers().size()) {
+            return false;
+        }
+        com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
+        EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + round1Based);
+        if (scoreInput != null) {
+            String text = scoreInput.getText().toString();
+            try {
+                int v = Integer.parseInt(text.trim());
+                if (v >= 0) {
+                    return true;
+                }
+            } catch (NumberFormatException ignored) {
+                // fall through to model
+            }
+        }
+        if (player.getScores() != null && player.getScores().size() >= round1Based) {
+            Integer existing = player.getScores().get(round1Based - 1);
+            if (existing != null && existing >= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int findFirstPlayerIncompleteForRound(com.example.rummypulse.data.GameData gameData, int round1Based, int startFromIndex) {
+        if (gameData.getPlayers() == null) {
+            return -1;
+        }
+        for (int p = startFromIndex; p < gameData.getPlayers().size(); p++) {
+            if (!isPlayerRoundCompleteForRound(p, round1Based, gameData)) {
+                return p;
+            }
+        }
+        return -1;
+    }
+
+    private boolean hasAnotherIncompletePlayerAfter(com.example.rummypulse.data.GameData gameData, int round1Based, int afterPlayerIndex) {
+        return findFirstPlayerIncompleteForRound(gameData, round1Based, afterPlayerIndex + 1) >= 0;
+    }
+
+    private void ensurePlayerScoresList(com.example.rummypulse.data.Player player) {
+        java.util.List<Integer> scores = player.getScores();
+        if (scores == null) {
+            scores = new java.util.ArrayList<>();
+            player.setScores(scores);
+        }
+        while (scores.size() < 10) {
+            scores.add(-1);
+        }
+    }
+
+    private void persistPlayerRoundScoreFromDialog(com.example.rummypulse.data.GameData gameData,
+            com.example.rummypulse.data.Player player, int playerIndex, int round0Based, int score) {
+        ensurePlayerScoresList(player);
+        player.getScores().set(round0Based, score);
+        EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + (round0Based + 1));
+        if (scoreInput != null) {
+            suppressScoreTextWatcherPersistence = true;
+            try {
+                scoreInput.setText(String.valueOf(score));
+                updateScoreColor(scoreInput);
+            } finally {
+                suppressScoreTextWatcherPersistence = false;
+            }
+        }
+        saveGameDataWithDebounce(gameData);
+        announceScoreWithDebounce(player.getName(), score, playerIndex, round0Based + 1);
+        updateStandings(gameData);
+        updateCurrentRound(gameData);
+        updateRoundValidation(gameData);
+        announceGameCompletion(gameData);
+        updateEnterRoundScoresButtonVisibility(gameData);
+    }
+
+    private void startSequentialRoundScoreEntryFlow() {
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        if (editAccess == null || !editAccess) {
+            return;
+        }
+        com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+        if (gameData == null || gameData.getPlayers() == null || gameData.getPlayers().isEmpty()) {
+            ModernToast.info(this, getString(R.string.enter_round_scores_all_done));
+            return;
+        }
+        if (isGameCompleted(gameData)) {
+            ModernToast.info(this, getString(R.string.enter_round_scores_game_over));
+            return;
+        }
+        int round1 = getActiveIncompleteRound1BasedOrZero(gameData);
+        if (round1 == 0) {
+            ModernToast.info(this, getString(R.string.enter_round_scores_all_done));
+            return;
+        }
+        int firstPlayer = findFirstPlayerIncompleteForRound(gameData, round1, 0);
+        if (firstPlayer < 0) {
+            ModernToast.info(this, getString(R.string.enter_round_scores_all_done));
+            return;
+        }
+        showSequentialScoreDialogForPlayer(gameData, round1, firstPlayer);
+    }
+
+    private void showSequentialScoreDialogForPlayer(com.example.rummypulse.data.GameData gameData, int round1Based, int playerIndex) {
+        com.example.rummypulse.data.GameData liveData = viewModel.getGameData().getValue();
+        if (liveData == null || liveData.getPlayers() == null || playerIndex >= liveData.getPlayers().size()) {
+            return;
+        }
+        gameData = liveData;
+        com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
+
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_enter_round_score, null, false);
+        TextView nameView = dialogView.findViewById(R.id.text_dialog_player_name);
+        TextView progressView = dialogView.findViewById(R.id.text_dialog_progress);
+        EditText scoreEdit = dialogView.findViewById(R.id.edit_dialog_score);
+        TextView errorView = dialogView.findViewById(R.id.text_dialog_score_error);
+        Button btnCancel = dialogView.findViewById(R.id.btn_dialog_cancel);
+        Button btnConfirm = dialogView.findViewById(R.id.btn_dialog_confirm);
+
+        nameView.setText(player.getName());
+        int numPlayers = gameData.getPlayers().size();
+        progressView.setText(getString(R.string.dialog_enter_round_score_player_progress, playerIndex + 1, numPlayers));
+        boolean hasMore = hasAnotherIncompletePlayerAfter(gameData, round1Based, playerIndex);
+        btnConfirm.setText(getString(hasMore ? R.string.dialog_enter_round_score_next : R.string.dialog_enter_round_score_done));
+
+        Integer existing = null;
+        if (player.getScores() != null && player.getScores().size() >= round1Based) {
+            existing = player.getScores().get(round1Based - 1);
+        }
+        if (existing != null && existing >= 0) {
+            scoreEdit.setText(String.valueOf(existing));
+        } else {
+            scoreEdit.setText("");
+        }
+        errorView.setVisibility(View.GONE);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.DarkDialogTheme);
+        builder.setTitle(getString(R.string.dialog_enter_round_score_title, round1Based));
+        builder.setView(dialogView);
+        builder.setCancelable(true);
+
+        AlertDialog dialog = builder.create();
+        activeSequentialScoreDialog = dialog;
+
+        btnCancel.setOnClickListener(v -> {
+            dialog.dismiss();
+            activeSequentialScoreDialog = null;
+        });
+
+        dialog.setOnDismissListener(d -> {
+            if (activeSequentialScoreDialog == dialog) {
+                activeSequentialScoreDialog = null;
+            }
+        });
+
+        final int finalRound1 = round1Based;
+        final int finalPlayerIndex = playerIndex;
+        btnConfirm.setOnClickListener(v -> {
+            String text = scoreEdit.getText().toString().trim();
+            if (text.isEmpty()) {
+                errorView.setText(getString(R.string.dialog_enter_round_score_invalid));
+                errorView.setVisibility(View.VISIBLE);
+                return;
+            }
+            int value;
+            try {
+                value = Integer.parseInt(text);
+            } catch (NumberFormatException ex) {
+                errorView.setText(getString(R.string.dialog_enter_round_score_invalid));
+                errorView.setVisibility(View.VISIBLE);
+                return;
+            }
+            if (value < 0) {
+                errorView.setText(getString(R.string.dialog_enter_round_score_invalid));
+                errorView.setVisibility(View.VISIBLE);
+                return;
+            }
+            errorView.setVisibility(View.GONE);
+
+            com.example.rummypulse.data.GameData gd = viewModel.getGameData().getValue();
+            if (gd == null || gd.getPlayers() == null || finalPlayerIndex >= gd.getPlayers().size()) {
+                dialog.dismiss();
+                return;
+            }
+            com.example.rummypulse.data.Player p = gd.getPlayers().get(finalPlayerIndex);
+            persistPlayerRoundScoreFromDialog(gd, p, finalPlayerIndex, finalRound1 - 1, value);
+            dialog.dismiss();
+
+            com.example.rummypulse.data.GameData gdAfter = viewModel.getGameData().getValue();
+            if (gdAfter == null || gdAfter.getPlayers() == null) {
+                return;
+            }
+            int next = findFirstPlayerIncompleteForRound(gdAfter, finalRound1, finalPlayerIndex + 1);
+            if (next >= 0) {
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+                        () -> showSequentialScoreDialogForPlayer(gdAfter, finalRound1, next), 120);
+            }
+        });
+
+        dialog.show();
+        scoreEdit.requestFocus();
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            android.view.inputmethod.InputMethodManager imm =
+                    (android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.showSoftInput(scoreEdit, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+            }
+        }, 150);
+    }
+
+    private void updateRoundValidation(com.example.rummypulse.data.GameData gameData) {
+        int roundWithRedBorder = getActiveIncompleteRound1BasedOrZero(gameData);
+
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        boolean inEditMode = editAccess != null && editAccess;
+
         // Update all score inputs based on sequential validation
         for (int playerIndex = 0; playerIndex < gameData.getPlayers().size(); playerIndex++) {
             for (int round = 0; round < 10; round++) {
                 EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + (round + 1));
                 if (scoreInput != null) {
                     boolean isEnabled = isRoundEnabled(round, playerIndex, gameData);
+                    if (inEditMode && roundWithRedBorder > 0 && (round + 1) == roundWithRedBorder) {
+                        isEnabled = false;
+                    }
                     scoreInput.setEnabled(isEnabled);
-                    scoreInput.setAlpha(isEnabled ? 1.0f : 0.5f);
-                    
-                    // Only add red border to the incomplete round
-                    if (isEnabled && (round + 1) == roundWithRedBorder) {
-                        // Use layered background with red border
+                    boolean isReadOnlyWizardCell = roundWithRedBorder > 0 && (round + 1) == roundWithRedBorder && !isEnabled;
+                    scoreInput.setAlpha(isEnabled ? 1.0f : (isReadOnlyWizardCell ? 1.0f : 0.5f));
+
+                    if (roundWithRedBorder > 0 && (round + 1) == roundWithRedBorder) {
                         scoreInput.setBackgroundResource(R.drawable.score_input_with_red_border);
                     } else {
-                        // Keep original background for all other rounds
                         scoreInput.setBackgroundResource(R.drawable.score_input_background);
                     }
                 }
@@ -2601,6 +2862,57 @@ public class JoinGameActivity extends AppCompatActivity {
         }
     }
     
+    /**
+     * True if any player has at least one round score treated as entered (≥ 0), using model data
+     * and score fields on player cards when present.
+     */
+    private boolean hasAnyEnteredScoreInGame(com.example.rummypulse.data.GameData gameData) {
+        if (gameData == null || gameData.getPlayers() == null) {
+            return false;
+        }
+        for (int pi = 0; pi < gameData.getPlayers().size(); pi++) {
+            com.example.rummypulse.data.Player player = gameData.getPlayers().get(pi);
+            if (player.getScores() != null) {
+                for (Integer s : player.getScores()) {
+                    if (s != null && s >= 0) {
+                        return true;
+                    }
+                }
+            }
+            for (int r = 1; r <= 10; r++) {
+                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (pi + 1) + "r" + r);
+                if (scoreInput != null) {
+                    try {
+                        int v = Integer.parseInt(scoreInput.getText().toString().trim());
+                        if (v >= 0) {
+                            return true;
+                        }
+                    } catch (NumberFormatException ignored) {
+                        // ignore
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private void onAddPlayerFabClicked() {
+        com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+        if (gameData == null) {
+            return;
+        }
+        if (hasAnyEnteredScoreInGame(gameData)) {
+            new AlertDialog.Builder(this, R.style.DarkDialogTheme)
+                    .setTitle(R.string.add_player_confirm_title)
+                    .setMessage(R.string.add_player_confirm_message)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(R.string.add_player_confirm_add, (dialog, which) -> addNewPlayerDirectly())
+                    .show();
+        } else {
+            addNewPlayerDirectly();
+        }
+    }
+
     private void addNewPlayerDirectly() {
         // Get current game data
         com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
