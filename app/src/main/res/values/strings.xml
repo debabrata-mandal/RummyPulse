@@ -56,6 +56,10 @@
     <string name="dialog_point_value_invalid">Enter a valid amount (max ₹100)</string>
     <string name="dialog_contribution_required">Enter contribution %</string>
     <string name="dialog_contribution_invalid">Enter a whole number from 0 to 100</string>
+    <string name="review_edit_economics_title">Edit point value &amp; contribution</string>
+    <string name="review_edit_economics_subtitle">Changes apply to this game and refresh contribution totals. Same rules as creating a game.</string>
+    <string name="review_edit_economics_save">Save</string>
+    <string name="review_edit_economics_saved">Game economics updated</string>
     <string name="cd_decrease_point_value">Decrease point value</string>
     <string name="cd_increase_point_value">Increase point value</string>
     <string name="cd_decrease_contribution">Decrease contribution</string>

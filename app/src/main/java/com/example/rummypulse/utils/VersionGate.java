@@ -55,6 +55,15 @@ public final class VersionGate {
             @NonNull final AppCompatActivity activity,
             @NonNull final Runnable onAllowed,
             boolean skipRemoteConfigFetchIfRecent) {
+        // Debug installs are often older than Remote Config min_supported_version_code; skipping the gate
+        // avoids blocking local development. Release builds still enforce the minimum.
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "DEBUG build: skipping Remote Config version gate");
+            recordGatePassedForSkip();
+            activity.runOnUiThread(onAllowed);
+            return;
+        }
+
         final FirebaseRemoteConfig rc = FirebaseRemoteConfig.getInstance();
 
         Map<String, Object> defaults = new HashMap<>();

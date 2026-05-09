@@ -231,7 +231,11 @@
                             android:textStyle="bold"
                             android:textColor="@color/accent_blue"
                             android:maxLines="1"
-                            android:ellipsize="end" />
+                            android:ellipsize="end"
+                            android:background="@drawable/clickable_text_background"
+                            android:padding="8dp"
+                            android:clickable="true"
+                            android:focusable="true" />
 
                     </LinearLayout>
 
@@ -309,7 +313,11 @@
                         android:textStyle="bold"
                         android:textColor="@color/status_offline"
                         android:maxLines="1"
-                        android:ellipsize="end" />
+                        android:ellipsize="end"
+                        android:background="@drawable/clickable_text_background"
+                        android:padding="8dp"
+                        android:clickable="true"
+                        android:focusable="true" />
 
                 </LinearLayout>
 

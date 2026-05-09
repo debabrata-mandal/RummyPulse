@@ -149,6 +149,10 @@ public class HomeViewModel extends ViewModel {
     public void approveAllCompletedGames(List<GameItem> items, Runnable onAllComplete) {
         gameRepository.approveAllCompletedGames(items, onAllComplete);
     }
+
+    public void updateGameEconomics(String gameId, double pointValue, double gstPercent, Runnable onSuccess) {
+        gameRepository.updateGameEconomics(gameId, pointValue, gstPercent, onSuccess);
+    }
     
     @Override
     protected void onCleared() {

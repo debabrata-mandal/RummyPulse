@@ -559,6 +559,52 @@ public class GameRepository {
                 });
     }
 
+    /**
+     * Update point value and contribution (GST) percent for a game. Contribution amount in the UI
+     * is derived on reload via {@link GameData#getGstAmount()}.
+     *
+     * @param onSuccess optional; runs on the main thread after Firestore write succeeds (before list refresh completes).
+     */
+    public void updateGameEconomics(String gameId, double pointValue, double gstPercent, Runnable onSuccess) {
+        if (gameId == null || gameId.isEmpty()) {
+            errorLiveData.setValue("Cannot update game: missing game id");
+            return;
+        }
+        db.collection(GAME_DATA_COLLECTION)
+                .document(gameId)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (!documentSnapshot.exists()) {
+                        errorLiveData.setValue("Game data not found");
+                        return;
+                    }
+                    GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
+                    if (gameDataWrapper == null || gameDataWrapper.getData() == null) {
+                        errorLiveData.setValue("Failed to load game data for update");
+                        return;
+                    }
+                    GameData gameData = gameDataWrapper.getData();
+                    gameData.setPointValue(pointValue);
+                    gameData.setGstPercent(gstPercent);
+                    gameDataWrapper.setLastUpdated(com.google.firebase.Timestamp.now());
+                    gameDataWrapper.setData(gameData);
+
+                    db.collection(GAME_DATA_COLLECTION)
+                            .document(gameId)
+                            .set(gameDataWrapper)
+                            .addOnSuccessListener(aVoid -> {
+                                loadAllGames();
+                                if (onSuccess != null) {
+                                    onSuccess.run();
+                                }
+                            })
+                            .addOnFailureListener(e ->
+                                    errorLiveData.setValue("Failed to update game: " + e.getMessage()));
+                })
+                .addOnFailureListener(e ->
+                        errorLiveData.setValue("Failed to load game data: " + e.getMessage()));
+    }
+
     public void approveGame(GameItem gameItem) {
         approveGame(gameItem, null);
     }

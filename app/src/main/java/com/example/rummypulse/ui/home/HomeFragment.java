@@ -1,21 +1,29 @@
 package com.example.rummypulse.ui.home;
 
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.rummypulse.R;
 import com.example.rummypulse.databinding.FragmentHomeBinding;
 import com.example.rummypulse.data.AppUserRoleSession;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 public class HomeFragment extends Fragment implements TableAdapter.OnGameActionListener {
@@ -115,6 +123,59 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 com.example.rummypulse.utils.ModernToast.error(getContext(), error);
             }
         });
+    }
+
+    @Override
+    public void onEditGameEconomics(GameItem game, int position) {
+        if (!isAdded() || getContext() == null || game == null) {
+            return;
+        }
+
+        View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_edit_game_economics, null);
+        TextInputLayout layoutPoint = dialogView.findViewById(R.id.layout_edit_review_point_value);
+        TextInputEditText editPoint = dialogView.findViewById(R.id.edit_review_point_value);
+        TextInputLayout layoutContribution = dialogView.findViewById(R.id.layout_edit_review_contribution);
+        TextInputEditText editContribution = dialogView.findViewById(R.id.edit_review_contribution);
+
+        String pv = game.getPointValue();
+        if (pv == null || pv.isEmpty()) {
+            editPoint.setText("");
+        } else {
+            editPoint.setText(formatPlainDecimalForField(parsePointValueForDisplay(pv)));
+        }
+        String gst = game.getGstPercentage();
+        if (gst == null) {
+            gst = "";
+        }
+        editContribution.setText(gst.replace("%", "").trim());
+
+        AlertDialog dialog = new AlertDialog.Builder(getContext(), R.style.DarkDialogTheme)
+                .setTitle(R.string.review_edit_economics_title)
+                .setView(dialogView)
+                .setPositiveButton(R.string.review_edit_economics_save, null)
+                .setNegativeButton(android.R.string.cancel, (d, which) -> {
+                })
+                .create();
+
+        dialog.setOnShowListener(d -> {
+            Button positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            positive.setOnClickListener(v -> {
+                Double point = parseAndClampPointValue(layoutPoint, editPoint);
+                Integer contrib = parseContributionPercent(layoutContribution, editContribution);
+                if (point == null || contrib == null) {
+                    return;
+                }
+                homeViewModel.updateGameEconomics(game.getGameId(), point, contrib, () -> {
+                    if (isAdded() && getContext() != null) {
+                        com.example.rummypulse.utils.ModernToast.success(getContext(),
+                                getString(R.string.review_edit_economics_saved));
+                    }
+                });
+                dialog.dismiss();
+            });
+        });
+
+        dialog.show();
     }
 
     private void setupLockedView() {
@@ -218,5 +279,77 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 com.example.rummypulse.utils.ModernToast.success(getContext(), "Games refreshed successfully!");
             }
         }, 1500);
+    }
+
+    private static String formatPlainDecimalForField(double v) {
+        BigDecimal bd = BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros();
+        return bd.toPlainString();
+    }
+
+    private static double snapToFivePaise(double value) {
+        return Math.round(value * 20.0) / 20.0;
+    }
+
+    private static double clampPointValue(double value) {
+        double s = snapToFivePaise(value);
+        if (s < 0.05) {
+            return 0.05;
+        }
+        if (s > 100.0) {
+            return 100.0;
+        }
+        return s;
+    }
+
+    private static double parsePointValueForDisplay(String pointValueStr) {
+        if (pointValueStr == null || pointValueStr.isEmpty()) {
+            return 0.05;
+        }
+        try {
+            return Double.parseDouble(pointValueStr.replace("₹", "").trim());
+        } catch (NumberFormatException e) {
+            return 0.05;
+        }
+    }
+
+    private Double parseAndClampPointValue(TextInputLayout layout, TextInputEditText edit) {
+        String s = edit.getText() != null ? edit.getText().toString().trim() : "";
+        if (TextUtils.isEmpty(s)) {
+            layout.setError(getString(R.string.dialog_point_value_required));
+            return null;
+        }
+        try {
+            double raw = Double.parseDouble(s);
+            if (raw <= 0 || raw > 100) {
+                layout.setError(getString(R.string.dialog_point_value_invalid));
+                return null;
+            }
+            double clamped = clampPointValue(raw);
+            layout.setError(null);
+            return clamped;
+        } catch (NumberFormatException e) {
+            layout.setError(getString(R.string.dialog_point_value_invalid));
+            return null;
+        }
+    }
+
+    private Integer parseContributionPercent(TextInputLayout layout, TextInputEditText edit) {
+        String s = edit.getText() != null ? edit.getText().toString().trim() : "";
+        if (TextUtils.isEmpty(s)) {
+            layout.setError(getString(R.string.dialog_contribution_required));
+            return null;
+        }
+        try {
+            int value = Integer.parseInt(s);
+            if (value < 0 || value > 100) {
+                layout.setError(getString(R.string.dialog_contribution_invalid));
+                return null;
+            }
+            layout.setError(null);
+            return value;
+        } catch (NumberFormatException e) {
+            layout.setError(getString(R.string.dialog_contribution_invalid));
+            return null;
+        }
     }
 }

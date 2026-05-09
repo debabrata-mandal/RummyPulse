@@ -33,6 +33,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     public interface OnGameActionListener {
         void onApproveGst(GameItem game, int position);
         void onDeleteGame(GameItem game, int position);
+        void onEditGameEconomics(GameItem game, int position);
     }
 
     public TableAdapter(List<GameItem> gameItems) {
@@ -95,6 +96,12 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 holder.pointValueText.setText("₹" + pointValue);
                 System.out.println("Setting point value for game " + item.getGameId() + ": ₹" + pointValue);
             }
+
+            holder.pointValueText.setOnClickListener(v -> {
+                if (actionListener != null) {
+                    actionListener.onEditGameEconomics(item, position);
+                }
+            });
         
         // Set Number of Players
         holder.playersText.setText(item.getNumberOfPlayers());
@@ -106,6 +113,11 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         
         // Set GST Percentage
         holder.gstPercentageText.setText(item.getGstPercentage());
+        holder.gstPercentageText.setOnClickListener(v -> {
+            if (actionListener != null) {
+                actionListener.onEditGameEconomics(item, position);
+            }
+        });
         
         // Set GST Amount with currency symbol and null handling
         String gstAmount = item.getGstAmount();
