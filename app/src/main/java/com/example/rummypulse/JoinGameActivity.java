@@ -2896,6 +2896,94 @@ public class JoinGameActivity extends AppCompatActivity {
         return false;
     }
 
+    /**
+     * Best-known score for an existing player in a given round (1-based), from card UI or model.
+     * Returns -1 if that round is not entered (placeholder).
+     */
+    private int effectiveScoreForPlayerRound(com.example.rummypulse.data.GameData gameData, int playerIndex, int round1Based) {
+        if (gameData.getPlayers() == null || playerIndex < 0 || playerIndex >= gameData.getPlayers().size()) {
+            return -1;
+        }
+        com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
+        EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + round1Based);
+        if (scoreInput != null) {
+            try {
+                int v = Integer.parseInt(scoreInput.getText().toString().trim());
+                if (v >= 0) {
+                    return v;
+                }
+            } catch (NumberFormatException ignored) {
+                // fall through
+            }
+        }
+        if (player.getScores() != null && player.getScores().size() >= round1Based) {
+            Integer s = player.getScores().get(round1Based - 1);
+            if (s != null && s >= 0) {
+                return s;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Sum of round scores {@code > 0} for one existing player (same rule as {@link com.example.rummypulse.data.Player#getTotalScore()}),
+     * using card fields when present via {@link #effectiveScoreForPlayerRound}.
+     */
+    private int totalPositiveRoundsScoreForPlayer(com.example.rummypulse.data.GameData gameData, int playerIndex) {
+        int sum = 0;
+        for (int r = 1; r <= 10; r++) {
+            int v = effectiveScoreForPlayerRound(gameData, playerIndex, r);
+            if (v > 0) {
+                sum += v;
+            }
+        }
+        return sum;
+    }
+
+    /**
+     * Largest cumulative total among existing players (sum of positive round scores). 0 if none.
+     */
+    private int maxTotalPositiveScoreAmongExistingPlayers(com.example.rummypulse.data.GameData gameData) {
+        if (gameData.getPlayers() == null) {
+            return 0;
+        }
+        int max = 0;
+        for (int pi = 0; pi < gameData.getPlayers().size(); pi++) {
+            int t = totalPositiveRoundsScoreForPlayer(gameData, pi);
+            if (t > max) {
+                max = t;
+            }
+        }
+        return max;
+    }
+
+    /**
+     * Scores for a player added mid-game: 0 for completed rounds before the active one,
+     * {@code (highest total score among existing players) + 2} for the active round
+     * (or for round 10 when the game is already complete), -1 for future rounds not yet played.
+     */
+    private java.util.List<Integer> buildScoresForNewMidGamePlayer(com.example.rummypulse.data.GameData gameData) {
+        java.util.List<Integer> scores = new java.util.ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            scores.add(-1);
+        }
+        int highPlus2 = maxTotalPositiveScoreAmongExistingPlayers(gameData) + 2;
+        int activeRound = getActiveIncompleteRound1BasedOrZero(gameData);
+        if (activeRound == 0) {
+            // All rounds complete: earlier rounds 1–9 → 0, round 10 → highest cumulative total among players + 2
+            for (int i = 0; i < 9; i++) {
+                scores.set(i, 0);
+            }
+            scores.set(9, highPlus2);
+            return scores;
+        }
+        for (int r = 1; r < activeRound; r++) {
+            scores.set(r - 1, 0);
+        }
+        scores.set(activeRound - 1, highPlus2);
+        return scores;
+    }
+
     private void onAddPlayerFabClicked() {
         com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
         if (gameData == null) {
@@ -2992,11 +3080,15 @@ public class JoinGameActivity extends AppCompatActivity {
         newPlayer.setUserId(null);
         // Set isCreator to false for manually added players
         newPlayer.setIsCreator(false);
-        
-        // Initialize scores with -1 for all rounds
-        java.util.List<Integer> scores = new java.util.ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            scores.add(-1);
+
+        java.util.List<Integer> scores;
+        if (hasAnyEnteredScoreInGame(gameData)) {
+            scores = buildScoresForNewMidGamePlayer(gameData);
+        } else {
+            scores = new java.util.ArrayList<>();
+            for (int i = 0; i < 10; i++) {
+                scores.add(-1);
+            }
         }
         newPlayer.setScores(scores);
         
