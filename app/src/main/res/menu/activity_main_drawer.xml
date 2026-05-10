@@ -20,6 +20,10 @@
             android:id="@+id/nav_user_management"
             android:icon="@drawable/ic_people"
             android:title="Users" />
+        <item
+            android:id="@+id/nav_game_defaults"
+            android:icon="@drawable/ic_enter_round_scores"
+            android:title="@string/menu_game_defaults" />
     </group>
 
     <item

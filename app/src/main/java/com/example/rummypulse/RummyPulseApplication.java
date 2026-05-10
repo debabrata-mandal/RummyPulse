@@ -67,6 +67,8 @@ public class RummyPulseApplication extends Application {
                     // Save authentication state as backup
                     authStateManager.saveAuthState(user);
                     gameRepository.loadAllGames();
+                    com.example.rummypulse.data.GameDefaultsRepository.getInstance(RummyPulseApplication.this)
+                            .refreshFromServer(null);
                 } else {
                     Log.d(TAG, "Global auth state: User is signed out");
                     AppUserRoleSession.getInstance().stop();

@@ -88,4 +88,23 @@
     <string name="add_player_confirm_title">Add another player?</string>
     <string name="add_player_confirm_message">Adding a player changes the game for everyone. Do you want to continue?</string>
     <string name="add_player_confirm_add">Add player</string>
+
+    <!-- Navigation -->
+    <string name="menu_game_defaults">Game defaults</string>
+
+    <!-- Game defaults (Firestore gameDefaults/config) -->
+    <string name="game_defaults_intro">Defaults for new games and mid-game player catch-up. Changes are saved for everyone on this project.</string>
+    <string name="game_defaults_section_values">Default values</string>
+    <string name="game_defaults_section_audit">Update record</string>
+    <string name="game_defaults_point_hint">Default point value (₹)</string>
+    <string name="game_defaults_contribution_hint">Default contribution %</string>
+    <string name="game_defaults_increment_hint">Mid-game new player score increment</string>
+    <string name="game_defaults_increment_required">Enter the increment (0 or higher)</string>
+    <string name="game_defaults_increment_invalid">Enter a whole number from 0 upward</string>
+    <string name="game_defaults_save">Save defaults</string>
+    <string name="game_defaults_saved">Defaults saved</string>
+    <string name="game_defaults_audit_format">Last updated: %1$s\nUpdated by: %2$s</string>
+    <string name="game_defaults_audit_never">Last updated: —</string>
+    <string name="game_defaults_audit_unknown_user">Unknown</string>
+    <string name="game_defaults_firestore_permission">Firestore blocked game defaults (missing or insufficient permission). In Firebase Console open Firestore → Rules and allow signed-in access to path gameDefaults/{docId} (see FIRESTORE.md in this repo for a copy-paste rule).</string>
 </resources>

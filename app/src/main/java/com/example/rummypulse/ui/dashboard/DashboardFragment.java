@@ -26,6 +26,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.rummypulse.JoinGameActivity;
 import com.example.rummypulse.R;
+import com.example.rummypulse.data.GameDefaults;
+import com.example.rummypulse.data.GameDefaultsRepository;
 import com.example.rummypulse.databinding.FragmentDashboardBinding;
 import com.example.rummypulse.service.GroqGameNameService;
 import com.example.rummypulse.ui.home.GameItem;
@@ -382,8 +384,12 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             editGameDisplayName.setText("");
         }
 
-        final double[] pointValueState = {0.15};
-        final int[] contributionPercentState = {25};
+        GameDefaultsRepository defaultsRepo = GameDefaultsRepository.getInstance(requireContext());
+        GameDefaults gd = defaultsRepo.getCachedResolved();
+        final double[] pointValueState = {clampPointValue(gd.getDefaultPointValue())};
+        final int[] contributionPercentState = {
+                Math.max(0, Math.min(100, (int) Math.round(gd.getDefaultGstPercent())))
+        };
 
         Runnable refreshPointFieldUi = () -> {
             editPointValue.setText(formatPlainDecimalForField(pointValueState[0]));
@@ -532,6 +538,9 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     @Override
     public void onStart() {
         super.onStart();
+        if (getContext() != null) {
+            GameDefaultsRepository.getInstance(requireContext()).refreshFromServer(null);
+        }
         if (connectivityManager != null && networkCallback != null) {
             try {
                 NetworkRequest request = new NetworkRequest.Builder()
