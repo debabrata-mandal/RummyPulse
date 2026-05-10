@@ -272,7 +272,9 @@ public class JoinGameActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        
+        com.example.rummypulse.data.GameDefaultsRepository.getInstance(getApplicationContext())
+                .refreshFromServer(null);
+
         // Refresh standings when returning to the activity
         // This ensures calculations are updated even if network was offline
         com.example.rummypulse.data.GameData currentGameData = viewModel.getGameData().getValue();
@@ -2959,7 +2961,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
     /**
      * Scores for a player added mid-game: 0 for fully completed rounds before the last completed one,
-     * {@code (highest total score among existing players) + 2} on the <strong>last completed</strong> round
+     * {@code (highest total score among existing players) + increment} on the <strong>last completed</strong> round
      * ({@code activeRound - 1}), not on the next open round ({@code activeRound}). When the game is already
      * complete, round 10 gets that value. Rounds after the backfilled cell stay {@code -1} until played.
      */
@@ -2968,26 +2970,28 @@ public class JoinGameActivity extends AppCompatActivity {
         for (int i = 0; i < 10; i++) {
             scores.add(-1);
         }
-        int highPlus2 = maxTotalPositiveScoreAmongExistingPlayers(gameData) + 2;
+        int increment = (int) com.example.rummypulse.data.GameDefaultsRepository.getInstance(getApplicationContext())
+                .getMidGameIncrementOrFallback();
+        int backfillScore = maxTotalPositiveScoreAmongExistingPlayers(gameData) + increment;
         int activeRound = getActiveIncompleteRound1BasedOrZero(gameData);
         if (activeRound == 0) {
-            // All rounds complete: earlier rounds 1–9 → 0, round 10 → highest cumulative total among players + 2
+            // All rounds complete: earlier rounds 1–9 → 0, round 10 → highest cumulative total + increment
             for (int i = 0; i < 9; i++) {
                 scores.set(i, 0);
             }
-            scores.set(9, highPlus2);
+            scores.set(9, backfillScore);
             return scores;
         }
         if (activeRound == 1) {
             // No round is fully complete for everyone yet; only round 1 is open
-            scores.set(0, highPlus2);
+            scores.set(0, backfillScore);
             return scores;
         }
         // Last fully completed round is (activeRound - 1). Zeros only on strictly earlier completed rounds.
         for (int r = 1; r <= activeRound - 2; r++) {
             scores.set(r - 1, 0);
         }
-        scores.set(activeRound - 2, highPlus2);
+        scores.set(activeRound - 2, backfillScore);
         return scores;
     }
 
@@ -3242,11 +3246,15 @@ public class JoinGameActivity extends AppCompatActivity {
         newPlayer.setName(finalName);
         newPlayer.setUserId(currentUserId); // Set user ID for joined user
         newPlayer.setIsCreator(false); // Not the creator
-        
-        // Initialize scores with -1 for all rounds
-        java.util.List<Integer> scores = new java.util.ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            scores.add(-1);
+
+        java.util.List<Integer> scores;
+        if (hasAnyEnteredScoreInGame(gameData)) {
+            scores = buildScoresForNewMidGamePlayer(gameData);
+        } else {
+            scores = new java.util.ArrayList<>();
+            for (int i = 0; i < 10; i++) {
+                scores.add(-1);
+            }
         }
         newPlayer.setScores(scores);
         

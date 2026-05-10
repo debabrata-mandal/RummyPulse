@@ -46,10 +46,15 @@
 
     <!-- Create game dialog -->
     <string name="dialog_new_game_title">🎮 New Game</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_create_game_confirm">Create game</string>
+    <string name="dialog_create_game_subtitle">Create a new game.</string>
+    <string name="dialog_point_value_section_title">Point value</string>
     <string name="dialog_game_name_section_title">✨ Game name</string>
-    <string name="dialog_game_name_section_subtitle">Suggested game name. Tap ✨ to get another.</string>
-    <string name="dialog_point_value_subtitle">Value of each point.</string>
-    <string name="dialog_contribution_subtitle">Percentage of wining player contribute to the pot.</string>
+    <string name="dialog_game_name_section_subtitle">Tap ✨ to refresh.</string>
+    <string name="dialog_point_value_subtitle">₹ per point.</string>
+    <string name="dialog_contribution_section_title">Contribution</string>
+    <string name="dialog_contribution_subtitle">Winner contribution.</string>
     <string name="dialog_point_value_field_hint">Amount (₹)</string>
     <string name="dialog_contribution_field_hint">Contribution (%)</string>
     <string name="dialog_point_value_required">Enter a point value</string>
@@ -88,4 +93,23 @@
     <string name="add_player_confirm_title">Add another player?</string>
     <string name="add_player_confirm_message">Adding a player changes the game for everyone. Do you want to continue?</string>
     <string name="add_player_confirm_add">Add player</string>
+
+    <!-- Navigation -->
+    <string name="menu_game_defaults">Game defaults</string>
+
+    <!-- Game defaults (Firestore gameDefaults/config) -->
+    <string name="game_defaults_intro">Defaults for new games and mid-game player catch-up. Changes are saved for everyone on this project.</string>
+    <string name="game_defaults_section_values">Default values</string>
+    <string name="game_defaults_section_audit">Update record</string>
+    <string name="game_defaults_point_hint">Default point value (₹)</string>
+    <string name="game_defaults_contribution_hint">Default contribution %</string>
+    <string name="game_defaults_increment_hint">Mid-game new player score increment</string>
+    <string name="game_defaults_increment_required">Enter the increment (0 or higher)</string>
+    <string name="game_defaults_increment_invalid">Enter a whole number from 0 upward</string>
+    <string name="game_defaults_save">Save defaults</string>
+    <string name="game_defaults_saved">Defaults saved</string>
+    <string name="game_defaults_audit_format">Last updated: %1$s\nUpdated by: %2$s</string>
+    <string name="game_defaults_audit_never">Last updated: —</string>
+    <string name="game_defaults_audit_unknown_user">Unknown</string>
+    <string name="game_defaults_firestore_permission">Firestore blocked game defaults (missing or insufficient permission). In Firebase Console open Firestore → Rules and allow signed-in users to read and write collection gameDefaults (document config).</string>
 </resources>
