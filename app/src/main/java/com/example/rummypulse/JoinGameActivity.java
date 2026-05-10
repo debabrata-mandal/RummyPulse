@@ -2958,9 +2958,10 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     /**
-     * Scores for a player added mid-game: 0 for completed rounds before the active one,
-     * {@code (highest total score among existing players) + 2} for the active round
-     * (or for round 10 when the game is already complete), -1 for future rounds not yet played.
+     * Scores for a player added mid-game: 0 for fully completed rounds before the last completed one,
+     * {@code (highest total score among existing players) + 2} on the <strong>last completed</strong> round
+     * ({@code activeRound - 1}), not on the next open round ({@code activeRound}). When the game is already
+     * complete, round 10 gets that value. Rounds after the backfilled cell stay {@code -1} until played.
      */
     private java.util.List<Integer> buildScoresForNewMidGamePlayer(com.example.rummypulse.data.GameData gameData) {
         java.util.List<Integer> scores = new java.util.ArrayList<>();
@@ -2977,10 +2978,16 @@ public class JoinGameActivity extends AppCompatActivity {
             scores.set(9, highPlus2);
             return scores;
         }
-        for (int r = 1; r < activeRound; r++) {
+        if (activeRound == 1) {
+            // No round is fully complete for everyone yet; only round 1 is open
+            scores.set(0, highPlus2);
+            return scores;
+        }
+        // Last fully completed round is (activeRound - 1). Zeros only on strictly earlier completed rounds.
+        for (int r = 1; r <= activeRound - 2; r++) {
             scores.set(r - 1, 0);
         }
-        scores.set(activeRound - 1, highPlus2);
+        scores.set(activeRound - 2, highPlus2);
         return scores;
     }
 
