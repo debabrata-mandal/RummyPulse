@@ -106,5 +106,5 @@
     <string name="game_defaults_audit_format">Last updated: %1$s\nUpdated by: %2$s</string>
     <string name="game_defaults_audit_never">Last updated: —</string>
     <string name="game_defaults_audit_unknown_user">Unknown</string>
-    <string name="game_defaults_firestore_permission">Firestore blocked game defaults (missing or insufficient permission). In Firebase Console open Firestore → Rules and allow signed-in access to path gameDefaults/{docId} (see FIRESTORE.md in this repo for a copy-paste rule).</string>
+    <string name="game_defaults_firestore_permission">Firestore blocked game defaults (missing or insufficient permission). In Firebase Console open Firestore → Rules and allow signed-in users to read and write collection gameDefaults (document config).</string>
 </resources>
