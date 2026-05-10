@@ -512,7 +512,29 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                     "🎮 Creating new game with you as Player 1...");
         });
 
+        final double[] baselinePoint = {pointValueState[0]};
+        final int[] baselineGst = {contributionPercentState[0]};
+
         dialog.show();
+
+        defaultsRepo.refreshFromServer(() -> {
+            if (!isAdded() || getContext() == null || !dialog.isShowing()) {
+                return;
+            }
+            boolean stillAtBaseline = Math.abs(pointValueState[0] - baselinePoint[0]) < 1e-9
+                    && contributionPercentState[0] == baselineGst[0];
+            if (!stillAtBaseline) {
+                return;
+            }
+            GameDefaults fresh = defaultsRepo.getCachedResolved();
+            pointValueState[0] = clampPointValue(fresh.getDefaultPointValue());
+            contributionPercentState[0] =
+                    Math.max(0, Math.min(100, (int) Math.round(fresh.getDefaultGstPercent())));
+            baselinePoint[0] = pointValueState[0];
+            baselineGst[0] = contributionPercentState[0];
+            refreshPointFieldUi.run();
+            refreshContributionFieldUi.run();
+        });
     }
 
     @Override

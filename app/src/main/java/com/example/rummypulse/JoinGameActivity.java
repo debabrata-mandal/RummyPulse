@@ -3246,11 +3246,15 @@ public class JoinGameActivity extends AppCompatActivity {
         newPlayer.setName(finalName);
         newPlayer.setUserId(currentUserId); // Set user ID for joined user
         newPlayer.setIsCreator(false); // Not the creator
-        
-        // Initialize scores with -1 for all rounds
-        java.util.List<Integer> scores = new java.util.ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            scores.add(-1);
+
+        java.util.List<Integer> scores;
+        if (hasAnyEnteredScoreInGame(gameData)) {
+            scores = buildScoresForNewMidGamePlayer(gameData);
+        } else {
+            scores = new java.util.ArrayList<>();
+            for (int i = 0; i < 10; i++) {
+                scores.add(-1);
+            }
         }
         newPlayer.setScores(scores);
         
