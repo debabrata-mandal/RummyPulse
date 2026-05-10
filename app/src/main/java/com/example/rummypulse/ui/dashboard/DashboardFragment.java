@@ -13,6 +13,8 @@ import android.view.inputmethod.EditorInfo;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -463,6 +465,14 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         final double[] baselinePoint = {pointValueState[0]};
 
         dialog.show();
+
+        Window window = dialog.getWindow();
+        if (window != null) {
+            android.util.DisplayMetrics dm = requireContext().getResources().getDisplayMetrics();
+            int maxPx = getResources().getDimensionPixelSize(R.dimen.dialog_create_game_max_width);
+            int widthPx = Math.min((int) (dm.widthPixels * 0.92f), maxPx);
+            window.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
 
         defaultsRepo.refreshFromServer(() -> {
             if (!isAdded() || getContext() == null || !dialog.isShowing()) {

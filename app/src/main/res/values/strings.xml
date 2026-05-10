@@ -46,11 +46,15 @@
 
     <!-- Create game dialog -->
     <string name="dialog_new_game_title">🎮 New Game</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_create_game_confirm">Create game</string>
+    <string name="dialog_create_game_subtitle">Create a new game.</string>
+    <string name="dialog_point_value_section_title">Point value</string>
     <string name="dialog_game_name_section_title">✨ Game name</string>
-    <string name="dialog_game_name_section_subtitle">Suggested game name. Tap ✨ to get another.</string>
-    <string name="dialog_point_value_subtitle">Value of each point.</string>
+    <string name="dialog_game_name_section_subtitle">Tap ✨ to refresh.</string>
+    <string name="dialog_point_value_subtitle">₹ per point.</string>
     <string name="dialog_contribution_section_title">Contribution</string>
-    <string name="dialog_contribution_subtitle">Uses the value from Game defaults (drawer). Change it there; it cannot be edited on this screen.</string>
+    <string name="dialog_contribution_subtitle">Winner contribution.</string>
     <string name="dialog_point_value_field_hint">Amount (₹)</string>
     <string name="dialog_contribution_field_hint">Contribution (%)</string>
     <string name="dialog_point_value_required">Enter a point value</string>
