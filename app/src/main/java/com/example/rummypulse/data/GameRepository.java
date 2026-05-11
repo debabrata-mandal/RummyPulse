@@ -1,34 +1,41 @@
 package com.example.rummypulse.data;
 
 import android.content.Context;
+import android.util.Pair;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.WriteBatch;
 import com.example.rummypulse.ui.home.GameItem;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class GameRepository {
     private static final String GAMES_COLLECTION = "games";
     private static final String GAME_DATA_COLLECTION = "gameData";
     private static final String APPROVED_GAMES_COLLECTION = "approvedGames";
+    private static final String APPROVED_GAMES_REPORT_COLLECTION = "approvedGamesReport";
     
     private FirebaseFirestore db;
     private MutableLiveData<List<GameItem>> gameItemsLiveData;
     private MutableLiveData<String> errorLiveData;
     private MutableLiveData<Double> totalApprovedGstLiveData;
     private MutableLiveData<Integer> approvedGamesCountLiveData;
-    private MutableLiveData<List<ApprovedGameData>> approvedGamesForReportsLiveData;
+    private MutableLiveData<List<MonthlyPointValueReport>> reportsSummariesLiveData;
     
     // Firestore listeners for real-time updates (used by Dashboard)
     private com.google.firebase.firestore.ListenerRegistration gamesListener;
@@ -49,7 +56,7 @@ public class GameRepository {
         errorLiveData = new MutableLiveData<>();
         totalApprovedGstLiveData = new MutableLiveData<>();
         approvedGamesCountLiveData = new MutableLiveData<>();
-        approvedGamesForReportsLiveData = new MutableLiveData<>();
+        reportsSummariesLiveData = new MutableLiveData<>();
     }
     
     /**
@@ -75,8 +82,8 @@ public class GameRepository {
         return approvedGamesCountLiveData;
     }
 
-    public LiveData<List<ApprovedGameData>> getApprovedGamesForReports() {
-        return approvedGamesForReportsLiveData;
+    public LiveData<List<MonthlyPointValueReport>> getReportsSummaries() {
+        return reportsSummariesLiveData;
     }
 
     /**
@@ -846,29 +853,163 @@ public class GameRepository {
                 });
     }
 
-    public void loadApprovedGamesForReports() {
-        // Load all approved games with full data for reports
-        db.collection(APPROVED_GAMES_COLLECTION)
-                .orderBy("approvedAt", Query.Direction.DESCENDING)
+    /**
+     * Loads pre-aggregated month documents (one read per month doc, no composite indexes).
+     */
+    public void loadReportsFromSavedSummaries() {
+        db.collection(APPROVED_GAMES_REPORT_COLLECTION)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-                    List<ApprovedGameData> approvedGames = new ArrayList<>();
+                    List<Pair<String, MonthlyPointValueReport>> tagged = new ArrayList<>();
                     for (DocumentSnapshot document : querySnapshot.getDocuments()) {
                         try {
-                            ApprovedGameData approvedGame = document.toObject(ApprovedGameData.class);
-                            if (approvedGame != null) {
-                                approvedGames.add(approvedGame);
+                            ApprovedGamesReportMonth month = document.toObject(ApprovedGamesReportMonth.class);
+                            if (month != null) {
+                                tagged.add(new Pair<>(document.getId(), month.toMonthlyPointValueReport()));
                             }
                         } catch (Exception e) {
-                            System.out.println("Error parsing approved game for reports: " + e.getMessage());
+                            System.out.println("Error parsing approvedGamesReport doc: " + e.getMessage());
                         }
                     }
-                    approvedGamesForReportsLiveData.setValue(approvedGames);
-                    System.out.println("Loaded " + approvedGames.size() + " approved games for reports");
+                    tagged.sort((a, b) -> b.first.compareTo(a.first));
+                    List<MonthlyPointValueReport> out = new ArrayList<>();
+                    for (Pair<String, MonthlyPointValueReport> p : tagged) {
+                        out.add(p.second);
+                    }
+                    reportsSummariesLiveData.setValue(out);
                 })
                 .addOnFailureListener(e -> {
-                    errorLiveData.setValue("Failed to load approved games for reports: " + e.getMessage());
-                    approvedGamesForReportsLiveData.setValue(new ArrayList<>());
+                    errorLiveData.setValue("Failed to load reports: " + e.getMessage());
+                    reportsSummariesLiveData.setValue(new ArrayList<>());
                 });
     }
+
+    /**
+     * Rebuilds {@code approvedGamesReport/{yyyy-MM}} for the current calendar month only.
+     * Uses a full collection read without {@code orderBy} (no composite index), then filters in memory
+     * by {@link ReportAggregator#yearMonthKey(ApprovedGameData)} so games without {@code approvedAt}
+     * still align with month grouping.
+     */
+    public void rebuildApprovedGamesReportForCurrentMonth(Runnable onSuccess, Consumer<String> onFailure) {
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.DAY_OF_MONTH, 1);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        final String yyyyMm = String.format(Locale.US, "%04d-%02d",
+                cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1);
+
+        db.collection(APPROVED_GAMES_COLLECTION)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<ApprovedGameData> monthGames = new ArrayList<>();
+                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                        try {
+                            ApprovedGameData g = document.toObject(ApprovedGameData.class);
+                            if (g != null && yyyyMm.equals(ReportAggregator.yearMonthKey(g))) {
+                                monthGames.add(g);
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Error parsing approved game: " + e.getMessage());
+                        }
+                    }
+                    MonthlyPointValueReport report = ReportAggregator.buildMonthlyPointValueReport(yyyyMm, monthGames);
+                    ApprovedGamesReportMonth doc = new ApprovedGamesReportMonth(
+                            report.getMonthYear(),
+                            report.getPointValueReports(),
+                            Timestamp.now());
+                    db.collection(APPROVED_GAMES_REPORT_COLLECTION)
+                            .document(yyyyMm)
+                            .set(doc)
+                            .addOnSuccessListener(aVoid -> {
+                                if (onSuccess != null) {
+                                    onSuccess.run();
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                if (onFailure != null) {
+                                    onFailure.accept(e.getMessage());
+                                }
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    if (onFailure != null) {
+                        onFailure.accept(e.getMessage());
+                    }
+                });
+    }
+
+    /**
+     * TODO: Remove this after initial backfill — reads all {@code approvedGames} and writes one summary
+     * document per calendar month (batched, max 450 writes per batch).
+     */
+    public void rebuildAllApprovedGamesReports(Runnable onSuccess, Consumer<String> onFailure) {
+        db.collection(APPROVED_GAMES_COLLECTION)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<ApprovedGameData> all = new ArrayList<>();
+                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                        try {
+                            ApprovedGameData g = document.toObject(ApprovedGameData.class);
+                            if (g != null) {
+                                all.add(g);
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Error parsing approved game: " + e.getMessage());
+                        }
+                    }
+                    Map<String, List<ApprovedGameData>> byMonth = new HashMap<>();
+                    for (ApprovedGameData g : all) {
+                        String key = ReportAggregator.yearMonthKey(g);
+                        if (key == null) {
+                            continue;
+                        }
+                        byMonth.computeIfAbsent(key, k -> new ArrayList<>()).add(g);
+                    }
+                    if (byMonth.isEmpty()) {
+                        if (onSuccess != null) {
+                            onSuccess.run();
+                        }
+                        return;
+                    }
+                    List<Map.Entry<String, List<ApprovedGameData>>> entries = new ArrayList<>(byMonth.entrySet());
+                    commitReportsBatch(entries, 0, onSuccess, onFailure);
+                })
+                .addOnFailureListener(e -> {
+                    if (onFailure != null) {
+                        onFailure.accept(e.getMessage());
+                    }
+                });
+    }
+
+    private void commitReportsBatch(List<Map.Entry<String, List<ApprovedGameData>>> entries, int start,
+            Runnable onSuccess, Consumer<String> onFailure) {
+        if (start >= entries.size()) {
+            if (onSuccess != null) {
+                onSuccess.run();
+            }
+            return;
+        }
+        int end = Math.min(start + 450, entries.size());
+        WriteBatch batch = db.batch();
+        for (int i = start; i < end; i++) {
+            Map.Entry<String, List<ApprovedGameData>> e = entries.get(i);
+            MonthlyPointValueReport report = ReportAggregator.buildMonthlyPointValueReport(e.getKey(), e.getValue());
+            ApprovedGamesReportMonth doc = new ApprovedGamesReportMonth(
+                    report.getMonthYear(),
+                    report.getPointValueReports(),
+                    Timestamp.now());
+            batch.set(db.collection(APPROVED_GAMES_REPORT_COLLECTION).document(e.getKey()), doc);
+        }
+        int nextStart = end;
+        batch.commit()
+                .addOnSuccessListener(aVoid -> commitReportsBatch(entries, nextStart, onSuccess, onFailure))
+                .addOnFailureListener(e -> {
+                    if (onFailure != null) {
+                        onFailure.accept(e.getMessage());
+                    }
+                });
+    }
+
 }

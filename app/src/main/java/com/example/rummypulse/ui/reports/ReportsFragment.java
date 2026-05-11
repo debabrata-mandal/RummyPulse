@@ -4,12 +4,12 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -38,6 +38,7 @@ public class ReportsFragment extends Fragment {
 
         initializeViews();
         setupRecyclerView();
+        setupBuildActions();
         setupSwipeRefresh();
         observeViewModel();
 
@@ -56,6 +57,19 @@ public class ReportsFragment extends Fragment {
         reportAdapter = new ExpandableMonthlyReportAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recyclerView.setAdapter(reportAdapter);
+    }
+
+    private void setupBuildActions() {
+        binding.buttonBuildMonth.setOnClickListener(v ->
+                reportsViewModel.rebuildCurrentMonthReport());
+        binding.buttonBuildAll.setOnClickListener(v ->
+                new AlertDialog.Builder(requireContext())
+                        .setTitle("Build all reports")
+                        .setMessage("This reads every approved game and rewrites all month summary documents. Continue?")
+                        .setPositiveButton("Build", (d, w) ->
+                                reportsViewModel.rebuildAllReportsFromApprovedGames())
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show());
     }
 
     private void setupSwipeRefresh() {
@@ -93,9 +107,14 @@ public class ReportsFragment extends Fragment {
                     hideAllStates();
                 } else {
                     progressBar.setVisibility(View.GONE);
-                    // Show completion toast when loading finishes
-                    com.example.rummypulse.utils.ModernToast.success(getContext(), "Reports refreshed");
                 }
+            }
+        });
+
+        reportsViewModel.getUiMessage().observe(getViewLifecycleOwner(), msg -> {
+            if (msg != null && !msg.isEmpty()) {
+                com.example.rummypulse.utils.ModernToast.success(getContext(), msg);
+                reportsViewModel.clearUiMessage();
             }
         });
 
