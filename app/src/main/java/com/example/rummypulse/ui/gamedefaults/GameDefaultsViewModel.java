@@ -3,6 +3,7 @@ package com.example.rummypulse.ui.gamedefaults;
 import android.app.Application;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -57,11 +58,16 @@ public class GameDefaultsViewModel extends AndroidViewModel {
         });
     }
 
-    public void save(double pointValue, double gstPercent, long midGameIncrement) {
+    /**
+     * @param gstPercentOrNull ignored when {@code canEditContribution} is false (repository omits GST field).
+     */
+    public void save(double pointValue, @Nullable Double gstPercentOrNull, long midGameIncrement,
+            boolean canEditContribution) {
         loading.setValue(true);
         error.setValue(null);
         saveSuccess.setValue(false);
-        repository.saveDefaults(pointValue, gstPercent, midGameIncrement)
+        Double gstWrite = canEditContribution ? gstPercentOrNull : null;
+        repository.saveDefaults(pointValue, midGameIncrement, gstWrite)
                 .addOnSuccessListener(aVoid -> {
                     loading.postValue(false);
                     saveSuccess.postValue(true);

@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.rummypulse.R;
+import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameDefaults;
 import com.example.rummypulse.databinding.FragmentGameDefaultsBinding;
 import com.example.rummypulse.utils.ModernToast;
@@ -27,6 +28,8 @@ public class GameDefaultsFragment extends Fragment {
 
     private FragmentGameDefaultsBinding binding;
     private GameDefaultsViewModel viewModel;
+    /** True when {@link AppUserRoleSession} reports {@link AppUserRoleSession.Role#ADMIN} (appUser.role == admin_user). */
+    private boolean canEditDefaultContribution;
 
     @Nullable
     @Override
@@ -61,7 +64,32 @@ public class GameDefaultsFragment extends Fragment {
             }
         });
 
+        AppUserRoleSession.getInstance().getRole().observe(getViewLifecycleOwner(), role -> {
+            if (binding == null) {
+                return;
+            }
+            canEditDefaultContribution = role == AppUserRoleSession.Role.ADMIN;
+            applyDefaultContributionFieldState();
+        });
+
         viewModel.load();
+    }
+
+    private void applyDefaultContributionFieldState() {
+        if (binding == null) {
+            return;
+        }
+        boolean enabled = canEditDefaultContribution;
+        binding.layoutDefaultContribution.setEnabled(enabled);
+        binding.editDefaultContribution.setEnabled(enabled);
+        binding.editDefaultContribution.setFocusable(enabled);
+        binding.editDefaultContribution.setFocusableInTouchMode(enabled);
+        binding.editDefaultContribution.setCursorVisible(enabled);
+        if (enabled) {
+            binding.layoutDefaultContribution.setHelperText(null);
+        } else {
+            binding.layoutDefaultContribution.setHelperText(getString(R.string.game_defaults_contribution_admin_only_helper));
+        }
     }
 
     private void populateFieldsFromDefaults(GameDefaults g) {
@@ -73,6 +101,7 @@ public class GameDefaultsFragment extends Fragment {
         binding.editMidGameIncrement.setText(String.valueOf(g.getDefaultMidGameNewPlayerScoreIncrement()));
         clearFieldErrors();
         binding.textAudit.setText(buildAuditText(g));
+        applyDefaultContributionFieldState();
     }
 
     private String buildAuditText(GameDefaults g) {
@@ -97,17 +126,21 @@ public class GameDefaultsFragment extends Fragment {
         if (point == null) {
             return;
         }
-        Integer gst = parseIntField(binding.layoutDefaultContribution, binding.editDefaultContribution.getText().toString(),
-                getString(R.string.dialog_contribution_required),
-                getString(R.string.dialog_contribution_invalid), 0, 100);
-        if (gst == null) {
-            return;
-        }
         Long inc = parseLongNonNegative(binding.layoutMidGameIncrement, binding.editMidGameIncrement.getText().toString());
         if (inc == null) {
             return;
         }
-        viewModel.save(point, gst, inc);
+        if (canEditDefaultContribution) {
+            Integer gst = parseIntField(binding.layoutDefaultContribution, binding.editDefaultContribution.getText().toString(),
+                    getString(R.string.dialog_contribution_required),
+                    getString(R.string.dialog_contribution_invalid), 0, 100);
+            if (gst == null) {
+                return;
+            }
+            viewModel.save(point, (double) gst, inc, true);
+        } else {
+            viewModel.save(point, null, inc, false);
+        }
     }
 
     private void clearFieldErrors() {

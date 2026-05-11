@@ -17,6 +17,10 @@ import java.util.Map;
 
 /**
  * Singleton access to {@code gameDefaults/config}.
+ * <p>
+ * For server-side enforcement when non-admins may write point/increment but not contribution,
+ * Firestore rules should allow writes only if the caller is {@code appUser/{uid}.role == "admin_user"}
+ * or {@code defaultGstPercent} is unchanged on merge updates.
  */
 public class GameDefaultsRepository {
 
@@ -91,7 +95,11 @@ public class GameDefaultsRepository {
         }
     }
 
-    public com.google.android.gms.tasks.Task<Void> saveDefaults(double pointValue, double gstPercent, long midGameIncrement) {
+    /**
+     * @param gstPercentOrNull when non-null, written as {@code defaultGstPercent}; when null, that field is omitted from the merge so the server value is preserved (non-admin contribution saves).
+     */
+    public com.google.android.gms.tasks.Task<Void> saveDefaults(double pointValue, long midGameIncrement,
+            @Nullable Double gstPercentOrNull) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         final String uid = user != null ? user.getUid() : "";
         final String updatedByName;
@@ -105,11 +113,17 @@ public class GameDefaultsRepository {
 
         Map<String, Object> map = new HashMap<>();
         map.put("defaultPointValue", pointValue);
-        map.put("defaultGstPercent", gstPercent);
+        if (gstPercentOrNull != null) {
+            map.put("defaultGstPercent", gstPercentOrNull);
+        }
         map.put("defaultMidGameNewPlayerScoreIncrement", midGameIncrement);
         map.put("updatedAt", FieldValue.serverTimestamp());
         map.put("updatedByUserId", uid);
         map.put("updatedByUserName", updatedByName);
+
+        final double gstForFailurePatch = gstPercentOrNull != null
+                ? gstPercentOrNull
+                : cachedResolved.getDefaultGstPercent();
 
         // Re-fetch after set so updatedAt (serverTimestamp) is materialized in the snapshot.
         return db.collection(COLLECTION).document(DOCUMENT_ID)
@@ -127,7 +141,7 @@ public class GameDefaultsRepository {
                     } else {
                         GameDefaults patch = new GameDefaults();
                         patch.setDefaultPointValue(pointValue);
-                        patch.setDefaultGstPercent(gstPercent);
+                        patch.setDefaultGstPercent(gstForFailurePatch);
                         patch.setDefaultMidGameNewPlayerScoreIncrement(midGameIncrement);
                         patch.setUpdatedByUserId(uid);
                         patch.setUpdatedByUserName(updatedByName);
