@@ -1,5 +1,6 @@
 package com.example.rummypulse.ui.gamedefaults;
 
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -8,6 +9,7 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -86,8 +88,19 @@ public class GameDefaultsFragment extends Fragment {
         binding.editDefaultContribution.setFocusableInTouchMode(enabled);
         binding.editDefaultContribution.setCursorVisible(enabled);
         if (enabled) {
+            binding.layoutDefaultContribution.setStartIconDrawable(
+                    ContextCompat.getDrawable(requireContext(), R.drawable.ic_percent));
+            binding.layoutDefaultContribution.setStartIconTintList(
+                    ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.accent_blue_light)));
+            binding.layoutDefaultContribution.setStartIconContentDescription(null);
             binding.layoutDefaultContribution.setHelperText(null);
         } else {
+            binding.layoutDefaultContribution.setStartIconDrawable(
+                    ContextCompat.getDrawable(requireContext(), R.drawable.ic_lock));
+            binding.layoutDefaultContribution.setStartIconTintList(
+                    ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.text_secondary)));
+            binding.layoutDefaultContribution.setStartIconContentDescription(
+                    getString(R.string.cd_game_defaults_contribution_locked));
             binding.layoutDefaultContribution.setHelperText(getString(R.string.game_defaults_contribution_admin_only_helper));
         }
     }
