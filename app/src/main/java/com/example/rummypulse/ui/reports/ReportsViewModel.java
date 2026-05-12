@@ -102,21 +102,6 @@ public class ReportsViewModel extends ViewModel {
                 });
     }
 
-    /**
-     * TODO: Remove after initial backfill (see GameRepository#rebuildAllApprovedGamesReports).
-     */
-    public void rebuildAllReportsFromApprovedGames() {
-        mIsLoading.setValue(true);
-        pendingSuccessMessage = "All month reports saved";
-        gameRepository.rebuildAllApprovedGamesReports(
-                () -> gameRepository.loadReportsFromSavedSummaries(),
-                err -> {
-                    pendingSuccessMessage = null;
-                    mError.setValue(err != null ? err : "Build all failed");
-                    mIsLoading.setValue(false);
-                });
-    }
-
     @Override
     protected void onCleared() {
         super.onCleared();

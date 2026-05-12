@@ -13,7 +13,11 @@
     <string name="menu_home">Review</string>
     <string name="menu_dashboard">Dashboard</string>
     <string name="menu_reports">Reports</string>
-    
+    <string name="reports_screen_subtitle">Monthly summaries from approved games (saved in Firestore). Pull down to refresh.</string>
+    <string name="reports_empty_title">No saved reports</string>
+    <string name="reports_empty_message">Tap Rebuild month to generate the current calendar month from approved games.</string>
+    <string name="reports_fab_build_month">Rebuild month</string>
+
     <!-- default_web_client_id is supplied by google-services.json (merged at build time). -->
 
     <string name="transfer_pin_done_countdown">Done (%1$d)</string>

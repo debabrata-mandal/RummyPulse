@@ -9,7 +9,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -60,16 +59,8 @@ public class ReportsFragment extends Fragment {
     }
 
     private void setupBuildActions() {
-        binding.buttonBuildMonth.setOnClickListener(v ->
+        binding.fabBuildMonth.setOnClickListener(v ->
                 reportsViewModel.rebuildCurrentMonthReport());
-        binding.buttonBuildAll.setOnClickListener(v ->
-                new AlertDialog.Builder(requireContext())
-                        .setTitle("Build all reports")
-                        .setMessage("This reads every approved game and rewrites all month summary documents. Continue?")
-                        .setPositiveButton("Build", (d, w) ->
-                                reportsViewModel.rebuildAllReportsFromApprovedGames())
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .show());
     }
 
     private void setupSwipeRefresh() {
@@ -80,11 +71,9 @@ public class ReportsFragment extends Fragment {
         
         // Set swipe refresh colors
         swipeRefreshLayout.setColorSchemeResources(
-            android.R.color.holo_blue_bright,
-            android.R.color.holo_green_light,
-            android.R.color.holo_orange_light,
-            android.R.color.holo_red_light
-        );
+                com.example.rummypulse.R.color.accent_blue,
+                com.example.rummypulse.R.color.accent_blue_light,
+                com.example.rummypulse.R.color.success_green);
     }
 
     private void observeViewModel() {
