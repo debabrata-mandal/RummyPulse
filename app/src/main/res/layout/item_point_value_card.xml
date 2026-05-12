@@ -18,60 +18,61 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="14dp">
+            android:layout_marginBottom="14dp"
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/text_month_year"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="8dp"
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
                 android:textColor="@color/text_secondary"
                 android:textStyle="bold"
-                android:visibility="visible"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/text_point_value"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                tools:text="September 2024" />
+                android:visibility="gone"
+                tools:text="September 2024"
+                tools:visibility="visible" />
 
-            <TextView
-                android:id="@+id/text_point_value"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:background="@drawable/point_value_subtle_background"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="6dp"
-                android:textColor="@color/accent_blue"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@id/text_total_games"
-                app:layout_constraintStart_toEndOf="@id/text_month_year"
-                app:layout_constraintTop_toTopOf="parent"
-                tools:text="₹0.15" />
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
 
-            <TextView
-                android:id="@+id/text_total_games"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_report_games_chip"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="5dp"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
-                android:textColor="@color/text_primary"
-                android:textStyle="bold"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                tools:text="12 games" />
-        </androidx.constraintlayout.widget.ConstraintLayout>
+                <TextView
+                    android:id="@+id/text_point_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/point_value_subtle_background"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
+                    android:textColor="@color/accent_blue"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:text="₹0.15" />
+
+                <TextView
+                    android:id="@+id/text_total_games"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_report_games_chip"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:text="12 games" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -85,7 +86,7 @@
                 android:layout_marginEnd="6dp"
                 android:background="@drawable/bg_dashboard_metric_tile"
                 android:gravity="start"
-                android:minHeight="88dp"
+                android:minHeight="96dp"
                 android:orientation="vertical"
                 android:padding="12dp">
 
@@ -116,9 +117,9 @@
                     android:id="@+id/text_total_gst"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
+                    android:layout_marginTop="8dp"
                     android:textColor="@color/success_green"
+                    android:textSize="24sp"
                     android:textStyle="bold"
                     tools:text="₹1,250" />
             </LinearLayout>
@@ -130,7 +131,7 @@
                 android:layout_marginStart="6dp"
                 android:background="@drawable/bg_dashboard_metric_tile"
                 android:gravity="start"
-                android:minHeight="88dp"
+                android:minHeight="96dp"
                 android:orientation="vertical"
                 android:padding="12dp">
 
@@ -161,9 +162,9 @@
                     android:id="@+id/text_total_players"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
+                    android:layout_marginTop="8dp"
                     android:textColor="@color/accent_blue"
+                    android:textSize="24sp"
                     android:textStyle="bold"
                     tools:text="48" />
             </LinearLayout>
@@ -182,7 +183,7 @@
                 android:layout_marginEnd="6dp"
                 android:background="@drawable/bg_dashboard_metric_tile"
                 android:gravity="start"
-                android:minHeight="88dp"
+                android:minHeight="96dp"
                 android:orientation="vertical"
                 android:padding="12dp">
 
@@ -213,9 +214,9 @@
                     android:id="@+id/text_avg_gst"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+                    android:layout_marginTop="8dp"
                     android:textColor="@color/text_primary"
+                    android:textSize="24sp"
                     android:textStyle="bold"
                     tools:text="₹104.2" />
             </LinearLayout>
@@ -227,7 +228,7 @@
                 android:layout_marginStart="6dp"
                 android:background="@drawable/bg_dashboard_metric_tile"
                 android:gravity="start"
-                android:minHeight="88dp"
+                android:minHeight="96dp"
                 android:orientation="vertical"
                 android:padding="12dp">
 
@@ -258,9 +259,9 @@
                     android:id="@+id/text_avg_players"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+                    android:layout_marginTop="8dp"
                     android:textColor="@color/text_primary"
+                    android:textSize="24sp"
                     android:textStyle="bold"
                     tools:text="4.0" />
             </LinearLayout>

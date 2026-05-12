@@ -89,6 +89,7 @@ public class MonthlyPointValueCardAdapter extends RecyclerView.Adapter<MonthlyPo
             String monthYear = item.getMonthYear();
             PointValueReport report = item.getPointValueReport();
 
+            monthYearText.setVisibility(View.VISIBLE);
             monthYearText.setText(monthYear);
             pointValueText.setText(report.getFormattedPointValue());
             totalGamesText.setText(report.getGamesText());
