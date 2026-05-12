@@ -13,10 +13,16 @@
     <string name="menu_home">Review</string>
     <string name="menu_dashboard">Dashboard</string>
     <string name="menu_reports">Reports</string>
-    <string name="reports_screen_subtitle">Monthly summaries from approved games (saved in Firestore). Pull down to refresh.</string>
+    <string name="reports_screen_subtitle">Monthly summaries of approved games.</string>
     <string name="reports_empty_title">No saved reports</string>
     <string name="reports_empty_message">Tap Rebuild month to generate the current calendar month from approved games.</string>
     <string name="reports_fab_build_month">Rebuild month</string>
+    <string name="reports_stat_total_contribution">Total contribution</string>
+    <string name="reports_stat_avg_contribution_per_game">Avg contribution / game</string>
+    <string name="reports_stat_total_players">Total players</string>
+    <string name="reports_stat_avg_players_per_game">Avg players / game</string>
+    <string name="reports_stat_icon_contribution_desc">Contribution</string>
+    <string name="reports_stat_icon_players_desc">Players</string>
 
     <!-- default_web_client_id is supplied by google-services.json (merged at build time). -->
 

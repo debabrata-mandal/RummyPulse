@@ -1,219 +1,269 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="6dp"
+    app:cardBackgroundColor="@color/card_background"
     app:cardCornerRadius="12dp"
-    app:cardElevation="4dp"
-    app:cardBackgroundColor="@color/card_background">
+    app:cardElevation="2dp"
+    app:strokeColor="@color/divider_color"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/professional_row_background"
         android:padding="16dp">
 
-        <!-- Month Year + Point Value Header -->
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="12dp">
+            android:layout_marginBottom="14dp">
 
-            <!-- Month Year -->
             <TextView
                 android:id="@+id/text_month_year"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="September 2024"
-                android:textSize="16sp"
+                android:layout_marginEnd="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+                android:textColor="@color/text_secondary"
                 android:textStyle="bold"
-                android:textColor="@color/text_secondary" />
+                android:visibility="visible"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/text_point_value"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="September 2024" />
 
-            <!-- Point Value -->
             <TextView
                 android:id="@+id/text_point_value"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="₹0.15"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:textColor="@color/accent_blue"
-                android:layout_marginEnd="12dp"
+                android:layout_marginEnd="8dp"
                 android:background="@drawable/point_value_subtle_background"
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="6dp"
-                android:shadowColor="@color/accent_blue"
-                android:shadowDx="0"
-                android:shadowDy="0"
-                android:shadowRadius="8" />
+                android:textColor="@color/accent_blue"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/text_total_games"
+                app:layout_constraintStart_toEndOf="@id/text_month_year"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="₹0.15" />
 
-            <!-- Total Games -->
             <TextView
                 android:id="@+id/text_total_games"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="12 Games"
-                android:textSize="14sp"
-                android:textStyle="bold"
+                android:background="@drawable/bg_report_games_chip"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="5dp"
+                android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
                 android:textColor="@color/text_primary"
-                android:background="@drawable/rounded_background"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="4dp" />
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="12 games" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
-        </LinearLayout>
-
-        <!-- Statistics Grid -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:weightSum="2">
+            android:orientation="horizontal">
 
-            <!-- Left Column -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_dashboard_metric_tile"
+                android:gravity="start"
+                android:minHeight="88dp"
                 android:orientation="vertical"
-                android:layout_marginEnd="8dp">
+                android:padding="12dp">
 
-                <!-- Total Contribution -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/professional_row_background"
-                    android:padding="12dp"
-                    android:layout_marginBottom="8dp"
-                    android:gravity="center">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@string/reports_stat_icon_contribution_desc"
+                        android:src="@drawable/ic_bar_chart"
+                        app:tint="@color/text_secondary" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="💰 Total Contribution"
-                        android:textSize="12sp"
-                        android:textColor="@color/text_secondary"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/text_total_gst"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="₹1,250"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/success_green"
-                        android:layout_marginTop="4dp" />
-
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/reports_stat_total_contribution"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                        android:textColor="@color/text_secondary" />
                 </LinearLayout>
 
-                <!-- Average Contribution per Game -->
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <TextView
+                    android:id="@+id/text_total_gst"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/professional_row_background"
-                    android:padding="12dp"
-                    android:gravity="center">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="📊 Contribution/Game"
-                        android:textSize="12sp"
-                        android:textColor="@color/text_secondary"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/text_avg_gst"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="₹104.2"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary"
-                        android:layout_marginTop="4dp" />
-
-                </LinearLayout>
-
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
+                    android:textColor="@color/success_green"
+                    android:textStyle="bold"
+                    tools:text="₹1,250" />
             </LinearLayout>
 
-            <!-- Right Column -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_dashboard_metric_tile"
+                android:gravity="start"
+                android:minHeight="88dp"
                 android:orientation="vertical"
-                android:layout_marginStart="8dp">
+                android:padding="12dp">
 
-                <!-- Total Players -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/professional_row_background"
-                    android:padding="12dp"
-                    android:layout_marginBottom="8dp"
-                    android:gravity="center">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@string/reports_stat_icon_players_desc"
+                        android:src="@drawable/ic_people"
+                        app:tint="@color/text_secondary" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="👥 Total Players"
-                        android:textSize="12sp"
-                        android:textColor="@color/text_secondary"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/text_total_players"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="48"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/accent_blue"
-                        android:layout_marginTop="4dp" />
-
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/reports_stat_total_players"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                        android:textColor="@color/text_secondary" />
                 </LinearLayout>
 
-                <!-- Average Players per Game -->
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <TextView
+                    android:id="@+id/text_total_players"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/professional_row_background"
-                    android:padding="12dp"
-                    android:gravity="center">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🎯 Players/Game"
-                        android:textSize="12sp"
-                        android:textColor="@color/text_secondary"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/text_avg_players"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="4.0"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary"
-                        android:layout_marginTop="4dp" />
-
-                </LinearLayout>
-
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
+                    android:textColor="@color/accent_blue"
+                    android:textStyle="bold"
+                    tools:text="48" />
             </LinearLayout>
-
         </LinearLayout>
 
-    </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
 
-</androidx.cardview.widget.CardView>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_dashboard_metric_tile"
+                android:gravity="start"
+                android:minHeight="88dp"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@string/reports_stat_icon_contribution_desc"
+                        android:src="@drawable/ic_percent"
+                        app:tint="@color/text_secondary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/reports_stat_avg_contribution_per_game"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/text_avg_gst"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"
+                    tools:text="₹104.2" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_dashboard_metric_tile"
+                android:gravity="start"
+                android:minHeight="88dp"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@string/reports_stat_icon_players_desc"
+                        android:src="@drawable/ic_people"
+                        app:tint="@color/text_secondary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/reports_stat_avg_players_per_game"
+                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                        android:textColor="@color/text_secondary" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/text_avg_players"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"
+                    tools:text="4.0" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
