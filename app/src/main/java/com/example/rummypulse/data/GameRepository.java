@@ -11,6 +11,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.Source;
 import com.google.firebase.firestore.WriteBatch;
 import com.example.rummypulse.ui.home.GameItem;
 
@@ -130,38 +131,42 @@ public class GameRepository {
     
     /**
      * Load all games with one-time fetch (for Review screen - manual refresh only)
-     * This method fetches data once and does not set up real-time listeners
+     * This method fetches data once and does not set up real-time listeners.
+     * Uses {@link Source#SERVER} first so local persistence cannot keep a deleted last game in the list.
      */
     public void loadAllGames() {
-        System.out.println("GameRepository: Fetching games collection (manual refresh)");
-        
-        // One-time fetch for games collection
-        db.collection(GAMES_COLLECTION)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    if (querySnapshot != null) {
-                        System.out.println("GameRepository: Fetched " + querySnapshot.size() + " documents");
-                        List<String> gameIds = new ArrayList<>();
-                        for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-                            gameIds.add(document.getId());
-                        }
-                        
-                        if (gameIds.isEmpty()) {
-                            System.out.println("GameRepository: No games found in database");
-                            resetGameListStateForEmptyQuery();
-                            return;
-                        }
-                        
-                        System.out.println("GameRepository: Found " + gameIds.size() + " game IDs, loading game data");
-                        // Now load game data for each game ID (one-time fetch)
-                        loadGameDataForIds(gameIds);
-                    }
-                })
+        System.out.println("GameRepository: Fetching games collection (manual refresh, prefer server)");
+        com.google.firebase.firestore.Query gamesQuery = db.collection(GAMES_COLLECTION)
+                .orderBy("createdAt", Query.Direction.DESCENDING);
+        gamesQuery.get(Source.SERVER)
+                .addOnSuccessListener(this::applyGamesQuerySnapshotForReview)
                 .addOnFailureListener(error -> {
-                    System.out.println("GameRepository: Error fetching games collection: " + error.getMessage());
-                    errorLiveData.setValue("Failed to load games: " + error.getMessage());
+                    System.out.println("GameRepository: Server games fetch failed, falling back to default: " + error.getMessage());
+                    gamesQuery.get()
+                            .addOnSuccessListener(this::applyGamesQuerySnapshotForReview)
+                            .addOnFailureListener(e2 -> {
+                                System.out.println("GameRepository: Error fetching games collection: " + e2.getMessage());
+                                errorLiveData.setValue("Failed to load games: " + e2.getMessage());
+                            });
                 });
+    }
+
+    private void applyGamesQuerySnapshotForReview(QuerySnapshot querySnapshot) {
+        if (querySnapshot == null) {
+            return;
+        }
+        System.out.println("GameRepository: Fetched " + querySnapshot.size() + " documents");
+        List<String> gameIds = new ArrayList<>();
+        for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+            gameIds.add(document.getId());
+        }
+        if (gameIds.isEmpty()) {
+            System.out.println("GameRepository: No games found in database");
+            resetGameListStateForEmptyQuery();
+            return;
+        }
+        System.out.println("GameRepository: Found " + gameIds.size() + " game IDs, loading game data");
+        loadGameDataForIds(gameIds);
     }
     
     /**
@@ -242,84 +247,117 @@ public class GameRepository {
     private void loadGameDataForIds(List<String> gameIds) {
         // Update the game IDs order
         gameIdsOrder = new ArrayList<>(gameIds);
-        
+
         // Clear previous game items
         gameItemsMap.clear();
-        
+        // Push empty list immediately so the UI does not keep the previous LiveData value when all fetches resolve to "missing".
+        updateGameItemsList();
+
         // Fetch game data for each game
         for (String gameId : gameIds) {
             fetchGameData(gameId);
         }
     }
-    
+
+    /** Drops a row when server no longer has gameData / games for this id (e.g. deleted while cache still listed it). */
+    private void removeStaleGameRowForReview(String gameId) {
+        if (gameId == null) {
+            return;
+        }
+        gameItemsMap.remove(gameId);
+        updateGameItemsList();
+    }
+
     private void fetchGameData(String gameId) {
         System.out.println("Fetching game data for: " + gameId);
-        
-        db.collection(GAME_DATA_COLLECTION)
-                .document(gameId)
-                .get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (!gameIdsOrder.contains(gameId)) {
-                        return;
-                    }
-                    if (documentSnapshot != null && documentSnapshot.exists()) {
-                        try {
-                            GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
-                            if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
-                                GameData gameData = gameDataWrapper.getData();
-                                // Also get the auth data for PIN
-                                db.collection(GAMES_COLLECTION)
-                                        .document(gameId)
-                                        .get()
-                                        .addOnSuccessListener(authSnapshot -> {
-                                            if (!gameIdsOrder.contains(gameId)) {
-                                                return;
-                                            }
-                                            GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
-                                            String pin = gameAuth != null ? gameAuth.getPin() : "0000";
-                                            String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
-                                            String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
-                                            String gameDisplayName = gameDisplayNameFromAuth(gameAuth);
-                                            
-                                            // Use createdAt from games collection instead of lastUpdated from gameData collection
-                                            com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
-                                            
-                                            // Fetch creator's photo URL from appUser collection
-                                            if (creatorUserId != null && !creatorUserId.isEmpty()) {
-                                                db.collection("appUser")
-                                                        .document(creatorUserId)
-                                                        .get()
-                                                        .addOnSuccessListener(userSnapshot -> {
-                                                            String creatorPhotoUrl = null;
-                                                            if (userSnapshot.exists()) {
-                                                                creatorPhotoUrl = userSnapshot.getString("photoUrl");
-                                                            }
-                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
-                                                            putGameItemIfStillInLoad(gameId, gameItem);
-                                                        })
-                                                        .addOnFailureListener(e -> {
-                                                            // If fetching photo fails, create game item without photo
-                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId, gameDisplayName);
-                                                            putGameItemIfStillInLoad(gameId, gameItem);
-                                                        });
-                                            } else {
-                                                // No creator user ID, create game item without photo
-                                                GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null, gameDisplayName);
-                                                putGameItemIfStillInLoad(gameId, gameItem);
-                                            }
-                                        });
-                            }
-                        } catch (Exception e) {
-                            System.out.println("Error deserializing game data for " + gameId + ": " + e.getMessage());
-                            e.printStackTrace();
-                        }
-                    } else {
-                        System.out.println("GameData document doesn't exist yet for " + gameId);
-                    }
-                })
+        com.google.firebase.firestore.DocumentReference dataRef = db.collection(GAME_DATA_COLLECTION).document(gameId);
+        dataRef.get(Source.SERVER)
+                .addOnSuccessListener(snapshot -> onGameDataSnapshotForReviewFetch(gameId, snapshot))
                 .addOnFailureListener(error -> {
-                    System.out.println("Error fetching gameData for " + gameId + ": " + error.getMessage());
+                    System.out.println("GameData server fetch failed for " + gameId + ", fallback: " + error.getMessage());
+                    dataRef.get()
+                            .addOnSuccessListener(snapshot -> onGameDataSnapshotForReviewFetch(gameId, snapshot))
+                            .addOnFailureListener(error2 ->
+                                    System.out.println("Error fetching gameData for " + gameId + ": " + error2.getMessage()));
                 });
+    }
+
+    private void onGameDataSnapshotForReviewFetch(String gameId, DocumentSnapshot documentSnapshot) {
+        if (!gameIdsOrder.contains(gameId)) {
+            return;
+        }
+        if (documentSnapshot == null || !documentSnapshot.exists()) {
+            System.out.println("GameData document doesn't exist for " + gameId);
+            removeStaleGameRowForReview(gameId);
+            return;
+        }
+        try {
+            GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
+            if (gameDataWrapper == null || gameDataWrapper.getData() == null) {
+                removeStaleGameRowForReview(gameId);
+                return;
+            }
+            GameData gameData = gameDataWrapper.getData();
+            attachReviewGameAuthFetch(gameId, gameDataWrapper, gameData);
+        } catch (Exception e) {
+            System.out.println("Error deserializing game data for " + gameId + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void attachReviewGameAuthFetch(String gameId, GameDataWrapper gameDataWrapper, GameData gameData) {
+        com.google.firebase.firestore.DocumentReference authRef = db.collection(GAMES_COLLECTION).document(gameId);
+        authRef.get(Source.SERVER)
+                .addOnSuccessListener(authSnapshot -> onAuthSnapshotForReviewFetch(gameId, gameDataWrapper, gameData, authSnapshot))
+                .addOnFailureListener(e -> authRef.get()
+                        .addOnSuccessListener(authSnapshot -> onAuthSnapshotForReviewFetch(gameId, gameDataWrapper, gameData, authSnapshot))
+                        .addOnFailureListener(e2 ->
+                                System.out.println("Error fetching games auth for " + gameId + ": " + e2.getMessage())));
+    }
+
+    private void onAuthSnapshotForReviewFetch(String gameId, GameDataWrapper gameDataWrapper, GameData gameData,
+                                                DocumentSnapshot authSnapshot) {
+        if (!gameIdsOrder.contains(gameId)) {
+            return;
+        }
+        if (authSnapshot == null || !authSnapshot.exists()) {
+            removeStaleGameRowForReview(gameId);
+            return;
+        }
+        GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
+        String pin = gameAuth != null ? gameAuth.getPin() : "0000";
+        String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
+        String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
+        String gameDisplayName = gameDisplayNameFromAuth(gameAuth);
+
+        com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
+
+        if (creatorUserId != null && !creatorUserId.isEmpty()) {
+            db.collection("appUser")
+                    .document(creatorUserId)
+                    .get()
+                    .addOnSuccessListener(userSnapshot -> {
+                        if (!gameIdsOrder.contains(gameId)) {
+                            return;
+                        }
+                        String creatorPhotoUrl = null;
+                        if (userSnapshot.exists()) {
+                            creatorPhotoUrl = userSnapshot.getString("photoUrl");
+                        }
+                        GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
+                        putGameItemIfStillInLoad(gameId, gameItem);
+                    })
+                    .addOnFailureListener(e -> {
+                        if (!gameIdsOrder.contains(gameId)) {
+                            return;
+                        }
+                        GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId, gameDisplayName);
+                        putGameItemIfStillInLoad(gameId, gameItem);
+                    });
+        } else {
+            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null, gameDisplayName);
+            putGameItemIfStillInLoad(gameId, gameItem);
+        }
     }
     
     /**
