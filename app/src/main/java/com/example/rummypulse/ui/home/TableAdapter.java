@@ -69,12 +69,10 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             holder.iconViewPin.setOnClickListener(v -> {
                 String actualPin = (String) holder.gamePinText.getTag();
                 holder.gamePinText.setText(actualPin);
-                holder.gamePinText.setTextColor(holder.itemView.getContext().getColor(R.color.accent_orange));
                 
                 // Hide PIN after 10 seconds
                 holder.gamePinText.postDelayed(() -> {
                     holder.gamePinText.setText("****");
-                    holder.gamePinText.setTextColor(holder.itemView.getContext().getColor(R.color.accent_orange));
                 }, 10000);
             });
 
@@ -145,26 +143,18 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             }
             holder.ageText.setText(age);
 
-            // Set Status with null checking and debug logging
             String status = item.getGameStatus();
             if (status == null || status.isEmpty()) {
                 status = "Unknown";
             }
             holder.statusText.setText(status);
-            
-            
-            // Set status color based on status
-            try {
-                if (status.equals("Completed")) {
-                    holder.statusText.setTextColor(holder.itemView.getContext().getColor(R.color.status_offline));
-                } else if (status.startsWith("R")) {
-                    holder.statusText.setTextColor(holder.itemView.getContext().getColor(R.color.status_online));
-                } else {
-                    holder.statusText.setTextColor(holder.itemView.getContext().getColor(R.color.text_secondary));
-                }
-            } catch (Exception e) {
-                // Fallback to default color if there's any issue
-                holder.statusText.setTextColor(holder.itemView.getContext().getColor(android.R.color.black));
+            holder.statusText.setTextColor(holder.itemView.getContext().getColor(R.color.white));
+            if ("Completed".equals(status)) {
+                holder.statusText.setBackgroundResource(R.drawable.status_background_green);
+            } else if (status.startsWith("R")) {
+                holder.statusText.setBackgroundResource(R.drawable.status_background_orange);
+            } else {
+                holder.statusText.setBackgroundResource(R.drawable.bg_dashboard_status_offline);
             }
 
             // Enable/disable approve button based on game status

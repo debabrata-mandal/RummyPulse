@@ -181,14 +181,15 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
     private void setupLockedView() {
         binding.recyclerViewTable.setVisibility(View.GONE);
         binding.swipeRefresh.setVisibility(View.GONE);
-        binding.btnRefresh.setVisibility(View.GONE);
-        binding.btnApproveAll.setVisibility(View.GONE);
 
         TextView lockedMessage = new TextView(getContext());
         lockedMessage.setId(LOCKED_OVERLAY_VIEW_ID);
-        lockedMessage.setText("🔒 Access Restricted\n\nThis screen requires administrator privileges.\nPlease contact an admin for access.");
-        lockedMessage.setTextSize(18);
+        lockedMessage.setText(getString(R.string.review_access_restricted)
+                + "\n\n"
+                + getString(R.string.review_access_restricted_detail));
+        lockedMessage.setTextSize(15);
         lockedMessage.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        lockedMessage.setLineSpacing(4f, 1f);
         lockedMessage.setPadding(32, 100, 32, 32);
         lockedMessage.setTextColor(getResources().getColor(com.example.rummypulse.R.color.text_secondary, null));
 
