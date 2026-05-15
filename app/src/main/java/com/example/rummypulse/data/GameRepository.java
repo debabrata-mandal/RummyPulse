@@ -117,7 +117,7 @@ public class GameRepository {
                         
                         if (gameIds.isEmpty()) {
                             System.out.println("GameRepository: No games found in database");
-                            gameItemsLiveData.setValue(new ArrayList<>());
+                            clearGameDataListenersAndResetGameListState();
                             return;
                         }
                         
@@ -149,7 +149,7 @@ public class GameRepository {
                         
                         if (gameIds.isEmpty()) {
                             System.out.println("GameRepository: No games found in database");
-                            gameItemsLiveData.setValue(new ArrayList<>());
+                            resetGameListStateForEmptyQuery();
                             return;
                         }
                         
@@ -181,6 +181,29 @@ public class GameRepository {
             listener.remove();
         }
         gameDataListeners.clear();
+    }
+
+    /**
+     * Clears in-memory game list state when the games collection has no documents (one-shot query / Review).
+     * Prevents stale in-flight {@link #fetchGameData} callbacks from repopulating the UI from old {@link #gameIdsOrder}.
+     */
+    private void resetGameListStateForEmptyQuery() {
+        gameItemsMap.clear();
+        gameIdsOrder.clear();
+        gameItemsLiveData.setValue(new ArrayList<>());
+    }
+
+    /**
+     * Removes per-game listeners and clears state when the realtime games snapshot is empty (Dashboard).
+     */
+    private void clearGameDataListenersAndResetGameListState() {
+        for (com.google.firebase.firestore.ListenerRegistration listener : gameDataListeners.values()) {
+            listener.remove();
+        }
+        gameDataListeners.clear();
+        gameItemsMap.clear();
+        gameIdsOrder.clear();
+        gameItemsLiveData.setValue(new ArrayList<>());
     }
 
     /**
@@ -236,6 +259,9 @@ public class GameRepository {
                 .document(gameId)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
+                    if (!gameIdsOrder.contains(gameId)) {
+                        return;
+                    }
                     if (documentSnapshot != null && documentSnapshot.exists()) {
                         try {
                             GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
@@ -246,6 +272,9 @@ public class GameRepository {
                                         .document(gameId)
                                         .get()
                                         .addOnSuccessListener(authSnapshot -> {
+                                            if (!gameIdsOrder.contains(gameId)) {
+                                                return;
+                                            }
                                             GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
                                             String pin = gameAuth != null ? gameAuth.getPin() : "0000";
                                             String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
@@ -266,27 +295,17 @@ public class GameRepository {
                                                                 creatorPhotoUrl = userSnapshot.getString("photoUrl");
                                                             }
                                                             GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
-                                                            
-                                                            if (gameItem != null) {
-                                                                gameItemsMap.put(gameId, gameItem);
-                                                                updateGameItemsList();
-                                                            }
+                                                            putGameItemIfStillInLoad(gameId, gameItem);
                                                         })
                                                         .addOnFailureListener(e -> {
                                                             // If fetching photo fails, create game item without photo
                                                             GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId, gameDisplayName);
-                                                            if (gameItem != null) {
-                                                                gameItemsMap.put(gameId, gameItem);
-                                                                updateGameItemsList();
-                                                            }
+                                                            putGameItemIfStillInLoad(gameId, gameItem);
                                                         });
                                             } else {
                                                 // No creator user ID, create game item without photo
                                                 GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null, gameDisplayName);
-                                                if (gameItem != null) {
-                                                    gameItemsMap.put(gameId, gameItem);
-                                                    updateGameItemsList();
-                                                }
+                                                putGameItemIfStillInLoad(gameId, gameItem);
                                             }
                                         });
                             }
@@ -399,6 +418,15 @@ public class GameRepository {
                 });
         
         gameDataListeners.put(gameId, listener);
+    }
+
+    /** Ignores late one-shot fetch callbacks after {@link #gameIdsOrder} no longer includes the id. */
+    private void putGameItemIfStillInLoad(String gameId, GameItem gameItem) {
+        if (gameItem == null || !gameIdsOrder.contains(gameId)) {
+            return;
+        }
+        gameItemsMap.put(gameId, gameItem);
+        updateGameItemsList();
     }
     
     private void updateGameItemsList() {
