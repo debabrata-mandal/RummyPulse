@@ -62,12 +62,12 @@ public class GameDefaultsViewModel extends AndroidViewModel {
      * @param gstPercentOrNull ignored when {@code canEditContribution} is false (repository omits GST field).
      */
     public void save(double pointValue, @Nullable Double gstPercentOrNull, long midGameIncrement,
-            boolean canEditContribution) {
+            boolean displayIntermediateCalculation, boolean canEditContribution) {
         loading.setValue(true);
         error.setValue(null);
         saveSuccess.setValue(false);
         Double gstWrite = canEditContribution ? gstPercentOrNull : null;
-        repository.saveDefaults(pointValue, midGameIncrement, gstWrite)
+        repository.saveDefaults(pointValue, midGameIncrement, displayIntermediateCalculation, gstWrite)
                 .addOnSuccessListener(aVoid -> {
                     loading.postValue(false);
                     saveSuccess.postValue(true);
@@ -86,5 +86,12 @@ public class GameDefaultsViewModel extends AndroidViewModel {
 
     public void clearSaveSuccessFlag() {
         saveSuccess.setValue(false);
+    }
+
+    public void saveDisplayIntermediateCalculation(boolean enabled) {
+        repository.setDisplayIntermediateCalculationCached(enabled);
+        repository.saveDisplayIntermediateCalculation(enabled)
+                .addOnFailureListener(e -> error.postValue(
+                        e.getMessage() != null ? e.getMessage() : "Failed to save display setting"));
     }
 }

@@ -43,6 +43,7 @@ public class JoinGameActivity extends AppCompatActivity {
     
     // Firestore listener for real-time updates
     private com.google.firebase.firestore.ListenerRegistration gameDataListener;
+    private com.google.firebase.firestore.ListenerRegistration gameDefaultsListener;
     
     // Network monitoring
     private android.net.ConnectivityManager.NetworkCallback networkCallback;
@@ -272,21 +273,26 @@ public class JoinGameActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        com.example.rummypulse.data.GameDefaultsRepository.getInstance(getApplicationContext())
-                .refreshFromServer(null);
+        refreshGameDefaultsAndStandings();
+    }
 
-        // Refresh standings when returning to the activity
-        // This ensures calculations are updated even if network was offline
-        com.example.rummypulse.data.GameData currentGameData = viewModel.getGameData().getValue();
-        if (currentGameData != null) {
-            System.out.println("onResume: Refreshing standings with cached game data");
-            // Force a complete refresh of the standings
-            // updateStandings now handles both view and edit mode intelligently
-            generateStandingsTable(currentGameData);
-            updateStandingsInfo(currentGameData);
-        } else {
-            System.out.println("onResume: No cached game data available, will wait for data to load");
+    private void refreshGameDefaultsAndStandings() {
+        com.example.rummypulse.data.GameDefaultsRepository.getInstance(getApplicationContext())
+                .refreshFromServer(() -> {
+                    com.example.rummypulse.data.GameData data = viewModel.getGameData().getValue();
+                    if (data != null && !isFinishing()) {
+                        runOnUiThread(() -> refreshStandingsUi(data));
+                    }
+                });
+    }
+
+    private void refreshStandingsUi(com.example.rummypulse.data.GameData gameData) {
+        if (gameData == null) {
+            return;
         }
+        updateGameInfoHeader(gameData);
+        generateStandingsTable(gameData);
+        updateStandingsInfo(gameData);
     }
     
     /**
@@ -720,7 +726,11 @@ public class JoinGameActivity extends AppCompatActivity {
             gameDataListener.remove();
             gameDataListener = null;
         }
-        
+        if (gameDefaultsListener != null) {
+            gameDefaultsListener.remove();
+            gameDefaultsListener = null;
+        }
+
         // Unregister network callback
         if (networkCallback != null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
             android.net.ConnectivityManager connectivityManager = 
@@ -891,9 +901,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
             // Set zero net amount only (simplified display)
             TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
-            netAmountText.setText("₹0");
-            netAmountText.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
-            netAmountText.setBackground(null); // Remove any background
+            applyStandingNetAmountPlaceholder(netAmountText);
 
             // Set all round scores to dash for loading state
             populateLoadingRoundScores(standingsRowView);
@@ -1314,6 +1322,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
         // Generate standings table
         generateStandingsTable(gameData);
+        setupGameDefaultsListener();
 
         // Update current round
         updateCurrentRound(gameData);
@@ -1360,7 +1369,11 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Update Total Contribution Amount (rounded, no decimals)
         double totalContribution = calculateTotalContribution(gameData);
-        binding.textHeaderTotalContribution.setText("₹" + Math.round(totalContribution));
+        if (shouldShowStandingAmounts(gameData)) {
+            binding.textHeaderTotalContribution.setText("₹" + Math.round(totalContribution));
+        } else {
+            binding.textHeaderTotalContribution.setText(getString(R.string.game_view_amount_hidden));
+        }
         
         // Game PIN is not shown in the compact header (same layout in edit and view mode)
         updateHeaderPinVisibility();
@@ -2276,6 +2289,45 @@ public class JoinGameActivity extends AppCompatActivity {
         return 10;
     }
     
+    /**
+     * Whether standings and header should show settlement amounts (net / total contribution).
+     * When intermediate calculation is off in game defaults, amounts appear only after the game is complete.
+     */
+    private boolean shouldShowStandingAmounts(com.example.rummypulse.data.GameData gameData) {
+        if (gameData != null && isGameCompleted(gameData)) {
+            return true;
+        }
+        return com.example.rummypulse.data.GameDefaultsRepository.getInstance(getApplicationContext())
+                .isDisplayIntermediateCalculationEnabled();
+    }
+
+    private void applyStandingNetAmountPlaceholder(TextView netAmountText) {
+        if (netAmountText == null) {
+            return;
+        }
+        netAmountText.setText(getString(R.string.game_view_amount_hidden));
+        netAmountText.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
+        netAmountText.setBackground(null);
+    }
+
+    private void applyStandingNetAmountDisplay(TextView netAmountText, PlayerStanding standing,
+                                               com.example.rummypulse.data.GameData gameData) {
+        if (netAmountText == null) {
+            return;
+        }
+        if (!shouldShowStandingAmounts(gameData)) {
+            applyStandingNetAmountPlaceholder(netAmountText);
+            return;
+        }
+        netAmountText.setText("₹" + String.format("%.0f", standing.netAmount));
+        if (standing.netAmount > 0) {
+            netAmountText.setTextColor(getResources().getColor(R.color.success_green, getTheme()));
+        } else {
+            netAmountText.setTextColor(getResources().getColor(R.color.error_red, getTheme()));
+        }
+        netAmountText.setBackground(null);
+    }
+
     private boolean isGameCompleted(com.example.rummypulse.data.GameData gameData) {
         // Always check game data directly for round 10 completion
         // This works reliably in both edit and view modes
@@ -2441,20 +2493,8 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView scoreText = standingsRowView.findViewById(R.id.text_score);
             scoreText.setText(String.valueOf(standing.totalScore));
 
-            // Set net amount only (simplified display)
             TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
-            netAmountText.setText("₹" + String.format("%.0f", standing.netAmount));
-            
-            // Color code based on positive/negative net amount - text color only
-            if (standing.netAmount > 0) {
-                // Positive net amount (winners) - green text only
-                netAmountText.setTextColor(getResources().getColor(R.color.success_green, getTheme()));
-                netAmountText.setBackground(null); // Remove any background
-            } else {
-                // Negative net amount (losers) - red text only
-                netAmountText.setTextColor(getResources().getColor(R.color.error_red, getTheme()));
-                netAmountText.setBackground(null); // Remove any background
-            }
+            applyStandingNetAmountDisplay(netAmountText, standing, gameData);
 
             // Populate round scores
             populateRoundScores(standingsRowView, standing.player, gameData);
@@ -3422,6 +3462,26 @@ public class JoinGameActivity extends AppCompatActivity {
      * This ensures the standings update automatically when other players modify scores or names
      * Note: Listener is NOT set up in edit mode to prevent interference with score updates
      */
+    private void setupGameDefaultsListener() {
+        if (gameDefaultsListener != null) {
+            return;
+        }
+        gameDefaultsListener = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection(com.example.rummypulse.data.GameDefaultsRepository.COLLECTION)
+                .document(com.example.rummypulse.data.GameDefaultsRepository.DOCUMENT_ID)
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null || snapshot == null || !snapshot.exists()) {
+                        return;
+                    }
+                    com.example.rummypulse.data.GameDefaultsRepository.getInstance(getApplicationContext())
+                            .applyConfigSnapshot(snapshot);
+                    com.example.rummypulse.data.GameData data = viewModel.getGameData().getValue();
+                    if (data != null && !isFinishing()) {
+                        runOnUiThread(() -> refreshStandingsUi(data));
+                    }
+                });
+    }
+
     private void setupRealtimeListener() {
         if (currentGameId == null) {
             System.out.println("Cannot setup listener: currentGameId is null");
@@ -4171,7 +4231,9 @@ public class JoinGameActivity extends AppCompatActivity {
         text.append("👥 *Players:* ").append(gameData.getNumPlayers()).append("\n");
         text.append("💰 *Point Value:* ₹").append(String.format("%.2f", gameData.getPointValue())).append("\n");
         text.append("📊 *Contribution %:* ").append(String.format("%.0f", gameData.getGstPercent())).append("%\n");
-        text.append("💵 *Total Contribution:* ₹").append(String.format("%.0f", totalContribution)).append("\n");
+        if (shouldShowStandingAmounts(gameData)) {
+            text.append("💵 *Total Contribution:* ₹").append(String.format("%.0f", totalContribution)).append("\n");
+        }
         text.append("━━━━━━━━━━━━━━━━━━━━━━\n");
         
         // Sort by total score (ascending - lower is better)
@@ -4194,7 +4256,9 @@ public class JoinGameActivity extends AppCompatActivity {
             // Compact format: Rank Name • Score: X • Net: ₹Y
             text.append(rankEmoji).append(" *").append(standing.player.getName()).append("*");
             text.append(" • Score: ").append(standing.totalScore);
-            text.append(" • Net: ₹").append(String.format("%.0f", standing.netAmount));
+            if (shouldShowStandingAmounts(gameData)) {
+                text.append(" • Net: ₹").append(String.format("%.0f", standing.netAmount));
+            }
             text.append("\n");
         }
         

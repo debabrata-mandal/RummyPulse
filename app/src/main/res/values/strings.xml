@@ -133,6 +133,8 @@
     <string name="game_defaults_contribution_hint">Default contribution %</string>
     <string name="game_defaults_contribution_admin_only_helper">Admins only.</string>
     <string name="cd_game_defaults_contribution_locked">Contribution percent locked. Admins only.</string>
+    <string name="game_defaults_display_intermediate_title">Show live amounts</string>
+    <string name="game_view_amount_hidden">—</string>
     <string name="game_defaults_increment_hint">Mid-game new player score increment</string>
     <string name="game_defaults_increment_required">Enter the increment (0 or higher)</string>
     <string name="game_defaults_increment_invalid">Enter a whole number from 0 upward</string>

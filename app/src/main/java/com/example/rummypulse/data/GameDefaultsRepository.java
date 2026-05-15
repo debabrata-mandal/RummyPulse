@@ -61,6 +61,37 @@ public class GameDefaultsRepository {
         return cachedResolved.getDefaultMidGameNewPlayerScoreIncrement();
     }
 
+    public boolean isDisplayIntermediateCalculationEnabled() {
+        return cachedResolved.isDisplayIntermediateCalculation();
+    }
+
+    /** Updates in-memory flag immediately (e.g. when the switch is toggled). */
+    public void setDisplayIntermediateCalculationCached(boolean enabled) {
+        cachedResolved.setDisplayIntermediateCalculation(enabled);
+    }
+
+    /** Merge only {@code displayIntermediateCalculation} to Firestore. */
+    public com.google.android.gms.tasks.Task<Void> saveDisplayIntermediateCalculation(boolean enabled) {
+        setDisplayIntermediateCalculationCached(enabled);
+        Map<String, Object> map = new HashMap<>();
+        map.put("displayIntermediateCalculation", enabled);
+        return db.collection(COLLECTION).document(DOCUMENT_ID)
+                .set(map, SetOptions.merge())
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful()) {
+                        Exception e = task.getException();
+                        return e != null ? Tasks.forException(e) : Tasks.forException(new IllegalStateException("set failed"));
+                    }
+                    return db.collection(COLLECTION).document(DOCUMENT_ID).get();
+                })
+                .continueWith(task -> {
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        applySnapshot((DocumentSnapshot) task.getResult());
+                    }
+                    return null;
+                });
+    }
+
     public void refreshFromServer(@Nullable Runnable onComplete) {
         refreshFromServer(onComplete, null);
     }
@@ -89,17 +120,28 @@ public class GameDefaultsRepository {
     private void applySnapshot(DocumentSnapshot snapshot) {
         if (snapshot != null && snapshot.exists()) {
             GameDefaults raw = snapshot.toObject(GameDefaults.class);
+            if (raw == null) {
+                raw = new GameDefaults();
+            }
+            if (snapshot.contains("displayIntermediateCalculation")) {
+                raw.setDisplayIntermediateCalculation(snapshot.getBoolean("displayIntermediateCalculation"));
+            }
             cachedResolved = GameDefaults.resolvedFromFirestoreBean(raw);
         } else {
             cachedResolved = GameDefaults.resolvedFromFirestoreBean(null);
         }
     }
 
+    /** Apply a realtime snapshot of gameDefaults/config (e.g. from JoinGameActivity listener). */
+    public void applyConfigSnapshot(DocumentSnapshot snapshot) {
+        applySnapshot(snapshot);
+    }
+
     /**
      * @param gstPercentOrNull when non-null, written as {@code defaultGstPercent}; when null, that field is omitted from the merge so the server value is preserved (non-admin contribution saves).
      */
     public com.google.android.gms.tasks.Task<Void> saveDefaults(double pointValue, long midGameIncrement,
-            @Nullable Double gstPercentOrNull) {
+            boolean displayIntermediateCalculation, @Nullable Double gstPercentOrNull) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         final String uid = user != null ? user.getUid() : "";
         final String updatedByName;
@@ -117,6 +159,7 @@ public class GameDefaultsRepository {
             map.put("defaultGstPercent", gstPercentOrNull);
         }
         map.put("defaultMidGameNewPlayerScoreIncrement", midGameIncrement);
+        map.put("displayIntermediateCalculation", displayIntermediateCalculation);
         map.put("updatedAt", FieldValue.serverTimestamp());
         map.put("updatedByUserId", uid);
         map.put("updatedByUserName", updatedByName);
@@ -143,6 +186,7 @@ public class GameDefaultsRepository {
                         patch.setDefaultPointValue(pointValue);
                         patch.setDefaultGstPercent(gstForFailurePatch);
                         patch.setDefaultMidGameNewPlayerScoreIncrement(midGameIncrement);
+                        patch.setDisplayIntermediateCalculation(displayIntermediateCalculation);
                         patch.setUpdatedByUserId(uid);
                         patch.setUpdatedByUserName(updatedByName);
                         cachedResolved = GameDefaults.resolvedFromFirestoreBean(patch);

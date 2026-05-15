@@ -10,10 +10,12 @@ public class GameDefaults {
     public static final double FALLBACK_DEFAULT_POINT_VALUE = 0.15;
     public static final double FALLBACK_DEFAULT_GST_PERCENT = 25.0;
     public static final long FALLBACK_MID_GAME_INCREMENT = 2L;
+    public static final boolean FALLBACK_DISPLAY_INTERMEDIATE_CALCULATION = true;
 
     private Double defaultPointValue;
     private Double defaultGstPercent;
     private Long defaultMidGameNewPlayerScoreIncrement;
+    private Boolean displayIntermediateCalculation;
     private Timestamp updatedAt;
     private String updatedByUserId;
     private String updatedByUserName;
@@ -47,6 +49,15 @@ public class GameDefaults {
         this.defaultMidGameNewPlayerScoreIncrement = defaultMidGameNewPlayerScoreIncrement;
     }
 
+    /** When true, standings show net amounts while rounds are in progress; when false, amounts appear only after the game is complete. */
+    public boolean isDisplayIntermediateCalculation() {
+        return displayIntermediateCalculation == null || displayIntermediateCalculation;
+    }
+
+    public void setDisplayIntermediateCalculation(Boolean displayIntermediateCalculation) {
+        this.displayIntermediateCalculation = displayIntermediateCalculation;
+    }
+
     public Timestamp getUpdatedAt() {
         return updatedAt;
     }
@@ -78,6 +89,7 @@ public class GameDefaults {
             g.setDefaultPointValue(FALLBACK_DEFAULT_POINT_VALUE);
             g.setDefaultGstPercent(FALLBACK_DEFAULT_GST_PERCENT);
             g.setDefaultMidGameNewPlayerScoreIncrement(FALLBACK_MID_GAME_INCREMENT);
+            g.setDisplayIntermediateCalculation(FALLBACK_DISPLAY_INTERMEDIATE_CALCULATION);
             return g;
         }
         g.setDefaultPointValue(fromDb.defaultPointValue != null && fromDb.defaultPointValue > 0
@@ -87,6 +99,9 @@ public class GameDefaults {
         long inc = fromDb.defaultMidGameNewPlayerScoreIncrement != null
                 ? fromDb.defaultMidGameNewPlayerScoreIncrement : FALLBACK_MID_GAME_INCREMENT;
         g.setDefaultMidGameNewPlayerScoreIncrement(Math.max(0L, inc));
+        g.setDisplayIntermediateCalculation(fromDb.displayIntermediateCalculation != null
+                ? fromDb.displayIntermediateCalculation
+                : FALLBACK_DISPLAY_INTERMEDIATE_CALCULATION);
         g.setUpdatedAt(fromDb.updatedAt);
         g.setUpdatedByUserId(fromDb.updatedByUserId);
         g.setUpdatedByUserName(fromDb.updatedByUserName);

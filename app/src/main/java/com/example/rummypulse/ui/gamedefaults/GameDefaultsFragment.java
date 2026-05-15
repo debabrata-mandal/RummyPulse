@@ -32,6 +32,7 @@ public class GameDefaultsFragment extends Fragment {
     private GameDefaultsViewModel viewModel;
     /** True when {@link AppUserRoleSession} reports {@link AppUserRoleSession.Role#ADMIN} (appUser.role == admin_user). */
     private boolean canEditDefaultContribution;
+    private boolean suppressSwitchCallback;
 
     @Nullable
     @Override
@@ -47,6 +48,13 @@ public class GameDefaultsFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         binding.btnSaveDefaults.setOnClickListener(v -> attemptSave());
+
+        binding.switchDisplayIntermediateCalculation.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchCallback) {
+                return;
+            }
+            viewModel.saveDisplayIntermediateCalculation(isChecked);
+        });
 
         viewModel.getDefaults().observe(getViewLifecycleOwner(), this::populateFieldsFromDefaults);
         viewModel.getLoading().observe(getViewLifecycleOwner(), loading -> {
@@ -112,6 +120,9 @@ public class GameDefaultsFragment extends Fragment {
         binding.editDefaultPointValue.setText(formatPoint(g.getDefaultPointValue()));
         binding.editDefaultContribution.setText(String.valueOf((int) Math.round(g.getDefaultGstPercent())));
         binding.editMidGameIncrement.setText(String.valueOf(g.getDefaultMidGameNewPlayerScoreIncrement()));
+        suppressSwitchCallback = true;
+        binding.switchDisplayIntermediateCalculation.setChecked(g.isDisplayIntermediateCalculation());
+        suppressSwitchCallback = false;
         clearFieldErrors();
         binding.textAudit.setText(buildAuditText(g));
         applyDefaultContributionFieldState();
@@ -150,9 +161,11 @@ public class GameDefaultsFragment extends Fragment {
             if (gst == null) {
                 return;
             }
-            viewModel.save(point, (double) gst, inc, true);
+            viewModel.save(point, (double) gst, inc,
+                    binding.switchDisplayIntermediateCalculation.isChecked(), true);
         } else {
-            viewModel.save(point, null, inc, false);
+            viewModel.save(point, null, inc,
+                    binding.switchDisplayIntermediateCalculation.isChecked(), false);
         }
     }
 
