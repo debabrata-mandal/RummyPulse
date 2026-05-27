@@ -15,8 +15,13 @@
     <string name="menu_reports">Reports</string>
     <string name="reports_screen_subtitle">Monthly summaries of approved games.</string>
     <string name="reports_empty_title">No saved reports</string>
-    <string name="reports_empty_message">Tap Rebuild month to generate the current calendar month from approved games.</string>
-    <string name="reports_fab_build_month">Rebuild month</string>
+    <string name="reports_empty_message">Tap Rebuild report to choose a month and generate it from approved games.</string>
+    <string name="reports_fab_build_month">Rebuild report</string>
+    <string name="reports_rebuild_month_dialog_title">Rebuild report month</string>
+    <string name="reports_rebuild_month_dialog_message">Choose the month to rebuild from approved games.</string>
+    <string name="reports_rebuild_month_month_label">Month</string>
+    <string name="reports_rebuild_month_year_label">Year</string>
+    <string name="reports_rebuild_month_confirm">Rebuild</string>
     <string name="reports_stat_total_contribution">Total contribution</string>
     <string name="reports_stat_avg_contribution_per_game">Avg contribution / game</string>
     <string name="reports_stat_total_players">Total players</string>

@@ -5,18 +5,26 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.NumberPicker;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.example.rummypulse.R;
 import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.databinding.FragmentReportsBinding;
+
+import java.text.DateFormatSymbols;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Locale;
 
 public class ReportsFragment extends Fragment {
 
@@ -66,7 +74,7 @@ public class ReportsFragment extends Fragment {
                 applyBuildMonthAccess(AppUserRoleSession.getInstance().peekRole());
                 return;
             }
-            reportsViewModel.rebuildCurrentMonthReport();
+            showRebuildMonthDialog();
         });
     }
 
@@ -132,6 +140,75 @@ public class ReportsFragment extends Fragment {
         boolean isAdmin = role == AppUserRoleSession.Role.ADMIN;
         binding.fabBuildMonth.setVisibility(isAdmin ? View.VISIBLE : View.GONE);
         binding.fabBuildMonth.setEnabled(isAdmin);
+    }
+
+    private void showRebuildMonthDialog() {
+        if (!isAdded() || getContext() == null) {
+            return;
+        }
+
+        Calendar defaultMonth = Calendar.getInstance();
+
+        LinearLayout content = new LinearLayout(requireContext());
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(24), dp(8), dp(24), 0);
+
+        TextView message = new TextView(requireContext());
+        message.setText(R.string.reports_rebuild_month_dialog_message);
+        content.addView(message);
+
+        LinearLayout pickerRow = new LinearLayout(requireContext());
+        pickerRow.setOrientation(LinearLayout.HORIZONTAL);
+        pickerRow.setPadding(0, dp(12), 0, 0);
+        content.addView(pickerRow);
+
+        NumberPicker monthPicker = new NumberPicker(requireContext());
+        String[] monthNames = Arrays.copyOf(
+                DateFormatSymbols.getInstance(Locale.getDefault()).getMonths(), 12);
+        monthPicker.setMinValue(Calendar.JANUARY);
+        monthPicker.setMaxValue(Calendar.DECEMBER);
+        monthPicker.setDisplayedValues(monthNames);
+        monthPicker.setValue(defaultMonth.get(Calendar.MONTH));
+
+        NumberPicker yearPicker = new NumberPicker(requireContext());
+        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+        yearPicker.setMinValue(2000);
+        yearPicker.setMaxValue(currentYear + 1);
+        yearPicker.setWrapSelectorWheel(false);
+        yearPicker.setValue(defaultMonth.get(Calendar.YEAR));
+
+        pickerRow.addView(createPickerColumn(
+                getString(R.string.reports_rebuild_month_month_label), monthPicker));
+        pickerRow.addView(createPickerColumn(
+                getString(R.string.reports_rebuild_month_year_label), yearPicker));
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.reports_rebuild_month_dialog_title)
+                .setView(content)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.reports_rebuild_month_confirm,
+                        (dialog, which) -> reportsViewModel.rebuildMonthReport(
+                                yearPicker.getValue(), monthPicker.getValue()))
+                .show();
+    }
+
+    private LinearLayout createPickerColumn(String label, NumberPicker picker) {
+        LinearLayout column = new LinearLayout(requireContext());
+        column.setOrientation(LinearLayout.VERTICAL);
+        column.setLayoutParams(new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView labelView = new TextView(requireContext());
+        labelView.setText(label);
+        labelView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+
+        column.addView(labelView);
+        column.addView(picker);
+        return column;
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void showReports() {

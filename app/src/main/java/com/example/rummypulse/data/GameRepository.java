@@ -951,21 +951,20 @@ public class GameRepository {
     }
 
     /**
-     * Rebuilds {@code approvedGamesReport/{yyyy-MM}} for the current calendar month only.
+     * Rebuilds {@code approvedGamesReport/{yyyy-MM}} for the selected calendar month.
      * Uses a full collection read without {@code orderBy} (no composite index), then filters in memory
      * by {@link ReportAggregator#yearMonthKey(ApprovedGameData)} so games without {@code approvedAt}
      * still align with month grouping.
      */
-    public void rebuildApprovedGamesReportForCurrentMonth(Runnable onSuccess, Consumer<String> onFailure) {
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.DAY_OF_MONTH, 1);
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        final String yyyyMm = String.format(Locale.US, "%04d-%02d",
-                cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1);
-
+    public void rebuildApprovedGamesReportForMonth(int year, int monthZeroBased,
+                                                   Runnable onSuccess, Consumer<String> onFailure) {
+        if (monthZeroBased < Calendar.JANUARY || monthZeroBased > Calendar.DECEMBER) {
+            if (onFailure != null) {
+                onFailure.accept("Invalid report month");
+            }
+            return;
+        }
+        final String yyyyMm = String.format(Locale.US, "%04d-%02d", year, monthZeroBased + 1);
         db.collection(APPROVED_GAMES_COLLECTION)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
@@ -1004,6 +1003,15 @@ public class GameRepository {
                         onFailure.accept(e.getMessage());
                     }
                 });
+    }
+
+    /**
+     * Rebuilds {@code approvedGamesReport/{yyyy-MM}} for the current calendar month.
+     */
+    public void rebuildApprovedGamesReportForCurrentMonth(Runnable onSuccess, Consumer<String> onFailure) {
+        Calendar cal = Calendar.getInstance();
+        rebuildApprovedGamesReportForMonth(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH),
+                onSuccess, onFailure);
     }
 
     /**

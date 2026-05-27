@@ -8,7 +8,9 @@ import androidx.lifecycle.ViewModel;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.MonthlyPointValueReport;
 
+import java.text.DateFormatSymbols;
 import java.util.List;
+import java.util.Locale;
 
 public class ReportsViewModel extends ViewModel {
 
@@ -91,15 +93,28 @@ public class ReportsViewModel extends ViewModel {
     }
 
     public void rebuildCurrentMonthReport() {
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        rebuildMonthReport(cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH));
+    }
+
+    public void rebuildMonthReport(int year, int monthZeroBased) {
         mIsLoading.setValue(true);
-        pendingSuccessMessage = "Current month report saved";
-        gameRepository.rebuildApprovedGamesReportForCurrentMonth(
+        pendingSuccessMessage = formatMonthLabel(year, monthZeroBased) + " report saved";
+        gameRepository.rebuildApprovedGamesReportForMonth(year, monthZeroBased,
                 () -> gameRepository.loadReportsFromSavedSummaries(),
                 err -> {
                     pendingSuccessMessage = null;
                     mError.setValue(err != null ? err : "Build failed");
                     mIsLoading.setValue(false);
                 });
+    }
+
+    private String formatMonthLabel(int year, int monthZeroBased) {
+        String[] months = DateFormatSymbols.getInstance(Locale.getDefault()).getMonths();
+        if (monthZeroBased >= 0 && monthZeroBased < 12) {
+            return months[monthZeroBased] + " " + year;
+        }
+        return String.format(Locale.getDefault(), "%04d-%02d", year, monthZeroBased + 1);
     }
 
     @Override
