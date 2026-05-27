@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.databinding.FragmentReportsBinding;
 
 public class ReportsFragment extends Fragment {
@@ -59,8 +60,14 @@ public class ReportsFragment extends Fragment {
     }
 
     private void setupBuildActions() {
-        binding.fabBuildMonth.setOnClickListener(v ->
-                reportsViewModel.rebuildCurrentMonthReport());
+        applyBuildMonthAccess(AppUserRoleSession.getInstance().peekRole());
+        binding.fabBuildMonth.setOnClickListener(v -> {
+            if (AppUserRoleSession.getInstance().peekRole() != AppUserRoleSession.Role.ADMIN) {
+                applyBuildMonthAccess(AppUserRoleSession.getInstance().peekRole());
+                return;
+            }
+            reportsViewModel.rebuildCurrentMonthReport();
+        });
     }
 
     private void setupSwipeRefresh() {
@@ -113,6 +120,18 @@ public class ReportsFragment extends Fragment {
                 showError(error);
             }
         });
+
+        AppUserRoleSession.getInstance().getRole().observe(getViewLifecycleOwner(),
+                this::applyBuildMonthAccess);
+    }
+
+    private void applyBuildMonthAccess(AppUserRoleSession.Role role) {
+        if (binding == null) {
+            return;
+        }
+        boolean isAdmin = role == AppUserRoleSession.Role.ADMIN;
+        binding.fabBuildMonth.setVisibility(isAdmin ? View.VISIBLE : View.GONE);
+        binding.fabBuildMonth.setEnabled(isAdmin);
     }
 
     private void showReports() {
