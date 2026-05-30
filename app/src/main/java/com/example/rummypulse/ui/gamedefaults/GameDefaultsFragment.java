@@ -31,7 +31,7 @@ public class GameDefaultsFragment extends Fragment {
     private FragmentGameDefaultsBinding binding;
     private GameDefaultsViewModel viewModel;
     /** True when {@link AppUserRoleSession} reports {@link AppUserRoleSession.Role#ADMIN} (appUser.role == admin_user). */
-    private boolean canEditDefaultContribution;
+    private boolean isAdmin;
     private boolean suppressSwitchCallback;
 
     @Nullable
@@ -50,10 +50,10 @@ public class GameDefaultsFragment extends Fragment {
         binding.btnSaveDefaults.setOnClickListener(v -> attemptSave());
 
         binding.switchDisplayIntermediateCalculation.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (suppressSwitchCallback) {
+            if (suppressSwitchCallback || !isAdmin) {
                 return;
             }
-            viewModel.saveDisplayIntermediateCalculation(isChecked);
+            viewModel.saveDisplayIntermediateCalculation(isChecked, true);
         });
 
         viewModel.getDefaults().observe(getViewLifecycleOwner(), this::populateFieldsFromDefaults);
@@ -78,24 +78,23 @@ public class GameDefaultsFragment extends Fragment {
             if (binding == null) {
                 return;
             }
-            canEditDefaultContribution = role == AppUserRoleSession.Role.ADMIN;
-            applyDefaultContributionFieldState();
+            isAdmin = role == AppUserRoleSession.Role.ADMIN;
+            applyAdminOnlyFieldStates();
         });
 
         viewModel.load();
     }
 
-    private void applyDefaultContributionFieldState() {
+    private void applyAdminOnlyFieldStates() {
         if (binding == null) {
             return;
         }
-        boolean enabled = canEditDefaultContribution;
-        binding.layoutDefaultContribution.setEnabled(enabled);
-        binding.editDefaultContribution.setEnabled(enabled);
-        binding.editDefaultContribution.setFocusable(enabled);
-        binding.editDefaultContribution.setFocusableInTouchMode(enabled);
-        binding.editDefaultContribution.setCursorVisible(enabled);
-        if (enabled) {
+        binding.layoutDefaultContribution.setEnabled(isAdmin);
+        binding.editDefaultContribution.setEnabled(isAdmin);
+        binding.editDefaultContribution.setFocusable(isAdmin);
+        binding.editDefaultContribution.setFocusableInTouchMode(isAdmin);
+        binding.editDefaultContribution.setCursorVisible(isAdmin);
+        if (isAdmin) {
             binding.layoutDefaultContribution.setStartIconDrawable(
                     ContextCompat.getDrawable(requireContext(), R.drawable.ic_percent));
             binding.layoutDefaultContribution.setStartIconTintList(
@@ -111,6 +110,27 @@ public class GameDefaultsFragment extends Fragment {
                     getString(R.string.cd_game_defaults_contribution_locked));
             binding.layoutDefaultContribution.setHelperText(getString(R.string.game_defaults_contribution_admin_only_helper));
         }
+
+        binding.switchDisplayIntermediateCalculation.setEnabled(isAdmin);
+        if (isAdmin) {
+            binding.iconDisplayIntermediate.setImageDrawable(
+                    ContextCompat.getDrawable(requireContext(), R.drawable.ic_visibility));
+            binding.iconDisplayIntermediate.setImageTintList(
+                    ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.accent_blue_light)));
+            binding.iconDisplayIntermediate.setContentDescription(null);
+            binding.switchDisplayIntermediateCalculation.setContentDescription(null);
+            binding.textDisplayIntermediateHelper.setVisibility(View.GONE);
+        } else {
+            binding.iconDisplayIntermediate.setImageDrawable(
+                    ContextCompat.getDrawable(requireContext(), R.drawable.ic_lock));
+            binding.iconDisplayIntermediate.setImageTintList(
+                    ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.text_secondary)));
+            binding.iconDisplayIntermediate.setContentDescription(
+                    getString(R.string.cd_game_defaults_display_intermediate_locked));
+            binding.switchDisplayIntermediateCalculation.setContentDescription(
+                    getString(R.string.cd_game_defaults_display_intermediate_locked));
+            binding.textDisplayIntermediateHelper.setVisibility(View.VISIBLE);
+        }
     }
 
     private void populateFieldsFromDefaults(GameDefaults g) {
@@ -125,7 +145,7 @@ public class GameDefaultsFragment extends Fragment {
         suppressSwitchCallback = false;
         clearFieldErrors();
         binding.textAudit.setText(buildAuditText(g));
-        applyDefaultContributionFieldState();
+        applyAdminOnlyFieldStates();
     }
 
     private String buildAuditText(GameDefaults g) {
@@ -154,7 +174,7 @@ public class GameDefaultsFragment extends Fragment {
         if (inc == null) {
             return;
         }
-        if (canEditDefaultContribution) {
+        if (isAdmin) {
             Integer gst = parseIntField(binding.layoutDefaultContribution, binding.editDefaultContribution.getText().toString(),
                     getString(R.string.dialog_contribution_required),
                     getString(R.string.dialog_contribution_invalid), 0, 100);
@@ -164,8 +184,7 @@ public class GameDefaultsFragment extends Fragment {
             viewModel.save(point, (double) gst, inc,
                     binding.switchDisplayIntermediateCalculation.isChecked(), true);
         } else {
-            viewModel.save(point, null, inc,
-                    binding.switchDisplayIntermediateCalculation.isChecked(), false);
+            viewModel.save(point, null, inc, null, false);
         }
     }
 

@@ -18,9 +18,10 @@ import java.util.Map;
 /**
  * Singleton access to {@code gameDefaults/config}.
  * <p>
- * For server-side enforcement when non-admins may write point/increment but not contribution,
- * Firestore rules should allow writes only if the caller is {@code appUser/{uid}.role == "admin_user"}
- * or {@code defaultGstPercent} is unchanged on merge updates.
+ * For server-side enforcement when non-admins may write point/increment but not contribution or
+ * display-intermediate, Firestore rules should allow writes only if the caller is
+ * {@code appUser/{uid}.role == "admin_user"} or {@code defaultGstPercent} and
+ * {@code displayIntermediateCalculation} are unchanged on merge updates.
  */
 public class GameDefaultsRepository {
 
@@ -139,9 +140,10 @@ public class GameDefaultsRepository {
 
     /**
      * @param gstPercentOrNull when non-null, written as {@code defaultGstPercent}; when null, that field is omitted from the merge so the server value is preserved (non-admin contribution saves).
+     * @param displayIntermediateOrNull when non-null, written as {@code displayIntermediateCalculation}; when null, omitted (non-admin saves).
      */
     public com.google.android.gms.tasks.Task<Void> saveDefaults(double pointValue, long midGameIncrement,
-            boolean displayIntermediateCalculation, @Nullable Double gstPercentOrNull) {
+            @Nullable Boolean displayIntermediateOrNull, @Nullable Double gstPercentOrNull) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         final String uid = user != null ? user.getUid() : "";
         final String updatedByName;
@@ -159,7 +161,9 @@ public class GameDefaultsRepository {
             map.put("defaultGstPercent", gstPercentOrNull);
         }
         map.put("defaultMidGameNewPlayerScoreIncrement", midGameIncrement);
-        map.put("displayIntermediateCalculation", displayIntermediateCalculation);
+        if (displayIntermediateOrNull != null) {
+            map.put("displayIntermediateCalculation", displayIntermediateOrNull);
+        }
         map.put("updatedAt", FieldValue.serverTimestamp());
         map.put("updatedByUserId", uid);
         map.put("updatedByUserName", updatedByName);
@@ -167,6 +171,9 @@ public class GameDefaultsRepository {
         final double gstForFailurePatch = gstPercentOrNull != null
                 ? gstPercentOrNull
                 : cachedResolved.getDefaultGstPercent();
+        final boolean displayForFailurePatch = displayIntermediateOrNull != null
+                ? displayIntermediateOrNull
+                : cachedResolved.isDisplayIntermediateCalculation();
 
         // Re-fetch after set so updatedAt (serverTimestamp) is materialized in the snapshot.
         return db.collection(COLLECTION).document(DOCUMENT_ID)
@@ -186,7 +193,7 @@ public class GameDefaultsRepository {
                         patch.setDefaultPointValue(pointValue);
                         patch.setDefaultGstPercent(gstForFailurePatch);
                         patch.setDefaultMidGameNewPlayerScoreIncrement(midGameIncrement);
-                        patch.setDisplayIntermediateCalculation(displayIntermediateCalculation);
+                        patch.setDisplayIntermediateCalculation(displayForFailurePatch);
                         patch.setUpdatedByUserId(uid);
                         patch.setUpdatedByUserName(updatedByName);
                         cachedResolved = GameDefaults.resolvedFromFirestoreBean(patch);

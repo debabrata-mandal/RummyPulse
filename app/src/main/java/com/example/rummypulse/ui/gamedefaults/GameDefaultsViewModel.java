@@ -59,15 +59,17 @@ public class GameDefaultsViewModel extends AndroidViewModel {
     }
 
     /**
-     * @param gstPercentOrNull ignored when {@code canEditContribution} is false (repository omits GST field).
+     * @param gstPercentOrNull ignored when {@code isAdmin} is false (repository omits GST field).
+     * @param displayIntermediateOrNull ignored when {@code isAdmin} is false (repository omits display field).
      */
     public void save(double pointValue, @Nullable Double gstPercentOrNull, long midGameIncrement,
-            boolean displayIntermediateCalculation, boolean canEditContribution) {
+            @Nullable Boolean displayIntermediateOrNull, boolean isAdmin) {
         loading.setValue(true);
         error.setValue(null);
         saveSuccess.setValue(false);
-        Double gstWrite = canEditContribution ? gstPercentOrNull : null;
-        repository.saveDefaults(pointValue, midGameIncrement, displayIntermediateCalculation, gstWrite)
+        Double gstWrite = isAdmin ? gstPercentOrNull : null;
+        Boolean displayWrite = isAdmin ? displayIntermediateOrNull : null;
+        repository.saveDefaults(pointValue, midGameIncrement, displayWrite, gstWrite)
                 .addOnSuccessListener(aVoid -> {
                     loading.postValue(false);
                     saveSuccess.postValue(true);
@@ -88,7 +90,10 @@ public class GameDefaultsViewModel extends AndroidViewModel {
         saveSuccess.setValue(false);
     }
 
-    public void saveDisplayIntermediateCalculation(boolean enabled) {
+    public void saveDisplayIntermediateCalculation(boolean enabled, boolean isAdmin) {
+        if (!isAdmin) {
+            return;
+        }
         repository.setDisplayIntermediateCalculationCached(enabled);
         repository.saveDisplayIntermediateCalculation(enabled)
                 .addOnFailureListener(e -> error.postValue(
