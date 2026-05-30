@@ -420,7 +420,8 @@
                                 android:layout_height="24dp"
                                 android:src="@drawable/ic_gamepad"
                                 android:tint="#2196F3"
-                                android:layout_marginEnd="8dp" />
+                                android:layout_marginEnd="8dp"
+                                android:contentDescription="@null" />
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -495,6 +496,21 @@
                         </LinearLayout>
 
                     </LinearLayout>
+
+                    <ImageView
+                        android:id="@+id/btn_correct_past_round"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="4dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:contentDescription="@string/cd_correct_past_round"
+                        android:focusable="true"
+                        android:padding="6dp"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/ic_edit"
+                        android:tint="@color/accent_blue"
+                        android:visibility="gone" />
 
                     <!-- Collapse/Expand Icon -->
                     <ImageView

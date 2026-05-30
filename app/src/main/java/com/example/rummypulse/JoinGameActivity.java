@@ -14,17 +14,20 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.GridLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.rummypulse.databinding.ActivityJoinGameBinding;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
 import com.example.rummypulse.utils.ModernToast;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -71,6 +74,7 @@ public class JoinGameActivity extends AppCompatActivity {
     
     // Timing constants
     private static final long EDIT_MODE_DEBOUNCE_MS = 4000; // 4 seconds for edit mode
+    private static final String REAL_PLAYER_CARD_TAG = "real_player_card";
     private static final long VIEW_MODE_DEBOUNCE_MS = 2000; // 2 seconds for view mode
     private static final long BULK_UPDATE_DEBOUNCE_MS = 6000; // 6 seconds for bulk updates
     private static final long GAME_COMPLETION_BUFFER_MS = 2000; // 2 seconds buffer after pending announcements
@@ -87,8 +91,6 @@ public class JoinGameActivity extends AppCompatActivity {
     private AlertDialog activeSequentialScoreDialog;
 
     /** When true, score {@link EditText} watchers skip persistence (programmatic sync from dialog). */
-    private boolean suppressScoreTextWatcherPersistence = false;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -944,16 +946,11 @@ public class JoinGameActivity extends AppCompatActivity {
             // Set placeholder player name
             EditText playerNameText = playerCardView.findViewById(R.id.text_player_name);
             playerNameText.setText("Player " + (i + 1));
-            playerNameText.setEnabled(false); // Disable during loading
-            
-            // Hide round badge (removed - redundant with top panel info)
-            TextView roundBadge = playerCardView.findViewById(R.id.text_current_round_badge);
-            if (roundBadge != null) {
-                // Hide the parent LinearLayout that contains the round badge
-                View parent = (View) roundBadge.getParent();
-                if (parent != null) {
-                    parent.setVisibility(View.GONE);
-                }
+            playerNameText.setEnabled(false);
+
+            TextView totalScoreView = playerCardView.findViewById(R.id.text_player_total_score);
+            if (totalScoreView != null) {
+                totalScoreView.setText("—");
             }
             
             binding.playersContainer.addView(playerCardView);
@@ -985,6 +982,8 @@ public class JoinGameActivity extends AppCompatActivity {
         });
 
         binding.btnEnterRoundScores.setOnClickListener(v -> startSequentialRoundScoreEntryFlow());
+
+        binding.btnCorrectPastRound.setOnClickListener(v -> startPastRoundCorrectionFlow());
         
         // Setup collapsible sections
         setupCollapsibleSections();
@@ -1009,10 +1008,8 @@ public class JoinGameActivity extends AppCompatActivity {
                     // Loading placeholders don't have these tags, so we'll regenerate
                     boolean realPlayerCardsExist = false;
                     if (binding.playersContainer.getChildCount() > 0) {
-                        // Check if first card has a score input with a tag (real player card)
                         View firstCard = binding.playersContainer.getChildAt(0);
-                        EditText firstScoreInput = firstCard.findViewById(R.id.edit_score_r1);
-                        if (firstScoreInput != null && firstScoreInput.getTag() != null) {
+                        if (REAL_PLAYER_CARD_TAG.equals(firstCard.getTag())) {
                             realPlayerCardsExist = true;
                         }
                     }
@@ -1021,18 +1018,14 @@ public class JoinGameActivity extends AppCompatActivity {
                         System.out.println("Player cards don't exist yet (or are placeholders) - generating them");
                         updatePlayersInfo(gameData);
                         generatePlayerCards(gameData);
-                        // Update current round indicator and validation
                         updateCurrentRound(gameData);
-                        updateRoundValidation(gameData);
-                        updateRoundColors(gameData);
+                        updateScoreEntryButtonsVisibility(gameData);
                     } else {
                         System.out.println("Real player cards already exist - skipping regeneration to preserve user input");
-                        // Update player info section, standings, and validation, but don't touch the input fields
                         updatePlayersInfo(gameData);
                         updateStandings(gameData);
                         updateCurrentRound(gameData);
-                        updateRoundValidation(gameData);
-                        updateRoundColors(gameData);
+                        updateScoreEntryButtonsVisibility(gameData);
                     }
                 }
             }
@@ -1056,6 +1049,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Show Players section and Add Player FAB when edit access is granted
                 binding.playersSection.setVisibility(View.VISIBLE);
                 binding.btnAddPlayer.setVisibility(View.VISIBLE);
+                updateScoreEntryButtonsVisibility(viewModel.getGameData().getValue());
                 // Hide Refresh FAB in edit mode
                 binding.btnRefresh.setVisibility(View.GONE);
                 
@@ -1093,6 +1087,7 @@ public class JoinGameActivity extends AppCompatActivity {
                     System.out.println("EDIT ACCESS GRANTED - No listener to remove (already in edit mode or listener was not active)");
                 }
             } else {
+                binding.btnCorrectPastRound.setVisibility(View.GONE);
                 // In view mode - set up real-time listener for game data updates
                 System.out.println("EDIT ACCESS DENIED - Setting up real-time listener for view mode");
                 setupRealtimeListener();
@@ -1108,7 +1103,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Update header PIN visibility (hide in view mode)
                 updateHeaderPinVisibility();
             }
-            updateEnterRoundScoresButtonVisibility(viewModel.getGameData().getValue());
+            updateScoreEntryButtonsVisibility(viewModel.getGameData().getValue());
         });
 
         // Observe loading state
@@ -1326,12 +1321,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
         // Update current round
         updateCurrentRound(gameData);
-        
-        // Update round validation (this is crucial for existing games)
-        updateRoundValidation(gameData);
-        
-        // Update round colors
-        updateRoundColors(gameData);
+        updateScoreEntryButtonsVisibility(gameData);
 
         // Hide admin mode initially
         binding.textAdminMode.setVisibility(View.GONE);
@@ -1378,7 +1368,7 @@ public class JoinGameActivity extends AppCompatActivity {
         // Game PIN is not shown in the compact header (same layout in edit and view mode)
         updateHeaderPinVisibility();
 
-        updateEnterRoundScoresButtonVisibility(gameData);
+        updateScoreEntryButtonsVisibility(gameData);
     }
 
     /**
@@ -1397,6 +1387,34 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         boolean show = !isGameCompleted(gameData);
         binding.btnEnterRoundScores.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateScoreEntryButtonsVisibility(com.example.rummypulse.data.GameData gameData) {
+        updateEnterRoundScoresButtonVisibility(gameData);
+        updateCorrectPastRoundButtonVisibility(gameData);
+    }
+
+    /** Shows the edit icon when at least one past round can be corrected. */
+    private void updateCorrectPastRoundButtonVisibility(com.example.rummypulse.data.GameData gameData) {
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        if (editAccess == null || !editAccess) {
+            binding.btnCorrectPastRound.setVisibility(View.GONE);
+            return;
+        }
+        int maxPast = getMaxCorrectablePastRound(gameData);
+        binding.btnCorrectPastRound.setVisibility(maxPast >= 1 ? View.VISIBLE : View.GONE);
+    }
+
+    /** Past rounds that can be corrected: R1..R(active-1), or R1..R10 when game is complete. */
+    private int getMaxCorrectablePastRound(com.example.rummypulse.data.GameData gameData) {
+        if (gameData == null || gameData.getPlayers() == null || gameData.getPlayers().isEmpty()) {
+            return 0;
+        }
+        if (isGameCompleted(gameData)) {
+            return 10;
+        }
+        int active = getActiveIncompleteRound1BasedOrZero(gameData);
+        return active > 1 ? active - 1 : 0;
     }
     
     private void updateHeaderPinVisibility() {
@@ -1506,16 +1524,6 @@ public class JoinGameActivity extends AppCompatActivity {
                 playerId.setVisibility(View.VISIBLE);
             }
 
-            // Hide current round badge (removed - redundant with top panel info)
-            TextView roundBadge = playerCardView.findViewById(R.id.text_current_round_badge);
-            if (roundBadge != null) {
-                // Hide the parent LinearLayout that contains the round badge
-                View parent = (View) roundBadge.getParent();
-                if (parent != null) {
-                    parent.setVisibility(View.GONE);
-                }
-            }
-
             // Setup delete player button
             ImageView deleteButton = playerCardView.findViewById(R.id.btn_delete_player);
             deleteButton.setOnClickListener(v -> {
@@ -1532,113 +1540,152 @@ public class JoinGameActivity extends AppCompatActivity {
                 dragHandle.setVisibility(View.GONE);
             }
 
-            // Set up score inputs
-            EditText[] scoreInputs = {
-                playerCardView.findViewById(R.id.edit_score_r1),
-                playerCardView.findViewById(R.id.edit_score_r2),
-                playerCardView.findViewById(R.id.edit_score_r3),
-                playerCardView.findViewById(R.id.edit_score_r4),
-                playerCardView.findViewById(R.id.edit_score_r5),
-                playerCardView.findViewById(R.id.edit_score_r6),
-                playerCardView.findViewById(R.id.edit_score_r7),
-                playerCardView.findViewById(R.id.edit_score_r8),
-                playerCardView.findViewById(R.id.edit_score_r9),
-                playerCardView.findViewById(R.id.edit_score_r10)
-            };
+            TextView totalScoreView = playerCardView.findViewById(R.id.text_player_total_score);
+            bindPlayerTotalScore(totalScoreView, player);
 
-            // Initialize score inputs with player data
-            for (int round = 0; round < 10; round++) {
-                EditText scoreInput = scoreInputs[round];
-                scoreInput.setTag("p" + (i + 1) + "r" + (round + 1)); // Tag for identification
-                
-                // Set initial value from player data
-                if (player.getScores() != null && player.getScores().size() > round) {
-                    Integer score = player.getScores().get(round);
-                    if (score != null && score != -1) {
-                        scoreInput.setText(score.toString());
-                    } else {
-                        scoreInput.setText("-1");
-                    }
-                } else {
-                    scoreInput.setText("-1");
-                }
-
-                // Set up sequential round validation
-                setupSequentialRoundValidation(scoreInput, round, playerIndex, gameData);
-
-                // Add focus listener to clear -1 values when user clicks
-                scoreInput.setOnFocusChangeListener((v, hasFocus) -> {
-                    if (hasFocus) {
-                        String currentText = scoreInput.getText().toString().trim();
-                        if ("-1".equals(currentText)) {
-                            scoreInput.setText("");
-                        }
-                    } else {
-                        // When focus is lost, if field is empty, show -1 placeholder
-                        String currentText = scoreInput.getText().toString().trim();
-                        if (currentText.isEmpty()) {
-                            scoreInput.setText("-1");
-                        }
-                    }
-                });
-
-                // Add text change listener for color coding and standings update
-                final int finalPlayerIndex = playerIndex;
-                final int finalRound = round;
-                scoreInput.addTextChangedListener(new android.text.TextWatcher() {
-                    @Override
-                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-                    @Override
-                    public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-                    @Override
-                    public void afterTextChanged(android.text.Editable s) {
-                        if (suppressScoreTextWatcherPersistence) {
-                            return;
-                        }
-                        // Update the score in the player's data
-                        try {
-                            String text = s.toString().trim();
-                            
-                            // Only save if user entered a valid number (not empty, not just clearing)
-                            if (!text.isEmpty()) {
-                                int score = Integer.parseInt(text);
-                                
-                                // Update the player's score in the game data
-                                if (player.getScores() != null && finalRound < player.getScores().size()) {
-                                    player.getScores().set(finalRound, score);
-                                }
-                                
-                                // Save the updated game data to Firebase (with debouncing)
-                                saveGameDataWithDebounce(gameData);
-                                
-                                // Announce player name and score with 4-second debounce
-                                announceScoreWithDebounce(player.getName(), score, finalPlayerIndex, finalRound + 1);
-                                
-                                updateScoreColor(scoreInput);
-                                updateStandings(gameData);
-                                updateCurrentRound(gameData);
-                                updateRoundValidation(gameData);
-                                
-                                // Check if game is completed and announce results (edit mode)
-                                announceGameCompletion(gameData);
-                            } else {
-                                // Field is empty - just update color, don't save to DB
-                                updateScoreColor(scoreInput);
-                            }
-                            
-                        } catch (NumberFormatException e) {
-                            // Invalid number - just update color
-                            updateScoreColor(scoreInput);
-                        }
-                    }
-                });
-            }
-
-
+            playerCardView.setTag(REAL_PLAYER_CARD_TAG);
             binding.playersContainer.addView(playerCardView);
         }
+        refreshAllPlayerTotalScores(gameData);
+    }
+
+    private void bindPlayerTotalScore(TextView totalScoreView, com.example.rummypulse.data.Player player) {
+        if (totalScoreView == null || player == null) {
+            return;
+        }
+        styleTotalScoreTextView(totalScoreView, player.getTotalScore());
+    }
+
+    private void styleTotalScoreTextView(TextView totalScoreView, int total) {
+        totalScoreView.setText(String.valueOf(total));
+        totalScoreView.setTypeface(null, android.graphics.Typeface.BOLD);
+        if (total < 40) {
+            totalScoreView.setTextColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
+        } else if (total <= 120) {
+            totalScoreView.setTextColor(0xFFFFC107);
+        } else {
+            totalScoreView.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_light));
+        }
+    }
+
+    private void refreshPlayerTotalScoreOnCard(int playerIndex, com.example.rummypulse.data.GameData gameData) {
+        if (gameData == null || gameData.getPlayers() == null
+                || playerIndex < 0 || playerIndex >= gameData.getPlayers().size()) {
+            return;
+        }
+        if (playerIndex >= binding.playersContainer.getChildCount()) {
+            return;
+        }
+        View playerCard = binding.playersContainer.getChildAt(playerIndex);
+        TextView totalScoreView = playerCard.findViewById(R.id.text_player_total_score);
+        bindPlayerTotalScore(totalScoreView, gameData.getPlayers().get(playerIndex));
+    }
+
+    private void refreshAllPlayerTotalScores(com.example.rummypulse.data.GameData gameData) {
+        if (gameData == null || gameData.getPlayers() == null) {
+            return;
+        }
+        int count = Math.min(binding.playersContainer.getChildCount(), gameData.getPlayers().size());
+        for (int i = 0; i < count; i++) {
+            refreshPlayerTotalScoreOnCard(i, gameData);
+        }
+    }
+
+    /** Opens round picker, then walks all players for the selected past round. */
+    private void startPastRoundCorrectionFlow() {
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        if (editAccess == null || !editAccess) {
+            return;
+        }
+        com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+        int maxPast = getMaxCorrectablePastRound(gameData);
+        if (maxPast < 1) {
+            ModernToast.info(this, getString(R.string.correct_past_round_none));
+            return;
+        }
+        showPastRoundPickerDialog(gameData, maxPast);
+    }
+
+    private void showPastRoundPickerDialog(com.example.rummypulse.data.GameData gameData, int maxPastRound) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_pick_past_round, null, false);
+        GridLayout grid = dialogView.findViewById(R.id.grid_round_chips);
+        MaterialButton btnCancel = dialogView.findViewById(R.id.btn_pick_round_cancel);
+        MaterialButton btnContinue = dialogView.findViewById(R.id.btn_pick_round_continue);
+
+        final int[] selectedRound = {0};
+        final MaterialButton[] selectedButton = {null};
+
+        final int columnCount = 4;
+        grid.setColumnCount(columnCount);
+        float density = getResources().getDisplayMetrics().density;
+        int chipMargin = Math.round(6 * density);
+        int chipHeight = Math.round(48 * density);
+        int gridWidth = Math.round(getResources().getDisplayMetrics().widthPixels * 0.82f)
+                - Math.round(80 * density);
+        int chipWidth = Math.max(Math.round(64 * density),
+                (gridWidth - chipMargin * 2 * columnCount) / columnCount);
+
+        for (int round = 1; round <= maxPastRound; round++) {
+            MaterialButton chip = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+            chip.setText(getString(R.string.dialog_pick_round_chip, round));
+            chip.setTag(round);
+            chip.setAllCaps(false);
+            chip.setCheckable(true);
+            chip.setSingleLine(true);
+            chip.setTextSize(15);
+            chip.setMinWidth(chipWidth);
+            chip.setMinimumWidth(chipWidth);
+            chip.setMinHeight(chipHeight);
+            chip.setMinimumHeight(chipHeight);
+            chip.setInsetTop(0);
+            chip.setInsetBottom(0);
+            chip.setPadding(0, 0, 0, 0);
+            chip.setGravity(android.view.Gravity.CENTER);
+            chip.setStrokeColor(android.content.res.ColorStateList.valueOf(
+                    ContextCompat.getColor(this, R.color.accent_blue)));
+            chip.setStrokeWidth(Math.round(1 * density));
+
+            GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+            params.width = chipWidth;
+            params.height = chipHeight;
+            params.columnSpec = GridLayout.spec((round - 1) % columnCount);
+            params.rowSpec = GridLayout.spec((round - 1) / columnCount);
+            params.setMargins(chipMargin, chipMargin, chipMargin, chipMargin);
+            chip.setLayoutParams(params);
+
+            final int roundNum = round;
+            chip.setOnClickListener(v -> {
+                if (selectedButton[0] != null) {
+                    selectedButton[0].setChecked(false);
+                }
+                selectedButton[0] = chip;
+                chip.setChecked(true);
+                selectedRound[0] = roundNum;
+            });
+
+            grid.addView(chip);
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.DarkDialogTheme);
+        builder.setView(dialogView);
+        builder.setCancelable(true);
+        AlertDialog dialog = builder.create();
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnContinue.setOnClickListener(v -> {
+            if (selectedRound[0] <= 0) {
+                ModernToast.info(this, getString(R.string.dialog_pick_past_round_subtitle));
+                return;
+            }
+            dialog.dismiss();
+            com.example.rummypulse.data.GameData live = viewModel.getGameData().getValue();
+            if (live == null || live.getPlayers() == null || live.getPlayers().isEmpty()) {
+                return;
+            }
+            showSequentialScoreDialogForPlayer(live, selectedRound[0], 0, true);
+        });
+
+        dialog.show();
     }
 
     // Drag and drop variables
@@ -1879,62 +1926,6 @@ public class JoinGameActivity extends AppCompatActivity {
         isDragging = false;
     }
 
-    private void setupSequentialRoundValidation(EditText scoreInput, int round, int playerIndex, com.example.rummypulse.data.GameData gameData) {
-        boolean isEnabled = isRoundEnabled(round, playerIndex, gameData);
-        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-        int roundWithRedBorder = getActiveIncompleteRound1BasedOrZero(gameData);
-        if (editAccess != null && editAccess && roundWithRedBorder > 0 && (round + 1) == roundWithRedBorder) {
-            isEnabled = false;
-        }
-        scoreInput.setEnabled(isEnabled);
-        boolean isReadOnlyWizardCell = roundWithRedBorder > 0 && (round + 1) == roundWithRedBorder && !isEnabled;
-        scoreInput.setAlpha(isEnabled ? 1.0f : (isReadOnlyWizardCell ? 1.0f : 0.5f));
-    }
-
-    private boolean isRoundEnabled(int round, int playerIndex, com.example.rummypulse.data.GameData gameData) {
-        // Round 1 is always enabled
-        if (round == 0) return true;
-        
-        // For rounds 2+, check if ALL players have completed the previous round
-        // A player has "completed" a round if they have entered 0 or positive score
-        for (int p = 0; p < gameData.getPlayers().size(); p++) {
-            com.example.rummypulse.data.Player player = gameData.getPlayers().get(p);
-            boolean playerCompleted = false;
-            
-            // Check UI input field first
-            EditText previousScoreInput = binding.playersContainer.findViewWithTag("p" + (p + 1) + "r" + round);
-            if (previousScoreInput != null) {
-                String text = previousScoreInput.getText().toString();
-                
-                try {
-                    int score = Integer.parseInt(text);
-                    // Only 0 or positive scores are considered valid completion
-                    if (score >= 0) {
-                        playerCompleted = true;
-                    }
-                } catch (NumberFormatException e) {
-                    // Invalid input, check existing data
-                }
-            }
-            
-            // If UI field is not completed, check existing player data
-            if (!playerCompleted && player.getScores() != null && player.getScores().size() > round) {
-                Integer existingScore = player.getScores().get(round);
-                if (existingScore != null && existingScore >= 0) {
-                    playerCompleted = true;
-                }
-            }
-            
-            // If player hasn't completed this round, next round is not enabled
-            if (!playerCompleted) {
-                return false;
-            }
-        }
-        
-        // All players have completed the previous round
-        return true;
-    }
-
     /**
      * First round (1..10) where not every player has a valid score; {@code 0} if every round is complete.
      */
@@ -1951,26 +1942,15 @@ public class JoinGameActivity extends AppCompatActivity {
         if (gameData.getPlayers() == null || playerIndex < 0 || playerIndex >= gameData.getPlayers().size()) {
             return false;
         }
-        com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
-        EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + round1Based);
-        if (scoreInput != null) {
-            String text = scoreInput.getText().toString();
-            try {
-                int v = Integer.parseInt(text.trim());
-                if (v >= 0) {
-                    return true;
-                }
-            } catch (NumberFormatException ignored) {
-                // fall through to model
-            }
+        return isPlayerRoundCompleteForRound(gameData.getPlayers().get(playerIndex), round1Based);
+    }
+
+    private boolean isPlayerRoundCompleteForRound(com.example.rummypulse.data.Player player, int round1Based) {
+        if (player == null || player.getScores() == null || player.getScores().size() < round1Based) {
+            return false;
         }
-        if (player.getScores() != null && player.getScores().size() >= round1Based) {
-            Integer existing = player.getScores().get(round1Based - 1);
-            if (existing != null && existing >= 0) {
-                return true;
-            }
-        }
-        return false;
+        Integer existing = player.getScores().get(round1Based - 1);
+        return existing != null && existing >= 0;
     }
 
     private int findFirstPlayerIncompleteForRound(com.example.rummypulse.data.GameData gameData, int round1Based, int startFromIndex) {
@@ -2004,23 +1984,13 @@ public class JoinGameActivity extends AppCompatActivity {
             com.example.rummypulse.data.Player player, int playerIndex, int round0Based, int score) {
         ensurePlayerScoresList(player);
         player.getScores().set(round0Based, score);
-        EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + (round0Based + 1));
-        if (scoreInput != null) {
-            suppressScoreTextWatcherPersistence = true;
-            try {
-                scoreInput.setText(String.valueOf(score));
-                updateScoreColor(scoreInput);
-            } finally {
-                suppressScoreTextWatcherPersistence = false;
-            }
-        }
+        refreshPlayerTotalScoreOnCard(playerIndex, gameData);
         saveGameDataWithDebounce(gameData);
         announceScoreWithDebounce(player.getName(), score, playerIndex, round0Based + 1);
         updateStandings(gameData);
         updateCurrentRound(gameData);
-        updateRoundValidation(gameData);
+        updateScoreEntryButtonsVisibility(gameData);
         announceGameCompletion(gameData);
-        updateEnterRoundScoresButtonVisibility(gameData);
     }
 
     private void startSequentialRoundScoreEntryFlow() {
@@ -2047,10 +2017,14 @@ public class JoinGameActivity extends AppCompatActivity {
             ModernToast.info(this, getString(R.string.enter_round_scores_all_done));
             return;
         }
-        showSequentialScoreDialogForPlayer(gameData, round1, firstPlayer);
+        showSequentialScoreDialogForPlayer(gameData, round1, firstPlayer, false);
     }
 
     private void showSequentialScoreDialogForPlayer(com.example.rummypulse.data.GameData gameData, int round1Based, int playerIndex) {
+        showSequentialScoreDialogForPlayer(gameData, round1Based, playerIndex, false);
+    }
+
+    private void showSequentialScoreDialogForPlayer(com.example.rummypulse.data.GameData gameData, int round1Based, int playerIndex, boolean correctionMode) {
         com.example.rummypulse.data.GameData liveData = viewModel.getGameData().getValue();
         if (liveData == null || liveData.getPlayers() == null || playerIndex >= liveData.getPlayers().size()) {
             return;
@@ -2069,7 +2043,9 @@ public class JoinGameActivity extends AppCompatActivity {
         nameView.setText(player.getName());
         int numPlayers = gameData.getPlayers().size();
         progressView.setText(getString(R.string.dialog_enter_round_score_player_progress, playerIndex + 1, numPlayers));
-        boolean hasMore = hasAnotherIncompletePlayerAfter(gameData, round1Based, playerIndex);
+        boolean hasMore = correctionMode
+                ? playerIndex + 1 < numPlayers
+                : hasAnotherIncompletePlayerAfter(gameData, round1Based, playerIndex);
         btnConfirm.setText(getString(hasMore ? R.string.dialog_enter_round_score_next : R.string.dialog_enter_round_score_done));
 
         Integer existing = null;
@@ -2084,7 +2060,9 @@ public class JoinGameActivity extends AppCompatActivity {
         errorView.setVisibility(View.GONE);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.DarkDialogTheme);
-        builder.setTitle(getString(R.string.dialog_enter_round_score_title, round1Based));
+        builder.setTitle(getString(correctionMode
+                ? R.string.dialog_correct_round_score_title
+                : R.string.dialog_enter_round_score_title, round1Based));
         builder.setView(dialogView);
         builder.setCancelable(true);
 
@@ -2104,6 +2082,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
         final int finalRound1 = round1Based;
         final int finalPlayerIndex = playerIndex;
+        final boolean finalCorrectionMode = correctionMode;
         btnConfirm.setOnClickListener(v -> {
             String text = scoreEdit.getText().toString().trim();
             if (text.isEmpty()) {
@@ -2139,10 +2118,15 @@ public class JoinGameActivity extends AppCompatActivity {
             if (gdAfter == null || gdAfter.getPlayers() == null) {
                 return;
             }
-            int next = findFirstPlayerIncompleteForRound(gdAfter, finalRound1, finalPlayerIndex + 1);
+            int next;
+            if (finalCorrectionMode) {
+                next = finalPlayerIndex + 1 < gdAfter.getPlayers().size() ? finalPlayerIndex + 1 : -1;
+            } else {
+                next = findFirstPlayerIncompleteForRound(gdAfter, finalRound1, finalPlayerIndex + 1);
+            }
             if (next >= 0) {
                 new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
-                        () -> showSequentialScoreDialogForPlayer(gdAfter, finalRound1, next), 120);
+                        () -> showSequentialScoreDialogForPlayer(gdAfter, finalRound1, next, finalCorrectionMode), 120);
             }
         });
 
@@ -2157,115 +2141,17 @@ public class JoinGameActivity extends AppCompatActivity {
         }, 150);
     }
 
-    private void updateRoundValidation(com.example.rummypulse.data.GameData gameData) {
-        int roundWithRedBorder = getActiveIncompleteRound1BasedOrZero(gameData);
-
-        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-        boolean inEditMode = editAccess != null && editAccess;
-
-        // Update all score inputs based on sequential validation
-        for (int playerIndex = 0; playerIndex < gameData.getPlayers().size(); playerIndex++) {
-            for (int round = 0; round < 10; round++) {
-                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + (round + 1));
-                if (scoreInput != null) {
-                    boolean isEnabled = isRoundEnabled(round, playerIndex, gameData);
-                    if (inEditMode && roundWithRedBorder > 0 && (round + 1) == roundWithRedBorder) {
-                        isEnabled = false;
-                    }
-                    scoreInput.setEnabled(isEnabled);
-                    boolean isReadOnlyWizardCell = roundWithRedBorder > 0 && (round + 1) == roundWithRedBorder && !isEnabled;
-                    scoreInput.setAlpha(isEnabled ? 1.0f : (isReadOnlyWizardCell ? 1.0f : 0.5f));
-
-                    if (roundWithRedBorder > 0 && (round + 1) == roundWithRedBorder) {
-                        scoreInput.setBackgroundResource(R.drawable.score_input_with_red_border);
-                    } else {
-                        scoreInput.setBackgroundResource(R.drawable.score_input_background);
-                    }
-                }
-            }
-        }
-        
-        // Update round colors based on completion status
-        updateRoundColors(gameData);
-    }
-    
-    private void updateRoundColors(com.example.rummypulse.data.GameData gameData) {
-        // Round badge removed - no longer updating colors (redundant with top panel info)
-        // This method is kept for potential future use but currently does nothing
-    }
-    
     private boolean isRoundComplete(int round, com.example.rummypulse.data.GameData gameData) {
-        // Check if ALL players have completed this round
-        for (int p = 0; p < gameData.getPlayers().size(); p++) {
-            com.example.rummypulse.data.Player player = gameData.getPlayers().get(p);
-            boolean playerCompleted = false;
-            
-            // Check UI input field first
-            EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (p + 1) + "r" + round);
-            if (scoreInput != null) {
-                String text = scoreInput.getText().toString();
-                
-                try {
-                    int score = Integer.parseInt(text);
-                    // Only 0 or positive scores are considered valid completion
-                    if (score >= 0) {
-                        playerCompleted = true;
-                    }
-                } catch (NumberFormatException e) {
-                    // Invalid input, check existing data
-                }
-            }
-            
-            // If UI field is not completed, check existing player data
-            if (!playerCompleted && player.getScores() != null && player.getScores().size() >= round) {
-                Integer existingScore = player.getScores().get(round - 1); // round is 1-based, scores array is 0-based
-                if (existingScore != null && existingScore >= 0) {
-                    playerCompleted = true;
-                }
-            }
-            
-            // If player hasn't completed this round, round is not complete
-            if (!playerCompleted) {
+        if (gameData.getPlayers() == null) {
+            return false;
+        }
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            if (!isPlayerRoundCompleteForRound(player, round)) {
                 return false;
             }
         }
-        
-        // All players have completed this round
         return true;
     }
-
-    private void updateScoreColor(EditText scoreInput) {
-        try {
-            String text = scoreInput.getText().toString();
-            int score = Integer.parseInt(text);
-            
-            if (score == -1) {
-                // Default -1 value (not entered yet)
-                scoreInput.setTextColor(getResources().getColor(android.R.color.darker_gray));
-                scoreInput.setTypeface(null, android.graphics.Typeface.ITALIC);
-            } else if (score < 0) {
-                // Negative scores (invalid)
-                scoreInput.setTextColor(getResources().getColor(android.R.color.holo_red_light));
-                scoreInput.setTypeface(null, android.graphics.Typeface.BOLD);
-            } else if (score < 40) {
-                // Low scores (good)
-                scoreInput.setTextColor(getResources().getColor(android.R.color.holo_green_light));
-                scoreInput.setTypeface(null, android.graphics.Typeface.NORMAL);
-            } else if (score <= 60) {
-                // Medium scores (okay)
-                scoreInput.setTextColor(getResources().getColor(android.R.color.holo_orange_light));
-                scoreInput.setTypeface(null, android.graphics.Typeface.NORMAL);
-            } else {
-                // High scores (bad)
-                scoreInput.setTextColor(getResources().getColor(android.R.color.holo_red_light));
-                scoreInput.setTypeface(null, android.graphics.Typeface.NORMAL);
-            }
-        } catch (NumberFormatException e) {
-            scoreInput.setTextColor(getResources().getColor(android.R.color.white));
-            scoreInput.setTypeface(null, android.graphics.Typeface.NORMAL);
-        }
-    }
-
 
     private void updateCurrentRound(com.example.rummypulse.data.GameData gameData) {
         int currentRound = calculateCurrentRound(gameData);
@@ -2367,57 +2253,7 @@ public class JoinGameActivity extends AppCompatActivity {
         
         for (int i = 0; i < gameData.getPlayers().size(); i++) {
             com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
-            
-            // Calculate total score from game data (works in both view and edit mode)
-            int totalScore = 0;
-            boolean scoresFoundInInputFields = false;
-            
-            // First try to get scores from input fields (edit mode)
-            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-            if (editAccess != null && editAccess) {
-                // Edit mode: try to get scores from input fields
-                // Check if input fields exist first
-                EditText firstScoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r1");
-                if (firstScoreInput != null) {
-                    // Input fields exist, read from them
-                    for (int round = 1; round <= 10; round++) {
-                        EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
-                        if (scoreInput != null) {
-                            try {
-                                String text = scoreInput.getText().toString();
-                                if (!text.isEmpty()) {
-                                    int score = Integer.parseInt(text);
-                                    if (score > 0) {
-                                        totalScore += score;
-                                        scoresFoundInInputFields = true;
-                                    }
-                                }
-                            } catch (NumberFormatException e) {
-                                // Ignore invalid scores
-                            }
-                        }
-                    }
-                }
-                
-                // If no input fields found or no scores in them, fall back to game data
-                if (!scoresFoundInInputFields && player.getScores() != null) {
-                    System.out.println("Edit mode but input fields not ready, using game data for player " + (i + 1));
-                    for (Integer score : player.getScores()) {
-                        if (score != null && score > 0) {
-                            totalScore += score;
-                        }
-                    }
-                }
-            } else {
-                // View mode: get scores from game data
-                if (player.getScores() != null) {
-                    for (Integer score : player.getScores()) {
-                        if (score != null && score > 0) {
-                            totalScore += score;
-                        }
-                    }
-                }
-            }
+            int totalScore = player.getTotalScore();
 
             PlayerStanding standing = new PlayerStanding();
             standing.player = player;
@@ -2709,52 +2545,8 @@ public class JoinGameActivity extends AppCompatActivity {
         
         for (int i = 0; i < gameData.getPlayers().size(); i++) {
             com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
-            int totalScore = 0;
-            boolean scoresFoundInInputFields = false;
-            
-            // Calculate total score from game data (works in both view and edit mode)
-            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-            if (editAccess != null && editAccess) {
-                // Edit mode: try to get scores from input fields
-                // Check if input fields exist first
-                EditText firstScoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r1");
-                if (firstScoreInput != null) {
-                    // Input fields exist, read from them
-                    for (int round = 1; round <= 10; round++) {
-                        EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (i + 1) + "r" + round);
-                        if (scoreInput != null && !scoreInput.getText().toString().trim().isEmpty()) {
-                            try {
-                                int score = Integer.parseInt(scoreInput.getText().toString().trim());
-                                if (score > 0) { // Only count positive scores
-                                    totalScore += score;
-                                    scoresFoundInInputFields = true;
-                                }
-                            } catch (NumberFormatException e) {
-                                // Skip invalid scores
-                            }
-                        }
-                    }
-                }
-                
-                // If no input fields found or no scores in them, fall back to game data
-                if (!scoresFoundInInputFields && player.getScores() != null) {
-                    for (Integer score : player.getScores()) {
-                        if (score != null && score > 0) {
-                            totalScore += score;
-                        }
-                    }
-                }
-            } else {
-                // View mode: get scores from game data
-                if (player.getScores() != null) {
-                    for (Integer score : player.getScores()) {
-                        if (score != null && score > 0) {
-                            totalScore += score;
-                        }
-                    }
-                }
-            }
-            
+            int totalScore = player.getTotalScore();
+
             PlayerStanding standing = new PlayerStanding();
             standing.player = player;
             standing.totalScore = totalScore;
@@ -2905,32 +2697,17 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     /**
-     * True if any player has at least one round score treated as entered (≥ 0), using model data
-     * and score fields on player cards when present.
+     * True if any player has at least one round score treated as entered (≥ 0) in model data.
      */
     private boolean hasAnyEnteredScoreInGame(com.example.rummypulse.data.GameData gameData) {
         if (gameData == null || gameData.getPlayers() == null) {
             return false;
         }
-        for (int pi = 0; pi < gameData.getPlayers().size(); pi++) {
-            com.example.rummypulse.data.Player player = gameData.getPlayers().get(pi);
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
             if (player.getScores() != null) {
                 for (Integer s : player.getScores()) {
                     if (s != null && s >= 0) {
                         return true;
-                    }
-                }
-            }
-            for (int r = 1; r <= 10; r++) {
-                EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (pi + 1) + "r" + r);
-                if (scoreInput != null) {
-                    try {
-                        int v = Integer.parseInt(scoreInput.getText().toString().trim());
-                        if (v >= 0) {
-                            return true;
-                        }
-                    } catch (NumberFormatException ignored) {
-                        // ignore
                     }
                 }
             }
@@ -2939,25 +2716,14 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     /**
-     * Best-known score for an existing player in a given round (1-based), from card UI or model.
-     * Returns -1 if that round is not entered (placeholder).
+     * Score for a player in a given round (1-based) from model data.
+     * Returns -1 if that round is not entered.
      */
     private int effectiveScoreForPlayerRound(com.example.rummypulse.data.GameData gameData, int playerIndex, int round1Based) {
         if (gameData.getPlayers() == null || playerIndex < 0 || playerIndex >= gameData.getPlayers().size()) {
             return -1;
         }
         com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
-        EditText scoreInput = binding.playersContainer.findViewWithTag("p" + (playerIndex + 1) + "r" + round1Based);
-        if (scoreInput != null) {
-            try {
-                int v = Integer.parseInt(scoreInput.getText().toString().trim());
-                if (v >= 0) {
-                    return v;
-                }
-            } catch (NumberFormatException ignored) {
-                // fall through
-            }
-        }
         if (player.getScores() != null && player.getScores().size() >= round1Based) {
             Integer s = player.getScores().get(round1Based - 1);
             if (s != null && s >= 0) {
@@ -3615,22 +3381,9 @@ public class JoinGameActivity extends AppCompatActivity {
                                         boolean playerListChanged = hasPlayerListChanged(currentGameData, gameData);
                                         
                                         if (playerListChanged) {
-                                            // Players were added/removed - need to update player cards
                                             System.out.println("Real-time update in EDIT MODE - player list changed, updating player cards");
-                                            
-                                            // Save current input values before regenerating cards
-                                            java.util.Map<String, java.util.Map<Integer, String>> savedInputs = saveCurrentInputValues(currentGameData);
-                                            
-                                            // Update ViewModel with fresh data first
                                             viewModel.updateGameData(gameData);
-                                            
-                                            // Regenerate player cards with new player list
                                             generatePlayerCards(gameData);
-                                            
-                                            // Restore saved input values (best effort)
-                                            restoreInputValues(savedInputs, gameData);
-                                            
-                                            // Update other UI elements
                                             updatePlayersInfo(gameData);
                                             updateStandings(gameData);
                                             updateStandingsInfo(gameData);
@@ -3674,6 +3427,11 @@ public class JoinGameActivity extends AppCompatActivity {
                                             }
                                             
                                             // Update standings and other read-only displays
+                                            com.example.rummypulse.data.GameData merged = viewModel.getGameData().getValue();
+                                            if (merged != null) {
+                                                refreshAllPlayerTotalScores(merged);
+                                                updateScoreEntryButtonsVisibility(merged);
+                                            }
                                             updateStandings(gameData);
                                             updateStandingsInfo(gameData);
                                             updateGameInfoHeader(gameData);
@@ -3961,99 +3719,6 @@ public class JoinGameActivity extends AppCompatActivity {
             System.out.println("Player list changed: players added or removed");
         }
         return changed;
-    }
-    
-    /**
-     * Saves current input field values from player cards
-     * Returns a map: playerIdentifier -> (round -> value)
-     * playerIdentifier is "userId|name" or just "name" if userId is null
-     */
-    private java.util.Map<String, java.util.Map<Integer, String>> saveCurrentInputValues(com.example.rummypulse.data.GameData currentGameData) {
-        java.util.Map<String, java.util.Map<Integer, String>> savedValues = new java.util.HashMap<>();
-        
-        if (currentGameData == null || currentGameData.getPlayers() == null) {
-            return savedValues;
-        }
-        
-        java.util.List<com.example.rummypulse.data.Player> players = currentGameData.getPlayers();
-        int playerCount = Math.min(binding.playersContainer.getChildCount(), players.size());
-        
-        for (int playerIndex = 0; playerIndex < playerCount; playerIndex++) {
-            View playerCard = binding.playersContainer.getChildAt(playerIndex);
-            if (playerCard == null) continue;
-            
-            com.example.rummypulse.data.Player player = players.get(playerIndex);
-            // Create unique identifier: userId|name or just name
-            String playerIdentifier = (player.getUserId() != null ? player.getUserId() : "") + "|" + player.getName();
-            
-            java.util.Map<Integer, String> playerValues = new java.util.HashMap<>();
-            
-            // Save values for all 10 rounds
-            for (int round = 1; round <= 10; round++) {
-                int scoreInputId = getResources().getIdentifier("edit_score_r" + round, "id", getPackageName());
-                if (scoreInputId != 0) {
-                    EditText scoreInput = playerCard.findViewById(scoreInputId);
-                    if (scoreInput != null) {
-                        String value = scoreInput.getText().toString().trim();
-                        if (!value.isEmpty()) {
-                            playerValues.put(round, value);
-                        }
-                    }
-                }
-            }
-            
-            if (!playerValues.isEmpty()) {
-                savedValues.put(playerIdentifier, playerValues);
-            }
-        }
-        
-        System.out.println("Saved input values for " + savedValues.size() + " players");
-        return savedValues;
-    }
-    
-    /**
-     * Restores saved input field values to player cards after regeneration
-     * savedValues: playerIdentifier -> (round -> value)
-     * Matches players by identifier (userId|name) to handle index changes
-     */
-    private void restoreInputValues(java.util.Map<String, java.util.Map<Integer, String>> savedValues, com.example.rummypulse.data.GameData gameData) {
-        if (savedValues == null || savedValues.isEmpty() || gameData == null || gameData.getPlayers() == null) {
-            return;
-        }
-        
-        java.util.List<com.example.rummypulse.data.Player> players = gameData.getPlayers();
-        int playerCount = binding.playersContainer.getChildCount();
-        
-        // Match saved values by player identifier
-        for (int newPlayerIndex = 0; newPlayerIndex < playerCount && newPlayerIndex < players.size(); newPlayerIndex++) {
-            View playerCard = binding.playersContainer.getChildAt(newPlayerIndex);
-            if (playerCard == null) continue;
-            
-            com.example.rummypulse.data.Player player = players.get(newPlayerIndex);
-            // Create identifier to match saved values
-            String playerIdentifier = (player.getUserId() != null ? player.getUserId() : "") + "|" + player.getName();
-            
-            // Find matching saved values
-            java.util.Map<Integer, String> playerValues = savedValues.get(playerIdentifier);
-            
-            if (playerValues != null && !playerValues.isEmpty()) {
-                // Restore values for this player
-                for (java.util.Map.Entry<Integer, String> roundEntry : playerValues.entrySet()) {
-                    int round = roundEntry.getKey();
-                    String value = roundEntry.getValue();
-                    
-                    int scoreInputId = getResources().getIdentifier("edit_score_r" + round, "id", getPackageName());
-                    if (scoreInputId != 0) {
-                        EditText scoreInput = playerCard.findViewById(scoreInputId);
-                        if (scoreInput != null) {
-                            scoreInput.setText(value);
-                        }
-                    }
-                }
-            }
-        }
-        
-        System.out.println("Restored input values for players");
     }
     
     /**

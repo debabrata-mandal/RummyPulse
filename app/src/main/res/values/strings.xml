@@ -120,7 +120,19 @@
     <string name="dialog_enter_round_score_next">Next</string>
     <string name="dialog_enter_round_score_done">Done</string>
     <string name="enter_round_scores_all_done">Everyone has a score for this round.</string>
-    <string name="enter_round_scores_game_over">Game is complete — use the score boxes to fix earlier rounds if needed.</string>
+    <string name="enter_round_scores_game_over">Game is complete — tap the edit icon to fix earlier rounds.</string>
+
+    <!-- Correct past round (edit mode) -->
+    <string name="btn_correct_past_round">Correct past round</string>
+    <string name="cd_correct_past_round">Edit past round scores</string>
+    <string name="player_card_total_label">Total</string>
+    <string name="dialog_pick_past_round_title">Correct past round</string>
+    <string name="dialog_pick_past_round_subtitle">Select a round to update scores</string>
+    <string name="dialog_pick_round_item">Round %1$d</string>
+    <string name="dialog_pick_round_chip">R%1$d</string>
+    <string name="dialog_pick_past_round_continue">Continue</string>
+    <string name="dialog_correct_round_score_title">Correct Round %1$d</string>
+    <string name="correct_past_round_none">No past rounds to correct yet.</string>
 
     <!-- Add player confirmation when scores already exist -->
     <string name="add_player_confirm_title">Add another player?</string>
