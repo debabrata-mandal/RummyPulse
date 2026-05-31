@@ -4,7 +4,7 @@ import com.google.firebase.firestore.ServerTimestamp;
 import java.util.Date;
 
 /**
- * Data model for the appUser collection in Firestore
+ * Data model for the appUser_v2 collection in Firestore
  * Stores user authentication provider information and role
  */
 public class AppUser {

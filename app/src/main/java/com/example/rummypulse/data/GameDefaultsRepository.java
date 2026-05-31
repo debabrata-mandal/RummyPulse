@@ -16,16 +16,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Singleton access to {@code gameDefaults/config}.
+ * Singleton access to {@code gameDefaults_v2/config}.
  * <p>
  * For server-side enforcement when non-admins may write point/increment but not contribution or
  * display-intermediate, Firestore rules should allow writes only if the caller is
- * {@code appUser/{uid}.role == "admin_user"} or {@code defaultGstPercent} and
+ * {@code appUser_v2/{uid}.role == "admin_user"} or {@code defaultGstPercent} and
  * {@code displayIntermediateCalculation} are unchanged on merge updates.
  */
 public class GameDefaultsRepository {
 
-    public static final String COLLECTION = "gameDefaults";
+    public static final String COLLECTION = FirestoreCollections.GAME_DEFAULTS;
     public static final String DOCUMENT_ID = "config";
 
     private static volatile GameDefaultsRepository instance;
@@ -133,7 +133,7 @@ public class GameDefaultsRepository {
         }
     }
 
-    /** Apply a realtime snapshot of gameDefaults/config (e.g. from JoinGameActivity listener). */
+    /** Apply a realtime snapshot of gameDefaults_v2/config (e.g. from JoinGameActivity listener). */
     public void applyConfigSnapshot(DocumentSnapshot snapshot) {
         applySnapshot(snapshot);
     }

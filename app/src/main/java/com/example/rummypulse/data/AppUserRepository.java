@@ -22,12 +22,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Repository class to handle appUser collection operations in Firestore
+ * Repository class to handle appUser_v2 collection operations in Firestore
  */
 public class AppUserRepository {
     private static final String TAG = "AppUserRepository";
-    private static final String COLLECTION_NAME = "appUser";
-    
     private final FirebaseFirestore db;
     
     public AppUserRepository() {
@@ -53,7 +51,7 @@ public class AppUserRepository {
         }
 
         String userId = firebaseUser.getUid();
-        DocumentReference userRef = db.collection(COLLECTION_NAME).document(userId);
+        DocumentReference userRef = db.collection(FirestoreCollections.APP_USER).document(userId);
 
         // Single transaction: avoids race between "get" and "set" and keeps create vs update atomic.
         db.runTransaction((Transaction transaction) -> {
@@ -85,7 +83,7 @@ public class AppUserRepository {
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "appUser create/update failed. Ensure Firestore rules allow authenticated "
-                            + "users to read/write appUser/{theirUid}. Error: " + e.getMessage(), e);
+                            + "users to read/write appUser_v2/{theirUid}. Error: " + e.getMessage(), e);
                     if (e instanceof FirebaseFirestoreException) {
                         Log.e(TAG, "Firestore error code: " + ((FirebaseFirestoreException) e).getCode());
                     }
@@ -99,7 +97,7 @@ public class AppUserRepository {
      * Get user by ID from appUser collection
      */
     public void getUserById(String userId, AppUserCallback callback) {
-        db.collection(COLLECTION_NAME).document(userId)
+        db.collection(FirestoreCollections.APP_USER).document(userId)
                 .get()
                 .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                     @Override
@@ -141,7 +139,7 @@ public class AppUserRepository {
         Map<String, Object> updates = new HashMap<>();
         updates.put("role", newRole.getValue());
         
-        db.collection(COLLECTION_NAME).document(userId)
+        db.collection(FirestoreCollections.APP_USER).document(userId)
                 .update(updates)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
@@ -220,7 +218,7 @@ public class AppUserRepository {
     public void getAllUsers(AllUsersCallback callback) {
         Log.d(TAG, "Fetching all users from appUser collection");
         
-        db.collection(COLLECTION_NAME)
+        db.collection(FirestoreCollections.APP_USER)
                 .get()
                 .addOnCompleteListener(new OnCompleteListener<com.google.firebase.firestore.QuerySnapshot>() {
                     @Override

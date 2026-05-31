@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.data.GameData;
 import com.example.rummypulse.data.GameDataWrapper;
 import com.example.rummypulse.data.GameAuth;
@@ -28,7 +29,7 @@ public class JoinGameViewModel extends AndroidViewModel {
     private MutableLiveData<Boolean> editAccessGranted = new MutableLiveData<>();
     private MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
     private MutableLiveData<String> gamePin = new MutableLiveData<>();
-    /** From {@code games.displayName}; empty means show game ID in UI. */
+    /** From {@code games_v2.displayName}; empty means show game ID in UI. */
     private MutableLiveData<String> gameDisplayName = new MutableLiveData<>();
 
     public JoinGameViewModel(@NonNull Application application) {
@@ -91,7 +92,7 @@ public class JoinGameViewModel extends AndroidViewModel {
         // Add a small delay to make spinner visible for testing
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             // First, check if the game exists in the games collection
-            db.collection("games").document(gameId)
+            db.collection(FirestoreCollections.GAMES).document(gameId)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
@@ -141,7 +142,7 @@ public class JoinGameViewModel extends AndroidViewModel {
     }
 
     private void fetchGameData(String gameId, boolean requestEditAccess) {
-        db.collection("gameData").document(gameId)
+        db.collection(FirestoreCollections.GAME_DATA).document(gameId)
             .get()
             .addOnSuccessListener(documentSnapshot -> {
                 isLoading.setValue(false); // Stop loading
@@ -209,7 +210,7 @@ public class JoinGameViewModel extends AndroidViewModel {
         gameDataDoc.put("version", "1.0");
 
         // Save to Firebase
-        db.collection("gameData").document(gameId)
+        db.collection(FirestoreCollections.GAME_DATA).document(gameId)
             .set(gameDataDoc)
             .addOnSuccessListener(aVoid -> {
                 // Update the local game data to trigger UI refresh
@@ -228,7 +229,7 @@ public class JoinGameViewModel extends AndroidViewModel {
         }
 
         // Fetch the PIN from the games collection
-        db.collection("games").document(gameId)
+        db.collection(FirestoreCollections.GAMES).document(gameId)
             .get()
             .addOnSuccessListener(documentSnapshot -> {
                 if (documentSnapshot.exists()) {

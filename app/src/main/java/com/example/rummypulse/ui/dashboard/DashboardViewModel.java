@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.ui.home.GameItem;
 import com.google.firebase.auth.FirebaseAuth;
@@ -259,7 +260,7 @@ public class DashboardViewModel extends ViewModel {
         // Add creation timestamp to game data as well for easy access
         initialGameData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
         
-        db.collection("games").document(gameId)
+        db.collection(FirestoreCollections.GAMES).document(gameId)
             .set(authData)
             .addOnSuccessListener(aVoid -> {
                 // Save game data to 'gameData' collection
@@ -268,7 +269,7 @@ public class DashboardViewModel extends ViewModel {
                 gameDataDoc.put("lastUpdated", com.google.firebase.firestore.FieldValue.serverTimestamp());
                 gameDataDoc.put("version", "1.0");
                 
-                db.collection("gameData").document(gameId)
+                db.collection(FirestoreCollections.GAME_DATA).document(gameId)
                     .set(gameDataDoc)
                     .addOnSuccessListener(aVoid2 -> {
                         // Refresh the games list to show the new game

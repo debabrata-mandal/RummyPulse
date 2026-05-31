@@ -3,7 +3,7 @@ package com.example.rummypulse.data;
 import com.google.firebase.Timestamp;
 
 /**
- * System-wide defaults stored at {@code gameDefaults/config} in Firestore.
+ * System-wide defaults stored at {@code gameDefaults_v2/config} in Firestore.
  */
 public class GameDefaults {
 

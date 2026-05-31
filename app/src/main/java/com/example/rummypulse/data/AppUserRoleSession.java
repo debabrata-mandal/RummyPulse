@@ -17,13 +17,12 @@ import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.ListenerRegistration;
 
 /**
- * Observes {@code appUser/{uid}} for the signed-in user so Review / drawer can update when the
+ * Observes {@code appUser_v2/{uid}} for the signed-in user so Review / drawer can update when the
  * document appears after fast login (Main opens before Firestore sync finishes).
  */
 public final class AppUserRoleSession {
 
     private static final String TAG = "AppUserRoleSession";
-    private static final String COLLECTION = "appUser";
     private static final long UNKNOWN_TIMEOUT_MS = 12_000L;
 
     public enum Role {
@@ -85,7 +84,8 @@ public final class AppUserRoleSession {
             role.postValue(Role.UNKNOWN);
         }
 
-        DocumentReference ref = FirebaseFirestore.getInstance().collection(COLLECTION).document(uid);
+        DocumentReference ref = FirebaseFirestore.getInstance()
+                .collection(FirestoreCollections.APP_USER).document(uid);
         registration = ref.addSnapshotListener((DocumentSnapshot snapshot, FirebaseFirestoreException error) -> {
             if (error != null) {
                 Log.w(TAG, "appUser snapshot error", error);

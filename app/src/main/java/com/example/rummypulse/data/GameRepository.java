@@ -26,11 +26,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 public class GameRepository {
-    private static final String GAMES_COLLECTION = "games";
-    private static final String GAME_DATA_COLLECTION = "gameData";
-    private static final String APPROVED_GAMES_COLLECTION = "approvedGames";
-    private static final String APPROVED_GAMES_REPORT_COLLECTION = "approvedGamesReport";
-    
     private FirebaseFirestore db;
     private MutableLiveData<List<GameItem>> gameItemsLiveData;
     private MutableLiveData<String> errorLiveData;
@@ -100,7 +95,7 @@ public class GameRepository {
         }
         
         // Set up real-time listener for games collection
-        gamesListener = db.collection(GAMES_COLLECTION)
+        gamesListener = db.collection(FirestoreCollections.GAMES)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .addSnapshotListener((querySnapshot, error) -> {
                     if (error != null) {
@@ -136,7 +131,7 @@ public class GameRepository {
      */
     public void loadAllGames() {
         System.out.println("GameRepository: Fetching games collection (manual refresh, prefer server)");
-        com.google.firebase.firestore.Query gamesQuery = db.collection(GAMES_COLLECTION)
+        com.google.firebase.firestore.Query gamesQuery = db.collection(FirestoreCollections.GAMES)
                 .orderBy("createdAt", Query.Direction.DESCENDING);
         gamesQuery.get(Source.SERVER)
                 .addOnSuccessListener(this::applyGamesQuerySnapshotForReview)
@@ -270,7 +265,7 @@ public class GameRepository {
 
     private void fetchGameData(String gameId) {
         System.out.println("Fetching game data for: " + gameId);
-        com.google.firebase.firestore.DocumentReference dataRef = db.collection(GAME_DATA_COLLECTION).document(gameId);
+        com.google.firebase.firestore.DocumentReference dataRef = db.collection(FirestoreCollections.GAME_DATA).document(gameId);
         dataRef.get(Source.SERVER)
                 .addOnSuccessListener(snapshot -> onGameDataSnapshotForReviewFetch(gameId, snapshot))
                 .addOnFailureListener(error -> {
@@ -306,7 +301,7 @@ public class GameRepository {
     }
 
     private void attachReviewGameAuthFetch(String gameId, GameDataWrapper gameDataWrapper, GameData gameData) {
-        com.google.firebase.firestore.DocumentReference authRef = db.collection(GAMES_COLLECTION).document(gameId);
+        com.google.firebase.firestore.DocumentReference authRef = db.collection(FirestoreCollections.GAMES).document(gameId);
         authRef.get(Source.SERVER)
                 .addOnSuccessListener(authSnapshot -> onAuthSnapshotForReviewFetch(gameId, gameDataWrapper, gameData, authSnapshot))
                 .addOnFailureListener(e -> authRef.get()
@@ -333,7 +328,7 @@ public class GameRepository {
         com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
 
         if (creatorUserId != null && !creatorUserId.isEmpty()) {
-            db.collection("appUser")
+            db.collection(FirestoreCollections.APP_USER)
                     .document(creatorUserId)
                     .get()
                     .addOnSuccessListener(userSnapshot -> {
@@ -372,7 +367,7 @@ public class GameRepository {
         
         System.out.println("Setting up real-time listener for gameData: " + gameId);
         
-        com.google.firebase.firestore.ListenerRegistration listener = db.collection(GAME_DATA_COLLECTION)
+        com.google.firebase.firestore.ListenerRegistration listener = db.collection(FirestoreCollections.GAME_DATA)
                 .document(gameId)
                 .addSnapshotListener((documentSnapshot, error) -> {
                     if (error != null) {
@@ -386,7 +381,7 @@ public class GameRepository {
                             if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
                                 GameData gameData = gameDataWrapper.getData();
                                 // Also get the auth data for PIN
-                                db.collection(GAMES_COLLECTION)
+                                db.collection(FirestoreCollections.GAMES)
                                         .document(gameId)
                                         .get()
                                         .addOnSuccessListener(authSnapshot -> {
@@ -401,7 +396,7 @@ public class GameRepository {
                                             
                                             // Fetch creator's photo URL from appUser collection
                                             if (creatorUserId != null && !creatorUserId.isEmpty()) {
-                                                db.collection("appUser")
+                                                db.collection(FirestoreCollections.APP_USER)
                                                         .document(creatorUserId)
                                                         .get()
                                                         .addOnSuccessListener(userSnapshot -> {
@@ -581,9 +576,9 @@ public class GameRepository {
 
     public void deleteGame(String gameId) {
         // Delete from both collections
-        db.collection(GAMES_COLLECTION).document(gameId).delete()
+        db.collection(FirestoreCollections.GAMES).document(gameId).delete()
                 .addOnSuccessListener(aVoid -> {
-                    db.collection(GAME_DATA_COLLECTION).document(gameId).delete()
+                    db.collection(FirestoreCollections.GAME_DATA).document(gameId).delete()
                             .addOnSuccessListener(aVoid1 -> {
                                 // Reload the list after deletion
                                 loadAllGames();
@@ -599,7 +594,7 @@ public class GameRepository {
 
     public void updateGameStatus(String gameId, String newStatus) {
         // Update the game status in the original gameData collection
-        db.collection(GAME_DATA_COLLECTION)
+        db.collection(FirestoreCollections.GAME_DATA)
                 .document(gameId)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
@@ -614,7 +609,7 @@ public class GameRepository {
                             gameDataWrapper.setData(gameData);
                             
                             // Save back to Firestore
-                            db.collection(GAME_DATA_COLLECTION)
+                            db.collection(FirestoreCollections.GAME_DATA)
                                     .document(gameId)
                                     .set(gameDataWrapper)
                                     .addOnSuccessListener(aVoid -> {
@@ -643,7 +638,7 @@ public class GameRepository {
             errorLiveData.setValue("Cannot update game: missing game id");
             return;
         }
-        db.collection(GAME_DATA_COLLECTION)
+        db.collection(FirestoreCollections.GAME_DATA)
                 .document(gameId)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
@@ -662,7 +657,7 @@ public class GameRepository {
                     gameDataWrapper.setLastUpdated(com.google.firebase.Timestamp.now());
                     gameDataWrapper.setData(gameData);
 
-                    db.collection(GAME_DATA_COLLECTION)
+                    db.collection(FirestoreCollections.GAME_DATA)
                             .document(gameId)
                             .set(gameDataWrapper)
                             .addOnSuccessListener(aVoid -> {
@@ -687,7 +682,7 @@ public class GameRepository {
      */
     public void approveGame(GameItem gameItem, Runnable onAfterFullSuccess) {
         // Get the original game data to extract player information
-        db.collection(GAME_DATA_COLLECTION)
+        db.collection(FirestoreCollections.GAME_DATA)
                 .document(gameItem.getGameId())
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
@@ -720,7 +715,7 @@ public class GameRepository {
                                 );
                                 
                                 // Save to approved games collection
-                                db.collection(APPROVED_GAMES_COLLECTION)
+                                db.collection(FirestoreCollections.APPROVED_GAMES)
                                         .document(gameItem.getGameId())
                                         .set(approvedGameData)
                                         .addOnSuccessListener(aVoid -> {
@@ -779,10 +774,10 @@ public class GameRepository {
 
     private void deleteApprovedGame(String gameId, Runnable onAfterSuccess) {
         // Delete from both collections after successful approval
-        db.collection(GAMES_COLLECTION).document(gameId).delete()
+        db.collection(FirestoreCollections.GAMES).document(gameId).delete()
                 .addOnSuccessListener(aVoid -> {
                     // After deleting from games collection, delete from gameData collection
-                    db.collection(GAME_DATA_COLLECTION).document(gameId).delete()
+                    db.collection(FirestoreCollections.GAME_DATA).document(gameId).delete()
                             .addOnSuccessListener(aVoid1 -> {
                                 // Reload the list after deletion
                                 loadAllGames();
@@ -804,7 +799,7 @@ public class GameRepository {
 
     private void updateGameStatusInOriginal(String gameId, String newStatus) {
         // Update the game status in the original gameData collection
-        db.collection(GAME_DATA_COLLECTION)
+        db.collection(FirestoreCollections.GAME_DATA)
                 .document(gameId)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
@@ -819,7 +814,7 @@ public class GameRepository {
                             gameDataWrapper.setData(gameData);
                             
                             // Save back to Firestore
-                            db.collection(GAME_DATA_COLLECTION)
+                            db.collection(FirestoreCollections.GAME_DATA)
                                     .document(gameId)
                                     .set(gameDataWrapper)
                                     .addOnSuccessListener(aVoid -> {
@@ -849,7 +844,7 @@ public class GameRepository {
         }
         
         // Set up real-time listener for approved games collection
-        approvedGamesListener = db.collection(APPROVED_GAMES_COLLECTION)
+        approvedGamesListener = db.collection(FirestoreCollections.APPROVED_GAMES)
                 .addSnapshotListener((querySnapshot, error) -> {
                     if (error != null) {
                         System.out.println("GameRepository: Error listening to approved games: " + error.getMessage());
@@ -888,7 +883,7 @@ public class GameRepository {
         System.out.println("GameRepository: Fetching approved games collection (manual refresh)");
         
         // One-time fetch for approved games collection
-        db.collection(APPROVED_GAMES_COLLECTION)
+        db.collection(FirestoreCollections.APPROVED_GAMES)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (querySnapshot != null) {
@@ -923,7 +918,7 @@ public class GameRepository {
      * Loads pre-aggregated month documents (one read per month doc, no composite indexes).
      */
     public void loadReportsFromSavedSummaries() {
-        db.collection(APPROVED_GAMES_REPORT_COLLECTION)
+        db.collection(FirestoreCollections.APPROVED_GAMES_REPORT)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<Pair<String, MonthlyPointValueReport>> tagged = new ArrayList<>();
@@ -951,7 +946,7 @@ public class GameRepository {
     }
 
     /**
-     * Rebuilds {@code approvedGamesReport/{yyyy-MM}} for the selected calendar month.
+     * Rebuilds {@code approvedGamesReport_v2/{yyyy-MM}} for the selected calendar month.
      * Uses a full collection read without {@code orderBy} (no composite index), then filters in memory
      * by {@link ReportAggregator#yearMonthKey(ApprovedGameData)} so games without {@code approvedAt}
      * still align with month grouping.
@@ -965,7 +960,7 @@ public class GameRepository {
             return;
         }
         final String yyyyMm = String.format(Locale.US, "%04d-%02d", year, monthZeroBased + 1);
-        db.collection(APPROVED_GAMES_COLLECTION)
+        db.collection(FirestoreCollections.APPROVED_GAMES)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<ApprovedGameData> monthGames = new ArrayList<>();
@@ -984,7 +979,7 @@ public class GameRepository {
                             report.getMonthYear(),
                             report.getPointValueReports(),
                             Timestamp.now());
-                    db.collection(APPROVED_GAMES_REPORT_COLLECTION)
+                    db.collection(FirestoreCollections.APPROVED_GAMES_REPORT)
                             .document(yyyyMm)
                             .set(doc)
                             .addOnSuccessListener(aVoid -> {
@@ -1006,7 +1001,7 @@ public class GameRepository {
     }
 
     /**
-     * Rebuilds {@code approvedGamesReport/{yyyy-MM}} for the current calendar month.
+     * Rebuilds {@code approvedGamesReport_v2/{yyyy-MM}} for the current calendar month.
      */
     public void rebuildApprovedGamesReportForCurrentMonth(Runnable onSuccess, Consumer<String> onFailure) {
         Calendar cal = Calendar.getInstance();
@@ -1019,7 +1014,7 @@ public class GameRepository {
      * document per calendar month (batched, max 450 writes per batch).
      */
     public void rebuildAllApprovedGamesReports(Runnable onSuccess, Consumer<String> onFailure) {
-        db.collection(APPROVED_GAMES_COLLECTION)
+        db.collection(FirestoreCollections.APPROVED_GAMES)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<ApprovedGameData> all = new ArrayList<>();
@@ -1074,7 +1069,7 @@ public class GameRepository {
                     report.getMonthYear(),
                     report.getPointValueReports(),
                     Timestamp.now());
-            batch.set(db.collection(APPROVED_GAMES_REPORT_COLLECTION).document(e.getKey()), doc);
+            batch.set(db.collection(FirestoreCollections.APPROVED_GAMES_REPORT).document(e.getKey()), doc);
         }
         int nextStart = end;
         batch.commit()

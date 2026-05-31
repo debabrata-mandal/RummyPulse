@@ -5,7 +5,7 @@ import com.google.firebase.Timestamp;
 import java.util.List;
 
 /**
- * One Firestore document in {@code approvedGamesReport} (document id: {@code yyyy-MM}).
+ * One Firestore document in {@code approvedGamesReport_v2} (document id: {@code yyyy-MM}).
  */
 public class ApprovedGamesReportMonth {
 

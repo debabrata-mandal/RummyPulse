@@ -9,7 +9,7 @@ public class GameAuth {
     private String version;
     private String creatorName;
     private String creatorUserId;
-    /** AI or user-facing game title; stored only on {@code games} documents. May be empty string. */
+    /** AI or user-facing game title; stored only on {@code games_v2} documents. May be empty string. */
     private String displayName;
 
     public GameAuth() {

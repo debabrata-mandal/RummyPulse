@@ -24,6 +24,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.databinding.ActivityJoinGameBinding;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
 import com.example.rummypulse.utils.ModernToast;
@@ -916,7 +917,7 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     /**
-     * Toolbar header: show {@code games.displayName} when non-empty, otherwise game ID.
+     * Toolbar header: show {@code games_v2.displayName} when non-empty, otherwise game ID.
      */
     private void applyGameHeaderText() {
         if (currentGameId == null) {
@@ -1163,7 +1164,7 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Fetch the game PIN from Firebase and grant edit access
         com.google.firebase.firestore.FirebaseFirestore.getInstance()
-            .collection("games")
+            .collection(FirestoreCollections.GAMES)
             .document(gameId)
             .get()
             .addOnSuccessListener(documentSnapshot -> {
@@ -1306,7 +1307,7 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         binding.standingsCard.setVisibility(View.VISIBLE);
 
-        // Header: name from games.displayName when set, else game ID
+        // Header: name from games_v2.displayName when set, else game ID
         applyGameHeaderText();
 
         // Update compact info header (dashboard style)
@@ -2969,7 +2970,7 @@ public class JoinGameActivity extends AppCompatActivity {
         ModernToast.info(this, "Checking game status...");
         
         com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
-        db.collection("gameData")
+        db.collection(FirestoreCollections.GAME_DATA)
             .document(currentGameId)
             .get(com.google.firebase.firestore.Source.SERVER) // Force server fetch, not cache
             .addOnSuccessListener(documentSnapshot -> {
@@ -3271,7 +3272,7 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Set up Firestore listener with metadata changes to track cache vs server data
         com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
-        gameDataListener = db.collection("gameData")
+        gameDataListener = db.collection(FirestoreCollections.GAME_DATA)
             .document(currentGameId)
             .addSnapshotListener(com.google.firebase.firestore.MetadataChanges.INCLUDE, (documentSnapshot, error) -> {
                 if (error != null) {
@@ -3732,7 +3733,7 @@ public class JoinGameActivity extends AppCompatActivity {
         System.out.println("Fetching fresh game data from server...");
         
         com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
-        db.collection("gameData")
+        db.collection(FirestoreCollections.GAME_DATA)
             .document(currentGameId)
             .get(com.google.firebase.firestore.Source.SERVER) // Force server fetch, not cache
             .addOnSuccessListener(documentSnapshot -> {

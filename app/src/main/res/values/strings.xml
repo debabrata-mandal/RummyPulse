@@ -142,7 +142,7 @@
     <!-- Navigation -->
     <string name="menu_game_defaults">Game defaults</string>
 
-    <!-- Game defaults (Firestore gameDefaults/config) -->
+    <!-- Game defaults (Firestore gameDefaults_v2/config) -->
     <string name="game_defaults_intro">Defaults for new games and mid-game player catch-up. Changes are saved for everyone on this project.</string>
     <string name="game_defaults_section_values">Default values</string>
     <string name="game_defaults_section_audit">Update record</string>
@@ -162,5 +162,5 @@
     <string name="game_defaults_audit_format">Last updated: %1$s\nUpdated by: %2$s</string>
     <string name="game_defaults_audit_never">Last updated: —</string>
     <string name="game_defaults_audit_unknown_user">Unknown</string>
-    <string name="game_defaults_firestore_permission">Firestore blocked game defaults (missing or insufficient permission). In Firebase Console open Firestore → Rules and allow signed-in users to read and write collection gameDefaults (document config).</string>
+    <string name="game_defaults_firestore_permission">Firestore blocked game defaults (missing or insufficient permission). In Firebase Console open Firestore → Rules and allow signed-in users to read and write collection gameDefaults_v2 (document config).</string>
 </resources>

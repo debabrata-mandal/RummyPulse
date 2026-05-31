@@ -195,7 +195,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         }
     }
 
-    /** Visible title: {@code games.displayName} when non-empty, else game ID. */
+    /** Visible title: {@code games_v2.displayName} when non-empty, else game ID. */
     private static String titleForGameRow(GameItem item) {
         if (item == null) {
             return "";

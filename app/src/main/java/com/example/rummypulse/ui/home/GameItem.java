@@ -17,7 +17,7 @@ public class GameItem {
     private String creatorName;
     private String creatorPhotoUrl;
     private String creatorUserId;
-    /** From {@code games.displayName}; may be empty. */
+    /** From {@code games_v2.displayName}; may be empty. */
     private String gameDisplayName;
     private List<Player> players;
 
@@ -102,7 +102,7 @@ public class GameItem {
     public String getGameDisplayName() { return gameDisplayName; }
 
     /**
-     * Dashboard card title: {@code games.displayName} when set, otherwise {@code Game #} + id (legacy style).
+     * Dashboard card title: {@code games_v2.displayName} when set, otherwise {@code Game #} + id (legacy style).
      */
     public String getDashboardPrimaryLabel() {
         if (gameDisplayName != null && !gameDisplayName.trim().isEmpty()) {
