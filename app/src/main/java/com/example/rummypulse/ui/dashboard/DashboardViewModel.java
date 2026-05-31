@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import com.example.rummypulse.data.FirestoreCollections;
+import com.example.rummypulse.utils.DisplayNameUtils;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.ui.home.GameItem;
 import com.google.firebase.auth.FirebaseAuth;
@@ -221,9 +222,13 @@ public class DashboardViewModel extends ViewModel {
         // Create initial players array with creator as first player
         List<Map<String, Object>> players = new ArrayList<>();
         
-        // First player is the creator
+        // First player is the creator (first name only in standings)
         Map<String, Object> creatorPlayer = new HashMap<>();
-        creatorPlayer.put("name", creatorName != null ? creatorName : "You");
+        String creatorPlayerName = DisplayNameUtils.firstName(creatorName);
+        if (creatorPlayerName.isEmpty()) {
+            creatorPlayerName = "You";
+        }
+        creatorPlayer.put("name", creatorPlayerName);
         creatorPlayer.put("scores", new ArrayList<>(java.util.Collections.nCopies(10, -1)));
         creatorPlayer.put("randomNumber", null);
         creatorPlayer.put("isCreator", true); // Mark as creator

@@ -23,6 +23,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
 import com.example.rummypulse.data.Player;
+import com.example.rummypulse.utils.DisplayNameUtils;
 
 import java.util.List;
 
@@ -207,30 +208,6 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         return item.getGameId() != null ? item.getGameId() : "";
     }
 
-    /** First whitespace-separated token of display name (e.g. email local-part before @ if no space). */
-    private static String creatorFirstName(String creatorName) {
-        if (creatorName == null) {
-            return "";
-        }
-        String t = creatorName.trim();
-        if (t.isEmpty()) {
-            return "";
-        }
-        int at = t.indexOf('@');
-        if (at > 0 && !t.contains(" ")) {
-            t = t.substring(0, at);
-            int dot = t.indexOf('.');
-            if (dot > 0) {
-                t = t.substring(0, dot);
-            }
-        }
-        int sp = t.indexOf(' ');
-        if (sp < 0) {
-            return t;
-        }
-        return t.substring(0, sp);
-    }
-
     private static String buildGameCreatedSummary(GameItem item) {
         String title = titleForGameRow(item);
         String rawWhen = item.getCreationDateTime();
@@ -238,7 +215,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         if (when.isEmpty()) {
             when = "unknown date";
         }
-        String first = creatorFirstName(item.getCreatorName());
+        String first = DisplayNameUtils.firstName(item.getCreatorName());
         if (!first.isEmpty()) {
             return title + " created by " + first + " on " + when;
         }
