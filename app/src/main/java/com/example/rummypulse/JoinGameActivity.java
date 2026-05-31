@@ -78,6 +78,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private static final String REAL_PLAYER_CARD_TAG = "real_player_card";
     private static final long VIEW_MODE_DEBOUNCE_MS = 2000; // 2 seconds for view mode
     private static final long BULK_UPDATE_DEBOUNCE_MS = 6000; // 6 seconds for bulk updates
+    private static final int LIVE_AMOUNTS_REVEAL_AFTER_ROUND = 6;
     private static final long GAME_COMPLETION_BUFFER_MS = 2000; // 2 seconds buffer after pending announcements
     private static final long MAX_GAME_COMPLETION_DELAY_MS = 10000; // Maximum 10 seconds delay
     
@@ -2178,10 +2179,10 @@ public class JoinGameActivity extends AppCompatActivity {
     
     /**
      * Whether standings and header should show settlement amounts (net / total contribution).
-     * When intermediate calculation is off in game defaults, amounts appear only after the game is complete.
+     * When intermediate calculation is off in game defaults, amounts appear only after round 6 is complete.
      */
     private boolean shouldShowStandingAmounts(com.example.rummypulse.data.GameData gameData) {
-        if (gameData != null && isGameCompleted(gameData)) {
+        if (gameData != null && isRoundComplete(LIVE_AMOUNTS_REVEAL_AFTER_ROUND, gameData)) {
             return true;
         }
         return com.example.rummypulse.data.GameDefaultsRepository.getInstance(getApplicationContext())
