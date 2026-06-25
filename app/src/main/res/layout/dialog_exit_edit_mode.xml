@@ -27,7 +27,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="💾 Saved edit access stays on this device."
+            android:text="💾 Without transfer, saved edit access stays on this device."
             android:textColor="@color/text_secondary"
             android:textSize="14sp"
             android:gravity="center"
@@ -60,7 +60,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="🔑 Reveal game secret PIN"
+                android:text="🔑 Transfer edit access"
                 android:textColor="@color/text_primary"
                 android:textSize="15sp"
                 android:textStyle="bold" />
@@ -69,7 +69,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Clears the PIN stored on this phone, then shows the full PIN so you can pass it on. This phone will ask for the PIN again before you can edit."
+                android:text="Generates a new PIN and invalidates the old one. Shows the new PIN so you can pass edit access to someone else. This phone will lose edit access immediately."
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
                 android:lineSpacingExtra="3dp" />

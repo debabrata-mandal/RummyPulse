@@ -197,14 +197,19 @@ public class JoinGameActivity extends AppCompatActivity {
             dialog.dismiss();
             boolean transferAccess = checkboxTransferAccess.isChecked() && currentGameId != null;
             if (transferAccess) {
-                clearSavedPin(currentGameId);
-                String pin = viewModel.getGamePin().getValue();
-                if (!TextUtils.isEmpty(pin)) {
-                    showTransferAccessPinDialog(pin);
-                } else {
-                    ModernToast.info(this, "Access cleared on this device. PIN was not available to show.");
-                    finish();
-                }
+                viewModel.transferEditAccess(currentGameId, new JoinGameViewModel.TransferCallback() {
+                    @Override
+                    public void onSuccess(String newPin, long newPinGeneration) {
+                        clearSavedPin(currentGameId);
+                        showTransferAccessPinDialog(newPin);
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        ModernToast.error(JoinGameActivity.this, message);
+                        finish();
+                    }
+                });
             } else {
                 finish();
             }
@@ -278,6 +283,19 @@ public class JoinGameActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         refreshGameDefaultsAndStandings();
+        checkEditSessionIfNeeded(null);
+    }
+
+    private void checkEditSessionIfNeeded(Runnable onStillValid) {
+        if (currentGameId == null) {
+            return;
+        }
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        if (editAccess == null || !editAccess) {
+            return;
+        }
+        long localGen = getSavedPinGeneration(currentGameId);
+        viewModel.validateEditSessionOnReconnect(currentGameId, localGen, onStillValid);
     }
 
     private void refreshGameDefaultsAndStandings() {
@@ -1045,6 +1063,19 @@ public class JoinGameActivity extends AppCompatActivity {
             }
         });
 
+        viewModel.getEditSessionStale().observe(this, stale -> {
+            if (Boolean.TRUE.equals(stale)) {
+                if (currentGameId != null) {
+                    clearSavedPin(currentGameId);
+                }
+                ModernToast.info(this, getString(R.string.edit_access_transferred_offline));
+                viewModel.clearEditSessionStale();
+                if (currentGameId != null) {
+                    viewModel.refreshGameData(currentGameId);
+                }
+            }
+        });
+
         viewModel.getEditAccessGranted().observe(this, granted -> {
             if (granted) {
                 binding.textAdminMode.setVisibility(View.VISIBLE);
@@ -1065,10 +1096,10 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Don't show duplicate success message here since it's already shown in ViewModel
                 System.out.println("Edit access granted - Players section should now be visible");
                 
-                // Save PIN for persistent edit access across app restarts
+                // Save PIN and generation for persistent edit access across app restarts
                 String pin = viewModel.getGamePin().getValue();
                 if (currentGameId != null && pin != null) {
-                    savePin(currentGameId, pin);
+                    savePin(currentGameId, pin, viewModel.getActiveEditGeneration());
                 }
                 
                 // Show online/offline indicator when edit access is granted
@@ -1162,8 +1193,8 @@ public class JoinGameActivity extends AppCompatActivity {
      */
     private void joinGameAsCreator(String gameId) {
         currentGameId = gameId;
-        
-        // Fetch the game PIN from Firebase and grant edit access
+        applyGameHeaderText();
+
         com.google.firebase.firestore.FirebaseFirestore.getInstance()
             .collection(FirestoreCollections.GAMES)
             .document(gameId)
@@ -1171,50 +1202,36 @@ public class JoinGameActivity extends AppCompatActivity {
             .addOnSuccessListener(documentSnapshot -> {
                 if (documentSnapshot.exists()) {
                     try {
-                        com.example.rummypulse.data.GameAuth gameAuth = 
+                        com.example.rummypulse.data.GameAuth gameAuth =
                             documentSnapshot.toObject(com.example.rummypulse.data.GameAuth.class);
                         if (gameAuth != null && gameAuth.getPin() != null) {
-                            String pin = gameAuth.getPin();
-                            System.out.println("Creator PIN fetched: " + pin);
-                            
-                            // Save the PIN immediately for persistent edit access
-                            savePin(gameId, pin);
-                            
-                            // Join with the PIN to grant edit access
-                            viewModel.joinGame(gameId, true, pin);
+                            viewModel.joinGame(gameId, true, gameAuth.getPin());
                         } else {
-                            System.err.println("PIN not found for creator game");
-                            // Fallback to normal join
                             viewModel.joinGame(gameId, false, null);
                         }
                     } catch (Exception e) {
-                        System.err.println("Error fetching creator PIN: " + e.getMessage());
                         viewModel.joinGame(gameId, false, null);
                     }
                 } else {
                     ModernToast.error(this, "Game not found");
                 }
             })
-            .addOnFailureListener(e -> {
-                System.err.println("Failed to fetch game for creator: " + e.getMessage());
-                ModernToast.error(this, "Failed to load game");
-            });
+            .addOnFailureListener(e -> ModernToast.error(this, "Failed to load game"));
     }
     
     /**
      * Save PIN for a game when edit access is granted
      */
-    private void savePin(String gameId, String pin) {
+    private void savePin(String gameId, String pin, long pinGeneration) {
         if (gameId != null && pin != null) {
             android.content.SharedPreferences prefs = getSharedPreferences("RummyPulse_EditAccess", MODE_PRIVATE);
-            prefs.edit().putString("pin_" + gameId, pin).apply();
-            System.out.println("PIN saved for game: " + gameId);
+            prefs.edit()
+                    .putString("pin_" + gameId, pin)
+                    .putLong("pinGen_" + gameId, pinGeneration)
+                    .apply();
         }
     }
-    
-    /**
-     * Get saved PIN for a game
-     */
+
     private String getSavedPin(String gameId) {
         if (gameId != null) {
             android.content.SharedPreferences prefs = getSharedPreferences("RummyPulse_EditAccess", MODE_PRIVATE);
@@ -1222,15 +1239,22 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         return null;
     }
-    
-    /**
-     * Clear saved PIN for a game
-     */
+
+    private long getSavedPinGeneration(String gameId) {
+        if (gameId != null) {
+            android.content.SharedPreferences prefs = getSharedPreferences("RummyPulse_EditAccess", MODE_PRIVATE);
+            return prefs.getLong("pinGen_" + gameId, 1L);
+        }
+        return 1L;
+    }
+
     private void clearSavedPin(String gameId) {
         if (gameId != null) {
             android.content.SharedPreferences prefs = getSharedPreferences("RummyPulse_EditAccess", MODE_PRIVATE);
-            prefs.edit().remove("pin_" + gameId).apply();
-            System.out.println("PIN cleared for game: " + gameId);
+            prefs.edit()
+                    .remove("pin_" + gameId)
+                    .remove("pinGen_" + gameId)
+                    .apply();
         }
     }
 
@@ -3667,11 +3691,9 @@ public class JoinGameActivity extends AppCompatActivity {
                     // Then setup real-time listener (will not create duplicate if already exists)
                     setupRealtimeListener();
                 } else {
-                    // Edit mode - do not reconnect listener
-                    System.out.println("Network restored in EDIT MODE - listener will not be reconnected (edit mode does not use listener)");
-                    
-                    // Force fetch fresh data from server to update UI
-                    fetchFreshGameData();
+                    // Edit mode - validate session then refresh if still valid
+                    System.out.println("Network restored in EDIT MODE - validating edit session");
+                    checkEditSessionIfNeeded(this::fetchFreshGameData);
                 }
                 
                 // Network status indicator already shows connection state, no need for toast

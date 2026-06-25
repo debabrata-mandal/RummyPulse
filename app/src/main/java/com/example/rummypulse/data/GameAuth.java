@@ -11,6 +11,12 @@ public class GameAuth {
     private String creatorUserId;
     /** AI or user-facing game title; stored only on {@code games_v2} documents. May be empty string. */
     private String displayName;
+    /** Increments on each edit-access transfer; invalidates prior PINs and offline saves. */
+    private Long pinGeneration;
+    /** Firebase Auth UID of the user who currently holds edit access. */
+    private String activeEditorUserId;
+    /** Display name of the active editor. */
+    private String activeEditorName;
 
     public GameAuth() {
         // Default constructor required for Firestore
@@ -78,5 +84,37 @@ public class GameAuth {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    public Long getPinGeneration() {
+        return pinGeneration;
+    }
+
+    public void setPinGeneration(Long pinGeneration) {
+        this.pinGeneration = pinGeneration;
+    }
+
+    /** Returns {@code pinGeneration} when set and positive, otherwise {@code 1}. */
+    public long getPinGenerationOrDefault() {
+        if (pinGeneration != null && pinGeneration > 0) {
+            return pinGeneration;
+        }
+        return 1L;
+    }
+
+    public String getActiveEditorUserId() {
+        return activeEditorUserId;
+    }
+
+    public void setActiveEditorUserId(String activeEditorUserId) {
+        this.activeEditorUserId = activeEditorUserId;
+    }
+
+    public String getActiveEditorName() {
+        return activeEditorName;
+    }
+
+    public void setActiveEditorName(String activeEditorName) {
+        this.activeEditorName = activeEditorName;
     }
 }

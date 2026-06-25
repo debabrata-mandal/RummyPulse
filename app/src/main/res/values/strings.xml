@@ -33,6 +33,7 @@
 
     <string name="transfer_pin_done_countdown">Done (%1$d)</string>
     <string name="transfer_pin_done">Done</string>
+    <string name="edit_access_transferred_offline">Edit access was transferred while you were offline. Your unsaved changes were discarded.</string>
 
     <string name="version_gate_loading">Checking for updates…</string>
     <string name="minimum_version_title">Update required</string>

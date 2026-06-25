@@ -10,6 +10,7 @@ import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.ui.home.GameItem;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.example.rummypulse.utils.PinUtils;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
@@ -204,7 +205,7 @@ public class DashboardViewModel extends ViewModel {
         String gameId = generateGameId();
         
         // Generate 4-digit PIN (avoid "0000")
-        String pin = generatePin();
+        String pin = PinUtils.generatePin();
         
         // Get current user info
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -261,6 +262,9 @@ public class DashboardViewModel extends ViewModel {
         authData.put("creatorName", creatorName);
         authData.put("version", "1.0");
         authData.put("displayName", displayLabel);
+        authData.put("pinGeneration", 1L);
+        authData.put("activeEditorUserId", creatorUserId);
+        authData.put("activeEditorName", creatorName);
         
         // Add creation timestamp to game data as well for easy access
         initialGameData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
@@ -273,6 +277,7 @@ public class DashboardViewModel extends ViewModel {
                 gameDataDoc.put("data", initialGameData);
                 gameDataDoc.put("lastUpdated", com.google.firebase.firestore.FieldValue.serverTimestamp());
                 gameDataDoc.put("version", "1.0");
+                gameDataDoc.put("editGeneration", 1L);
                 
                 db.collection(FirestoreCollections.GAME_DATA).document(gameId)
                     .set(gameDataDoc)
@@ -308,17 +313,6 @@ public class DashboardViewModel extends ViewModel {
         }
         
         return result.toString();
-    }
-
-    private String generatePin() {
-        Random random = new Random();
-        String pin;
-        
-        do {
-            pin = String.format("%04d", random.nextInt(10000));
-        } while ("0000".equals(pin));
-        
-        return pin;
     }
     
     /**
