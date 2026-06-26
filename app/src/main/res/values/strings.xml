@@ -143,6 +143,8 @@
 
     <!-- Navigation -->
     <string name="menu_game_defaults">Game defaults</string>
+    <string name="menu_player_consolidation">Player Consolidation</string>
+    <string name="player_consolidation_coming_soon">Map players across completed games and view consolidated totals. Coming soon.</string>
 
     <!-- Game defaults (Firestore gameDefaults_v2/config) -->
     <string name="game_defaults_intro">Defaults for new games and mid-game player catch-up. Changes are saved for everyone on this project.</string>

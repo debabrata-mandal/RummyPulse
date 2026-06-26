@@ -17,6 +17,10 @@
             android:icon="@drawable/ic_reports"
             android:title="@string/menu_reports" />
         <item
+            android:id="@+id/nav_player_consolidation"
+            android:icon="@drawable/ic_portfolio"
+            android:title="@string/menu_player_consolidation" />
+        <item
             android:id="@+id/nav_user_management"
             android:icon="@drawable/ic_people"
             android:title="Users" />

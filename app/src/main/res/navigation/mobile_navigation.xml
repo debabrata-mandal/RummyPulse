@@ -24,6 +24,12 @@
         tools:layout="@layout/fragment_reports" />
 
     <fragment
+        android:id="@+id/nav_player_consolidation"
+        android:name="com.example.rummypulse.ui.playerconsolidation.PlayerConsolidationFragment"
+        android:label="@string/menu_player_consolidation"
+        tools:layout="@layout/fragment_player_consolidation" />
+
+    <fragment
         android:id="@+id/nav_user_management"
         android:name="com.example.rummypulse.ui.usermanagement.UserManagementFragment"
         android:label="Users"
