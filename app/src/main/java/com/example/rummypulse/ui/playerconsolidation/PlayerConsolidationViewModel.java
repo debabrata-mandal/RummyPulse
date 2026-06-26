@@ -1,5 +1,7 @@
 package com.example.rummypulse.ui.playerconsolidation;
 
+import android.text.TextUtils;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -8,14 +10,23 @@ import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.ui.home.GameItem;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class PlayerConsolidationViewModel extends ViewModel {
 
     private final GameRepository gameRepository;
     private final MutableLiveData<Set<String>> selectedGameIds = new MutableLiveData<>(new HashSet<>());
+    private final MutableLiveData<List<ConsolidatedPlayerGroup>> playerGroups = new MutableLiveData<>(new ArrayList<>());
+    private final MutableLiveData<Set<String>> selectedEntryIds = new MutableLiveData<>(new HashSet<>());
+    private final MutableLiveData<List<PlayerConsolidationEngine.GamePlayerSection>> playerSections =
+            new MutableLiveData<>(new ArrayList<>());
+
+    private boolean consolidationInitialized;
+    private String lastInitializedGameKey = "";
 
     public PlayerConsolidationViewModel() {
         gameRepository = new GameRepository();
@@ -28,6 +39,18 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     public LiveData<Set<String>> getSelectedGameIds() {
         return selectedGameIds;
+    }
+
+    public LiveData<List<ConsolidatedPlayerGroup>> getPlayerGroups() {
+        return playerGroups;
+    }
+
+    public LiveData<Set<String>> getSelectedEntryIds() {
+        return selectedEntryIds;
+    }
+
+    public LiveData<List<PlayerConsolidationEngine.GamePlayerSection>> getPlayerSections() {
+        return playerSections;
     }
 
     public void toggleGameSelection(String gameId) {
@@ -68,6 +91,112 @@ public class PlayerConsolidationViewModel extends ViewModel {
             }
         }
         return result;
+    }
+
+    public boolean hasActiveConsolidation() {
+        return consolidationInitialized;
+    }
+
+    public void initializeConsolidation(List<GameItem> selectedGames) {
+        String gameKey = buildGameKey(selectedGames);
+        if (consolidationInitialized && gameKey.equals(lastInitializedGameKey)) {
+            publishDerivedLists(playerGroups.getValue());
+            return;
+        }
+        List<ConsolidatedPlayerGroup> groups = PlayerConsolidationEngine.buildInitialGroups(selectedGames);
+        consolidationInitialized = true;
+        lastInitializedGameKey = gameKey;
+        selectedEntryIds.setValue(new HashSet<>());
+        playerGroups.setValue(groups);
+        publishDerivedLists(groups);
+    }
+
+    public void toggleEntrySelection(String entryId) {
+        if (TextUtils.isEmpty(entryId)) {
+            return;
+        }
+        Set<String> current = selectedEntryIds.getValue();
+        if (current == null) {
+            current = new HashSet<>();
+        }
+        Set<String> updated = new HashSet<>(current);
+        if (updated.contains(entryId)) {
+            updated.remove(entryId);
+        } else {
+            updated.add(entryId);
+        }
+        selectedEntryIds.setValue(updated);
+    }
+
+    public int getSelectedEntryCount() {
+        Set<String> ids = selectedEntryIds.getValue();
+        return ids != null ? ids.size() : 0;
+    }
+
+    public boolean canLinkSelected() {
+        return getSelectedEntryCount() >= 2;
+    }
+
+    public List<String> getSelectedEntryNames() {
+        Set<String> selectedIds = selectedEntryIds.getValue();
+        if (selectedIds == null || selectedIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<String> names = new ArrayList<>();
+        List<ConsolidatedPlayerGroup> groups = playerGroups.getValue();
+        if (groups == null) {
+            return names;
+        }
+        for (ConsolidatedPlayerGroup group : groups) {
+            for (GamePlayerEntry entry : group.getMembers()) {
+                if (selectedIds.contains(entry.getEntryId())) {
+                    names.add(entry.getPlayerName());
+                }
+            }
+        }
+        return names;
+    }
+
+    public void mergeSelectedPlayers(String displayName) {
+        Set<String> selectedIds = selectedEntryIds.getValue();
+        List<ConsolidatedPlayerGroup> currentGroups = playerGroups.getValue();
+        if (selectedIds == null || selectedIds.size() < 2 || currentGroups == null) {
+            return;
+        }
+        List<ConsolidatedPlayerGroup> merged = PlayerConsolidationEngine.mergeGroups(
+                currentGroups, selectedIds, displayName);
+        selectedEntryIds.setValue(new HashSet<>());
+        playerGroups.setValue(merged);
+        publishDerivedLists(merged);
+    }
+
+    public void resetConsolidation(List<GameItem> selectedGames) {
+        List<ConsolidatedPlayerGroup> groups = PlayerConsolidationEngine.buildInitialGroups(selectedGames);
+        selectedEntryIds.setValue(new HashSet<>());
+        playerGroups.setValue(groups);
+        publishDerivedLists(groups);
+    }
+
+    private void publishDerivedLists(List<ConsolidatedPlayerGroup> groups) {
+        if (groups == null) {
+            playerSections.setValue(new ArrayList<>());
+            return;
+        }
+        List<ConsolidatedPlayerGroup> sortedGroups = new ArrayList<>(groups);
+        sortedGroups.sort(Comparator.comparing(group -> group.getDisplayName().toLowerCase()));
+        playerGroups.setValue(sortedGroups);
+        playerSections.setValue(PlayerConsolidationEngine.buildSections(sortedGroups));
+    }
+
+    private String buildGameKey(List<GameItem> selectedGames) {
+        if (selectedGames == null || selectedGames.isEmpty()) {
+            return "";
+        }
+        List<String> ids = selectedGames.stream()
+                .map(GameItem::getGameId)
+                .sorted()
+                .collect(Collectors.toList());
+        return TextUtils.join(",", ids);
     }
 
     @Override

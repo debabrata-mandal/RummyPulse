@@ -1,10 +1,16 @@
 package com.example.rummypulse.ui.playerconsolidation;
 
+import android.app.AlertDialog;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -15,6 +21,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.rummypulse.R;
 import com.example.rummypulse.databinding.FragmentPlayerConsolidationBinding;
 import com.example.rummypulse.ui.home.GameItem;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +31,9 @@ public class PlayerConsolidationFragment extends Fragment {
 
     private FragmentPlayerConsolidationBinding binding;
     private PlayerConsolidationViewModel viewModel;
-    private ConsolidationGameAdapter adapter;
+    private ConsolidationGameAdapter gameAdapter;
+    private ConsolidatedPlayerAdapter consolidatedAdapter;
+    private PlayerEntryAdapter playerEntryAdapter;
     private List<GameItem> currentGames = new ArrayList<>();
 
     @Nullable
@@ -38,40 +47,85 @@ public class PlayerConsolidationFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        viewModel = new ViewModelProvider(this).get(PlayerConsolidationViewModel.class);
+        viewModel = new ViewModelProvider(requireActivity()).get(PlayerConsolidationViewModel.class);
 
-        adapter = new ConsolidationGameAdapter();
-        adapter.setOnGameSelectionListener(game -> viewModel.toggleGameSelection(game.getGameId()));
-        binding.recyclerGames.setLayoutManager(new LinearLayoutManager(requireContext()));
-        binding.recyclerGames.setAdapter(adapter);
+        setupGameSelectionStep();
+        setupMapPlayersStep();
 
         viewModel.getGameItems().observe(getViewLifecycleOwner(), games -> {
             currentGames = games != null ? games : new ArrayList<>();
-            adapter.setGameItems(currentGames);
+            gameAdapter.setGameItems(currentGames);
             boolean isEmpty = currentGames.isEmpty();
             binding.emptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
         });
 
-        viewModel.getSelectedGameIds().observe(getViewLifecycleOwner(), this::updateSelectionUi);
+        viewModel.getSelectedGameIds().observe(getViewLifecycleOwner(), this::updateGameSelectionUi);
 
-        binding.btnContinue.setOnClickListener(v -> showMapPlayersStep());
+        if (viewModel.hasActiveConsolidation()) {
+            showMapPlayersStep(false);
+        }
+    }
+
+    private void setupGameSelectionStep() {
+        gameAdapter = new ConsolidationGameAdapter();
+        gameAdapter.setOnGameSelectionListener(game -> viewModel.toggleGameSelection(game.getGameId()));
+        binding.recyclerGames.setLayoutManager(new LinearLayoutManager(requireContext()));
+        binding.recyclerGames.setAdapter(gameAdapter);
+        binding.btnContinue.setOnClickListener(v -> showMapPlayersStep(true));
         binding.btnChangeGames.setOnClickListener(v -> showSelectGamesStep());
     }
 
-    private void updateSelectionUi(Set<String> selectedIds) {
-        adapter.setSelectedIds(selectedIds);
+    private void setupMapPlayersStep() {
+        consolidatedAdapter = new ConsolidatedPlayerAdapter();
+        playerEntryAdapter = new PlayerEntryAdapter();
+        playerEntryAdapter.setOnEntryToggleListener(entry -> viewModel.toggleEntrySelection(entry.getEntryId()));
+
+        LinearLayoutManager consolidatedLayoutManager = new LinearLayoutManager(requireContext());
+        consolidatedLayoutManager.setAutoMeasureEnabled(true);
+        binding.recyclerConsolidatedPlayers.setLayoutManager(consolidatedLayoutManager);
+        binding.recyclerConsolidatedPlayers.setAdapter(consolidatedAdapter);
+        binding.recyclerConsolidatedPlayers.setNestedScrollingEnabled(false);
+
+        LinearLayoutManager entryLayoutManager = new LinearLayoutManager(requireContext());
+        entryLayoutManager.setAutoMeasureEnabled(true);
+        binding.recyclerPlayerEntries.setLayoutManager(entryLayoutManager);
+        binding.recyclerPlayerEntries.setAdapter(playerEntryAdapter);
+        binding.recyclerPlayerEntries.setNestedScrollingEnabled(false);
+
+        viewModel.getPlayerGroups().observe(getViewLifecycleOwner(), groups -> {
+            consolidatedAdapter.setGroups(groups);
+            boolean isEmpty = groups == null || groups.isEmpty();
+            binding.textNoConsolidatedPlayers.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+            binding.recyclerConsolidatedPlayers.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+        });
+
+        viewModel.getPlayerSections().observe(getViewLifecycleOwner(), playerEntryAdapter::setSections);
+        viewModel.getSelectedEntryIds().observe(getViewLifecycleOwner(), this::updateEntrySelectionUi);
+
+        binding.btnLinkSelected.setOnClickListener(v -> showLinkDialog());
+        binding.btnResetMappings.setOnClickListener(v -> {
+            List<GameItem> selected = viewModel.getSelectedGames(currentGames);
+            viewModel.resetConsolidation(selected);
+        });
+    }
+
+    private void updateGameSelectionUi(Set<String> selectedIds) {
+        gameAdapter.setSelectedIds(selectedIds);
         int count = selectedIds != null ? selectedIds.size() : 0;
         binding.btnContinue.setEnabled(count >= 2);
         binding.btnContinue.setText(getString(R.string.player_consolidation_continue, count));
     }
 
-    private void showMapPlayersStep() {
+    private void updateEntrySelectionUi(Set<String> selectedIds) {
+        playerEntryAdapter.setSelectedEntryIds(selectedIds);
+        binding.btnLinkSelected.setEnabled(viewModel.canLinkSelected());
+    }
+
+    private void showMapPlayersStep(boolean initializeIfNeeded) {
         List<GameItem> selected = viewModel.getSelectedGames(currentGames);
-        List<String> labels = new ArrayList<>();
-        for (GameItem game : selected) {
-            labels.add(game.getDashboardPrimaryLabel());
+        if (initializeIfNeeded || !viewModel.hasActiveConsolidation()) {
+            viewModel.initializeConsolidation(selected);
         }
-        binding.textSelectedGames.setText(TextUtils.join("\n", labels));
         binding.stepSelectGames.setVisibility(View.GONE);
         binding.stepMapPlayers.setVisibility(View.VISIBLE);
     }
@@ -79,5 +133,46 @@ public class PlayerConsolidationFragment extends Fragment {
     private void showSelectGamesStep() {
         binding.stepMapPlayers.setVisibility(View.GONE);
         binding.stepSelectGames.setVisibility(View.VISIBLE);
+    }
+
+    private void showLinkDialog() {
+        List<String> selectedNames = viewModel.getSelectedEntryNames();
+        if (selectedNames.size() < 2) {
+            return;
+        }
+
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_link_players, null);
+        TextView selectedNamesText = dialogView.findViewById(R.id.text_selected_names);
+        TextInputEditText displayNameInput = dialogView.findViewById(R.id.input_display_name);
+        selectedNamesText.setText(TextUtils.join(", ", selectedNames));
+        displayNameInput.setText(selectedNames.get(0));
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext(), R.style.DarkDialogTheme)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create();
+
+        dialogView.findViewById(R.id.btn_cancel).setOnClickListener(v -> dialog.dismiss());
+        dialogView.findViewById(R.id.btn_link).setOnClickListener(v -> {
+            String displayName = displayNameInput.getText() != null
+                    ? displayNameInput.getText().toString()
+                    : selectedNames.get(0);
+            viewModel.mergeSelectedPlayers(displayName);
+            dialog.dismiss();
+        });
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        dialog.show();
+
+        Window window = dialog.getWindow();
+        if (window != null) {
+            android.util.DisplayMetrics dm = requireContext().getResources().getDisplayMetrics();
+            int maxPx = getResources().getDimensionPixelSize(R.dimen.dialog_create_game_max_width);
+            int widthPx = Math.min((int) (dm.widthPixels * 0.92f), maxPx);
+            window.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
     }
 }
