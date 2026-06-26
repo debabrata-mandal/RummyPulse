@@ -144,7 +144,17 @@
     <!-- Navigation -->
     <string name="menu_game_defaults">Game defaults</string>
     <string name="menu_player_consolidation">Player Consolidation</string>
-    <string name="player_consolidation_coming_soon">Map players across completed games and view consolidated totals. Coming soon.</string>
+    <string name="player_consolidation_subtitle">Select 2 or more games to consolidate players across.</string>
+    <string name="player_consolidation_continue">Continue (%1$d selected)</string>
+    <string name="player_consolidation_empty">No games available</string>
+    <string name="player_consolidation_game_subtitle">%1$s players · ₹%2$s per point</string>
+    <string name="player_consolidation_map_title">Map players</string>
+    <string name="player_consolidation_map_coming_soon">Player mapping and consolidated totals coming soon.</string>
+    <string name="player_consolidation_selected_games_label">Selected games</string>
+    <string name="player_consolidation_change_games">Change games</string>
+    <string name="player_consolidation_created_by">Created by </string>
+    <string name="player_consolidation_started">Started %1$s</string>
+    <string name="player_consolidation_creator_photo">Game creator photo</string>
 
     <!-- Game defaults (Firestore gameDefaults_v2/config) -->
     <string name="game_defaults_intro">Defaults for new games and mid-game player catch-up. Changes are saved for everyone on this project.</string>

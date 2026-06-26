@@ -8,4 +8,6 @@
     <!-- Cap create-game dialog scroll area so full layout fits small phones; content scrolls inside. -->
     <dimen name="dialog_create_game_scroll_max_height">300dp</dimen>
     <dimen name="dialog_create_game_max_width">320dp</dimen>
+    <dimen name="consolidation_card_stroke_default">1dp</dimen>
+    <dimen name="consolidation_card_stroke_selected">2dp</dimen>
 </resources>
