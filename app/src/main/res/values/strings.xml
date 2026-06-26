@@ -113,10 +113,11 @@
     <string name="btn_enter_round_scores">Enter round scores</string>
     <string name="cd_enter_round_scores">Enter round scores one player at a time</string>
     <string name="dialog_enter_round_score_title">Round %1$d</string>
+    <string name="dialog_enter_round_score_subtitle">Enter this player\'s points for the round</string>
+    <string name="dialog_correct_round_score_subtitle">Update this player\'s score for the round</string>
     <string name="dialog_enter_round_score_section_player">Player</string>
     <string name="dialog_enter_round_score_player_progress">Player %1$d of %2$d</string>
     <string name="dialog_enter_round_score_field_label">Points this round</string>
-    <string name="dialog_enter_round_score_helper">Digits only. Zero is allowed for a winning round.</string>
     <string name="dialog_enter_round_score_invalid">Enter a valid whole number (0 or higher).</string>
     <string name="dialog_enter_round_score_next">Next</string>
     <string name="dialog_enter_round_score_done">Done</string>

@@ -10,11 +10,14 @@ import android.os.CountDownTimer;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.GridLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,6 +33,7 @@ import com.example.rummypulse.ui.join.JoinGameViewModel;
 import com.example.rummypulse.utils.ModernToast;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.zxing.BarcodeFormat;
@@ -2059,16 +2063,27 @@ public class JoinGameActivity extends AppCompatActivity {
         com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
 
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_enter_round_score, null, false);
+        TextView titleView = dialogView.findViewById(R.id.text_dialog_round_title);
+        TextView subtitleView = dialogView.findViewById(R.id.text_dialog_round_subtitle);
         TextView nameView = dialogView.findViewById(R.id.text_dialog_player_name);
         TextView progressView = dialogView.findViewById(R.id.text_dialog_progress);
+        ProgressBar progressBar = dialogView.findViewById(R.id.progress_bar_dialog);
+        TextInputLayout layoutScore = dialogView.findViewById(R.id.layout_dialog_score);
         EditText scoreEdit = dialogView.findViewById(R.id.edit_dialog_score);
-        TextView errorView = dialogView.findViewById(R.id.text_dialog_score_error);
-        Button btnCancel = dialogView.findViewById(R.id.btn_dialog_cancel);
-        Button btnConfirm = dialogView.findViewById(R.id.btn_dialog_confirm);
+        MaterialButton btnCancel = dialogView.findViewById(R.id.btn_dialog_cancel);
+        MaterialButton btnConfirm = dialogView.findViewById(R.id.btn_dialog_confirm);
 
+        titleView.setText(getString(correctionMode
+                ? R.string.dialog_correct_round_score_title
+                : R.string.dialog_enter_round_score_title, round1Based));
+        subtitleView.setText(getString(correctionMode
+                ? R.string.dialog_correct_round_score_subtitle
+                : R.string.dialog_enter_round_score_subtitle));
         nameView.setText(player.getName());
         int numPlayers = gameData.getPlayers().size();
         progressView.setText(getString(R.string.dialog_enter_round_score_player_progress, playerIndex + 1, numPlayers));
+        progressBar.setMax(numPlayers);
+        progressBar.setProgress(playerIndex + 1);
         boolean hasMore = correctionMode
                 ? playerIndex + 1 < numPlayers
                 : hasAnotherIncompletePlayerAfter(gameData, round1Based, playerIndex);
@@ -2083,12 +2098,9 @@ public class JoinGameActivity extends AppCompatActivity {
         } else {
             scoreEdit.setText("");
         }
-        errorView.setVisibility(View.GONE);
+        layoutScore.setError(null);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.DarkDialogTheme);
-        builder.setTitle(getString(correctionMode
-                ? R.string.dialog_correct_round_score_title
-                : R.string.dialog_enter_round_score_title, round1Based));
         builder.setView(dialogView);
         builder.setCancelable(true);
 
@@ -2112,24 +2124,21 @@ public class JoinGameActivity extends AppCompatActivity {
         btnConfirm.setOnClickListener(v -> {
             String text = scoreEdit.getText().toString().trim();
             if (text.isEmpty()) {
-                errorView.setText(getString(R.string.dialog_enter_round_score_invalid));
-                errorView.setVisibility(View.VISIBLE);
+                layoutScore.setError(getString(R.string.dialog_enter_round_score_invalid));
                 return;
             }
             int value;
             try {
                 value = Integer.parseInt(text);
             } catch (NumberFormatException ex) {
-                errorView.setText(getString(R.string.dialog_enter_round_score_invalid));
-                errorView.setVisibility(View.VISIBLE);
+                layoutScore.setError(getString(R.string.dialog_enter_round_score_invalid));
                 return;
             }
             if (value < 0) {
-                errorView.setText(getString(R.string.dialog_enter_round_score_invalid));
-                errorView.setVisibility(View.VISIBLE);
+                layoutScore.setError(getString(R.string.dialog_enter_round_score_invalid));
                 return;
             }
-            errorView.setVisibility(View.GONE);
+            layoutScore.setError(null);
 
             com.example.rummypulse.data.GameData gd = viewModel.getGameData().getValue();
             if (gd == null || gd.getPlayers() == null || finalPlayerIndex >= gd.getPlayers().size()) {
@@ -2157,6 +2166,16 @@ public class JoinGameActivity extends AppCompatActivity {
         });
 
         dialog.show();
+
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+            int maxPx = getResources().getDimensionPixelSize(R.dimen.dialog_create_game_max_width);
+            int widthPx = Math.min((int) (dm.widthPixels * 0.92f), maxPx);
+            window.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
+
         scoreEdit.requestFocus();
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
             android.view.inputmethod.InputMethodManager imm =
