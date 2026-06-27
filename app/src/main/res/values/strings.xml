@@ -149,9 +149,8 @@
     <string name="player_consolidation_empty">No games available</string>
     <string name="player_consolidation_game_subtitle">%1$s players · ₹%2$s per point</string>
     <string name="player_consolidation_map_title">Map players</string>
-    <string name="player_consolidation_map_subtitle">Link players who are the same person across games.</string>
+    <string name="player_consolidation_map_subtitle">Tap players to select, then link as the same person.</string>
     <string name="player_consolidation_consolidated_title">Consolidated players</string>
-    <string name="player_consolidation_all_players_title">Players by game</string>
     <string name="player_consolidation_link_selected">Link as same person</string>
     <string name="player_consolidation_link_confirm">Link players</string>
     <string name="player_consolidation_reset">Reset mappings</string>

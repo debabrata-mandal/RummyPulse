@@ -22,8 +22,6 @@ public class PlayerConsolidationViewModel extends ViewModel {
     private final MutableLiveData<Set<String>> selectedGameIds = new MutableLiveData<>(new HashSet<>());
     private final MutableLiveData<List<ConsolidatedPlayerGroup>> playerGroups = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<Set<String>> selectedEntryIds = new MutableLiveData<>(new HashSet<>());
-    private final MutableLiveData<List<PlayerConsolidationEngine.GamePlayerSection>> playerSections =
-            new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<ConsolidationTotals> consolidationTotals =
             new MutableLiveData<>(new ConsolidationTotals(0, 0));
 
@@ -49,10 +47,6 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     public LiveData<Set<String>> getSelectedEntryIds() {
         return selectedEntryIds;
-    }
-
-    public LiveData<List<PlayerConsolidationEngine.GamePlayerSection>> getPlayerSections() {
-        return playerSections;
     }
 
     public LiveData<ConsolidationTotals> getConsolidationTotals() {
@@ -117,8 +111,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
         publishDerivedLists(groups);
     }
 
-    public void toggleEntrySelection(String entryId) {
-        if (TextUtils.isEmpty(entryId)) {
+    public void toggleGroupSelection(ConsolidatedPlayerGroup group) {
+        if (group == null || group.getMembers().isEmpty()) {
             return;
         }
         Set<String> current = selectedEntryIds.getValue();
@@ -126,10 +120,21 @@ public class PlayerConsolidationViewModel extends ViewModel {
             current = new HashSet<>();
         }
         Set<String> updated = new HashSet<>(current);
-        if (updated.contains(entryId)) {
-            updated.remove(entryId);
+        boolean fullySelected = true;
+        for (GamePlayerEntry member : group.getMembers()) {
+            if (!updated.contains(member.getEntryId())) {
+                fullySelected = false;
+                break;
+            }
+        }
+        if (fullySelected) {
+            for (GamePlayerEntry member : group.getMembers()) {
+                updated.remove(member.getEntryId());
+            }
         } else {
-            updated.add(entryId);
+            for (GamePlayerEntry member : group.getMembers()) {
+                updated.add(member.getEntryId());
+            }
         }
         selectedEntryIds.setValue(updated);
     }
@@ -185,14 +190,12 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     private void publishDerivedLists(List<ConsolidatedPlayerGroup> groups) {
         if (groups == null) {
-            playerSections.setValue(new ArrayList<>());
             consolidationTotals.setValue(new ConsolidationTotals(0, 0));
             return;
         }
         List<ConsolidatedPlayerGroup> sortedGroups = new ArrayList<>(groups);
         sortedGroups.sort(Comparator.comparing(group -> group.getDisplayName().toLowerCase()));
         playerGroups.setValue(sortedGroups);
-        playerSections.setValue(PlayerConsolidationEngine.buildSections(sortedGroups));
         consolidationTotals.setValue(ConsolidationTotals.fromGroups(sortedGroups));
     }
 

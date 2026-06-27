@@ -7,19 +7,38 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
+import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<ConsolidatedPlayerAdapter.ViewHolder> {
 
     private List<ConsolidatedPlayerGroup> groups = new ArrayList<>();
+    private Set<String> selectedEntryIds = new HashSet<>();
+    private OnGroupToggleListener listener;
+
+    public interface OnGroupToggleListener {
+        void onToggle(ConsolidatedPlayerGroup group);
+    }
+
+    public void setOnGroupToggleListener(OnGroupToggleListener listener) {
+        this.listener = listener;
+    }
 
     public void setGroups(List<ConsolidatedPlayerGroup> groups) {
         this.groups = groups != null ? groups : new ArrayList<>();
+        notifyDataSetChanged();
+    }
+
+    public void setSelectedEntryIds(Set<String> selectedEntryIds) {
+        this.selectedEntryIds = selectedEntryIds != null ? selectedEntryIds : new HashSet<>();
         notifyDataSetChanged();
     }
 
@@ -51,6 +70,13 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
         }
 
         bindAmounts(holder, group);
+        bindSelection(holder, group);
+
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onToggle(group);
+            }
+        });
     }
 
     private void bindAmounts(ViewHolder holder, ConsolidatedPlayerGroup group) {
@@ -60,18 +86,42 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
                 ConsolidationAmountFormatter.getSignedAmountColor(holder.itemView.getContext(), net));
     }
 
+    private void bindSelection(ViewHolder holder, ConsolidatedPlayerGroup group) {
+        boolean isSelected = isGroupSelected(group);
+        int strokeColor = ContextCompat.getColor(holder.itemView.getContext(),
+                isSelected ? R.color.accent_blue : R.color.divider_color);
+        holder.card.setStrokeColor(strokeColor);
+        holder.card.setStrokeWidth(isSelected
+                ? holder.itemView.getResources().getDimensionPixelSize(R.dimen.consolidation_card_stroke_selected)
+                : holder.itemView.getResources().getDimensionPixelSize(R.dimen.consolidation_card_stroke_default));
+    }
+
+    private boolean isGroupSelected(ConsolidatedPlayerGroup group) {
+        if (selectedEntryIds.isEmpty() || group.getMembers().isEmpty()) {
+            return false;
+        }
+        for (GamePlayerEntry member : group.getMembers()) {
+            if (!selectedEntryIds.contains(member.getEntryId())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     public int getItemCount() {
         return groups.size();
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
+        final MaterialCardView card;
         final TextView displayNameText;
         final TextView aliasesText;
         final TextView netAmountText;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
+            card = itemView.findViewById(R.id.card_player);
             displayNameText = itemView.findViewById(R.id.text_display_name);
             aliasesText = itemView.findViewById(R.id.text_aliases);
             netAmountText = itemView.findViewById(R.id.text_net_amount);

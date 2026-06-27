@@ -7,9 +7,7 @@ import com.example.rummypulse.ui.home.GameItem;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -88,21 +86,6 @@ public final class PlayerConsolidationEngine {
         return result;
     }
 
-    public static List<GamePlayerSection> buildSections(List<ConsolidatedPlayerGroup> groups) {
-        Map<String, GamePlayerSection> sectionsByGameId = new LinkedHashMap<>();
-        for (ConsolidatedPlayerGroup group : groups) {
-            for (GamePlayerEntry entry : group.getMembers()) {
-                GamePlayerSection section = sectionsByGameId.get(entry.getGameId());
-                if (section == null) {
-                    section = new GamePlayerSection(entry.getGameId(), entry.getGameName());
-                    sectionsByGameId.put(entry.getGameId(), section);
-                }
-                section.getEntries().add(entry);
-            }
-        }
-        return new ArrayList<>(sectionsByGameId.values());
-    }
-
     private static List<GamePlayerEntry> flattenPlayers(List<GameItem> games) {
         List<GamePlayerEntry> entries = new ArrayList<>();
         if (games == null) {
@@ -154,28 +137,5 @@ public final class PlayerConsolidationEngine {
             copy.add(copyGroup(group));
         }
         return copy;
-    }
-
-    public static class GamePlayerSection {
-        private final String gameId;
-        private final String gameName;
-        private final List<GamePlayerEntry> entries = new ArrayList<>();
-
-        public GamePlayerSection(String gameId, String gameName) {
-            this.gameId = gameId;
-            this.gameName = gameName;
-        }
-
-        public String getGameId() {
-            return gameId;
-        }
-
-        public String getGameName() {
-            return gameName;
-        }
-
-        public List<GamePlayerEntry> getEntries() {
-            return entries;
-        }
     }
 }

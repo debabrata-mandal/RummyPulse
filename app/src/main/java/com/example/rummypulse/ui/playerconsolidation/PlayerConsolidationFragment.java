@@ -33,7 +33,6 @@ public class PlayerConsolidationFragment extends Fragment {
     private PlayerConsolidationViewModel viewModel;
     private ConsolidationGameAdapter gameAdapter;
     private ConsolidatedPlayerAdapter consolidatedAdapter;
-    private PlayerEntryAdapter playerEntryAdapter;
     private List<GameItem> currentGames = new ArrayList<>();
 
     @Nullable
@@ -77,20 +76,13 @@ public class PlayerConsolidationFragment extends Fragment {
 
     private void setupMapPlayersStep() {
         consolidatedAdapter = new ConsolidatedPlayerAdapter();
-        playerEntryAdapter = new PlayerEntryAdapter();
-        playerEntryAdapter.setOnEntryToggleListener(entry -> viewModel.toggleEntrySelection(entry.getEntryId()));
+        consolidatedAdapter.setOnGroupToggleListener(viewModel::toggleGroupSelection);
 
         LinearLayoutManager consolidatedLayoutManager = new LinearLayoutManager(requireContext());
         consolidatedLayoutManager.setAutoMeasureEnabled(true);
         binding.recyclerConsolidatedPlayers.setLayoutManager(consolidatedLayoutManager);
         binding.recyclerConsolidatedPlayers.setAdapter(consolidatedAdapter);
         binding.recyclerConsolidatedPlayers.setNestedScrollingEnabled(false);
-
-        LinearLayoutManager entryLayoutManager = new LinearLayoutManager(requireContext());
-        entryLayoutManager.setAutoMeasureEnabled(true);
-        binding.recyclerPlayerEntries.setLayoutManager(entryLayoutManager);
-        binding.recyclerPlayerEntries.setAdapter(playerEntryAdapter);
-        binding.recyclerPlayerEntries.setNestedScrollingEnabled(false);
 
         viewModel.getPlayerGroups().observe(getViewLifecycleOwner(), groups -> {
             consolidatedAdapter.setGroups(groups);
@@ -100,7 +92,6 @@ public class PlayerConsolidationFragment extends Fragment {
             binding.consolidationTotalsSummary.getRoot().setVisibility(isEmpty ? View.GONE : View.VISIBLE);
         });
 
-        viewModel.getPlayerSections().observe(getViewLifecycleOwner(), playerEntryAdapter::setSections);
         viewModel.getSelectedEntryIds().observe(getViewLifecycleOwner(), this::updateEntrySelectionUi);
         viewModel.getConsolidationTotals().observe(getViewLifecycleOwner(), this::updateTotalsSummary);
 
@@ -119,8 +110,8 @@ public class PlayerConsolidationFragment extends Fragment {
     }
 
     private void updateEntrySelectionUi(Set<String> selectedIds) {
-        playerEntryAdapter.setSelectedEntryIds(selectedIds);
-        binding.btnLinkSelected.setEnabled(viewModel.canLinkSelected());
+        consolidatedAdapter.setSelectedEntryIds(selectedIds);
+        binding.btnLinkSelected.setVisibility(viewModel.canLinkSelected() ? View.VISIBLE : View.GONE);
     }
 
     private void updateTotalsSummary(ConsolidationTotals totals) {

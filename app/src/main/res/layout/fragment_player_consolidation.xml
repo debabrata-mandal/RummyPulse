@@ -77,11 +77,11 @@
             app:cornerRadius="12dp" />
     </LinearLayout>
 
-    <androidx.core.widget.NestedScrollView
+    <LinearLayout
         android:id="@+id/step_map_players"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:fillViewport="true"
+        android:orientation="vertical"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -89,11 +89,17 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:visibility="visible">
 
-        <LinearLayout
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingBottom="24dp">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="24dp">
 
             <TextView
                 android:layout_width="match_parent"
@@ -144,36 +150,6 @@
                 tools:itemCount="2"
                 tools:listitem="@layout/item_consolidated_player" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="20dp"
-                android:paddingTop="16dp"
-                android:paddingEnd="20dp"
-                android:paddingBottom="8dp"
-                android:text="@string/player_consolidation_all_players_title"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
-                android:textColor="@color/text_primary" />
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recycler_player_entries"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                android:paddingHorizontal="12dp"
-                tools:itemCount="4"
-                tools:listitem="@layout/item_consolidation_player_entry" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_link_selected"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="16dp"
-                android:enabled="false"
-                android:text="@string/player_consolidation_link_selected"
-                app:cornerRadius="12dp" />
-
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_reset_mappings"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
@@ -193,7 +169,20 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/player_consolidation_change_games"
                 app:cornerRadius="12dp" />
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_link_selected"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:text="@string/player_consolidation_link_selected"
+            android:visibility="gone"
+            app:cornerRadius="12dp"
+            tools:visibility="visible" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
