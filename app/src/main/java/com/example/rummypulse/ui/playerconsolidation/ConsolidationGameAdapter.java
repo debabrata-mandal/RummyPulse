@@ -62,23 +62,9 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
         boolean isSelected = selectedIds.contains(item.getGameId());
 
         holder.titleText.setText(item.getDashboardPrimaryLabel());
+        ConsolidationGameStatusUi.bindStatus(holder.statusText, item.getGameStatus());
 
-        String status = item.getGameStatus();
-        if (status == null || status.isEmpty()) {
-            status = "In Progress";
-        }
-        holder.statusText.setText(status);
-        if ("Completed".equals(status) || status.startsWith("R")) {
-            holder.statusText.setBackgroundResource(R.drawable.status_background_green);
-        } else {
-            holder.statusText.setBackgroundResource(R.drawable.status_background_orange);
-        }
-
-        String players = item.getNumberOfPlayers() != null ? item.getNumberOfPlayers() : "0";
-        String pointValue = item.getPointValue() != null && !item.getPointValue().isEmpty()
-                ? item.getPointValue() : "0.00";
-        holder.subtitleText.setText(holder.itemView.getContext().getString(
-                R.string.player_consolidation_game_subtitle, players, pointValue));
+        holder.subtitleText.setText(ConsolidationGameStatusUi.formatGameSubtitle(holder.itemView.getContext(), item));
 
         if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
             holder.creatorNameText.setText(item.getCreatorName());

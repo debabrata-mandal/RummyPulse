@@ -6,8 +6,12 @@ import com.example.rummypulse.data.Player;
 import com.example.rummypulse.ui.home.GameItem;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -18,6 +22,24 @@ public final class PlayerConsolidationEngine {
     private PlayerConsolidationEngine() {
     }
 
+    public static final class RefreshResult {
+        private final List<ConsolidatedPlayerGroup> groups;
+        private final boolean hadMissingMembers;
+
+        public RefreshResult(List<ConsolidatedPlayerGroup> groups, boolean hadMissingMembers) {
+            this.groups = groups;
+            this.hadMissingMembers = hadMissingMembers;
+        }
+
+        public List<ConsolidatedPlayerGroup> getGroups() {
+            return groups;
+        }
+
+        public boolean hadMissingMembers() {
+            return hadMissingMembers;
+        }
+    }
+
     public static List<ConsolidatedPlayerGroup> buildInitialGroups(List<GameItem> games) {
         List<GamePlayerEntry> allEntries = flattenPlayers(games);
         List<ConsolidatedPlayerGroup> groups = new ArrayList<>();
@@ -25,6 +47,54 @@ public final class PlayerConsolidationEngine {
             groups.add(createGroup(List.of(entry)));
         }
         return groups;
+    }
+
+    public static RefreshResult refreshGroupsFromGames(
+            List<ConsolidatedPlayerGroup> currentGroups,
+            List<GameItem> games) {
+        if (currentGroups == null || currentGroups.isEmpty()) {
+            return new RefreshResult(buildInitialGroups(games), false);
+        }
+
+        List<GamePlayerEntry> freshEntries = flattenPlayers(games);
+        Map<String, GamePlayerEntry> freshById = new HashMap<>();
+        Map<String, List<GamePlayerEntry>> freshByGameId = new LinkedHashMap<>();
+        for (GamePlayerEntry entry : freshEntries) {
+            freshById.put(entry.getEntryId(), entry);
+            freshByGameId.computeIfAbsent(entry.getGameId(), key -> new ArrayList<>()).add(entry);
+        }
+
+        Set<String> assignedEntryIds = new HashSet<>();
+        List<ConsolidatedPlayerGroup> refreshedGroups = new ArrayList<>();
+        boolean hadMissingMembers = false;
+
+        for (ConsolidatedPlayerGroup group : currentGroups) {
+            List<GamePlayerEntry> updatedMembers = new ArrayList<>();
+            for (GamePlayerEntry member : group.getMembers()) {
+                GamePlayerEntry fresh = resolveFreshEntry(member, freshById, freshByGameId);
+                if (fresh != null) {
+                    updatedMembers.add(fresh);
+                    assignedEntryIds.add(fresh.getEntryId());
+                } else {
+                    hadMissingMembers = true;
+                }
+            }
+            if (updatedMembers.isEmpty()) {
+                continue;
+            }
+            ConsolidatedPlayerGroup refreshed = new ConsolidatedPlayerGroup(
+                    group.getGroupId(), group.getDisplayName(), updatedMembers);
+            refreshed.setNetAdjustment(group.getNetAdjustment());
+            refreshedGroups.add(refreshed);
+        }
+
+        for (GamePlayerEntry entry : freshEntries) {
+            if (!assignedEntryIds.contains(entry.getEntryId())) {
+                refreshedGroups.add(createGroup(List.of(entry)));
+            }
+        }
+
+        return new RefreshResult(refreshedGroups, hadMissingMembers);
     }
 
     public static List<ConsolidatedPlayerGroup> mergeGroups(
@@ -97,6 +167,78 @@ public final class PlayerConsolidationEngine {
         return result;
     }
 
+    static String buildEntryId(String gameId, Player player, int index) {
+        if (!TextUtils.isEmpty(player.getUserId())) {
+            return gameId + "::uid:" + player.getUserId();
+        }
+        String playerName = player.getName();
+        if (TextUtils.isEmpty(playerName)) {
+            playerName = UNKNOWN_PLAYER;
+        }
+        return gameId + "::idx:" + index + "::" + normalizeName(playerName);
+    }
+
+    private static GamePlayerEntry resolveFreshEntry(
+            GamePlayerEntry existing,
+            Map<String, GamePlayerEntry> freshById,
+            Map<String, List<GamePlayerEntry>> freshByGameId) {
+        GamePlayerEntry direct = freshById.get(existing.getEntryId());
+        if (direct != null) {
+            return direct;
+        }
+
+        String userId = existing.getUserId();
+        if (!TextUtils.isEmpty(userId)) {
+            for (GamePlayerEntry fresh : freshById.values()) {
+                if (existing.getGameId().equals(fresh.getGameId()) && userId.equals(fresh.getUserId())) {
+                    return fresh;
+                }
+            }
+        }
+
+        Integer legacyIndex = parseLegacyIndexEntryId(existing.getEntryId(), existing.getGameId());
+        if (legacyIndex != null) {
+            List<GamePlayerEntry> gameEntries = freshByGameId.get(existing.getGameId());
+            if (gameEntries != null && legacyIndex >= 0 && legacyIndex < gameEntries.size()) {
+                return gameEntries.get(legacyIndex);
+            }
+        }
+
+        String normalizedExistingName = normalizeName(existing.getPlayerName());
+        for (GamePlayerEntry fresh : freshById.values()) {
+            if (existing.getGameId().equals(fresh.getGameId())
+                    && normalizedExistingName.equals(normalizeName(fresh.getPlayerName()))) {
+                return fresh;
+            }
+        }
+        return null;
+    }
+
+    private static Integer parseLegacyIndexEntryId(String entryId, String gameId) {
+        if (TextUtils.isEmpty(entryId) || TextUtils.isEmpty(gameId)) {
+            return null;
+        }
+        if (!entryId.startsWith(gameId + "::")) {
+            return null;
+        }
+        String suffix = entryId.substring(gameId.length() + 2);
+        if (suffix.startsWith("uid:") || suffix.startsWith("idx:")) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(suffix);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static String normalizeName(String name) {
+        if (TextUtils.isEmpty(name)) {
+            return UNKNOWN_PLAYER.toLowerCase(Locale.US);
+        }
+        return name.trim().toLowerCase(Locale.US);
+    }
+
     private static List<GamePlayerEntry> flattenPlayers(List<GameItem> games) {
         List<GamePlayerEntry> entries = new ArrayList<>();
         if (games == null) {
@@ -115,7 +257,7 @@ public final class PlayerConsolidationEngine {
                 if (TextUtils.isEmpty(playerName)) {
                     playerName = UNKNOWN_PLAYER;
                 }
-                String entryId = gameId + "::" + i;
+                String entryId = buildEntryId(gameId, player, i);
                 PlayerSettlementCalculator.PlayerSettlement settlement =
                         PlayerSettlementCalculator.compute(game, player);
                 entries.add(new GamePlayerEntry(

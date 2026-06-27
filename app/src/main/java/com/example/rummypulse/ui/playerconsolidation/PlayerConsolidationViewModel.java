@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import com.example.rummypulse.data.GameRepository;
+import com.example.rummypulse.data.Player;
 import com.example.rummypulse.ui.home.GameItem;
 
 import java.util.ArrayList;
@@ -28,7 +29,14 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     private boolean consolidationInitialized;
     private String lastInitializedGameKey = "";
+    private String lastSelectedGamesContentHash = "";
     private final List<String> groupSelectionOrder = new ArrayList<>();
+
+    public enum RefreshOutcome {
+        SKIPPED,
+        REFRESHED,
+        REFRESHED_WITH_MISSING_MEMBERS
+    }
 
     public PlayerConsolidationViewModel() {
         gameRepository = new GameRepository();
@@ -108,6 +116,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
         List<ConsolidatedPlayerGroup> groups = PlayerConsolidationEngine.buildInitialGroups(selectedGames);
         consolidationInitialized = true;
         lastInitializedGameKey = gameKey;
+        lastSelectedGamesContentHash = computeSelectedGamesContentHash(selectedGames);
         selectedEntryIds.setValue(new HashSet<>());
         groupSelectionOrder.clear();
         playerGroups.setValue(groups);
@@ -282,8 +291,59 @@ public class PlayerConsolidationViewModel extends ViewModel {
         List<ConsolidatedPlayerGroup> groups = PlayerConsolidationEngine.buildInitialGroups(selectedGames);
         selectedEntryIds.setValue(new HashSet<>());
         groupSelectionOrder.clear();
+        lastSelectedGamesContentHash = computeSelectedGamesContentHash(selectedGames);
         playerGroups.setValue(groups);
         publishDerivedLists(groups);
+    }
+
+    public RefreshOutcome refreshConsolidationFromLatestGames(List<GameItem> allGames, boolean force) {
+        if (!consolidationInitialized) {
+            return RefreshOutcome.SKIPPED;
+        }
+        List<GameItem> selectedGames = getSelectedGames(allGames);
+        if (selectedGames.isEmpty()) {
+            return RefreshOutcome.SKIPPED;
+        }
+
+        String contentHash = computeSelectedGamesContentHash(selectedGames);
+        if (!force && contentHash.equals(lastSelectedGamesContentHash)) {
+            return RefreshOutcome.SKIPPED;
+        }
+
+        List<ConsolidatedPlayerGroup> currentGroups = playerGroups.getValue();
+        PlayerConsolidationEngine.RefreshResult result =
+                PlayerConsolidationEngine.refreshGroupsFromGames(currentGroups, selectedGames);
+        lastSelectedGamesContentHash = contentHash;
+        publishDerivedLists(result.getGroups());
+        return result.hadMissingMembers()
+                ? RefreshOutcome.REFRESHED_WITH_MISSING_MEMBERS
+                : RefreshOutcome.REFRESHED;
+    }
+
+    private String computeSelectedGamesContentHash(List<GameItem> selectedGames) {
+        if (selectedGames == null || selectedGames.isEmpty()) {
+            return "";
+        }
+        List<GameItem> sorted = new ArrayList<>(selectedGames);
+        sorted.sort(Comparator.comparing(game -> game.getGameId() != null ? game.getGameId() : ""));
+        StringBuilder hash = new StringBuilder();
+        for (GameItem game : sorted) {
+            hash.append(game.getGameId()).append('|');
+            hash.append(game.getGameStatus()).append('|');
+            hash.append(game.getPointValue()).append('|');
+            hash.append(game.getGstPercentage()).append('|');
+            List<Player> players = game.getPlayers();
+            if (players != null) {
+                hash.append(players.size()).append(':');
+                for (Player player : players) {
+                    hash.append(player.getTotalScore()).append(',');
+                    hash.append(player.getUserId()).append(',');
+                    hash.append(player.getName()).append(',');
+                }
+            }
+            hash.append(';');
+        }
+        return hash.toString();
     }
 
     private void publishDerivedLists(List<ConsolidatedPlayerGroup> groups) {

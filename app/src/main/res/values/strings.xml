@@ -165,6 +165,9 @@
     <string name="player_consolidation_contribution_short">Contrib %1$s</string>
     <string name="player_consolidation_selected_games_label">Selected games</string>
     <string name="player_consolidation_change_games">Change games</string>
+    <string name="player_consolidation_refresh_data">Refresh game data</string>
+    <string name="player_consolidation_refresh_data_done">Game data updated.</string>
+    <string name="player_consolidation_refresh_missing_members">Some mapped players were removed from a game.</string>
     <string name="player_consolidation_transfer_amount">Transfer amount</string>
     <string name="player_consolidation_transfer_dialog_title">Transfer amount</string>
     <string name="player_consolidation_transfer_dialog_subtitle">Deduct from one player and add the same amount to the other.</string>

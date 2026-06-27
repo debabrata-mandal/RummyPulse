@@ -35,6 +35,7 @@ public class PlayerConsolidationFragment extends Fragment {
     private PlayerConsolidationViewModel viewModel;
     private ConsolidationGameAdapter gameAdapter;
     private ConsolidatedPlayerAdapter consolidatedAdapter;
+    private SelectedGamesStatusAdapter selectedGamesStatusAdapter;
     private List<GameItem> currentGames = new ArrayList<>();
 
     @Nullable
@@ -58,6 +59,10 @@ public class PlayerConsolidationFragment extends Fragment {
             gameAdapter.setGameItems(currentGames);
             boolean isEmpty = currentGames.isEmpty();
             binding.emptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+            if (viewModel.hasActiveConsolidation() && binding.stepMapPlayers.getVisibility() == View.VISIBLE) {
+                updateSelectedGamesStatus();
+                handleRefreshOutcome(viewModel.refreshConsolidationFromLatestGames(currentGames, false));
+            }
         });
 
         viewModel.getSelectedGameIds().observe(getViewLifecycleOwner(), this::updateGameSelectionUi);
@@ -80,6 +85,13 @@ public class PlayerConsolidationFragment extends Fragment {
         consolidatedAdapter = new ConsolidatedPlayerAdapter();
         consolidatedAdapter.setOnGroupToggleListener(viewModel::toggleGroupSelection);
 
+        selectedGamesStatusAdapter = new SelectedGamesStatusAdapter();
+        LinearLayoutManager selectedGamesLayoutManager = new LinearLayoutManager(requireContext());
+        selectedGamesLayoutManager.setAutoMeasureEnabled(true);
+        binding.recyclerSelectedGamesStatus.setLayoutManager(selectedGamesLayoutManager);
+        binding.recyclerSelectedGamesStatus.setAdapter(selectedGamesStatusAdapter);
+        binding.recyclerSelectedGamesStatus.setNestedScrollingEnabled(false);
+
         LinearLayoutManager consolidatedLayoutManager = new LinearLayoutManager(requireContext());
         consolidatedLayoutManager.setAutoMeasureEnabled(true);
         binding.recyclerConsolidatedPlayers.setLayoutManager(consolidatedLayoutManager);
@@ -99,6 +111,19 @@ public class PlayerConsolidationFragment extends Fragment {
 
         binding.btnLinkSelected.setOnClickListener(v -> showLinkDialog());
         binding.btnTransferAmount.setOnClickListener(v -> showTransferDialog());
+        binding.fabRefreshGameData.setOnClickListener(v -> {
+            PlayerConsolidationViewModel.RefreshOutcome outcome =
+                    viewModel.refreshConsolidationFromLatestGames(currentGames, true);
+            if (outcome == PlayerConsolidationViewModel.RefreshOutcome.SKIPPED) {
+                return;
+            }
+            if (outcome == PlayerConsolidationViewModel.RefreshOutcome.REFRESHED_WITH_MISSING_MEMBERS) {
+                ModernToast.warning(requireContext(),
+                        getString(R.string.player_consolidation_refresh_missing_members));
+            } else {
+                ModernToast.success(requireContext(), getString(R.string.player_consolidation_refresh_data_done));
+            }
+        });
         binding.btnResetMappings.setOnClickListener(v -> {
             List<GameItem> selected = viewModel.getSelectedGames(currentGames);
             viewModel.resetConsolidation(selected);
@@ -116,6 +141,17 @@ public class PlayerConsolidationFragment extends Fragment {
         consolidatedAdapter.setSelectedEntryIds(selectedIds);
         binding.btnLinkSelected.setVisibility(viewModel.canLinkSelected() ? View.VISIBLE : View.GONE);
         binding.btnTransferAmount.setVisibility(viewModel.canTransferBetweenSelected() ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateSelectedGamesStatus() {
+        selectedGamesStatusAdapter.setGames(viewModel.getSelectedGames(currentGames));
+    }
+
+    private void handleRefreshOutcome(PlayerConsolidationViewModel.RefreshOutcome outcome) {
+        if (outcome == PlayerConsolidationViewModel.RefreshOutcome.REFRESHED_WITH_MISSING_MEMBERS) {
+            ModernToast.warning(requireContext(),
+                    getString(R.string.player_consolidation_refresh_missing_members));
+        }
     }
 
     private void updateTotalsSummary(ConsolidationTotals totals) {
@@ -138,11 +174,14 @@ public class PlayerConsolidationFragment extends Fragment {
         }
         binding.stepSelectGames.setVisibility(View.GONE);
         binding.stepMapPlayers.setVisibility(View.VISIBLE);
+        binding.fabRefreshGameData.setVisibility(View.VISIBLE);
+        updateSelectedGamesStatus();
     }
 
     private void showSelectGamesStep() {
         binding.stepMapPlayers.setVisibility(View.GONE);
         binding.stepSelectGames.setVisibility(View.VISIBLE);
+        binding.fabRefreshGameData.setVisibility(View.GONE);
     }
 
     private void showLinkDialog() {
