@@ -24,6 +24,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
     private final MutableLiveData<Set<String>> selectedEntryIds = new MutableLiveData<>(new HashSet<>());
     private final MutableLiveData<List<PlayerConsolidationEngine.GamePlayerSection>> playerSections =
             new MutableLiveData<>(new ArrayList<>());
+    private final MutableLiveData<ConsolidationTotals> consolidationTotals =
+            new MutableLiveData<>(new ConsolidationTotals(0, 0));
 
     private boolean consolidationInitialized;
     private String lastInitializedGameKey = "";
@@ -51,6 +53,10 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     public LiveData<List<PlayerConsolidationEngine.GamePlayerSection>> getPlayerSections() {
         return playerSections;
+    }
+
+    public LiveData<ConsolidationTotals> getConsolidationTotals() {
+        return consolidationTotals;
     }
 
     public void toggleGameSelection(String gameId) {
@@ -180,12 +186,14 @@ public class PlayerConsolidationViewModel extends ViewModel {
     private void publishDerivedLists(List<ConsolidatedPlayerGroup> groups) {
         if (groups == null) {
             playerSections.setValue(new ArrayList<>());
+            consolidationTotals.setValue(new ConsolidationTotals(0, 0));
             return;
         }
         List<ConsolidatedPlayerGroup> sortedGroups = new ArrayList<>(groups);
         sortedGroups.sort(Comparator.comparing(group -> group.getDisplayName().toLowerCase()));
         playerGroups.setValue(sortedGroups);
         playerSections.setValue(PlayerConsolidationEngine.buildSections(sortedGroups));
+        consolidationTotals.setValue(ConsolidationTotals.fromGroups(sortedGroups));
     }
 
     private String buildGameKey(List<GameItem> selectedGames) {

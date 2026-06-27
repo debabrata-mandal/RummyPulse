@@ -159,6 +159,11 @@
     <string name="player_consolidation_link_dialog_hint">Display name</string>
     <string name="player_consolidation_alias_format">%1$s (%2$s)</string>
     <string name="player_consolidation_no_players">No players found in the selected games.</string>
+    <string name="player_consolidation_totals_title">Consolidated totals</string>
+    <string name="player_consolidation_net_label">Net amount</string>
+    <string name="player_consolidation_contribution_label">Contribution</string>
+    <string name="player_consolidation_contribution_value">Contribution %1$s</string>
+    <string name="player_consolidation_contribution_short">Contrib %1$s</string>
     <string name="player_consolidation_selected_games_label">Selected games</string>
     <string name="player_consolidation_change_games">Change games</string>
     <string name="player_consolidation_created_by">Created by </string>

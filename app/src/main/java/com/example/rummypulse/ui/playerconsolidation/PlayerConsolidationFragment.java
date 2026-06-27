@@ -97,10 +97,12 @@ public class PlayerConsolidationFragment extends Fragment {
             boolean isEmpty = groups == null || groups.isEmpty();
             binding.textNoConsolidatedPlayers.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
             binding.recyclerConsolidatedPlayers.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+            binding.consolidationTotalsSummary.getRoot().setVisibility(isEmpty ? View.GONE : View.VISIBLE);
         });
 
         viewModel.getPlayerSections().observe(getViewLifecycleOwner(), playerEntryAdapter::setSections);
         viewModel.getSelectedEntryIds().observe(getViewLifecycleOwner(), this::updateEntrySelectionUi);
+        viewModel.getConsolidationTotals().observe(getViewLifecycleOwner(), this::updateTotalsSummary);
 
         binding.btnLinkSelected.setOnClickListener(v -> showLinkDialog());
         binding.btnResetMappings.setOnClickListener(v -> {
@@ -119,6 +121,19 @@ public class PlayerConsolidationFragment extends Fragment {
     private void updateEntrySelectionUi(Set<String> selectedIds) {
         playerEntryAdapter.setSelectedEntryIds(selectedIds);
         binding.btnLinkSelected.setEnabled(viewModel.canLinkSelected());
+    }
+
+    private void updateTotalsSummary(ConsolidationTotals totals) {
+        if (totals == null) {
+            binding.consolidationTotalsSummary.getRoot().setVisibility(View.GONE);
+            return;
+        }
+        binding.consolidationTotalsSummary.getRoot().setVisibility(View.VISIBLE);
+        binding.consolidationTotalsSummary.textTotalContribution.setText(
+                ConsolidationAmountFormatter.formatContribution(totals.getTotalContribution()));
+        binding.consolidationTotalsSummary.textTotalContribution.setTextColor(
+                ConsolidationAmountFormatter.getContributionColor(
+                        requireContext(), totals.getTotalContribution()));
     }
 
     private void showMapPlayersStep(boolean initializeIfNeeded) {

@@ -30,4 +30,28 @@ public class ConsolidatedPlayerGroup {
     public List<GamePlayerEntry> getMembers() {
         return members;
     }
+
+    public double getTotalGrossAmount() {
+        double sum = 0;
+        for (GamePlayerEntry member : members) {
+            sum += member.getGrossAmount();
+        }
+        return sum;
+    }
+
+    public double getTotalContribution() {
+        double sum = 0;
+        for (GamePlayerEntry member : members) {
+            sum += member.getGstPaid();
+        }
+        return sum;
+    }
+
+    public double getTotalNetAmount() {
+        double sum = 0;
+        for (GamePlayerEntry member : members) {
+            sum += member.getNetAmount();
+        }
+        return sum;
+    }
 }

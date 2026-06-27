@@ -116,6 +116,14 @@
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
                 android:textColor="@color/text_primary" />
 
+            <include
+                android:id="@+id/consolidation_totals_summary"
+                layout="@layout/item_consolidation_totals_summary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
             <TextView
                 android:id="@+id/text_no_consolidated_players"
                 android:layout_width="match_parent"

@@ -43,4 +43,13 @@
             tools:text="Weekend Game" />
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/text_net_amount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        tools:text="+₹60"
+        tools:textColor="@color/success_green" />
+
 </LinearLayout>

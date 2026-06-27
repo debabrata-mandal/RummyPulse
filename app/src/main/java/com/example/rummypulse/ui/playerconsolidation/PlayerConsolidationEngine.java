@@ -122,12 +122,18 @@ public final class PlayerConsolidationEngine {
                     playerName = UNKNOWN_PLAYER;
                 }
                 String entryId = gameId + "::" + i;
+                PlayerSettlementCalculator.PlayerSettlement settlement =
+                        PlayerSettlementCalculator.compute(game, player);
                 entries.add(new GamePlayerEntry(
                         entryId,
                         gameId,
                         gameName,
                         playerName,
-                        player.getUserId()));
+                        player.getUserId(),
+                        settlement.playerScore,
+                        settlement.grossAmount,
+                        settlement.gstPaid,
+                        settlement.netAmount));
             }
         }
         return entries;

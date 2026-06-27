@@ -49,6 +49,15 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
             }
             holder.aliasesText.setText(TextUtils.join(", ", aliasParts));
         }
+
+        bindAmounts(holder, group);
+    }
+
+    private void bindAmounts(ViewHolder holder, ConsolidatedPlayerGroup group) {
+        double net = group.getTotalNetAmount();
+        holder.netAmountText.setText(ConsolidationAmountFormatter.formatSignedAmount(net));
+        holder.netAmountText.setTextColor(
+                ConsolidationAmountFormatter.getSignedAmountColor(holder.itemView.getContext(), net));
     }
 
     @Override
@@ -59,11 +68,13 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
     static class ViewHolder extends RecyclerView.ViewHolder {
         final TextView displayNameText;
         final TextView aliasesText;
+        final TextView netAmountText;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             displayNameText = itemView.findViewById(R.id.text_display_name);
             aliasesText = itemView.findViewById(R.id.text_aliases);
+            netAmountText = itemView.findViewById(R.id.text_net_amount);
         }
     }
 }

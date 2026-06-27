@@ -72,6 +72,11 @@ public class PlayerEntryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         boolean isSelected = selectedEntryIds.contains(entry.getEntryId());
         entryHolder.playerNameText.setText(entry.getPlayerName());
         entryHolder.gameNameText.setText(entry.getGameName());
+        entryHolder.netAmountText.setText(
+                ConsolidationAmountFormatter.formatSignedAmount(entry.getNetAmount()));
+        entryHolder.netAmountText.setTextColor(
+                ConsolidationAmountFormatter.getSignedAmountColor(
+                        entryHolder.itemView.getContext(), entry.getNetAmount()));
         entryHolder.checkbox.setChecked(isSelected);
         entryHolder.itemView.setOnClickListener(v -> {
             if (listener != null) {
@@ -139,12 +144,14 @@ public class PlayerEntryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         final MaterialCheckBox checkbox;
         final TextView playerNameText;
         final TextView gameNameText;
+        final TextView netAmountText;
 
         EntryViewHolder(@NonNull View itemView) {
             super(itemView);
             checkbox = itemView.findViewById(R.id.checkbox_entry);
             playerNameText = itemView.findViewById(R.id.text_player_name);
             gameNameText = itemView.findViewById(R.id.text_game_name);
+            netAmountText = itemView.findViewById(R.id.text_net_amount);
         }
     }
 }
