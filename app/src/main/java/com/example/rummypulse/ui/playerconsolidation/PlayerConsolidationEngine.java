@@ -64,7 +64,16 @@ public final class PlayerConsolidationEngine {
         String resolvedName = TextUtils.isEmpty(displayName)
                 ? mergedMembers.get(0).getPlayerName()
                 : displayName.trim();
-        result.add(new ConsolidatedPlayerGroup(UUID.randomUUID().toString(), resolvedName, mergedMembers));
+        ConsolidatedPlayerGroup mergedGroup =
+                new ConsolidatedPlayerGroup(UUID.randomUUID().toString(), resolvedName, mergedMembers);
+        double mergedAdjustment = 0;
+        for (ConsolidatedPlayerGroup group : groups) {
+            if (isFullyConsumed(group, entryIdsToMerge)) {
+                mergedAdjustment += group.getNetAdjustment();
+            }
+        }
+        mergedGroup.setNetAdjustment(mergedAdjustment);
+        result.add(mergedGroup);
 
         for (ConsolidatedPlayerGroup group : groups) {
             if (!consumedGroupIds.contains(group.getGroupId())) {
@@ -79,7 +88,9 @@ public final class PlayerConsolidationEngine {
                 }
             }
             if (!remaining.isEmpty()) {
-                result.add(createGroup(remaining));
+                ConsolidatedPlayerGroup remainder = createGroup(remaining);
+                remainder.setNetAdjustment(group.getNetAdjustment());
+                result.add(remainder);
             }
         }
 
@@ -127,8 +138,20 @@ public final class PlayerConsolidationEngine {
         return new ConsolidatedPlayerGroup(UUID.randomUUID().toString(), displayName, members);
     }
 
+    private static boolean isFullyConsumed(ConsolidatedPlayerGroup group, Set<String> entryIdsToMerge) {
+        for (GamePlayerEntry member : group.getMembers()) {
+            if (!entryIdsToMerge.contains(member.getEntryId())) {
+                return false;
+            }
+        }
+        return !group.getMembers().isEmpty();
+    }
+
     private static ConsolidatedPlayerGroup copyGroup(ConsolidatedPlayerGroup group) {
-        return new ConsolidatedPlayerGroup(group.getGroupId(), group.getDisplayName(), group.getMembers());
+        ConsolidatedPlayerGroup copy = new ConsolidatedPlayerGroup(
+                group.getGroupId(), group.getDisplayName(), group.getMembers());
+        copy.setNetAdjustment(group.getNetAdjustment());
+        return copy;
     }
 
     private static List<ConsolidatedPlayerGroup> copyGroups(List<ConsolidatedPlayerGroup> groups) {

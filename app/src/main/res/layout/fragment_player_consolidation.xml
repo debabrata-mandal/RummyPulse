@@ -173,6 +173,18 @@
         </androidx.core.widget.NestedScrollView>
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_transfer_amount"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="8dp"
+            android:text="@string/player_consolidation_transfer_amount"
+            android:visibility="gone"
+            app:cornerRadius="12dp"
+            tools:visibility="visible" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_link_selected"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

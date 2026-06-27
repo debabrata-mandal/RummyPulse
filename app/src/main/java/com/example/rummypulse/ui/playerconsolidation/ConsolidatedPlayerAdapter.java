@@ -55,20 +55,7 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
         ConsolidatedPlayerGroup group = groups.get(position);
         holder.displayNameText.setText(group.getDisplayName());
 
-        if (group.getMembers().size() <= 1) {
-            GamePlayerEntry member = group.getMembers().get(0);
-            holder.aliasesText.setText(member.getGameName());
-        } else {
-            List<String> aliasParts = new ArrayList<>();
-            for (GamePlayerEntry member : group.getMembers()) {
-                aliasParts.add(holder.itemView.getContext().getString(
-                        R.string.player_consolidation_alias_format,
-                        member.getPlayerName(),
-                        member.getGameName()));
-            }
-            holder.aliasesText.setText(TextUtils.join(", ", aliasParts));
-        }
-
+        bindSubtitle(holder, group);
         bindAmounts(holder, group);
         bindSelection(holder, group);
 
@@ -79,8 +66,29 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
         });
     }
 
+    private void bindSubtitle(ViewHolder holder, ConsolidatedPlayerGroup group) {
+        List<String> parts = new ArrayList<>();
+        if (group.getMembers().size() <= 1) {
+            parts.add(group.getMembers().get(0).getGameName());
+        } else {
+            for (GamePlayerEntry member : group.getMembers()) {
+                parts.add(holder.itemView.getContext().getString(
+                        R.string.player_consolidation_alias_format,
+                        member.getPlayerName(),
+                        member.getGameName()));
+            }
+        }
+        double adjustment = group.getNetAdjustment();
+        if (adjustment != 0) {
+            parts.add(holder.itemView.getContext().getString(
+                    R.string.player_consolidation_transfer_adj,
+                    ConsolidationAmountFormatter.formatSignedAmount(adjustment)));
+        }
+        holder.aliasesText.setText(TextUtils.join(" · ", parts));
+    }
+
     private void bindAmounts(ViewHolder holder, ConsolidatedPlayerGroup group) {
-        double net = group.getTotalNetAmount();
+        double net = group.getAdjustedNetAmount();
         holder.netAmountText.setText(ConsolidationAmountFormatter.formatSignedAmount(net));
         holder.netAmountText.setTextColor(
                 ConsolidationAmountFormatter.getSignedAmountColor(holder.itemView.getContext(), net));

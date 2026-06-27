@@ -2,6 +2,7 @@ package com.example.rummypulse.ui.playerconsolidation;
 
 import android.text.TextUtils;
 
+import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -27,6 +28,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     private boolean consolidationInitialized;
     private String lastInitializedGameKey = "";
+    private final List<String> groupSelectionOrder = new ArrayList<>();
 
     public PlayerConsolidationViewModel() {
         gameRepository = new GameRepository();
@@ -107,6 +109,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
         consolidationInitialized = true;
         lastInitializedGameKey = gameKey;
         selectedEntryIds.setValue(new HashSet<>());
+        groupSelectionOrder.clear();
         playerGroups.setValue(groups);
         publishDerivedLists(groups);
     }
@@ -131,9 +134,13 @@ public class PlayerConsolidationViewModel extends ViewModel {
             for (GamePlayerEntry member : group.getMembers()) {
                 updated.remove(member.getEntryId());
             }
+            groupSelectionOrder.remove(group.getGroupId());
         } else {
             for (GamePlayerEntry member : group.getMembers()) {
                 updated.add(member.getEntryId());
+            }
+            if (!groupSelectionOrder.contains(group.getGroupId())) {
+                groupSelectionOrder.add(group.getGroupId());
             }
         }
         selectedEntryIds.setValue(updated);
@@ -146,6 +153,95 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     public boolean canLinkSelected() {
         return getSelectedEntryCount() >= 2;
+    }
+
+    public List<ConsolidatedPlayerGroup> getFullySelectedGroups() {
+        Set<String> selectedIds = selectedEntryIds.getValue();
+        List<ConsolidatedPlayerGroup> groups = playerGroups.getValue();
+        List<ConsolidatedPlayerGroup> result = new ArrayList<>();
+        if (selectedIds == null || selectedIds.isEmpty() || groups == null) {
+            return result;
+        }
+        for (ConsolidatedPlayerGroup group : groups) {
+            if (group.getMembers().isEmpty()) {
+                continue;
+            }
+            boolean fullySelected = true;
+            for (GamePlayerEntry member : group.getMembers()) {
+                if (!selectedIds.contains(member.getEntryId())) {
+                    fullySelected = false;
+                    break;
+                }
+            }
+            if (fullySelected) {
+                result.add(group);
+            }
+        }
+        return result;
+    }
+
+    public boolean canTransferBetweenSelected() {
+        return getFullySelectedGroups().size() == 2;
+    }
+
+    @Nullable
+    public ConsolidatedPlayerGroup getDefaultTransferFromGroup() {
+        List<ConsolidatedPlayerGroup> selected = getFullySelectedGroups();
+        if (selected.size() != 2) {
+            return null;
+        }
+        for (String groupId : groupSelectionOrder) {
+            for (ConsolidatedPlayerGroup group : selected) {
+                if (groupId.equals(group.getGroupId())) {
+                    return group;
+                }
+            }
+        }
+        return selected.get(0);
+    }
+
+    @Nullable
+    public ConsolidatedPlayerGroup getDefaultTransferToGroup() {
+        ConsolidatedPlayerGroup from = getDefaultTransferFromGroup();
+        List<ConsolidatedPlayerGroup> selected = getFullySelectedGroups();
+        if (from == null || selected.size() != 2) {
+            return null;
+        }
+        for (ConsolidatedPlayerGroup group : selected) {
+            if (!group.getGroupId().equals(from.getGroupId())) {
+                return group;
+            }
+        }
+        return null;
+    }
+
+    public boolean applyTransfer(String fromGroupId, String toGroupId, double amount) {
+        if (amount <= 0 || TextUtils.isEmpty(fromGroupId) || TextUtils.isEmpty(toGroupId)
+                || fromGroupId.equals(toGroupId)) {
+            return false;
+        }
+        List<ConsolidatedPlayerGroup> groups = playerGroups.getValue();
+        if (groups == null) {
+            return false;
+        }
+        ConsolidatedPlayerGroup fromGroup = null;
+        ConsolidatedPlayerGroup toGroup = null;
+        for (ConsolidatedPlayerGroup group : groups) {
+            if (fromGroupId.equals(group.getGroupId())) {
+                fromGroup = group;
+            } else if (toGroupId.equals(group.getGroupId())) {
+                toGroup = group;
+            }
+        }
+        if (fromGroup == null || toGroup == null) {
+            return false;
+        }
+        fromGroup.applyNetAdjustmentDelta(-amount);
+        toGroup.applyNetAdjustmentDelta(amount);
+        selectedEntryIds.setValue(new HashSet<>());
+        groupSelectionOrder.clear();
+        publishDerivedLists(groups);
+        return true;
     }
 
     public List<String> getSelectedEntryNames() {
@@ -177,6 +273,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
         List<ConsolidatedPlayerGroup> merged = PlayerConsolidationEngine.mergeGroups(
                 currentGroups, selectedIds, displayName);
         selectedEntryIds.setValue(new HashSet<>());
+        groupSelectionOrder.clear();
         playerGroups.setValue(merged);
         publishDerivedLists(merged);
     }
@@ -184,6 +281,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
     public void resetConsolidation(List<GameItem> selectedGames) {
         List<ConsolidatedPlayerGroup> groups = PlayerConsolidationEngine.buildInitialGroups(selectedGames);
         selectedEntryIds.setValue(new HashSet<>());
+        groupSelectionOrder.clear();
         playerGroups.setValue(groups);
         publishDerivedLists(groups);
     }

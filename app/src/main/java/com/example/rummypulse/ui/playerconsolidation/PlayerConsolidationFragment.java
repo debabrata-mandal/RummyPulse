@@ -10,6 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.RadioButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -21,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.rummypulse.R;
 import com.example.rummypulse.databinding.FragmentPlayerConsolidationBinding;
 import com.example.rummypulse.ui.home.GameItem;
+import com.example.rummypulse.utils.ModernToast;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
@@ -96,6 +98,7 @@ public class PlayerConsolidationFragment extends Fragment {
         viewModel.getConsolidationTotals().observe(getViewLifecycleOwner(), this::updateTotalsSummary);
 
         binding.btnLinkSelected.setOnClickListener(v -> showLinkDialog());
+        binding.btnTransferAmount.setOnClickListener(v -> showTransferDialog());
         binding.btnResetMappings.setOnClickListener(v -> {
             List<GameItem> selected = viewModel.getSelectedGames(currentGames);
             viewModel.resetConsolidation(selected);
@@ -112,6 +115,7 @@ public class PlayerConsolidationFragment extends Fragment {
     private void updateEntrySelectionUi(Set<String> selectedIds) {
         consolidatedAdapter.setSelectedEntryIds(selectedIds);
         binding.btnLinkSelected.setVisibility(viewModel.canLinkSelected() ? View.VISIBLE : View.GONE);
+        binding.btnTransferAmount.setVisibility(viewModel.canTransferBetweenSelected() ? View.VISIBLE : View.GONE);
     }
 
     private void updateTotalsSummary(ConsolidationTotals totals) {
@@ -172,7 +176,81 @@ public class PlayerConsolidationFragment extends Fragment {
         }
 
         dialog.show();
+        configureDialogWidth(dialog);
+    }
 
+    private void showTransferDialog() {
+        ConsolidatedPlayerGroup defaultFrom = viewModel.getDefaultTransferFromGroup();
+        ConsolidatedPlayerGroup defaultTo = viewModel.getDefaultTransferToGroup();
+        if (defaultFrom == null || defaultTo == null) {
+            return;
+        }
+
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_transfer_amount, null);
+        RadioButton radioFromFirst = dialogView.findViewById(R.id.radio_from_first);
+        RadioButton radioFromSecond = dialogView.findViewById(R.id.radio_from_second);
+        TextInputEditText amountInput = dialogView.findViewById(R.id.input_transfer_amount);
+
+        radioFromFirst.setText(formatTransferFromOption(defaultFrom));
+        radioFromSecond.setText(formatTransferFromOption(defaultTo));
+        radioFromFirst.setTag(defaultFrom.getGroupId());
+        radioFromSecond.setTag(defaultTo.getGroupId());
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext(), R.style.DarkDialogTheme)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create();
+
+        dialogView.findViewById(R.id.btn_cancel).setOnClickListener(v -> dialog.dismiss());
+        dialogView.findViewById(R.id.btn_apply_transfer).setOnClickListener(v -> {
+            String fromGroupId = radioFromFirst.isChecked()
+                    ? (String) radioFromFirst.getTag()
+                    : (String) radioFromSecond.getTag();
+            String toGroupId = radioFromFirst.isChecked()
+                    ? (String) radioFromSecond.getTag()
+                    : (String) radioFromFirst.getTag();
+            double amount = parseTransferAmount(amountInput);
+            if (amount <= 0) {
+                ModernToast.error(requireContext(),
+                        getString(R.string.player_consolidation_transfer_invalid_amount));
+                return;
+            }
+            if (viewModel.applyTransfer(fromGroupId, toGroupId, amount)) {
+                dialog.dismiss();
+            }
+        });
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        dialog.show();
+        configureDialogWidth(dialog);
+    }
+
+    private String formatTransferFromOption(ConsolidatedPlayerGroup group) {
+        return getString(
+                R.string.player_consolidation_transfer_from_option,
+                group.getDisplayName(),
+                ConsolidationAmountFormatter.formatSignedAmount(group.getAdjustedNetAmount()));
+    }
+
+    private static double parseTransferAmount(TextInputEditText amountInput) {
+        if (amountInput.getText() == null) {
+            return 0;
+        }
+        String raw = amountInput.getText().toString().trim();
+        if (TextUtils.isEmpty(raw)) {
+            return 0;
+        }
+        try {
+            return Double.parseDouble(raw);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private void configureDialogWidth(AlertDialog dialog) {
         Window window = dialog.getWindow();
         if (window != null) {
             android.util.DisplayMetrics dm = requireContext().getResources().getDisplayMetrics();

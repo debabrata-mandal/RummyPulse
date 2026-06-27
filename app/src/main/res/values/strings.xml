@@ -165,6 +165,15 @@
     <string name="player_consolidation_contribution_short">Contrib %1$s</string>
     <string name="player_consolidation_selected_games_label">Selected games</string>
     <string name="player_consolidation_change_games">Change games</string>
+    <string name="player_consolidation_transfer_amount">Transfer amount</string>
+    <string name="player_consolidation_transfer_dialog_title">Transfer amount</string>
+    <string name="player_consolidation_transfer_dialog_subtitle">Deduct from one player and add the same amount to the other.</string>
+    <string name="player_consolidation_transfer_from_label">Transfer from</string>
+    <string name="player_consolidation_transfer_from_option">From %1$s (%2$s)</string>
+    <string name="player_consolidation_transfer_amount_hint">Amount</string>
+    <string name="player_consolidation_transfer_confirm">Apply transfer</string>
+    <string name="player_consolidation_transfer_invalid_amount">Enter an amount greater than zero.</string>
+    <string name="player_consolidation_transfer_adj">Transfer adj. %1$s</string>
     <string name="player_consolidation_created_by">Created by </string>
     <string name="player_consolidation_started">Started %1$s</string>
     <string name="player_consolidation_creator_photo">Game creator photo</string>

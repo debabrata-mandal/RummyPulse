@@ -8,6 +8,7 @@ public class ConsolidatedPlayerGroup {
     private final String groupId;
     private String displayName;
     private final List<GamePlayerEntry> members;
+    private double netAdjustment;
 
     public ConsolidatedPlayerGroup(String groupId, String displayName, List<GamePlayerEntry> members) {
         this.groupId = groupId;
@@ -29,6 +30,18 @@ public class ConsolidatedPlayerGroup {
 
     public List<GamePlayerEntry> getMembers() {
         return members;
+    }
+
+    public double getNetAdjustment() {
+        return netAdjustment;
+    }
+
+    public void setNetAdjustment(double netAdjustment) {
+        this.netAdjustment = netAdjustment;
+    }
+
+    public void applyNetAdjustmentDelta(double delta) {
+        this.netAdjustment += delta;
     }
 
     public double getTotalGrossAmount() {
@@ -53,5 +66,9 @@ public class ConsolidatedPlayerGroup {
             sum += member.getNetAmount();
         }
         return sum;
+    }
+
+    public double getAdjustedNetAmount() {
+        return getTotalNetAmount() + netAdjustment;
     }
 }
