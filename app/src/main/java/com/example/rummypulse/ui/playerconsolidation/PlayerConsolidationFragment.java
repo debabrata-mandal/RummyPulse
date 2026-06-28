@@ -110,6 +110,7 @@ public class PlayerConsolidationFragment extends Fragment {
         viewModel.getConsolidationTotals().observe(getViewLifecycleOwner(), this::updateTotalsSummary);
 
         binding.btnLinkSelected.setOnClickListener(v -> showLinkDialog());
+        binding.btnUnlinkSelected.setOnClickListener(v -> showUnlinkDialog());
         binding.btnTransferAmount.setOnClickListener(v -> showTransferDialog());
         binding.fabRefreshGameData.setOnClickListener(v -> {
             PlayerConsolidationViewModel.RefreshOutcome outcome =
@@ -139,6 +140,7 @@ public class PlayerConsolidationFragment extends Fragment {
 
     private void updateEntrySelectionUi(Set<String> selectedIds) {
         consolidatedAdapter.setSelectedEntryIds(selectedIds);
+        binding.btnUnlinkSelected.setVisibility(viewModel.canUnlinkSelected() ? View.VISIBLE : View.GONE);
         binding.btnLinkSelected.setVisibility(viewModel.canLinkSelected() ? View.VISIBLE : View.GONE);
         binding.btnTransferAmount.setVisibility(viewModel.canTransferBetweenSelected() ? View.VISIBLE : View.GONE);
     }
@@ -207,6 +209,40 @@ public class PlayerConsolidationFragment extends Fragment {
                     ? displayNameInput.getText().toString()
                     : selectedNames.get(0);
             viewModel.mergeSelectedPlayers(displayName);
+            dialog.dismiss();
+        });
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        dialog.show();
+        configureDialogWidth(dialog);
+    }
+
+    private void showUnlinkDialog() {
+        ConsolidatedPlayerGroup group = viewModel.getSelectedGroupForUnlink();
+        if (group == null) {
+            return;
+        }
+
+        List<String> memberNames = new ArrayList<>();
+        for (GamePlayerEntry member : group.getMembers()) {
+            memberNames.add(member.getPlayerName());
+        }
+
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_unlink_players, null);
+        TextView memberNamesText = dialogView.findViewById(R.id.text_member_names);
+        memberNamesText.setText(TextUtils.join(", ", memberNames));
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext(), R.style.DarkDialogTheme)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create();
+
+        dialogView.findViewById(R.id.btn_cancel).setOnClickListener(v -> dialog.dismiss());
+        dialogView.findViewById(R.id.btn_unlink).setOnClickListener(v -> {
+            viewModel.unlinkSelectedGroup();
             dialog.dismiss();
         });
 

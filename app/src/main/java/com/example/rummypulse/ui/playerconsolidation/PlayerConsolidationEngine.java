@@ -167,6 +167,48 @@ public final class PlayerConsolidationEngine {
         return result;
     }
 
+    public static List<ConsolidatedPlayerGroup> splitGroup(
+            List<ConsolidatedPlayerGroup> groups,
+            String groupId) {
+        if (groups == null || TextUtils.isEmpty(groupId)) {
+            return copyGroups(groups);
+        }
+
+        ConsolidatedPlayerGroup target = null;
+        for (ConsolidatedPlayerGroup group : groups) {
+            if (groupId.equals(group.getGroupId())) {
+                target = group;
+                break;
+            }
+        }
+        if (target == null || target.getMembers().size() < 2) {
+            return copyGroups(groups);
+        }
+
+        List<ConsolidatedPlayerGroup> result = new ArrayList<>();
+        int memberCount = target.getMembers().size();
+        double totalAdjustment = target.getNetAdjustment();
+        double perMember = totalAdjustment / memberCount;
+        double assigned = 0;
+
+        for (int i = 0; i < memberCount; i++) {
+            GamePlayerEntry member = target.getMembers().get(i);
+            ConsolidatedPlayerGroup splitGroup = createGroup(List.of(member));
+            double adjustment = (i == memberCount - 1) ? totalAdjustment - assigned : perMember;
+            splitGroup.setNetAdjustment(adjustment);
+            assigned += adjustment;
+            result.add(splitGroup);
+        }
+
+        for (ConsolidatedPlayerGroup group : groups) {
+            if (!groupId.equals(group.getGroupId())) {
+                result.add(copyGroup(group));
+            }
+        }
+
+        return result;
+    }
+
     static String buildEntryId(String gameId, Player player, int index) {
         if (!TextUtils.isEmpty(player.getUserId())) {
             return gameId + "::uid:" + player.getUserId();

@@ -149,9 +149,13 @@
     <string name="player_consolidation_empty">No games available</string>
     <string name="player_consolidation_game_subtitle">%1$s players · ₹%2$s per point</string>
     <string name="player_consolidation_map_title">Map players</string>
-    <string name="player_consolidation_map_subtitle">Tap players to select, then link as the same person.</string>
+    <string name="player_consolidation_map_subtitle">Tap players to select, then link as the same person. Tap a merged card to unlink.</string>
     <string name="player_consolidation_consolidated_title">Consolidated players</string>
     <string name="player_consolidation_link_selected">Link as same person</string>
+    <string name="player_consolidation_unlink_selected">Unlink players</string>
+    <string name="player_consolidation_unlink_dialog_title">Unlink merged players?</string>
+    <string name="player_consolidation_unlink_dialog_message">This will split the merged card back into separate players.</string>
+    <string name="player_consolidation_unlink_confirm">Unlink</string>
     <string name="player_consolidation_link_confirm">Link players</string>
     <string name="player_consolidation_reset">Reset mappings</string>
     <string name="player_consolidation_link_dialog_title">Link selected players</string>

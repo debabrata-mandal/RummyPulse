@@ -161,7 +161,20 @@ public class PlayerConsolidationViewModel extends ViewModel {
     }
 
     public boolean canLinkSelected() {
-        return getSelectedEntryCount() >= 2;
+        return getSelectedEntryCount() >= 2 && !canUnlinkSelected();
+    }
+
+    public boolean canUnlinkSelected() {
+        List<ConsolidatedPlayerGroup> selectedGroups = getFullySelectedGroups();
+        return selectedGroups.size() == 1 && selectedGroups.get(0).getMembers().size() >= 2;
+    }
+
+    @Nullable
+    public ConsolidatedPlayerGroup getSelectedGroupForUnlink() {
+        if (!canUnlinkSelected()) {
+            return null;
+        }
+        return getFullySelectedGroups().get(0);
     }
 
     public List<ConsolidatedPlayerGroup> getFullySelectedGroups() {
@@ -285,6 +298,20 @@ public class PlayerConsolidationViewModel extends ViewModel {
         groupSelectionOrder.clear();
         playerGroups.setValue(merged);
         publishDerivedLists(merged);
+    }
+
+    public void unlinkSelectedGroup() {
+        ConsolidatedPlayerGroup group = getSelectedGroupForUnlink();
+        List<ConsolidatedPlayerGroup> currentGroups = playerGroups.getValue();
+        if (group == null || currentGroups == null) {
+            return;
+        }
+        List<ConsolidatedPlayerGroup> split = PlayerConsolidationEngine.splitGroup(
+                currentGroups, group.getGroupId());
+        selectedEntryIds.setValue(new HashSet<>());
+        groupSelectionOrder.clear();
+        playerGroups.setValue(split);
+        publishDerivedLists(split);
     }
 
     public void resetConsolidation(List<GameItem> selectedGames) {
