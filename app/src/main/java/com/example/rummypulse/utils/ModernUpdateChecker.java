@@ -1290,7 +1290,7 @@ public class ModernUpdateChecker {
                 params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
                 params.setAppPackageName(appContext.getPackageName());
                 params.setSize(apkFile.length());
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                if (Build.VERSION.SDK_INT >= 35) {
                     params.setPackageSource(PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE);
                 }
 

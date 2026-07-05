@@ -47,7 +47,7 @@ Android app for running 10-round Rummy sessions: live scoring, multi-user sync, 
 
 | | |
 |---|---|
-| **Android** | 9.0+ (API 28), target SDK 35 |
+| **Android** | 7.0+ (API 24), target SDK 34 |
 | **Storage** | ~50 MB |
 | **Network** | Required for Firebase sync |
 
@@ -65,7 +65,7 @@ RummyPulse is distributed as an APK via GitHub Releases (not on the Play Store).
 
 - Android Studio (recent stable; Ladybug or newer recommended)
 - JDK 17
-- Android SDK with API 36 (compile) / 28+ (min)
+- Android SDK with API 34 (compile) / 24+ (min)
 - Git and `adb` on PATH for device deploy
 
 ### Clone and open

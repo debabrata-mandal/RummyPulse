@@ -36,12 +36,12 @@ fun groqConfig(propAndEnvName: String, default: String = ""): String {
 
 android {
     namespace = "com.example.rummypulse"
-    compileSdk = 36
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.rummypulse"
-        minSdk = 28
-        targetSdk = 35
+        minSdk = 24
+        targetSdk = 34
         versionCode = 101
         versionName = "1.0.0"
 
