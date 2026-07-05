@@ -2,7 +2,7 @@
 
 Android app for running 10-round Rummy sessions: live scoring, multi-user sync, GST/contribution tracking, admin review, and monthly reports. Built with Java, Android Views, MVVM, and Firebase.
 
-![Android](https://img.shields.io/badge/Android-9%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
+![Android](https://img.shields.io/badge/Android-7%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
 ![Java](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-Firestore-039BE5?style=flat-square&logo=Firebase&logoColor=white)
 
