@@ -11,6 +11,12 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/games_v2/$(gameId)).data.creatorUserId == request.auth.uid;
     }
 
+    function isAdmin() {
+      return isAuthenticated()
+          && exists(/databases/$(database)/documents/appUser_v2/$(request.auth.uid))
+          && get(/databases/$(database)/documents/appUser_v2/$(request.auth.uid)).data.role == 'admin_user';
+    }
+
     function gamePinGeneration(gameId) {
       let game = get(/databases/$(database)/documents/games_v2/$(gameId)).data;
       return game.keys().hasAll(['pinGeneration']) ? game.pinGeneration : 1;
@@ -19,6 +25,10 @@ service cloud.firestore {
     function validEditGeneration(gameId) {
       return request.resource.data.keys().hasAll(['editGeneration'])
           && request.resource.data.editGeneration == gamePinGeneration(gameId);
+    }
+
+    function canUpdateGameData(gameId) {
+      return validEditGeneration(gameId) || isAdmin();
     }
 
     match /games_v2/{gameId} {
@@ -34,7 +44,7 @@ service cloud.firestore {
       allow create: if isAuthenticated()
           && (!request.resource.data.keys().hasAll(['editGeneration'])
               || request.resource.data.editGeneration == gamePinGeneration(gameId));
-      allow update: if isAuthenticated() && validEditGeneration(gameId);
+      allow update: if isAuthenticated() && canUpdateGameData(gameId);
       allow delete: if isAuthenticated();
     }
 

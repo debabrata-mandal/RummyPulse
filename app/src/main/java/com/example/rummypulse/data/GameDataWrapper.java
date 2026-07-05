@@ -7,6 +7,7 @@ public class GameDataWrapper {
     private GameData data;
     private Timestamp lastUpdated;
     private String version;
+    private Long editGeneration;
 
     public GameDataWrapper() {
         // Default constructor required for Firestore
@@ -41,5 +42,13 @@ public class GameDataWrapper {
 
     public void setVersion(String version) {
         this.version = version;
+    }
+
+    public Long getEditGeneration() {
+        return editGeneration;
+    }
+
+    public void setEditGeneration(Long editGeneration) {
+        this.editGeneration = editGeneration;
     }
 }

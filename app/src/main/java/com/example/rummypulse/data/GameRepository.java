@@ -607,6 +607,7 @@ public class GameRepository {
                             // Update the wrapper with new timestamp
                             gameDataWrapper.setLastUpdated(com.google.firebase.Timestamp.now());
                             gameDataWrapper.setData(gameData);
+                            preserveEditGeneration(documentSnapshot, gameDataWrapper);
                             
                             // Save back to Firestore
                             db.collection(FirestoreCollections.GAME_DATA)
@@ -656,6 +657,7 @@ public class GameRepository {
                     gameData.setGstPercent(gstPercent);
                     gameDataWrapper.setLastUpdated(com.google.firebase.Timestamp.now());
                     gameDataWrapper.setData(gameData);
+                    preserveEditGeneration(documentSnapshot, gameDataWrapper);
 
                     db.collection(FirestoreCollections.GAME_DATA)
                             .document(gameId)
@@ -812,6 +814,7 @@ public class GameRepository {
                             // Update the wrapper with new timestamp
                             gameDataWrapper.setLastUpdated(com.google.firebase.Timestamp.now());
                             gameDataWrapper.setData(gameData);
+                            preserveEditGeneration(documentSnapshot, gameDataWrapper);
                             
                             // Save back to Firestore
                             db.collection(FirestoreCollections.GAME_DATA)
@@ -830,6 +833,16 @@ public class GameRepository {
                 .addOnFailureListener(e -> {
                     errorLiveData.setValue("Failed to update game status: " + e.getMessage());
                 });
+    }
+
+    private static void preserveEditGeneration(DocumentSnapshot snapshot, GameDataWrapper wrapper) {
+        if (snapshot == null || wrapper == null || !snapshot.contains("editGeneration")) {
+            return;
+        }
+        Long editGen = snapshot.getLong("editGeneration");
+        if (editGen != null) {
+            wrapper.setEditGeneration(editGen);
+        }
     }
 
     /**
