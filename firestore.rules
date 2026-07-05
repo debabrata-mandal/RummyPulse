@@ -27,8 +27,18 @@ service cloud.firestore {
           && request.resource.data.editGeneration == gamePinGeneration(gameId);
     }
 
+    function isAdminGameEconomicsUpdate() {
+      return isAdmin()
+          && resource.data.keys().hasAll(['data'])
+          && request.resource.data.keys().hasAll(['data'])
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['data', 'lastUpdated', 'editGeneration', 'version'])
+          && request.resource.data.data.diff(resource.data.data).affectedKeys()
+              .hasOnly(['pointValue', 'gstPercent']);
+    }
+
     function canUpdateGameData(gameId) {
-      return validEditGeneration(gameId) || isAdmin();
+      return validEditGeneration(gameId) || isAdminGameEconomicsUpdate();
     }
 
     match /games_v2/{gameId} {

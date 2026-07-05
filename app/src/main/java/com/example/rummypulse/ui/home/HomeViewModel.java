@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameRepository;
 
 import java.util.ArrayList;
@@ -151,6 +152,10 @@ public class HomeViewModel extends ViewModel {
     }
 
     public void updateGameEconomics(String gameId, double pointValue, double gstPercent, Runnable onSuccess) {
+        if (AppUserRoleSession.getInstance().peekRole() != AppUserRoleSession.Role.ADMIN) {
+            mError.setValue("Administrator access required to edit point value and contribution");
+            return;
+        }
         gameRepository.updateGameEconomics(gameId, pointValue, gstPercent, onSuccess);
     }
     
