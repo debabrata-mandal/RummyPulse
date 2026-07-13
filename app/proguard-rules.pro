@@ -9,6 +9,14 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
+# Required for Firestore toObject() to resolve generic List<T> field types at runtime
+# Without this, R8 strips generic signatures and Firestore deserializes List<Player>
+# as List<LinkedTreeMap>, causing ClassCastException in release builds only.
+-keepattributes Signature
+
+# Required for Firestore @ServerTimestamp and other runtime-retained annotations
+-keepattributes *Annotation*
+
 # Firebase rules
 -keep class com.google.firebase.** { *; }
 -keep class com.google.android.gms.** { *; }
