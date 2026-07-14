@@ -87,11 +87,10 @@ public class PermissionManager {
                 }
             }
         } else if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
-            // Android 10 - still might need WRITE_EXTERNAL_STORAGE for some operations
-            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) 
-                != PackageManager.PERMISSION_GRANTED) {
-                permissionsToRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-            }
+            // Android 10 (API 29): WRITE_EXTERNAL_STORAGE is declared with maxSdkVersion="28"
+            // in the manifest, so the system will not grant it here — requesting it causes a
+            // denial that previously triggered closeApp(). The manifest's
+            // requestLegacyExternalStorage="true" is sufficient for storage access on API 29.
         }
         // Android 11+ (API 30+) - Scoped storage, no explicit storage permissions needed for app-specific directories
         
@@ -329,11 +328,8 @@ public class PermissionManager {
                 }
             }
         } else if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
-            // Android 10 - check WRITE_EXTERNAL_STORAGE
-            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE) 
-                != PackageManager.PERMISSION_GRANTED) {
-                return false;
-            }
+            // Android 10 (API 29): WRITE_EXTERNAL_STORAGE has maxSdkVersion="28" in the manifest;
+            // do not check it here — requestLegacyExternalStorage="true" covers storage access.
         }
         // Android 11+ - no explicit storage permissions needed
         
