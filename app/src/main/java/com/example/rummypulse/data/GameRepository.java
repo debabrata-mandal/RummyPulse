@@ -132,7 +132,7 @@ public class GameRepository {
     public void loadAllGames() {
         System.out.println("GameRepository: Fetching games collection (manual refresh, prefer server)");
         com.google.firebase.firestore.Query gamesQuery = db.collection(FirestoreCollections.GAMES)
-                .orderBy("createdAt", Query.Direction.DESCENDING);
+                .orderBy("createdAt", Query.Direction.ASCENDING);
         gamesQuery.get(Source.SERVER)
                 .addOnSuccessListener(this::applyGamesQuerySnapshotForReview)
                 .addOnFailureListener(error -> {
