@@ -11,6 +11,10 @@ public class GameData {
     private Timestamp lastUpdated;
     private String version;
     private String gameStatus;
+    /** Active incomplete round (1-based, or 0 if complete) when mid-game backfill baseline was computed. */
+    private Integer midGameJoinActiveRound;
+    /** Cached backfill score for players joining mid-game during {@link #midGameJoinActiveRound}. */
+    private Integer midGameJoinBackfillScore;
 
     public GameData() {
         // Default constructor required for Firestore
@@ -77,6 +81,22 @@ public class GameData {
 
     public void setGameStatus(String gameStatus) {
         this.gameStatus = gameStatus;
+    }
+
+    public Integer getMidGameJoinActiveRound() {
+        return midGameJoinActiveRound;
+    }
+
+    public void setMidGameJoinActiveRound(Integer midGameJoinActiveRound) {
+        this.midGameJoinActiveRound = midGameJoinActiveRound;
+    }
+
+    public Integer getMidGameJoinBackfillScore() {
+        return midGameJoinBackfillScore;
+    }
+
+    public void setMidGameJoinBackfillScore(Integer midGameJoinBackfillScore) {
+        this.midGameJoinBackfillScore = midGameJoinBackfillScore;
     }
 
     // Helper methods
