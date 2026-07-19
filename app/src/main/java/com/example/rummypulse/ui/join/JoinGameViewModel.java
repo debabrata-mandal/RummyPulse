@@ -252,9 +252,38 @@ public class JoinGameViewModel extends AndroidViewModel {
                     fetchGameData(gameId);
                 }
             });
-        } else {
-            fetchGameData(gameId);
+            return;
         }
+
+        GameAuth auth = gameAuth.getValue();
+        if (auth != null && tryRestoreActiveEditorSession(auth)) {
+            fetchGameData(gameId);
+            return;
+        }
+
+        fetchGameData(gameId);
+    }
+
+    /**
+     * Restores edit mode when Firestore still lists this signed-in user as the active editor.
+     * Covers app cache/data clears that wipe locally saved PINs while the server session remains.
+     */
+    private boolean tryRestoreActiveEditorSession(@NonNull GameAuth auth) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            return false;
+        }
+        String activeEditor = auth.getActiveEditorUserId();
+        if (activeEditor == null || !activeEditor.equals(user.getUid())) {
+            return false;
+        }
+
+        activeEditGeneration = auth.getPinGenerationOrDefault();
+        if (auth.getPin() != null) {
+            gamePin.setValue(auth.getPin());
+        }
+        editAccessGranted.setValue(true);
+        return true;
     }
 
     public void startPendingViewRequestsListener(String gameId) {

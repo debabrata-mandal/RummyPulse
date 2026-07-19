@@ -336,7 +336,10 @@ public class JoinGameActivity extends AppCompatActivity {
         if (editAccess == null || !editAccess) {
             return;
         }
-        long localGen = getSavedPinGeneration(currentGameId);
+        long localGen = viewModel.getActiveEditGeneration();
+        if (localGen <= 0) {
+            localGen = getSavedPinGeneration(currentGameId);
+        }
         viewModel.validateEditSessionOnReconnect(currentGameId, localGen, onStillValid);
     }
 
