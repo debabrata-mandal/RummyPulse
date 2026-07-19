@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel;
 import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.utils.DisplayNameUtils;
 import com.example.rummypulse.data.GameRepository;
+import com.example.rummypulse.data.GameViewApprovalRepository;
 import com.example.rummypulse.ui.home.GameItem;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -22,6 +23,7 @@ import java.util.Random;
 public class DashboardViewModel extends ViewModel {
 
     private final GameRepository gameRepository;
+    private final GameViewApprovalRepository viewApprovalRepository;
     private final MutableLiveData<List<GameItem>> mInProgressGames;
     private final MutableLiveData<List<GameItem>> mCompletedGames;
     private final MutableLiveData<String> mActiveGamesCount;
@@ -44,7 +46,8 @@ public class DashboardViewModel extends ViewModel {
     }
 
     public DashboardViewModel() {
-        gameRepository = new GameRepository();
+        gameRepository = GameRepository.getDashboardInstance();
+        viewApprovalRepository = new GameViewApprovalRepository();
         mInProgressGames = new MutableLiveData<>();
         mCompletedGames = new MutableLiveData<>();
         mActiveGamesCount = new MutableLiveData<>();
@@ -183,6 +186,10 @@ public class DashboardViewModel extends ViewModel {
         gameRepository.loadAllGamesWithRealtimeListener();
     }
 
+    public void refreshCreatorDashboardRows() {
+        gameRepository.refreshCreatorDashboardRows();
+    }
+
     public void joinGame(GameItem game) {
         joinGame(game, "player"); // Default to player
     }
@@ -265,6 +272,10 @@ public class DashboardViewModel extends ViewModel {
         authData.put("pinGeneration", 1L);
         authData.put("activeEditorUserId", creatorUserId);
         authData.put("activeEditorName", creatorName);
+        authData.put("dashboardPointValue", pointValue);
+        authData.put("dashboardNumPlayers", 2);
+        authData.put("dashboardGstPercent", gstPercentage);
+        authData.put("dashboardGameStatus", "R1");
         
         // Add creation timestamp to game data as well for easy access
         initialGameData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
@@ -282,8 +293,9 @@ public class DashboardViewModel extends ViewModel {
                 db.collection(FirestoreCollections.GAME_DATA).document(gameId)
                     .set(gameDataDoc)
                     .addOnSuccessListener(aVoid2 -> {
-                        // Refresh the games list to show the new game
-                        loadGames();
+                        viewApprovalRepository.seedCreatorApproval(gameId, creatorUserId, creatorName);
+
+                        // Realtime games listener already active — avoid reset/race from loadGames()
                         
                         // Trigger navigation to the new game with edit access
                         newGameCreated.setValue(gameId);

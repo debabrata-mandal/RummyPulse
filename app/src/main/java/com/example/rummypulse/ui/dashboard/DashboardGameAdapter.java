@@ -125,6 +125,22 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         } else {
             holder.gameStatusText.setBackgroundResource(R.drawable.status_background_orange);
         }
+
+        if (item.isViewAccessPending()) {
+            holder.viewAccessStatusText.setVisibility(View.VISIBLE);
+            holder.viewAccessStatusText.setText(R.string.dashboard_view_access_pending);
+            holder.viewAccessStatusText.setTextColor(
+                    holder.itemView.getContext().getColor(R.color.white));
+            holder.viewAccessStatusText.setBackgroundResource(R.drawable.status_background_orange);
+        } else if (item.isViewAccessRejected()) {
+            holder.viewAccessStatusText.setVisibility(View.VISIBLE);
+            holder.viewAccessStatusText.setText(R.string.dashboard_view_access_rejected);
+            holder.viewAccessStatusText.setTextColor(
+                    holder.itemView.getContext().getColor(R.color.white));
+            holder.viewAccessStatusText.setBackgroundResource(R.drawable.delete_button_background);
+        } else {
+            holder.viewAccessStatusText.setVisibility(View.GONE);
+        }
         
         // Set players count
         holder.playersText.setText(String.valueOf(item.getNumberOfPlayers()));
@@ -343,6 +359,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
 
     static class GameViewHolder extends RecyclerView.ViewHolder {
         TextView gameIdText, gameStatusText, playersText, pointValueText, gstText, createdTimeText, creatorNameText;
+        TextView viewAccessStatusText;
         ImageView qrCodeIcon, creatorProfileImage;
         LinearLayout creatorSection;
 
@@ -350,6 +367,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             super(itemView);
             gameIdText = itemView.findViewById(R.id.text_game_id);
             gameStatusText = itemView.findViewById(R.id.text_game_status);
+            viewAccessStatusText = itemView.findViewById(R.id.text_view_access_status);
             playersText = itemView.findViewById(R.id.text_players);
             pointValueText = itemView.findViewById(R.id.text_point_value);
             gstText = itemView.findViewById(R.id.text_gst);

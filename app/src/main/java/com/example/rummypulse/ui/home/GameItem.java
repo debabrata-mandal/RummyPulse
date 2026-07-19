@@ -19,6 +19,8 @@ public class GameItem {
     private String creatorUserId;
     /** From {@code games_v2.displayName}; may be empty. */
     private String gameDisplayName;
+    /** Current user's view approval for this game: requested, approved, rejected, or null. */
+    private String myViewAccessStatus;
     private List<Player> players;
 
     public GameItem() {
@@ -100,6 +102,15 @@ public class GameItem {
     public String getCreatorPhotoUrl() { return creatorPhotoUrl; }
     public String getCreatorUserId() { return creatorUserId; }
     public String getGameDisplayName() { return gameDisplayName; }
+    public String getMyViewAccessStatus() { return myViewAccessStatus; }
+
+    public boolean isViewAccessPending() {
+        return "requested".equalsIgnoreCase(myViewAccessStatus);
+    }
+
+    public boolean isViewAccessRejected() {
+        return "rejected".equalsIgnoreCase(myViewAccessStatus);
+    }
 
     /**
      * Dashboard card title: {@code games_v2.displayName} when set, otherwise {@code Game #} + id (legacy style).
@@ -128,6 +139,7 @@ public class GameItem {
     public void setCreatorPhotoUrl(String creatorPhotoUrl) { this.creatorPhotoUrl = creatorPhotoUrl; }
     public void setCreatorUserId(String creatorUserId) { this.creatorUserId = creatorUserId; }
     public void setGameDisplayName(String gameDisplayName) { this.gameDisplayName = gameDisplayName; }
+    public void setMyViewAccessStatus(String myViewAccessStatus) { this.myViewAccessStatus = myViewAccessStatus; }
     public void setPlayers(List<Player> players) { this.players = players; }
 
     // Helper methods for better data handling

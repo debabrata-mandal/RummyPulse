@@ -206,4 +206,29 @@
     <string name="game_defaults_audit_never">Last updated: —</string>
     <string name="game_defaults_audit_unknown_user">Unknown</string>
     <string name="game_defaults_firestore_permission">Firestore blocked game defaults (missing or insufficient permission). In Firebase Console open Firestore → Rules and allow signed-in users to read and write collection gameDefaults_v2 (document config).</string>
+
+    <!-- Game view approval -->
+    <string name="view_access_pending">View request sent. Waiting for approval from the game editor.</string>
+    <string name="view_access_rejected">View access was denied for this game.</string>
+    <string name="view_access_check_failed">Could not verify view access. Please try again.</string>
+    <string name="view_access_dialog_ok">Got it</string>
+    <string name="view_access_dialog_pending_title">View request sent</string>
+    <string name="view_access_dialog_pending_message">Your request was sent to the game editor. You can open this game after they approve it.</string>
+    <string name="view_access_dialog_rejected_title">View access denied</string>
+    <string name="view_access_dialog_rejected_message">The editor declined your request to view this game. Contact them if you need access.</string>
+    <string name="view_access_dialog_error_title">Could not verify access</string>
+    <string name="dashboard_view_access_pending">Approval pending — waiting for editor</string>
+    <string name="dashboard_view_access_rejected">View access denied</string>
+    <string name="view_requests_section_title">View Requests</string>
+    <string name="view_request_approve">Approve</string>
+    <string name="view_request_reject">Reject</string>
+    <string name="view_request_empty">No view requests yet</string>
+    <string name="view_request_pending_badge">%1$d pending</string>
+    <string name="view_request_total_badge">%1$d requests</string>
+    <string name="view_request_badge_summary">%1$d requests (%2$d pending)</string>
+    <string name="view_request_status_pending">Pending approval</string>
+    <string name="view_request_status_approved">Approved</string>
+    <string name="view_request_status_rejected">Rejected</string>
+    <string name="view_request_requested_at">Requested %1$s</string>
+    <string name="view_request_decided_at">Updated %1$s</string>
 </resources>

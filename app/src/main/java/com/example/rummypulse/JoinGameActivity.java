@@ -27,8 +27,14 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.example.rummypulse.data.AppUserManager;
+import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.FirestoreCollections;
+import com.example.rummypulse.data.GameAuth;
+import com.example.rummypulse.data.GameViewApproval;
+import com.example.rummypulse.data.GameViewApprovalStatus;
 import com.example.rummypulse.databinding.ActivityJoinGameBinding;
+import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
 import com.example.rummypulse.utils.ModernToast;
 import com.google.android.material.button.MaterialButton;
@@ -39,6 +45,10 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
+
+import java.text.DateFormat;
+import java.util.List;
+import java.util.Locale;
 
 public class JoinGameActivity extends AppCompatActivity {
 
@@ -96,6 +106,9 @@ public class JoinGameActivity extends AppCompatActivity {
     /** Sequential score-entry dialog; dismissed in {@link #onPause()} to avoid leaks. */
     private AlertDialog activeSequentialScoreDialog;
 
+    /** Cached admin flag so View Requests works before/without edit access. */
+    private boolean isAppAdmin;
+
     /** When true, score {@link EditText} watchers skip persistence (programmatic sync from dialog). */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,6 +132,7 @@ public class JoinGameActivity extends AppCompatActivity {
         initializeViews();
         setupClickListeners();
         observeViewModel();
+        setupAdminRoleObserver();
         
         // Setup network monitoring
         setupNetworkMonitoring();
@@ -288,6 +302,30 @@ public class JoinGameActivity extends AppCompatActivity {
         super.onResume();
         refreshGameDefaultsAndStandings();
         checkEditSessionIfNeeded(null);
+        refreshAppAdminFlag();
+    }
+
+    private void setupAdminRoleObserver() {
+        AppUserRoleSession.getInstance().getRole().observe(this, role -> {
+            isAppAdmin = role == AppUserRoleSession.Role.ADMIN;
+            refreshViewRequestsSection();
+        });
+        refreshAppAdminFlag();
+    }
+
+    private void refreshAppAdminFlag() {
+        AppUserManager.getInstance().isCurrentUserAdmin(isAdmin -> runOnUiThread(() -> {
+            if (isAdmin) {
+                isAppAdmin = true;
+            }
+            refreshViewRequestsSection();
+        }));
+    }
+
+    private void refreshViewRequestsSection() {
+        if (viewModel != null) {
+            updateViewRequestsSectionVisibility(viewModel.getGameAuth().getValue());
+        }
     }
 
     private void checkEditSessionIfNeeded(Runnable onStillValid) {
@@ -736,11 +774,28 @@ public class JoinGameActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        flushPendingGameSave();
         super.onPause();
         if (activeSequentialScoreDialog != null && activeSequentialScoreDialog.isShowing()) {
             activeSequentialScoreDialog.dismiss();
         }
         activeSequentialScoreDialog = null;
+    }
+
+    /** Saves any debounced score changes and syncs the dashboard before leaving the game screen. */
+    private void flushPendingGameSave() {
+        if (saveRunnable != null) {
+            saveHandler.removeCallbacks(saveRunnable);
+            saveRunnable = null;
+        }
+        if (viewModel == null || currentGameId == null) {
+            return;
+        }
+        com.example.rummypulse.data.GameData liveData = viewModel.getGameData().getValue();
+        if (liveData != null) {
+            viewModel.saveGameData(currentGameId, liveData);
+        }
+        GameRepository.getDashboardInstance().forcePublishDashboard();
     }
 
     @Override
@@ -756,6 +811,7 @@ public class JoinGameActivity extends AppCompatActivity {
             gameDefaultsListener.remove();
             gameDefaultsListener = null;
         }
+        viewModel.stopPendingViewRequestsListener();
 
         // Unregister network callback
         if (networkCallback != null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
@@ -1016,8 +1072,38 @@ public class JoinGameActivity extends AppCompatActivity {
     private void observeViewModel() {
         viewModel.getGameDisplayName().observe(this, ignored -> applyGameHeaderText());
 
+        viewModel.getViewAccessBlocked().observe(this, reason -> {
+            if (reason == null) {
+                return;
+            }
+            if (reason == JoinGameViewModel.ViewAccessBlockedReason.PENDING) {
+                com.example.rummypulse.utils.ViewAccessDialog.showPending(this, this::finish);
+            } else if (reason == JoinGameViewModel.ViewAccessBlockedReason.REJECTED) {
+                com.example.rummypulse.utils.ViewAccessDialog.showRejected(this, this::finish);
+            } else {
+                String msg = viewModel.getErrorMessage().getValue();
+                com.example.rummypulse.utils.ViewAccessDialog.showError(this, msg, this::finish);
+            }
+            viewModel.clearViewAccessBlocked();
+        });
+
+        viewModel.getGameAuth().observe(this, auth -> updateViewRequestsSectionVisibility(auth));
+
+        viewModel.getPendingViewRequests().observe(this, this::renderViewRequests);
+
+        viewModel.getPendingViewRequestsError().observe(this, error -> {
+            if (!TextUtils.isEmpty(error)) {
+                ModernToast.error(this, error);
+                if (binding.textViewRequestsEmpty != null) {
+                    binding.textViewRequestsEmpty.setVisibility(View.VISIBLE);
+                    binding.textViewRequestsEmpty.setText(error);
+                }
+            }
+        });
+
         viewModel.getGameData().observe(this, gameData -> {
             if (gameData != null) {
+                refreshViewRequestsSection();
                 displayGameData(gameData);
                 
                 // Set up real-time listener if in view mode (no edit access)
@@ -1081,6 +1167,7 @@ public class JoinGameActivity extends AppCompatActivity {
         });
 
         viewModel.getEditAccessGranted().observe(this, granted -> {
+            refreshViewRequestsSection();
             if (granted) {
                 binding.textAdminMode.setVisibility(View.VISIBLE);
                 // Show Players section and Add Player FAB when edit access is granted
@@ -1209,12 +1296,12 @@ public class JoinGameActivity extends AppCompatActivity {
                         com.example.rummypulse.data.GameAuth gameAuth =
                             documentSnapshot.toObject(com.example.rummypulse.data.GameAuth.class);
                         if (gameAuth != null && gameAuth.getPin() != null) {
-                            viewModel.joinGame(gameId, true, gameAuth.getPin());
+                            viewModel.joinGame(gameId, true, gameAuth.getPin(), true);
                         } else {
-                            viewModel.joinGame(gameId, false, null);
+                            viewModel.joinGame(gameId, false, null, true);
                         }
                     } catch (Exception e) {
-                        viewModel.joinGame(gameId, false, null);
+                        viewModel.joinGame(gameId, false, null, true);
                     }
                 } else {
                     ModernToast.error(this, "Game not found");
@@ -2529,8 +2616,136 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.settlementHeader.setOnClickListener(v -> {
             toggleSection(binding.settlementContent, binding.settlementToggleIcon);
         });
+
+        binding.viewRequestsHeader.setOnClickListener(v -> {
+            toggleSection(binding.viewRequestsContent, binding.viewRequestsCollapseIcon);
+        });
     }
-    
+
+    private void updateViewRequestsSectionVisibility(GameAuth auth) {
+        if (binding == null) {
+            return;
+        }
+        boolean canManage = canManageViewRequests(auth);
+        binding.viewRequestsCard.setVisibility(canManage ? View.VISIBLE : View.GONE);
+        if (canManage && currentGameId != null) {
+            viewModel.startPendingViewRequestsListener(currentGameId);
+        } else {
+            viewModel.stopPendingViewRequestsListener();
+        }
+    }
+
+    private boolean canManageViewRequests(GameAuth auth) {
+        if (isAppAdmin) {
+            return true;
+        }
+        if (AppUserRoleSession.getInstance().peekRole() == AppUserRoleSession.Role.ADMIN) {
+            return true;
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String uid = user != null ? user.getUid() : null;
+        if (auth != null && uid != null) {
+            if (uid.equals(auth.getCreatorUserId())) {
+                return true;
+            }
+            String activeEditorId = auth.getActiveEditorUserId();
+            if (activeEditorId != null && activeEditorId.equals(uid)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void renderViewRequests(List<GameViewApproval> requests) {
+        if (binding == null || binding.viewRequestsContainer == null) {
+            return;
+        }
+        binding.viewRequestsContainer.removeAllViews();
+
+        int count = requests != null ? requests.size() : 0;
+        int pendingCount = 0;
+        if (requests != null) {
+            for (GameViewApproval request : requests) {
+                if (request != null && request.getStatusEnum() == GameViewApprovalStatus.REQUESTED) {
+                    pendingCount++;
+                }
+            }
+        }
+        if (count > 0) {
+            binding.textViewRequestsBadge.setVisibility(View.VISIBLE);
+            if (pendingCount > 0 && pendingCount < count) {
+                binding.textViewRequestsBadge.setText(
+                        getString(R.string.view_request_badge_summary, count, pendingCount));
+            } else if (pendingCount > 0) {
+                binding.textViewRequestsBadge.setText(
+                        getString(R.string.view_request_pending_badge, pendingCount));
+            } else {
+                binding.textViewRequestsBadge.setText(getString(R.string.view_request_total_badge, count));
+            }
+            binding.textViewRequestsEmpty.setVisibility(View.GONE);
+        } else {
+            binding.textViewRequestsBadge.setVisibility(View.GONE);
+            binding.textViewRequestsEmpty.setVisibility(View.VISIBLE);
+            String loadError = viewModel.getPendingViewRequestsError().getValue();
+            if (!TextUtils.isEmpty(loadError)) {
+                binding.textViewRequestsEmpty.setText(loadError);
+            } else {
+                binding.textViewRequestsEmpty.setText(R.string.view_request_empty);
+            }
+        }
+
+        if (requests == null || currentGameId == null) {
+            return;
+        }
+
+        DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.getDefault());
+        for (GameViewApproval request : requests) {
+            if (request == null || request.getUserId() == null) {
+                continue;
+            }
+            View row = LayoutInflater.from(this).inflate(R.layout.item_view_request_card,
+                    binding.viewRequestsContainer, false);
+
+            TextView userView = row.findViewById(R.id.text_view_request_user);
+            TextView timeView = row.findViewById(R.id.text_view_request_time);
+            TextView statusView = row.findViewById(R.id.text_view_request_status);
+            MaterialButton approveBtn = row.findViewById(R.id.btn_view_request_approve);
+            MaterialButton rejectBtn = row.findViewById(R.id.btn_view_request_reject);
+
+            String name = request.getUserDisplayName();
+            userView.setText(TextUtils.isEmpty(name) ? request.getUserId() : name);
+
+            GameViewApprovalStatus status = request.getStatusEnum();
+            if (status == GameViewApprovalStatus.APPROVED) {
+                statusView.setText(R.string.view_request_status_approved);
+                statusView.setTextColor(getColor(R.color.success_green));
+            } else if (status == GameViewApprovalStatus.REJECTED) {
+                statusView.setText(R.string.view_request_status_rejected);
+                statusView.setTextColor(getColor(R.color.error_red));
+            } else {
+                statusView.setText(R.string.view_request_status_pending);
+                statusView.setTextColor(getColor(R.color.warning_orange));
+            }
+
+            if (request.getRequestedAt() != null) {
+                timeView.setText(getString(R.string.view_request_requested_at,
+                        dateFormat.format(request.getRequestedAt().toDate())));
+            } else {
+                timeView.setText("");
+            }
+
+            String userId = request.getUserId();
+            approveBtn.setEnabled(true);
+            rejectBtn.setEnabled(true);
+            approveBtn.setAlpha(status == GameViewApprovalStatus.APPROVED ? 1f : 0.7f);
+            rejectBtn.setAlpha(status == GameViewApprovalStatus.REJECTED ? 1f : 0.7f);
+            approveBtn.setOnClickListener(v -> viewModel.approveViewRequest(currentGameId, userId));
+            rejectBtn.setOnClickListener(v -> viewModel.rejectViewRequest(currentGameId, userId));
+
+            binding.viewRequestsContainer.addView(row);
+        }
+    }
+
     private void toggleSection(View contentView, ImageView arrowIcon) {
         if (contentView.getId() == R.id.players_content) {
             // For players section, only toggle the players_container (not the info card)
@@ -3231,6 +3446,11 @@ public class JoinGameActivity extends AppCompatActivity {
     private static final int SAVE_DELAY_MS = 1000; // 1 second delay
     
     private void saveGameDataWithDebounce(com.example.rummypulse.data.GameData gameData) {
+        // Optimistic dashboard sync — don't wait for debounced Firestore write
+        if (currentGameId != null && gameData != null) {
+            GameRepository.getDashboardInstance()
+                    .updateLocalDashboardFromGameData(currentGameId, gameData);
+        }
         // Cancel any pending save
         if (saveRunnable != null) {
             saveHandler.removeCallbacks(saveRunnable);

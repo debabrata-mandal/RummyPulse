@@ -8,22 +8,35 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.data.GameAuth;
 import com.example.rummypulse.data.GameData;
 import com.example.rummypulse.data.GameDataWrapper;
+import com.example.rummypulse.data.GameViewApproval;
+import com.example.rummypulse.data.GameRepository;
+import com.example.rummypulse.data.GameViewApprovalRepository;
 import com.example.rummypulse.utils.PinUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Source;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class JoinGameViewModel extends AndroidViewModel {
+
+    public enum ViewAccessBlockedReason {
+        PENDING,
+        REJECTED,
+        ERROR
+    }
 
     public interface ClaimCallback {
         void onSuccess(String pin, long pinGeneration);
@@ -38,6 +51,8 @@ public class JoinGameViewModel extends AndroidViewModel {
     }
 
     private final FirebaseFirestore db;
+    private final GameViewApprovalRepository viewApprovalRepository;
+    private final GameRepository gameRepository;
     private final MutableLiveData<GameData> gameData = new MutableLiveData<>();
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private final MutableLiveData<String> successMessage = new MutableLiveData<>();
@@ -47,6 +62,12 @@ public class JoinGameViewModel extends AndroidViewModel {
     /** From {@code games_v2.displayName}; empty means show game ID in UI. */
     private final MutableLiveData<String> gameDisplayName = new MutableLiveData<>();
     private final MutableLiveData<Boolean> editSessionStale = new MutableLiveData<>();
+    private final MutableLiveData<GameAuth> gameAuth = new MutableLiveData<>();
+    private final MutableLiveData<ViewAccessBlockedReason> viewAccessBlocked = new MutableLiveData<>();
+    private final MutableLiveData<List<GameViewApproval>> pendingViewRequests = new MutableLiveData<>(new ArrayList<>());
+    private final MutableLiveData<String> pendingViewRequestsError = new MutableLiveData<>();
+
+    private ListenerRegistration pendingViewRequestsListener;
 
     /** {@code pinGeneration} held when edit access was last claimed on this device. */
     private long activeEditGeneration;
@@ -54,6 +75,8 @@ public class JoinGameViewModel extends AndroidViewModel {
     public JoinGameViewModel(@NonNull Application application) {
         super(application);
         db = FirebaseFirestore.getInstance();
+        viewApprovalRepository = new GameViewApprovalRepository();
+        gameRepository = GameRepository.getDashboardInstance();
     }
 
     public LiveData<GameData> getGameData() {
@@ -88,6 +111,26 @@ public class JoinGameViewModel extends AndroidViewModel {
         return editSessionStale;
     }
 
+    public LiveData<GameAuth> getGameAuth() {
+        return gameAuth;
+    }
+
+    public LiveData<ViewAccessBlockedReason> getViewAccessBlocked() {
+        return viewAccessBlocked;
+    }
+
+    public LiveData<List<GameViewApproval>> getPendingViewRequests() {
+        return pendingViewRequests;
+    }
+
+    public LiveData<String> getPendingViewRequestsError() {
+        return pendingViewRequestsError;
+    }
+
+    public void clearViewAccessBlocked() {
+        viewAccessBlocked.setValue(null);
+    }
+
     public long getActiveEditGeneration() {
         return activeEditGeneration > 0 ? activeEditGeneration : 1L;
     }
@@ -102,10 +145,14 @@ public class JoinGameViewModel extends AndroidViewModel {
     }
 
     public void joinGame(String gameId, boolean requestEditAccess) {
-        joinGame(gameId, requestEditAccess, null);
+        joinGame(gameId, requestEditAccess, null, false);
     }
 
     public void joinGame(String gameId, boolean requestEditAccess, String enteredPin) {
+        joinGame(gameId, requestEditAccess, enteredPin, false);
+    }
+
+    public void joinGame(String gameId, boolean requestEditAccess, String enteredPin, boolean skipViewGate) {
         if (TextUtils.isEmpty(gameId)) {
             errorMessage.setValue("Please enter a Game ID");
             return;
@@ -118,6 +165,7 @@ public class JoinGameViewModel extends AndroidViewModel {
 
         isLoading.setValue(true);
         gameDisplayName.setValue(null);
+        viewAccessBlocked.setValue(null);
 
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() ->
                 db.collection(FirestoreCollections.GAMES).document(gameId)
@@ -126,35 +174,153 @@ public class JoinGameViewModel extends AndroidViewModel {
                             if (!documentSnapshot.exists()) {
                                 isLoading.setValue(false);
                                 gameDisplayName.setValue(null);
+                                gameAuth.setValue(null);
                                 errorMessage.setValue("Game not found. Please check the Game ID.");
                                 return;
                             }
 
+                            GameAuth auth = documentSnapshot.toObject(GameAuth.class);
+                            gameAuth.setValue(auth);
                             applyGameAuthMetadata(documentSnapshot);
 
-                            if (requestEditAccess && enteredPin != null) {
-                                claimEditAccess(gameId, enteredPin, new ClaimCallback() {
-                                    @Override
-                                    public void onSuccess(String pin, long pinGeneration) {
-                                        fetchGameData(gameId);
-                                    }
-
-                                    @Override
-                                    public void onError(String message) {
-                                        errorMessage.setValue(message);
-                                        editAccessGranted.setValue(false);
-                                        fetchGameData(gameId);
-                                    }
-                                });
-                            } else {
-                                fetchGameData(gameId);
-                            }
+                            proceedJoinAfterAuthLoaded(gameId, auth, requestEditAccess, enteredPin,
+                                    skipViewGate);
                         })
                         .addOnFailureListener(e -> {
                             isLoading.setValue(false);
                             gameDisplayName.setValue(null);
+                            gameAuth.setValue(null);
                             errorMessage.setValue("Failed to connect to server. Please try again.");
                         }), 500);
+    }
+
+    private void proceedJoinAfterAuthLoaded(String gameId,
+                                            GameAuth auth,
+                                            boolean requestEditAccess,
+                                            String enteredPin,
+                                            boolean skipViewGate) {
+        if (skipViewGate || GameViewApprovalRepository.canBypassViewGate(auth)) {
+            continueJoinAfterViewAccess(gameId, requestEditAccess, enteredPin);
+            return;
+        }
+
+        AppUserManager.getInstance().isCurrentUserAdmin(isAdmin -> {
+            if (isAdmin) {
+                continueJoinAfterViewAccess(gameId, requestEditAccess, enteredPin);
+                return;
+            }
+            viewApprovalRepository.resolveViewAccess(gameId,
+                    new GameViewApprovalRepository.ViewAccessCallback() {
+                        @Override
+                        public void onResult(GameViewApprovalRepository.ViewAccessOutcome outcome) {
+                            if (outcome == GameViewApprovalRepository.ViewAccessOutcome.GRANTED) {
+                                continueJoinAfterViewAccess(gameId, requestEditAccess, enteredPin);
+                            } else if (outcome
+                                    == GameViewApprovalRepository.ViewAccessOutcome.REJECTED) {
+                                isLoading.setValue(false);
+                                viewAccessBlocked.setValue(ViewAccessBlockedReason.REJECTED);
+                            } else {
+                                isLoading.setValue(false);
+                                viewAccessBlocked.setValue(ViewAccessBlockedReason.PENDING);
+                            }
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            isLoading.setValue(false);
+                            errorMessage.setValue(message);
+                            viewAccessBlocked.setValue(ViewAccessBlockedReason.ERROR);
+                        }
+                    });
+        });
+    }
+
+    private void continueJoinAfterViewAccess(String gameId,
+                                             boolean requestEditAccess,
+                                             String enteredPin) {
+        if (requestEditAccess && enteredPin != null) {
+            claimEditAccess(gameId, enteredPin, new ClaimCallback() {
+                @Override
+                public void onSuccess(String pin, long pinGeneration) {
+                    fetchGameData(gameId);
+                }
+
+                @Override
+                public void onError(String message) {
+                    errorMessage.setValue(message);
+                    editAccessGranted.setValue(false);
+                    fetchGameData(gameId);
+                }
+            });
+        } else {
+            fetchGameData(gameId);
+        }
+    }
+
+    public void startPendingViewRequestsListener(String gameId) {
+        stopPendingViewRequestsListener();
+        if (TextUtils.isEmpty(gameId)) {
+            return;
+        }
+        GameViewApprovalRepository.PendingRequestsCallback callback =
+                new GameViewApprovalRepository.PendingRequestsCallback() {
+                    @Override
+                    public void onRequests(@NonNull List<GameViewApproval> requests) {
+                        pendingViewRequestsError.postValue(null);
+                        pendingViewRequests.postValue(requests);
+                    }
+
+                    @Override
+                    public void onError(@NonNull String message) {
+                        pendingViewRequestsError.postValue(message);
+                    }
+                };
+        viewApprovalRepository.fetchPendingRequestsForGame(gameId, callback);
+        pendingViewRequestsListener =
+                viewApprovalRepository.listenPendingRequestsForGame(gameId, callback);
+    }
+
+    public void stopPendingViewRequestsListener() {
+        if (pendingViewRequestsListener != null) {
+            pendingViewRequestsListener.remove();
+            pendingViewRequestsListener = null;
+        }
+        pendingViewRequests.setValue(new ArrayList<>());
+        pendingViewRequestsError.setValue(null);
+    }
+
+    public void approveViewRequest(String gameId, String userId) {
+        viewApprovalRepository.approveRequest(gameId, userId, new GameViewApprovalRepository.SimpleCallback() {
+            @Override
+            public void onSuccess() {
+                successMessage.setValue("View access approved");
+            }
+
+            @Override
+            public void onError(String message) {
+                errorMessage.setValue(message);
+            }
+        });
+    }
+
+    public void rejectViewRequest(String gameId, String userId) {
+        viewApprovalRepository.rejectRequest(gameId, userId, new GameViewApprovalRepository.SimpleCallback() {
+            @Override
+            public void onSuccess() {
+                successMessage.setValue("View access rejected");
+            }
+
+            @Override
+            public void onError(String message) {
+                errorMessage.setValue(message);
+            }
+        });
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        stopPendingViewRequestsListener();
     }
 
     private void applyGameAuthMetadata(DocumentSnapshot documentSnapshot) {
@@ -228,6 +394,12 @@ public class JoinGameViewModel extends AndroidViewModel {
             activeEditGeneration = result.pinGeneration;
             gamePin.setValue(result.pin);
             editAccessGranted.setValue(true);
+            GameAuth currentAuth = gameAuth.getValue();
+            if (currentAuth != null) {
+                currentAuth.setActiveEditorUserId(user.getUid());
+                currentAuth.setActiveEditorName(editorName);
+                gameAuth.setValue(currentAuth);
+            }
             if (callback != null) {
                 callback.onSuccess(result.pin, result.pinGeneration);
             }
@@ -276,6 +448,12 @@ public class JoinGameViewModel extends AndroidViewModel {
             gamePin.setValue(result.newPin);
             activeEditGeneration = 0;
             editAccessGranted.setValue(false);
+            GameAuth currentAuth = gameAuth.getValue();
+            if (currentAuth != null) {
+                currentAuth.setActiveEditorUserId(null);
+                currentAuth.setActiveEditorName(null);
+                gameAuth.setValue(currentAuth);
+            }
             if (callback != null) {
                 callback.onSuccess(result.newPin, result.newPinGeneration);
             }
@@ -368,7 +546,9 @@ public class JoinGameViewModel extends AndroidViewModel {
         }
 
         Map<String, Object> cleanGameData = new HashMap<>();
-        cleanGameData.put("numPlayers", updatedGameData.getNumPlayers());
+        cleanGameData.put("numPlayers", updatedGameData.getPlayers() != null
+                ? updatedGameData.getPlayers().size()
+                : updatedGameData.getNumPlayers());
         cleanGameData.put("pointValue", updatedGameData.getPointValue());
         cleanGameData.put("gstPercent", updatedGameData.getGstPercent());
         cleanGameData.put("players", updatedGameData.getPlayers());
@@ -380,9 +560,15 @@ public class JoinGameViewModel extends AndroidViewModel {
         gameDataDoc.put("version", "1.0");
         gameDataDoc.put("editGeneration", getActiveEditGeneration());
 
+        gameRepository.updateLocalDashboardFromGameData(gameId, updatedGameData);
+        gameRepository.syncDashboardSummaryForGame(gameId, updatedGameData);
+
         db.collection(FirestoreCollections.GAME_DATA).document(gameId)
                 .set(gameDataDoc)
-                .addOnSuccessListener(aVoid -> gameData.setValue(updatedGameData))
+                .addOnSuccessListener(aVoid -> {
+                    gameData.setValue(updatedGameData);
+                    gameRepository.syncDashboardSummaryForGame(gameId, updatedGameData);
+                })
                 .addOnFailureListener(e ->
                         errorMessage.setValue("Failed to save game data: " + e.getMessage()));
     }

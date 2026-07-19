@@ -2,6 +2,8 @@ package com.example.rummypulse.data;
 
 import android.content.Context;
 import android.util.Pair;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
@@ -26,7 +28,18 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 public class GameRepository {
+    private static GameRepository dashboardInstance;
+
+    /** Shared instance used by Dashboard and Join game so in-memory rows stay in sync. */
+    public static synchronized GameRepository getDashboardInstance() {
+        if (dashboardInstance == null) {
+            dashboardInstance = new GameRepository();
+        }
+        return dashboardInstance;
+    }
+
     private FirebaseFirestore db;
+    private final GameViewApprovalRepository viewApprovalRepository;
     private MutableLiveData<List<GameItem>> gameItemsLiveData;
     private MutableLiveData<String> errorLiveData;
     private MutableLiveData<Double> totalApprovedGstLiveData;
@@ -41,6 +54,10 @@ public class GameRepository {
     // Store game items and game IDs order for maintaining consistency
     private java.util.Map<String, GameItem> gameItemsMap = new java.util.HashMap<>();
     private List<String> gameIdsOrder = new ArrayList<>();
+    private java.util.Map<String, String> myViewApprovalStatusByGame = new java.util.HashMap<>();
+    private com.google.firebase.firestore.ListenerRegistration myViewApprovalsListener;
+    /** When JoinGame saves locally, remote refresh must not overwrite until Firestore catches up. */
+    private final Map<String, Long> localDashboardUpdatedAtMs = new HashMap<>();
     
     // Track seen games
     private Set<String> seenGameIds = new HashSet<>();
@@ -48,6 +65,7 @@ public class GameRepository {
 
     public GameRepository() {
         db = FirebaseFirestore.getInstance();
+        viewApprovalRepository = new GameViewApprovalRepository();
         gameItemsLiveData = new MutableLiveData<>();
         errorLiveData = new MutableLiveData<>();
         totalApprovedGstLiveData = new MutableLiveData<>();
@@ -88,7 +106,8 @@ public class GameRepository {
      */
     public void loadAllGamesWithRealtimeListener() {
         System.out.println("GameRepository: Setting up real-time listener for games collection");
-        
+        startMyViewApprovalsListener();
+
         // Remove existing listener if any
         if (gamesListener != null) {
             gamesListener.remove();
@@ -106,20 +125,15 @@ public class GameRepository {
                     
                     if (querySnapshot != null) {
                         System.out.println("GameRepository: Real-time update received, found " + querySnapshot.size() + " documents");
-                        List<String> gameIds = new ArrayList<>();
-                        for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-                            gameIds.add(document.getId());
-                        }
-                        
-                        if (gameIds.isEmpty()) {
+
+                        if (querySnapshot.isEmpty()) {
                             System.out.println("GameRepository: No games found in database");
                             clearGameDataListenersAndResetGameListState();
                             return;
                         }
-                        
-                        System.out.println("GameRepository: Found " + gameIds.size() + " game IDs, loading game data");
-                        // Now load game data for each game ID with real-time listeners
-                        loadGameDataForIdsWithListeners(gameIds);
+
+                        System.out.println("GameRepository: Found " + querySnapshot.size() + " games, seeding dashboard rows");
+                        loadGameDataForIdsWithListeners(querySnapshot);
                     }
                 });
     }
@@ -176,6 +190,10 @@ public class GameRepository {
             approvedGamesListener.remove();
             approvedGamesListener = null;
         }
+        if (myViewApprovalsListener != null) {
+            myViewApprovalsListener.remove();
+            myViewApprovalsListener = null;
+        }
         // Remove all gameData listeners
         for (com.google.firebase.firestore.ListenerRegistration listener : gameDataListeners.values()) {
             listener.remove();
@@ -207,15 +225,19 @@ public class GameRepository {
     }
 
     /**
-     * Load game data with real-time listeners (for Dashboard)
+     * Load game data with real-time listeners (for Dashboard).
+     * Pre-approval behavior: attach a {@code gameData_v2} listener per game; placeholders only on read errors.
      */
-    private void loadGameDataForIdsWithListeners(List<String> gameIds) {
-        // Update the game IDs order
+    private void loadGameDataForIdsWithListeners(QuerySnapshot gamesSnapshot) {
+        List<String> gameIds = new ArrayList<>();
+        for (DocumentSnapshot document : gamesSnapshot.getDocuments()) {
+            gameIds.add(document.getId());
+        }
+
         gameIdsOrder = new ArrayList<>(gameIds);
-        
-        // Remove listeners and data for games that are no longer in the list
+
         java.util.Set<String> currentGameIds = new java.util.HashSet<>(gameIds);
-        java.util.Iterator<java.util.Map.Entry<String, com.google.firebase.firestore.ListenerRegistration>> iterator = 
+        java.util.Iterator<java.util.Map.Entry<String, com.google.firebase.firestore.ListenerRegistration>> iterator =
             gameDataListeners.entrySet().iterator();
         while (iterator.hasNext()) {
             java.util.Map.Entry<String, com.google.firebase.firestore.ListenerRegistration> entry = iterator.next();
@@ -226,14 +248,394 @@ public class GameRepository {
                 System.out.println("Removed listener and data for gameData: " + entry.getKey());
             }
         }
-        
-        // Setup listeners for each game
+
         for (String gameId : gameIds) {
             setupGameDataListener(gameId);
         }
-        
-        // Trigger initial update
+
         updateGameItemsList();
+    }
+
+    private boolean hasGameDataAccess(@Nullable GameAuth auth, @NonNull String gameId) {
+        if (GameViewApprovalRepository.canBypassViewGate(auth)) {
+            return true;
+        }
+        String status = myViewApprovalStatusByGame.get(gameId);
+        return "approved".equalsIgnoreCase(status);
+    }
+
+    /**
+     * Builds a dashboard card from {@code games_v2} when {@code gameData_v2} is not readable.
+     */
+    private void ensurePlaceholderForRestrictedUser(DocumentSnapshot authDocument) {
+        if (authDocument == null || !authDocument.exists()) {
+            return;
+        }
+        String gameId = authDocument.getId();
+        if (!gameIdsOrder.contains(gameId)) {
+            return;
+        }
+
+        GameAuth auth = authDocument.toObject(GameAuth.class);
+        if (auth == null) {
+            return;
+        }
+
+        GameItem existing = gameItemsMap.get(gameId);
+        if (existing != null) {
+            if (existing.getPlayers() != null || wasRecentlyUpdatedLocally(gameId)) {
+                return;
+            }
+            if (!authDocument.getMetadata().isFromCache()) {
+                applyDashboardSummaryFromAuth(existing, auth);
+                updateGameItemsList();
+            }
+            return;
+        }
+
+        putDashboardPlaceholder(gameId, auth, null);
+
+        String creatorUserId = auth.getCreatorUserId();
+        if (creatorUserId != null && !creatorUserId.isEmpty()) {
+            db.collection(FirestoreCollections.APP_USER)
+                    .document(creatorUserId)
+                    .get()
+                    .addOnSuccessListener(userSnapshot -> {
+                        if (!gameIdsOrder.contains(gameId)) {
+                            return;
+                        }
+                        GameItem current = gameItemsMap.get(gameId);
+                        if (current == null || current.getPlayers() != null) {
+                            return;
+                        }
+                        String creatorPhotoUrl = userSnapshot.exists()
+                                ? userSnapshot.getString("photoUrl") : null;
+                        if (creatorPhotoUrl != null) {
+                            current.setCreatorPhotoUrl(creatorPhotoUrl);
+                            updateGameItemsList();
+                        }
+                    });
+        }
+    }
+
+    private void putDashboardPlaceholder(String gameId, GameAuth auth, String creatorPhotoUrl) {
+        if (!gameIdsOrder.contains(gameId)) {
+            return;
+        }
+        GameItem item = convertToPlaceholderGameItem(gameId, auth, creatorPhotoUrl);
+        gameItemsMap.put(gameId, item);
+        updateGameItemsList();
+    }
+
+    private GameItem convertToPlaceholderGameItem(String gameId, GameAuth auth, String creatorPhotoUrl) {
+        String pin = auth.getPin() != null ? auth.getPin() : "";
+        String creatorName = auth.getCreatorName();
+        String creatorUserId = auth.getCreatorUserId();
+        com.google.firebase.Timestamp createdAt = auth.getCreatedAt();
+        String gameDisplayName = gameDisplayNameFromAuth(auth);
+        String unknown = "—";
+
+        String pointValueStr = auth.getDashboardPointValue() != null
+                ? String.format("%.2f", auth.getDashboardPointValue()) : unknown;
+        String playersStr = auth.getDashboardNumPlayers() != null
+                ? String.valueOf(auth.getDashboardNumPlayers()) : unknown;
+        String gstStr = auth.getDashboardGstPercent() != null
+                ? String.format("%.0f", auth.getDashboardGstPercent()) : unknown;
+        String gameStatus = dashboardStatusForDisplay(auth.getDashboardGameStatus());
+
+        GameItem gameItem = new GameItem(
+                gameId,
+                pin,
+                unknown,
+                pointValueStr,
+                formatTimestamp(createdAt),
+                gameStatus,
+                playersStr,
+                gstStr,
+                unknown,
+                creatorName
+        );
+        gameItem.setCreatorPhotoUrl(creatorPhotoUrl);
+        gameItem.setCreatorUserId(creatorUserId);
+        gameItem.setGameDisplayName(gameDisplayName != null ? gameDisplayName : "");
+        return gameItem;
+    }
+
+    /**
+     * Loads {@code gameData_v2} for dashboard row refresh (creator/editor/admin).
+     * Prefers server data so offline cache cannot revert round/player counts.
+     */
+    private void refreshDashboardRowFromGameData(String gameId) {
+        if (gameId == null || gameId.isEmpty()) {
+            return;
+        }
+        com.google.firebase.firestore.DocumentReference ref =
+                db.collection(FirestoreCollections.GAME_DATA).document(gameId);
+        ref.get(Source.SERVER)
+                .addOnSuccessListener(snapshot -> applyGameDataRefreshSnapshot(gameId, snapshot))
+                .addOnFailureListener(e -> ref.get()
+                        .addOnSuccessListener(snapshot -> applyGameDataRefreshSnapshot(gameId, snapshot))
+                        .addOnFailureListener(e2 ->
+                                System.out.println("Dashboard row refresh failed for " + gameId + ": "
+                                        + e2.getMessage())));
+    }
+
+    private void applyGameDataRefreshSnapshot(String gameId, DocumentSnapshot snapshot) {
+        if (snapshot == null || !snapshot.exists()) {
+            return;
+        }
+        if (!gameIdsOrder.contains(gameId)) {
+            gameIdsOrder.add(0, gameId);
+        }
+        GameDataWrapper wrapper = snapshot.toObject(GameDataWrapper.class);
+        if (wrapper == null || wrapper.getData() == null) {
+            return;
+        }
+        if (!shouldApplyRemoteDashboardGameData(gameId, wrapper.getData(), snapshot)) {
+            System.out.println("Skipping stale dashboard server refresh for " + gameId);
+            return;
+        }
+        upgradeDashboardItemFromGameData(gameId, wrapper.getData(), wrapper.getLastUpdated());
+    }
+
+    private void upgradeDashboardItemFromGameData(String gameId, GameData gameData,
+                                                  com.google.firebase.Timestamp fallbackCreatedAt) {
+        db.collection(FirestoreCollections.GAMES)
+                .document(gameId)
+                .get()
+                .addOnSuccessListener(authSnapshot -> {
+                    if (!gameIdsOrder.contains(gameId)) {
+                        return;
+                    }
+                    GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
+                    String pin = gameAuth != null ? gameAuth.getPin() : "0000";
+                    String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
+                    String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
+                    String gameDisplayName = gameDisplayNameFromAuth(gameAuth);
+                    com.google.firebase.Timestamp createdAt = gameAuth != null && gameAuth.getCreatedAt() != null
+                            ? gameAuth.getCreatedAt() : fallbackCreatedAt;
+
+                    Runnable publish = () -> {
+                        GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt,
+                                creatorName, null, creatorUserId, gameDisplayName);
+                        if (gameItem != null) {
+                            gameItemsMap.put(gameId, gameItem);
+                            updateGameItemsList();
+                        }
+                    };
+
+                    if (creatorUserId != null && !creatorUserId.isEmpty()) {
+                        db.collection(FirestoreCollections.APP_USER)
+                                .document(creatorUserId)
+                                .get()
+                                .addOnSuccessListener(userSnapshot -> {
+                                    String creatorPhotoUrl = userSnapshot.exists()
+                                            ? userSnapshot.getString("photoUrl") : null;
+                                    GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt,
+                                            creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
+                                    if (gameItem != null) {
+                                        gameItemsMap.put(gameId, gameItem);
+                                        updateGameItemsList();
+                                    }
+                                })
+                                .addOnFailureListener(e -> publish.run());
+                    } else {
+                        publish.run();
+                    }
+                });
+    }
+
+    private void applyDashboardSummaryFromAuth(@Nullable GameItem item, @Nullable GameAuth auth) {
+        if (item == null || auth == null) {
+            return;
+        }
+        if (auth.getDashboardPointValue() != null) {
+            item.setPointValue(String.format(Locale.US, "%.2f", auth.getDashboardPointValue()));
+        }
+        if (auth.getDashboardNumPlayers() != null) {
+            item.setNumberOfPlayers(String.valueOf(auth.getDashboardNumPlayers()));
+        }
+        if (auth.getDashboardGstPercent() != null) {
+            item.setGstPercentage(String.format(Locale.US, "%.0f", auth.getDashboardGstPercent()));
+        }
+        if (auth.getDashboardGameStatus() != null && !auth.getDashboardGameStatus().trim().isEmpty()) {
+            item.setGameStatus(dashboardStatusForDisplay(auth.getDashboardGameStatus()));
+        }
+        String gameDisplayName = gameDisplayNameFromAuth(auth);
+        if (gameDisplayName != null && !gameDisplayName.isEmpty()) {
+            item.setGameDisplayName(gameDisplayName);
+        }
+    }
+
+    /**
+     * Keeps {@code games_v2} dashboard summary in sync for users who cannot read {@code gameData_v2}.
+     */
+    /** Pushes the current in-memory dashboard rows to LiveData observers immediately. */
+    public void forcePublishDashboard() {
+        updateGameItemsList();
+    }
+
+    public void syncDashboardSummaryForGame(@NonNull String gameId, @NonNull GameData gameData) {
+        syncDashboardSummaryOnGameDoc(gameId, gameData);
+    }
+
+    /**
+     * Immediately updates the dashboard card in memory (round badge, stats) after a score save.
+     */
+    public void updateLocalDashboardFromGameData(@NonNull String gameId, @NonNull GameData gameData) {
+        if (gameData == null || gameId.isEmpty()) {
+            return;
+        }
+        int playerCount = resolvePlayerCount(gameData);
+        String status = gameData.getGameStatus();
+        String pointValueStr = String.format(Locale.US, "%.2f", gameData.getPointValue());
+        String gstStr = String.format(Locale.US, "%.0f", gameData.getGstPercent());
+        String totalScoreStr = String.valueOf(gameData.getTotalScore());
+
+        GameItem item = gameItemsMap.get(gameId);
+        if (item == null) {
+            if (!gameIdsOrder.contains(gameId)) {
+                gameIdsOrder.add(0, gameId);
+            }
+            item = new GameItem(
+                    gameId,
+                    "",
+                    totalScoreStr,
+                    pointValueStr,
+                    "",
+                    status != null ? status : "R1",
+                    String.valueOf(playerCount),
+                    gstStr,
+                    "—",
+                    gameData.getPlayers()
+            );
+            gameItemsMap.put(gameId, item);
+        } else {
+            GameItem updated = new GameItem(
+                    gameId,
+                    item.getGamePin() != null ? item.getGamePin() : "",
+                    totalScoreStr,
+                    pointValueStr,
+                    item.getCreationDateTime() != null ? item.getCreationDateTime() : "",
+                    status != null ? status : item.getGameStatus(),
+                    String.valueOf(playerCount),
+                    gstStr,
+                    item.getGstAmount() != null ? item.getGstAmount() : "—",
+                    item.getCreatorName(),
+                    gameData.getPlayers()
+            );
+            updated.setCreatorPhotoUrl(item.getCreatorPhotoUrl());
+            updated.setCreatorUserId(item.getCreatorUserId());
+            updated.setGameDisplayName(item.getGameDisplayName());
+            updated.setMyViewAccessStatus(item.getMyViewAccessStatus());
+            gameItemsMap.put(gameId, updated);
+        }
+        markLocalDashboardUpdated(gameId);
+        updateGameItemsList();
+    }
+
+    /** Refreshes dashboard rows from {@code gameData_v2} when the user can read it (e.g. after Join). */
+    public void refreshCreatorDashboardRows() {
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            return;
+        }
+        long now = android.os.SystemClock.elapsedRealtime();
+        for (String gameId : new ArrayList<>(gameIdsOrder)) {
+            Long localAt = localDashboardUpdatedAtMs.get(gameId);
+            if (localAt != null && now - localAt < 30_000) {
+                continue;
+            }
+            if (gameDataListeners.containsKey(gameId)) {
+                refreshDashboardRowFromGameData(gameId);
+            }
+        }
+    }
+
+    private void markLocalDashboardUpdated(@NonNull String gameId) {
+        localDashboardUpdatedAtMs.put(gameId, android.os.SystemClock.elapsedRealtime());
+    }
+
+    private boolean wasRecentlyUpdatedLocally(@NonNull String gameId) {
+        Long localAt = localDashboardUpdatedAtMs.get(gameId);
+        return localAt != null
+                && android.os.SystemClock.elapsedRealtime() - localAt < 60_000;
+    }
+
+    /**
+     * Prevents a stale Firestore snapshot (often still R1 / 2 players) from undoing a fresh local save
+     * when the user leaves JoinGame before the async write finishes.
+     */
+    private boolean shouldApplyRemoteDashboardGameData(@NonNull String gameId,
+                                                       @NonNull GameData remote,
+                                                       @Nullable DocumentSnapshot snapshot) {
+        GameItem local = gameItemsMap.get(gameId);
+        if (local == null || local.getPlayers() == null || local.getPlayers().isEmpty()) {
+            if (wasRecentlyUpdatedLocally(gameId)) {
+                return false;
+            }
+            return true;
+        }
+
+        int localPlayers = local.getPlayers().size();
+        int remotePlayers = resolvePlayerCount(remote);
+        if (remotePlayers < localPlayers) {
+            return false;
+        }
+
+        Long localAt = localDashboardUpdatedAtMs.get(gameId);
+        if (localAt == null) {
+            return true;
+        }
+
+        long ageMs = android.os.SystemClock.elapsedRealtime() - localAt;
+        if (ageMs > 60_000) {
+            return true;
+        }
+
+        int localRound = parseRoundNumber(local.getGameStatus());
+        int remoteRound = parseRoundNumber(remote.getGameStatus());
+        if (localRound > 0 && remoteRound > 0 && remoteRound < localRound) {
+            return false;
+        }
+
+        if (snapshot != null && snapshot.getMetadata().isFromCache() && ageMs < 15_000) {
+            if (remotePlayers <= localPlayers && localRound > 0
+                    && (remoteRound <= 0 || remoteRound <= localRound)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static int parseRoundNumber(@Nullable String status) {
+        if (status != null && status.startsWith("R")) {
+            try {
+                return Integer.parseInt(status.substring(1));
+            } catch (NumberFormatException ignored) {
+                // fall through
+            }
+        }
+        return -1;
+    }
+
+    private void syncDashboardSummaryOnGameDoc(String gameId, GameData gameData) {
+        if (gameId == null || gameData == null) {
+            return;
+        }
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("dashboardPointValue", gameData.getPointValue());
+        summary.put("dashboardNumPlayers", resolvePlayerCount(gameData));
+        summary.put("dashboardGstPercent", gameData.getGstPercent());
+        String status = gameData.getGameStatus();
+        summary.put("dashboardGameStatus",
+                status != null && !status.trim().isEmpty() ? status.trim() : "R1");
+        db.collection(FirestoreCollections.GAMES)
+                .document(gameId)
+                .update(summary)
+                .addOnFailureListener(e ->
+                        System.out.println("Failed to sync dashboard summary for " + gameId + ": "
+                                + e.getMessage()));
     }
 
     /**
@@ -372,6 +774,16 @@ public class GameRepository {
                 .addSnapshotListener((documentSnapshot, error) -> {
                     if (error != null) {
                         System.out.println("Error listening to gameData for " + gameId + ": " + error.getMessage());
+                        db.collection(FirestoreCollections.GAMES)
+                                .document(gameId)
+                                .get()
+                                .addOnSuccessListener(authSnapshot -> {
+                                    if (hasGameDataAccess(authSnapshot.toObject(GameAuth.class), gameId)) {
+                                        refreshDashboardRowFromGameData(gameId);
+                                    } else {
+                                        ensurePlaceholderForRestrictedUser(authSnapshot);
+                                    }
+                                });
                         return;
                     }
                     
@@ -380,6 +792,10 @@ public class GameRepository {
                             GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
                             if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
                                 GameData gameData = gameDataWrapper.getData();
+                                if (!shouldApplyRemoteDashboardGameData(gameId, gameData, documentSnapshot)) {
+                                    System.out.println("Skipping stale dashboard listener snapshot for " + gameId);
+                                    return;
+                                }
                                 // Also get the auth data for PIN
                                 db.collection(FirestoreCollections.GAMES)
                                         .document(gameId)
@@ -406,36 +822,27 @@ public class GameRepository {
                                                             }
                                                             GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
                                                             
-                                                            if (gameItem != null) {
+                                                            if (gameItem != null && shouldApplyRemoteDashboardGameData(gameId, gameData, documentSnapshot)) {
                                                                 gameItemsMap.put(gameId, gameItem);
-                                                                
-                                                                // Check if this is a new game
                                                                 checkAndNotifyNewGame(gameItem);
-                                                                
                                                                 updateGameItemsList();
                                                             }
                                                         })
                                                         .addOnFailureListener(e -> {
                                                             // If fetching photo fails, create game item without photo
                                                             GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId, gameDisplayName);
-                                                            if (gameItem != null) {
+                                                            if (gameItem != null && shouldApplyRemoteDashboardGameData(gameId, gameData, documentSnapshot)) {
                                                                 gameItemsMap.put(gameId, gameItem);
-                                                                
-                                                                // Check if this is a new game
                                                                 checkAndNotifyNewGame(gameItem);
-                                                                
                                                                 updateGameItemsList();
                                                             }
                                                         });
                                             } else {
                                                 // No creator user ID, create game item without photo
                                                 GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null, gameDisplayName);
-                                                if (gameItem != null) {
+                                                if (gameItem != null && shouldApplyRemoteDashboardGameData(gameId, gameData, documentSnapshot)) {
                                                     gameItemsMap.put(gameId, gameItem);
-                                                    
-                                                    // Check if this is a new game
                                                     checkAndNotifyNewGame(gameItem);
-                                                    
                                                     updateGameItemsList();
                                                 }
                                             }
@@ -463,6 +870,7 @@ public class GameRepository {
     }
     
     private void updateGameItemsList() {
+        applyMyViewAccessStatusToGameItems();
         List<GameItem> gameItems = new ArrayList<>();
         // Maintain the order from gameIdsOrder
         for (String gameId : gameIdsOrder) {
@@ -472,7 +880,89 @@ public class GameRepository {
             }
         }
         System.out.println("Updating game items list with " + gameItems.size() + " games");
-        gameItemsLiveData.setValue(gameItems);
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            gameItemsLiveData.setValue(gameItems);
+        } else {
+            gameItemsLiveData.postValue(gameItems);
+        }
+    }
+
+    private void startMyViewApprovalsListener() {
+        com.google.firebase.auth.FirebaseUser user =
+                com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            myViewApprovalStatusByGame.clear();
+            return;
+        }
+        if (myViewApprovalsListener != null) {
+            myViewApprovalsListener.remove();
+        }
+        myViewApprovalsListener = viewApprovalRepository.listenMyViewApprovals(
+                user.getUid(),
+                statusByGameId -> {
+                    Map<String, String> previous = myViewApprovalStatusByGame;
+                    myViewApprovalStatusByGame = statusByGameId != null
+                            ? new HashMap<>(statusByGameId) : new HashMap<>();
+                    if (statusByGameId != null) {
+                        for (Map.Entry<String, String> entry : statusByGameId.entrySet()) {
+                            String gameId = entry.getKey();
+                            if (!"approved".equalsIgnoreCase(entry.getValue())) {
+                                continue;
+                            }
+                            String prior = previous != null ? previous.get(gameId) : null;
+                            if ("approved".equalsIgnoreCase(prior)) {
+                                continue;
+                            }
+                            setupGameDataListener(gameId);
+                            refreshDashboardRowFromGameData(gameId);
+                        }
+                    }
+                    applyMyViewAccessStatusToGameItems();
+                    updateGameItemsListWithoutReapply();
+                });
+    }
+
+    private void applyMyViewAccessStatusToGameItems() {
+        com.google.firebase.auth.FirebaseUser user =
+                com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        boolean isAdmin = AppUserRoleSession.getInstance().peekRole() == AppUserRoleSession.Role.ADMIN;
+        String uid = user != null ? user.getUid() : null;
+        for (GameItem item : gameItemsMap.values()) {
+            if (item == null) {
+                continue;
+            }
+            if (isAdmin || (uid != null && uid.equals(item.getCreatorUserId()))) {
+                item.setMyViewAccessStatus(null);
+            } else {
+                item.setMyViewAccessStatus(myViewApprovalStatusByGame.get(item.getGameId()));
+            }
+        }
+    }
+
+    private void updateGameItemsListWithoutReapply() {
+        List<GameItem> gameItems = new ArrayList<>();
+        for (String gameId : gameIdsOrder) {
+            GameItem item = gameItemsMap.get(gameId);
+            if (item != null) {
+                gameItems.add(item);
+            }
+        }
+        gameItemsLiveData.postValue(gameItems);
+    }
+
+    private static String dashboardStatusForDisplay(@Nullable String status) {
+        if (status == null || status.trim().isEmpty()
+                || "In Progress".equalsIgnoreCase(status.trim())) {
+            return "R1";
+        }
+        return status.trim();
+    }
+
+    private static int resolvePlayerCount(@NonNull GameData gameData) {
+        if (gameData.getPlayers() != null && !gameData.getPlayers().isEmpty()) {
+            return gameData.getPlayers().size();
+        }
+        return Math.max(gameData.getNumPlayers(), 0);
     }
 
     private static String gameDisplayNameFromAuth(GameAuth auth) {
@@ -503,7 +993,7 @@ public class GameRepository {
         String gameStatus = gameData.getGameStatus();
         
         // Get number of players
-        String numberOfPlayers = String.valueOf(gameData.getNumPlayers());
+        String numberOfPlayers = String.valueOf(resolvePlayerCount(gameData));
 
         GameItem gameItem = new GameItem(
                 gameId,
@@ -575,6 +1065,7 @@ public class GameRepository {
     }
 
     public void deleteGame(String gameId) {
+        viewApprovalRepository.deleteAllForGame(gameId);
         // Delete from both collections
         db.collection(FirestoreCollections.GAMES).document(gameId).delete()
                 .addOnSuccessListener(aVoid -> {
@@ -663,6 +1154,7 @@ public class GameRepository {
                             .document(gameId)
                             .set(gameDataWrapper)
                             .addOnSuccessListener(aVoid -> {
+                                syncDashboardSummaryOnGameDoc(gameId, gameData);
                                 loadAllGames();
                                 if (onSuccess != null) {
                                     onSuccess.run();
@@ -775,6 +1267,7 @@ public class GameRepository {
     }
 
     private void deleteApprovedGame(String gameId, Runnable onAfterSuccess) {
+        viewApprovalRepository.deleteAllForGame(gameId);
         // Delete from both collections after successful approval
         db.collection(FirestoreCollections.GAMES).document(gameId).delete()
                 .addOnSuccessListener(aVoid -> {

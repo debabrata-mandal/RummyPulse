@@ -300,6 +300,15 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
     @Override
     public void onJoinGame(GameItem game, int position, String joinType) {
+        if (game.isViewAccessPending()) {
+            com.example.rummypulse.utils.ViewAccessDialog.showPending(getContext(), null);
+            return;
+        }
+        if (game.isViewAccessRejected()) {
+            com.example.rummypulse.utils.ViewAccessDialog.showRejected(getContext(), null);
+            return;
+        }
+
         if ("view".equals(joinType)) {
             com.example.rummypulse.utils.ModernToast.info(getContext(), "👁️ Viewing completed game #" + game.getGameId());
         } else {

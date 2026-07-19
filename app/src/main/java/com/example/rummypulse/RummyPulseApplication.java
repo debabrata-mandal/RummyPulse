@@ -54,7 +54,7 @@ public class RummyPulseApplication extends Application {
         AuthStateManager authStateManager = AuthStateManager.getInstance(this);
 
         // GameRepository: load only when a user is signed in (avoids Firestore work while logged out).
-        final GameRepository gameRepository = new GameRepository();
+        final GameRepository gameRepository = GameRepository.getDashboardInstance();
         gameRepository.setContext(this);
         
         // Add a global auth state listener for debugging and backup
@@ -66,7 +66,7 @@ public class RummyPulseApplication extends Application {
                     Log.d(TAG, "Global auth state: User is signed in - " + user.getEmail());
                     // Save authentication state as backup
                     authStateManager.saveAuthState(user);
-                    gameRepository.loadAllGames();
+                    gameRepository.loadAllGamesWithRealtimeListener();
                     com.example.rummypulse.data.GameDefaultsRepository.getInstance(RummyPulseApplication.this)
                             .refreshFromServer(null);
                 } else {

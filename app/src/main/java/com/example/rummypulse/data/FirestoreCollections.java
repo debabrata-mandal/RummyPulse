@@ -11,6 +11,7 @@ public final class FirestoreCollections {
     public static final String APPROVED_GAMES = "approvedGames_v2";
     public static final String APPROVED_GAMES_REPORT = "approvedGamesReport_v2";
     public static final String GAME_DEFAULTS = "gameDefaults_v2";
+    public static final String GAME_VIEW_APPROVALS = "gameViewApprovals_v2";
 
     private FirestoreCollections() {
     }

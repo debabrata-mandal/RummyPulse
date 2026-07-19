@@ -17,6 +17,11 @@ public class GameAuth {
     private String activeEditorUserId;
     /** Display name of the active editor. */
     private String activeEditorName;
+    /** Denormalized dashboard fields (readable from {@code games_v2} without {@code gameData_v2}). */
+    private Double dashboardPointValue;
+    private Integer dashboardNumPlayers;
+    private Double dashboardGstPercent;
+    private String dashboardGameStatus;
 
     public GameAuth() {
         // Default constructor required for Firestore
@@ -116,5 +121,43 @@ public class GameAuth {
 
     public void setActiveEditorName(String activeEditorName) {
         this.activeEditorName = activeEditorName;
+    }
+
+    public Double getDashboardPointValue() {
+        return dashboardPointValue;
+    }
+
+    public void setDashboardPointValue(Double dashboardPointValue) {
+        this.dashboardPointValue = dashboardPointValue;
+    }
+
+    public Integer getDashboardNumPlayers() {
+        return dashboardNumPlayers;
+    }
+
+    public void setDashboardNumPlayers(Integer dashboardNumPlayers) {
+        this.dashboardNumPlayers = dashboardNumPlayers;
+    }
+
+    public Double getDashboardGstPercent() {
+        return dashboardGstPercent;
+    }
+
+    public void setDashboardGstPercent(Double dashboardGstPercent) {
+        this.dashboardGstPercent = dashboardGstPercent;
+    }
+
+    public String getDashboardGameStatus() {
+        return dashboardGameStatus;
+    }
+
+    public void setDashboardGameStatus(String dashboardGameStatus) {
+        this.dashboardGameStatus = dashboardGameStatus;
+    }
+
+    public boolean hasDashboardSummary() {
+        return dashboardPointValue != null
+                && dashboardNumPlayers != null
+                && dashboardGstPercent != null;
     }
 }
