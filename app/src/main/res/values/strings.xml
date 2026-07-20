@@ -18,6 +18,15 @@
     <string name="nav_role_admin">Admin</string>
     <string name="nav_role_player">Player</string>
     <string name="nav_app_version">Version %1$s</string>
+    <string name="app_info_title">RummyPulse</string>
+    <string name="app_info_subtitle">Game scoring and review tools</string>
+    <string name="app_info_version_label">Version</string>
+    <string name="app_info_build_label">Build</string>
+    <string name="app_info_updated_label">Checked</string>
+    <string name="app_info_update_status_label">Updates</string>
+    <string name="app_info_update_status_debug">Manual checks only in debug</string>
+    <string name="app_info_update_status_release">Automatic checks enabled</string>
+    <string name="app_info_check_updates">Check for updates</string>
     <string name="menu_dashboard">Dashboard</string>
     <string name="menu_reports">Reports</string>
     <string name="reports_screen_subtitle">Monthly summaries of approved games.</string>

@@ -631,13 +631,17 @@ public class MainActivity extends AppCompatActivity {
             android.widget.TextView textVersion = dialog.findViewById(R.id.text_version);
             android.widget.TextView textBuild = dialog.findViewById(R.id.text_build);
             android.widget.TextView textDate = dialog.findViewById(R.id.text_date);
+            android.widget.TextView textUpdateStatus = dialog.findViewById(R.id.text_update_status);
             android.widget.ImageButton btnClose = dialog.findViewById(R.id.btn_close);
             android.widget.Button btnCheckUpdates = dialog.findViewById(R.id.btn_check_updates);
             
             // Set values
             textVersion.setText(versionName);
             textBuild.setText(String.valueOf(versionCode));
-            textDate.setText("📅 " + currentDate);
+            textDate.setText(currentDate);
+            textUpdateStatus.setText(BuildConfig.DEBUG
+                    ? R.string.app_info_update_status_debug
+                    : R.string.app_info_update_status_release);
             
             // Set button listeners
             btnClose.setOnClickListener(v -> dialog.dismiss());
