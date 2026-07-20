@@ -135,6 +135,15 @@ public class JoinGameViewModel extends AndroidViewModel {
         return activeEditGeneration > 0 ? activeEditGeneration : 1L;
     }
 
+    public boolean canSaveGameData() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        return GameEditAccessPolicy.canSaveGameData(
+                editAccessGranted.getValue(),
+                activeEditGeneration,
+                gameAuth.getValue(),
+                user != null ? user.getUid() : null);
+    }
+
     public void clearEditSessionStale() {
         editSessionStale.setValue(null);
     }
@@ -573,6 +582,10 @@ public class JoinGameViewModel extends AndroidViewModel {
             errorMessage.setValue("Invalid game data");
             return;
         }
+        if (!canSaveGameData()) {
+            errorMessage.setValue("Only the active editor can save game data.");
+            return;
+        }
 
         Map<String, Object> cleanGameData = new HashMap<>();
         cleanGameData.put("numPlayers", updatedGameData.getPlayers() != null
@@ -613,7 +626,33 @@ public class JoinGameViewModel extends AndroidViewModel {
             return;
         }
         isLoading.setValue(true);
-        fetchGameData(gameId);
+        fetchGameDataFromServer(gameId);
+    }
+
+    private void fetchGameDataFromServer(String gameId) {
+        db.collection(FirestoreCollections.GAME_DATA).document(gameId)
+                .get(Source.SERVER)
+                .addOnSuccessListener(documentSnapshot -> {
+                    isLoading.setValue(false);
+                    if (documentSnapshot.exists()) {
+                        try {
+                            GameDataWrapper wrapper = documentSnapshot.toObject(GameDataWrapper.class);
+                            if (wrapper != null && wrapper.getData() != null) {
+                                gameData.setValue(wrapper.getData());
+                            } else {
+                                errorMessage.setValue("Game data is corrupted. Please try again.");
+                            }
+                        } catch (Exception e) {
+                            errorMessage.setValue("Failed to parse game data. Please try again.");
+                        }
+                    } else {
+                        errorMessage.setValue("Game data not found. Please check the Game ID.");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    isLoading.setValue(false);
+                    errorMessage.setValue("Could not refresh from server. Check your connection and try again.");
+                });
     }
 
     public void updateGameData(GameData newGameData) {

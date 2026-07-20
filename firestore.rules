@@ -22,6 +22,11 @@ service cloud.firestore {
       return game.keys().hasAll(['pinGeneration']) ? game.pinGeneration : 1;
     }
 
+    function isActiveEditor(gameId) {
+      return isAuthenticated()
+          && get(/databases/$(database)/documents/games_v2/$(gameId)).data.activeEditorUserId == request.auth.uid;
+    }
+
     function validEditGeneration(gameId) {
       return request.resource.data.keys().hasAll(['editGeneration'])
           && request.resource.data.editGeneration == gamePinGeneration(gameId);
@@ -38,7 +43,14 @@ service cloud.firestore {
     }
 
     function canUpdateGameData(gameId) {
-      return validEditGeneration(gameId) || isAdminGameEconomicsUpdate();
+      return (isActiveEditor(gameId) && validEditGeneration(gameId))
+          || isAdminGameEconomicsUpdate();
+    }
+
+    function canCreateGameData(gameId) {
+      return (isGameCreator(gameId) || isActiveEditor(gameId) || isAdmin())
+          && (!request.resource.data.keys().hasAll(['editGeneration'])
+              || request.resource.data.editGeneration == gamePinGeneration(gameId));
     }
 
     match /games_v2/{gameId} {
@@ -51,11 +63,9 @@ service cloud.firestore {
 
     match /gameData_v2/{gameId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated()
-          && (!request.resource.data.keys().hasAll(['editGeneration'])
-              || request.resource.data.editGeneration == gamePinGeneration(gameId));
+      allow create: if canCreateGameData(gameId);
       allow update: if isAuthenticated() && canUpdateGameData(gameId);
-      allow delete: if isAuthenticated();
+      allow delete: if isGameCreator(gameId) || isAdmin();
     }
 
     match /approvedGames_v2/{gameId} {

@@ -101,6 +101,7 @@ dependencies {
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    testImplementation(libs.junit)
     
     // QR Code generation library
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
