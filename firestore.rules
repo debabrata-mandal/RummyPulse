@@ -17,14 +17,28 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/appUser_v2/$(request.auth.uid)).data.role == 'admin_user';
     }
 
-    function gamePinGeneration(gameId) {
-      let game = get(/databases/$(database)/documents/games_v2/$(gameId)).data;
-      return game.keys().hasAll(['pinGeneration']) ? game.pinGeneration : 1;
-    }
-
     function isActiveEditor(gameId) {
       return isAuthenticated()
           && get(/databases/$(database)/documents/games_v2/$(gameId)).data.activeEditorUserId == request.auth.uid;
+    }
+
+    function approvalDocId(gameId) {
+      return gameId + '_' + request.auth.uid;
+    }
+
+    function hasApprovedViewAccess(gameId) {
+      let docPath = /databases/$(database)/documents/gameViewApprovals_v2/$(approvalDocId(gameId));
+      return exists(docPath)
+          && get(docPath).data.status == 'approved';
+    }
+
+    function canManageViewApprovals(gameId) {
+      return isAdmin() || isActiveEditor(gameId);
+    }
+
+    function gamePinGeneration(gameId) {
+      let game = get(/databases/$(database)/documents/games_v2/$(gameId)).data;
+      return game.keys().hasAll(['pinGeneration']) ? game.pinGeneration : 1;
     }
 
     function validEditGeneration(gameId) {
@@ -42,15 +56,15 @@ service cloud.firestore {
               .hasOnly(['pointValue', 'gstPercent']);
     }
 
-    function canUpdateGameData(gameId) {
-      return (isActiveEditor(gameId) && validEditGeneration(gameId))
-          || isAdminGameEconomicsUpdate();
-    }
-
     function canCreateGameData(gameId) {
       return (isGameCreator(gameId) || isActiveEditor(gameId) || isAdmin())
           && (!request.resource.data.keys().hasAll(['editGeneration'])
               || request.resource.data.editGeneration == gamePinGeneration(gameId));
+    }
+
+    function canUpdateGameData(gameId) {
+      return (isActiveEditor(gameId) && validEditGeneration(gameId))
+          || isAdminGameEconomicsUpdate();
     }
 
     match /games_v2/{gameId} {
@@ -62,10 +76,36 @@ service cloud.firestore {
     }
 
     match /gameData_v2/{gameId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (
+        isAdmin()
+        || isGameCreator(gameId)
+        || isActiveEditor(gameId)
+        || hasApprovedViewAccess(gameId)
+      );
       allow create: if canCreateGameData(gameId);
       allow update: if isAuthenticated() && canUpdateGameData(gameId);
       allow delete: if isGameCreator(gameId) || isAdmin();
+    }
+
+    match /gameViewApprovals_v2/{approvalId} {
+      allow read: if isAuthenticated() && (
+        !exists(/databases/$(database)/documents/gameViewApprovals_v2/$(approvalId))
+        || resource.data.userId == request.auth.uid
+        || canManageViewApprovals(resource.data.gameId)
+      );
+      allow create: if isAuthenticated()
+          && approvalId == request.resource.data.gameId + '_' + request.auth.uid
+          && request.resource.data.userId == request.auth.uid
+          && (
+            request.resource.data.status == 'requested'
+            || (
+              request.resource.data.status == 'approved'
+              && isGameCreator(request.resource.data.gameId)
+            )
+          );
+      allow update: if isAuthenticated()
+          && canManageViewApprovals(resource.data.gameId);
+      allow delete: if isAuthenticated();
     }
 
     match /approvedGames_v2/{gameId} {
