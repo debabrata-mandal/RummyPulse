@@ -14,21 +14,67 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.google.android.material.navigation.NavigationView
-        android:id="@+id/nav_view"
+    <LinearLayout
+        android:id="@+id/nav_drawer_container"
         android:layout_width="@dimen/navigation_drawer_width"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
         android:background="@drawable/navigation_drawer_background"
-        app:itemBackground="@drawable/navigation_item_background"
-        app:itemHorizontalPadding="20dp"
-        app:itemIconPadding="18dp"
-        app:itemIconTint="@color/navigation_item_icon_tint"
-        app:itemTextColor="@color/navigation_item_text_tint"
-        app:itemVerticalPadding="@dimen/navigation_item_vertical_padding"
-        app:subheaderColor="@color/navigation_section_text"
-        app:subheaderTextAppearance="@style/NavigationSectionText"
-        app:headerLayout="@layout/nav_header_main"
-        app:menu="@menu/activity_main_drawer" />
+        android:orientation="vertical">
+
+        <com.google.android.material.navigation.NavigationView
+            android:id="@+id/nav_view"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:fitsSystemWindows="true"
+            app:itemBackground="@drawable/navigation_item_background"
+            app:itemHorizontalPadding="18dp"
+            app:itemIconPadding="18dp"
+            app:itemIconTint="@color/navigation_item_icon_tint"
+            app:itemTextColor="@color/navigation_item_text_tint"
+            app:itemVerticalPadding="@dimen/navigation_item_vertical_padding"
+            app:subheaderColor="@color/navigation_section_text"
+            app:subheaderTextAppearance="@style/NavigationSectionText"
+            app:headerLayout="@layout/nav_header_main"
+            app:menu="@menu/activity_main_drawer" />
+
+        <LinearLayout
+            android:id="@+id/nav_footer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/navigation_footer_top_border"
+            android:orientation="vertical"
+            android:padding="@dimen/navigation_footer_padding">
+
+            <TextView
+                android:id="@+id/nav_footer_sign_out"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/navigation_sign_out_background"
+                android:clickable="true"
+                android:drawablePadding="12dp"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp"
+                android:text="Sign Out"
+                android:textColor="@color/navigation_sign_out"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                app:drawableStartCompat="@drawable/ic_sign_out"
+                app:drawableTint="@color/navigation_sign_out" />
+
+            <TextView
+                android:id="@+id/nav_footer_version"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:textColor="@color/navigation_section_text"
+                android:textSize="11sp"
+                tools:text="Version 1.0.0" />
+        </LinearLayout>
+    </LinearLayout>
 </androidx.drawerlayout.widget.DrawerLayout>

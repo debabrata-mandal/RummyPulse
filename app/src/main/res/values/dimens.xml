@@ -7,6 +7,7 @@
     <dimen name="navigation_drawer_width">304dp</dimen>
     <dimen name="navigation_item_horizontal_margin">12dp</dimen>
     <dimen name="navigation_item_vertical_padding">10dp</dimen>
+    <dimen name="navigation_footer_padding">16dp</dimen>
     <dimen name="fab_margin">16dp</dimen>
     <!-- Cap create-game dialog scroll area so full layout fits small phones; content scrolls inside. -->
     <dimen name="dialog_create_game_scroll_max_height">300dp</dimen>

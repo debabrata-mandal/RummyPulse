@@ -11,7 +11,7 @@
         <item
             android:id="@+id/nav_home"
             android:icon="@drawable/ic_games_dashboard"
-            android:title="@string/menu_home" />
+            android:title="@string/menu_game_review" />
         <item
             android:id="@+id/nav_reports"
             android:icon="@drawable/ic_reports"
@@ -29,7 +29,7 @@
                 <item
                     android:id="@+id/nav_user_management"
                     android:icon="@drawable/ic_people"
-                    android:title="Users" />
+                    android:title="@string/menu_user_management" />
                 <item
                     android:id="@+id/nav_game_defaults"
                     android:icon="@drawable/ic_enter_round_scores"
@@ -44,15 +44,11 @@
             <item
                 android:id="@+id/nav_voice_settings"
                 android:icon="@drawable/ic_voice"
-                android:title="Announcements" />
+                android:title="@string/menu_voice_announcements" />
             <item
                 android:id="@+id/nav_app_info"
                 android:icon="@drawable/ic_info"
                 android:title="App Info" />
-            <item
-                android:id="@+id/nav_sign_out"
-                android:icon="@drawable/ic_sign_out"
-                android:title="Sign Out" />
         </menu>
     </item>
 </menu>

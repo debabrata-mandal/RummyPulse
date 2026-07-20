@@ -7,9 +7,6 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.SpannableString;
-import android.text.Spanned;
-import android.text.style.ForegroundColorSpan;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -133,16 +130,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onChanged(AppUserRoleSession.Role role) {
                 applyReviewMenuIconsFromRole(role);
+                updateNavigationRoleBadge(role);
             }
         });
         applyNavigationMenuVisuals();
+        configureNavigationFooter();
         
         // Handle navigation item clicks
         navigationView.setNavigationItemSelectedListener(item -> {
-            if (item.getItemId() == R.id.nav_sign_out) {
-                signOut();
-                return true;
-            } else if (item.getItemId() == R.id.nav_voice_settings) {
+            if (item.getItemId() == R.id.nav_voice_settings) {
                 showVoiceSettingsDialog();
                 drawerLayout.closeDrawers();
                 return true;
@@ -184,6 +180,7 @@ public class MainActivity extends AppCompatActivity {
         
         // Update navigation header with user info
         updateNavigationHeader(navigationView, currentUser);
+        updateNavigationRoleBadge(AppUserRoleSession.getInstance().peekRole());
 
         // Initialize permission manager and request permissions
         initializePermissions();
@@ -297,6 +294,7 @@ public class MainActivity extends AppCompatActivity {
         applyNavigationHeaderInsets(headerView);
         TextView nameTextView = headerView.findViewById(R.id.nav_header_title);
         TextView subtitleTextView = headerView.findViewById(R.id.nav_header_subtitle);
+        TextView roleBadgeTextView = headerView.findViewById(R.id.nav_header_role_badge);
         ImageView profileImageView = headerView.findViewById(R.id.imageView);
 
         if (user != null) {
@@ -338,6 +336,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             nameTextView.setText(R.string.nav_header_title);
             subtitleTextView.setText(R.string.app_name);
+            roleBadgeTextView.setText(R.string.nav_role_checking);
             profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo);
         }
     }
@@ -384,17 +383,54 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        MenuItem signOutItem = navigationView.getMenu().findItem(R.id.nav_sign_out);
-        if (signOutItem == null) {
+        Menu menu = navigationView.getMenu();
+        MenuItem appInfoItem = menu.findItem(R.id.nav_app_info);
+        MenuItem voiceItem = menu.findItem(R.id.nav_voice_settings);
+
+        if (voiceItem != null) {
+            voiceItem.setTitle(R.string.menu_voice_announcements);
+        }
+        if (appInfoItem != null) {
+            appInfoItem.setTitle("App Info");
+        }
+    }
+
+    private void configureNavigationFooter() {
+        TextView signOutFooter = findViewById(R.id.nav_footer_sign_out);
+        TextView versionFooter = findViewById(R.id.nav_footer_version);
+        if (signOutFooter != null) {
+            signOutFooter.setOnClickListener(v -> signOut());
+        }
+        if (versionFooter != null) {
+            versionFooter.setText(getString(R.string.nav_app_version, getAppVersionName()));
+        }
+    }
+
+    private void updateNavigationRoleBadge(AppUserRoleSession.Role role) {
+        if (navigationView == null || navigationView.getHeaderCount() == 0) {
             return;
         }
+        android.view.View headerView = navigationView.getHeaderView(0);
+        TextView roleBadgeTextView = headerView.findViewById(R.id.nav_header_role_badge);
+        if (roleBadgeTextView == null) {
+            return;
+        }
+        if (role == AppUserRoleSession.Role.ADMIN) {
+            roleBadgeTextView.setText(R.string.nav_role_admin);
+        } else if (role == AppUserRoleSession.Role.NON_ADMIN) {
+            roleBadgeTextView.setText(R.string.nav_role_player);
+        } else {
+            roleBadgeTextView.setText(R.string.nav_role_checking);
+        }
+    }
 
-        int signOutColor = ContextCompat.getColor(this, R.color.navigation_sign_out);
-        SpannableString title = new SpannableString(signOutItem.getTitle());
-        title.setSpan(new ForegroundColorSpan(signOutColor), 0, title.length(),
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        signOutItem.setTitle(title);
-        signOutItem.setIconTintList(ColorStateList.valueOf(signOutColor));
+    private String getAppVersionName() {
+        try {
+            PackageInfo packageInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return packageInfo.versionName != null ? packageInfo.versionName : "1.0";
+        } catch (PackageManager.NameNotFoundException e) {
+            return "1.0";
+        }
     }
     
     private void applyReviewMenuIconsFromRole(AppUserRoleSession.Role role) {
@@ -408,16 +444,16 @@ public class MainActivity extends AppCompatActivity {
         if (reviewMenuItem != null) {
             if (role == AppUserRoleSession.Role.ADMIN) {
                 reviewMenuItem.setIcon(R.drawable.ic_games_dashboard);
-                reviewMenuItem.setTitle("Review");
+                reviewMenuItem.setTitle(R.string.menu_game_review);
             } else {
                 reviewMenuItem.setIcon(R.drawable.ic_lock);
-                reviewMenuItem.setTitle("Review 🔒");
+                reviewMenuItem.setTitle(R.string.menu_game_review);
             }
         }
 
         if (userManagementMenuItem != null) {
             userManagementMenuItem.setIcon(R.drawable.ic_people);
-            userManagementMenuItem.setTitle("Users");
+            userManagementMenuItem.setTitle(R.string.menu_user_management);
         }
     }
 
