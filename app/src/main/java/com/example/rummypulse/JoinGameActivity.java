@@ -794,6 +794,10 @@ public class JoinGameActivity extends AppCompatActivity {
         if (viewModel == null || currentGameId == null) {
             return;
         }
+        if (!viewModel.canSaveGameData()) {
+            GameRepository.getDashboardInstance().forcePublishDashboard();
+            return;
+        }
         com.example.rummypulse.data.GameData liveData = viewModel.getGameData().getValue();
         if (liveData != null) {
             viewModel.saveGameData(currentGameId, liveData);
@@ -3449,6 +3453,9 @@ public class JoinGameActivity extends AppCompatActivity {
     private static final int SAVE_DELAY_MS = 1000; // 1 second delay
     
     private void saveGameDataWithDebounce(com.example.rummypulse.data.GameData gameData) {
+        if (viewModel == null || !viewModel.canSaveGameData()) {
+            return;
+        }
         // Optimistic dashboard sync — don't wait for debounced Firestore write
         if (currentGameId != null && gameData != null) {
             GameRepository.getDashboardInstance()
@@ -3577,9 +3584,14 @@ public class JoinGameActivity extends AppCompatActivity {
                 if (documentSnapshot != null && documentSnapshot.exists()) {
                     try {
                         // Check if data is from cache or server
+                        boolean hasPendingWrites = documentSnapshot.getMetadata().hasPendingWrites();
                         String dataSource = documentSnapshot.getMetadata().isFromCache() ? "LOCAL CACHE" : "SERVER";
                         System.out.println("Real-time update received for game: " + currentGameId + " [Source: " + dataSource + "]");
                         System.out.println("Raw document data keys: " + documentSnapshot.getData().keySet());
+                        if (hasPendingWrites) {
+                            System.out.println("Skipping local pending write snapshot - waiting for committed data...");
+                            return;
+                        }
                         
                         // If data is from cache and we're online, skip this update and wait for server data
                         if (documentSnapshot.getMetadata().isFromCache() && isConnected && isNetworkAvailable()) {
@@ -3737,6 +3749,7 @@ public class JoinGameActivity extends AppCompatActivity {
                                     } else {
                                         // VIEW MODE: Update everything including player cards
                                         System.out.println("Real-time update in VIEW MODE - updating all UI elements");
+                                        viewModel.updateGameData(gameData);
                                         updateStandings(gameData);
                                         updateStandingsInfo(gameData);
                                         updatePlayersInfo(gameData);
@@ -4044,6 +4057,7 @@ public class JoinGameActivity extends AppCompatActivity {
                             runOnUiThread(() -> {
                                 if (gameData != null && gameData.getPlayers() != null && !gameData.getPlayers().isEmpty()) {
                                     System.out.println("Updating UI with fresh server data");
+                                    viewModel.updateGameData(gameData);
                                     updateStandings(gameData);
                                     updateStandingsInfo(gameData);
                                     updatePlayersInfo(gameData);
