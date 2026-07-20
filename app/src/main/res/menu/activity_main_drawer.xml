@@ -20,28 +20,39 @@
             android:id="@+id/nav_player_consolidation"
             android:icon="@drawable/ic_portfolio"
             android:title="@string/menu_player_consolidation" />
-        <item
-            android:id="@+id/nav_user_management"
-            android:icon="@drawable/ic_people"
-            android:title="Users" />
-        <item
-            android:id="@+id/nav_game_defaults"
-            android:icon="@drawable/ic_enter_round_scores"
-            android:title="@string/menu_game_defaults" />
     </group>
 
     <item
-        android:id="@+id/nav_voice_settings"
-        android:icon="@drawable/ic_voice"
-        android:title="Announcements" />
-    
+        android:title="Manage">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/nav_user_management"
+                    android:icon="@drawable/ic_people"
+                    android:title="Users" />
+                <item
+                    android:id="@+id/nav_game_defaults"
+                    android:icon="@drawable/ic_enter_round_scores"
+                    android:title="@string/menu_game_defaults" />
+            </group>
+        </menu>
+    </item>
+
     <item
-        android:id="@+id/nav_app_info"
-        android:icon="@drawable/ic_info"
-        android:title="App Info" />
-    
-    <item
-        android:id="@+id/nav_sign_out"
-        android:icon="@drawable/ic_sign_out"
-        android:title="Sign Out" />
+        android:title="Utilities">
+        <menu>
+            <item
+                android:id="@+id/nav_voice_settings"
+                android:icon="@drawable/ic_voice"
+                android:title="Announcements" />
+            <item
+                android:id="@+id/nav_app_info"
+                android:icon="@drawable/ic_info"
+                android:title="App Info" />
+            <item
+                android:id="@+id/nav_sign_out"
+                android:icon="@drawable/ic_sign_out"
+                android:title="Sign Out" />
+        </menu>
+    </item>
 </menu>

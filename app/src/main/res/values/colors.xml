@@ -63,6 +63,14 @@
     <color name="header_gradient_end">#FF0E1424</color>
     <color name="navigation_background">#FF16253A</color>
     <color name="navigation_selected">#FF2196F3</color>
+    <color name="navigation_header_start">#FF203A5E</color>
+    <color name="navigation_header_end">#FF101827</color>
+    <color name="navigation_item_selected_bg">#263FA7F5</color>
+    <color name="navigation_item_pressed_bg">#1F64B5F6</color>
+    <color name="navigation_item_icon">#FFC2CEE2</color>
+    <color name="navigation_item_text">#FFE5EDF8</color>
+    <color name="navigation_section_text">#FF9FB0C8</color>
+    <color name="navigation_sign_out">#FFFF8A80</color>
     
     <!-- Search and Input Colors -->
     <color name="search_background">#FF20324C</color>

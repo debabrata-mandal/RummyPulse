@@ -1,11 +1,15 @@
 package com.example.rummypulse;
 
 import android.app.AlertDialog;
+import android.content.res.ColorStateList;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -37,6 +41,7 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.example.rummypulse.databinding.ActivityMainBinding;
 
@@ -130,6 +135,7 @@ public class MainActivity extends AppCompatActivity {
                 applyReviewMenuIconsFromRole(role);
             }
         });
+        applyNavigationMenuVisuals();
         
         // Handle navigation item clicks
         navigationView.setNavigationItemSelectedListener(item -> {
@@ -290,6 +296,7 @@ public class MainActivity extends AppCompatActivity {
         android.view.View headerView = navigationView.getHeaderView(0);
         applyNavigationHeaderInsets(headerView);
         TextView nameTextView = headerView.findViewById(R.id.nav_header_title);
+        TextView subtitleTextView = headerView.findViewById(R.id.nav_header_subtitle);
         ImageView profileImageView = headerView.findViewById(R.id.imageView);
 
         if (user != null) {
@@ -308,6 +315,13 @@ public class MainActivity extends AppCompatActivity {
                 nameLine = getString(R.string.nav_header_name_fallback);
             }
             nameTextView.setText(nameLine);
+            if (email != null && !email.trim().isEmpty()) {
+                subtitleTextView.setText(email.trim());
+            } else if (phone != null && !phone.trim().isEmpty()) {
+                subtitleTextView.setText(phone.trim());
+            } else {
+                subtitleTextView.setText(R.string.app_name);
+            }
 
             if (user.getPhotoUrl() != null) {
                 Glide.with(this)
@@ -323,6 +337,7 @@ public class MainActivity extends AppCompatActivity {
             }
         } else {
             nameTextView.setText(R.string.nav_header_title);
+            subtitleTextView.setText(R.string.app_name);
             profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo);
         }
     }
@@ -362,6 +377,24 @@ public class MainActivity extends AppCompatActivity {
 
     private int dpToPx(int dp) {
         return Math.round(dp * getResources().getDisplayMetrics().density);
+    }
+
+    private void applyNavigationMenuVisuals() {
+        if (navigationView == null) {
+            return;
+        }
+
+        MenuItem signOutItem = navigationView.getMenu().findItem(R.id.nav_sign_out);
+        if (signOutItem == null) {
+            return;
+        }
+
+        int signOutColor = ContextCompat.getColor(this, R.color.navigation_sign_out);
+        SpannableString title = new SpannableString(signOutItem.getTitle());
+        title.setSpan(new ForegroundColorSpan(signOutColor), 0, title.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        signOutItem.setTitle(title);
+        signOutItem.setIconTintList(ColorStateList.valueOf(signOutColor));
     }
     
     private void applyReviewMenuIconsFromRole(AppUserRoleSession.Role role) {
@@ -421,6 +454,11 @@ public class MainActivity extends AppCompatActivity {
      * Initialize update checker and check for new versions
      */
     private void initializeUpdateChecker() {
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("MainActivity", "DEBUG build: skipping automatic update check");
+            return;
+        }
+
         updateChecker = new ModernUpdateChecker(this);
 
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
@@ -570,6 +608,9 @@ public class MainActivity extends AppCompatActivity {
             
             btnCheckUpdates.setOnClickListener(v -> {
                 dialog.dismiss();
+                if (updateChecker == null) {
+                    updateChecker = new ModernUpdateChecker(this);
+                }
                 if (updateChecker != null) {
                     com.example.rummypulse.utils.ModernToast.info(this, "Checking for updates...");
                     updateChecker.forceCheckForUpdates();
