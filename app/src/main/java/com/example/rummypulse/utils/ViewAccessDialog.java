@@ -5,14 +5,17 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.util.DisplayMetrics;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 import com.example.rummypulse.R;
+import com.google.android.material.button.MaterialButton;
 
 /**
  * Clear, blocking dialog when view access is pending, rejected, or failed.
@@ -37,19 +40,28 @@ public final class ViewAccessDialog {
         dialog.setContentView(R.layout.dialog_view_access_status);
         dialog.setCancelable(true);
 
-        TextView icon = dialog.findViewById(R.id.text_view_access_dialog_icon);
+        View iconContainer = dialog.findViewById(R.id.view_access_dialog_icon_container);
+        ImageView icon = dialog.findViewById(R.id.image_view_access_dialog_icon);
         TextView title = dialog.findViewById(R.id.text_view_access_dialog_title);
         TextView message = dialog.findViewById(R.id.text_view_access_dialog_message);
-        Button ok = dialog.findViewById(R.id.btn_view_access_dialog_ok);
+        MaterialButton ok = dialog.findViewById(R.id.btn_view_access_dialog_ok);
 
         switch (type) {
             case REJECTED:
-                icon.setText("🚫");
+                iconContainer.setBackgroundResource(R.drawable.view_access_icon_rejected_background);
+                icon.setImageResource(R.drawable.ic_lock);
+                icon.setImageTintList(android.content.res.ColorStateList.valueOf(
+                        ContextCompat.getColor(context, R.color.error_red)));
+                ok.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        ContextCompat.getColor(context, R.color.error_red)));
                 title.setText(R.string.view_access_dialog_rejected_title);
                 message.setText(R.string.view_access_dialog_rejected_message);
                 break;
             case ERROR:
-                icon.setText("⚠️");
+                iconContainer.setBackgroundResource(R.drawable.view_access_icon_error_background);
+                icon.setImageResource(R.drawable.ic_info);
+                icon.setImageTintList(android.content.res.ColorStateList.valueOf(
+                        ContextCompat.getColor(context, R.color.accent_blue_light)));
                 title.setText(R.string.view_access_dialog_error_title);
                 if (errorDetail != null && !errorDetail.trim().isEmpty()) {
                     message.setText(errorDetail.trim());
@@ -59,7 +71,10 @@ public final class ViewAccessDialog {
                 break;
             case PENDING:
             default:
-                icon.setText("⏳");
+                iconContainer.setBackgroundResource(R.drawable.view_access_icon_pending_background);
+                icon.setImageResource(R.drawable.ic_lock);
+                icon.setImageTintList(android.content.res.ColorStateList.valueOf(
+                        ContextCompat.getColor(context, R.color.warning_orange)));
                 title.setText(R.string.view_access_dialog_pending_title);
                 message.setText(R.string.view_access_dialog_pending_message);
                 break;
