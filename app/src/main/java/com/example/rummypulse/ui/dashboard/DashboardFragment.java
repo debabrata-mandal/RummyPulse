@@ -525,7 +525,17 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     public void onStart() {
         super.onStart();
         if (getContext() != null) {
-            GameDefaultsRepository.getInstance(requireContext()).refreshFromServer(null);
+            GameDefaultsRepository.getInstance(requireContext()).refreshFromServer(() -> {
+                if (!isAdded()) {
+                    return;
+                }
+                if (gameAdapter != null) {
+                    gameAdapter.notifyDataSetChanged();
+                }
+                if (completedGameAdapter != null) {
+                    completedGameAdapter.notifyDataSetChanged();
+                }
+            });
         }
         if (connectivityManager != null && networkCallback != null) {
             try {

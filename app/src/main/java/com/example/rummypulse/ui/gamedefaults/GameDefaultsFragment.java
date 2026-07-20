@@ -56,6 +56,13 @@ public class GameDefaultsFragment extends Fragment {
             viewModel.saveDisplayIntermediateCalculation(isChecked, true);
         });
 
+        binding.switchShowDashboardApprovalCounts.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchCallback) {
+                return;
+            }
+            viewModel.saveShowDashboardApprovalCounts(isChecked);
+        });
+
         viewModel.getDefaults().observe(getViewLifecycleOwner(), this::populateFieldsFromDefaults);
         viewModel.getLoading().observe(getViewLifecycleOwner(), loading -> {
             boolean b = Boolean.TRUE.equals(loading);
@@ -112,6 +119,14 @@ public class GameDefaultsFragment extends Fragment {
         }
 
         binding.switchDisplayIntermediateCalculation.setEnabled(isAdmin);
+        binding.switchShowDashboardApprovalCounts.setEnabled(true);
+        binding.iconDashboardApprovalCounts.setImageDrawable(
+                ContextCompat.getDrawable(requireContext(), R.drawable.ic_visibility));
+        binding.iconDashboardApprovalCounts.setImageTintList(
+                ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.accent_blue_light)));
+        binding.iconDashboardApprovalCounts.setContentDescription(null);
+        binding.switchShowDashboardApprovalCounts.setContentDescription(null);
+        binding.textDashboardApprovalCountsHelper.setVisibility(View.GONE);
         if (isAdmin) {
             binding.iconDisplayIntermediate.setImageDrawable(
                     ContextCompat.getDrawable(requireContext(), R.drawable.ic_visibility));
@@ -142,6 +157,7 @@ public class GameDefaultsFragment extends Fragment {
         binding.editMidGameIncrement.setText(String.valueOf(g.getDefaultMidGameNewPlayerScoreIncrement()));
         suppressSwitchCallback = true;
         binding.switchDisplayIntermediateCalculation.setChecked(g.isDisplayIntermediateCalculation());
+        binding.switchShowDashboardApprovalCounts.setChecked(g.isShowDashboardApprovalCounts());
         suppressSwitchCallback = false;
         clearFieldErrors();
         binding.textAudit.setText(buildAuditText(g));
@@ -182,9 +198,13 @@ public class GameDefaultsFragment extends Fragment {
                 return;
             }
             viewModel.save(point, (double) gst, inc,
-                    binding.switchDisplayIntermediateCalculation.isChecked(), true);
+                    binding.switchDisplayIntermediateCalculation.isChecked(),
+                    binding.switchShowDashboardApprovalCounts.isChecked(),
+                    true);
         } else {
-            viewModel.save(point, null, inc, null, false);
+            viewModel.save(point, null, inc, null,
+                    binding.switchShowDashboardApprovalCounts.isChecked(),
+                    false);
         }
     }
 

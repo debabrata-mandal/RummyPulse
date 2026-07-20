@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
+import com.example.rummypulse.data.GameDefaultsRepository;
 import com.example.rummypulse.ui.home.GameItem;
 
 import java.util.ArrayList;
@@ -140,6 +141,24 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             holder.viewAccessStatusText.setBackgroundResource(R.drawable.delete_button_background);
         } else {
             holder.viewAccessStatusText.setVisibility(View.GONE);
+        }
+
+        Context context = holder.itemView.getContext();
+        boolean showApprovalCounts = GameDefaultsRepository.getInstance(context)
+                .isShowDashboardApprovalCountsEnabled();
+        if (showApprovalCounts && item.hasViewRequestCounts()) {
+            holder.viewRequestCountsSection.setVisibility(View.VISIBLE);
+            holder.pendingViewCountText.setText(context.getString(
+                    R.string.dashboard_view_count_pending,
+                    item.getPendingViewRequestCount()));
+            holder.approvedViewCountText.setText(context.getString(
+                    R.string.dashboard_view_count_approved,
+                    item.getApprovedViewRequestCount()));
+            holder.rejectedViewCountText.setText(context.getString(
+                    R.string.dashboard_view_count_rejected,
+                    item.getRejectedViewRequestCount()));
+        } else {
+            holder.viewRequestCountsSection.setVisibility(View.GONE);
         }
         
         // Set players count
@@ -359,15 +378,19 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
 
     static class GameViewHolder extends RecyclerView.ViewHolder {
         TextView gameIdText, gameStatusText, playersText, pointValueText, gstText, createdTimeText, creatorNameText;
-        TextView viewAccessStatusText;
+        TextView viewAccessStatusText, pendingViewCountText, approvedViewCountText, rejectedViewCountText;
         ImageView qrCodeIcon, creatorProfileImage;
-        LinearLayout creatorSection;
+        LinearLayout creatorSection, viewRequestCountsSection;
 
         GameViewHolder(@NonNull View itemView) {
             super(itemView);
             gameIdText = itemView.findViewById(R.id.text_game_id);
             gameStatusText = itemView.findViewById(R.id.text_game_status);
             viewAccessStatusText = itemView.findViewById(R.id.text_view_access_status);
+            viewRequestCountsSection = itemView.findViewById(R.id.view_request_counts_section);
+            pendingViewCountText = itemView.findViewById(R.id.text_pending_view_count);
+            approvedViewCountText = itemView.findViewById(R.id.text_approved_view_count);
+            rejectedViewCountText = itemView.findViewById(R.id.text_rejected_view_count);
             playersText = itemView.findViewById(R.id.text_players);
             pointValueText = itemView.findViewById(R.id.text_point_value);
             gstText = itemView.findViewById(R.id.text_gst);

@@ -66,9 +66,17 @@ public class GameDefaultsRepository {
         return cachedResolved.isDisplayIntermediateCalculation();
     }
 
+    public boolean isShowDashboardApprovalCountsEnabled() {
+        return cachedResolved.isShowDashboardApprovalCounts();
+    }
+
     /** Updates in-memory flag immediately (e.g. when the switch is toggled). */
     public void setDisplayIntermediateCalculationCached(boolean enabled) {
         cachedResolved.setDisplayIntermediateCalculation(enabled);
+    }
+
+    public void setShowDashboardApprovalCountsCached(boolean enabled) {
+        cachedResolved.setShowDashboardApprovalCounts(enabled);
     }
 
     /** Merge only {@code displayIntermediateCalculation} to Firestore. */
@@ -76,6 +84,28 @@ public class GameDefaultsRepository {
         setDisplayIntermediateCalculationCached(enabled);
         Map<String, Object> map = new HashMap<>();
         map.put("displayIntermediateCalculation", enabled);
+        return db.collection(COLLECTION).document(DOCUMENT_ID)
+                .set(map, SetOptions.merge())
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful()) {
+                        Exception e = task.getException();
+                        return e != null ? Tasks.forException(e) : Tasks.forException(new IllegalStateException("set failed"));
+                    }
+                    return db.collection(COLLECTION).document(DOCUMENT_ID).get();
+                })
+                .continueWith(task -> {
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        applySnapshot((DocumentSnapshot) task.getResult());
+                    }
+                    return null;
+                });
+    }
+
+    /** Merge only {@code showDashboardApprovalCounts} to Firestore. */
+    public com.google.android.gms.tasks.Task<Void> saveShowDashboardApprovalCounts(boolean enabled) {
+        setShowDashboardApprovalCountsCached(enabled);
+        Map<String, Object> map = new HashMap<>();
+        map.put("showDashboardApprovalCounts", enabled);
         return db.collection(COLLECTION).document(DOCUMENT_ID)
                 .set(map, SetOptions.merge())
                 .continueWithTask(task -> {
@@ -127,6 +157,9 @@ public class GameDefaultsRepository {
             if (snapshot.contains("displayIntermediateCalculation")) {
                 raw.setDisplayIntermediateCalculation(snapshot.getBoolean("displayIntermediateCalculation"));
             }
+            if (snapshot.contains("showDashboardApprovalCounts")) {
+                raw.setShowDashboardApprovalCounts(snapshot.getBoolean("showDashboardApprovalCounts"));
+            }
             cachedResolved = GameDefaults.resolvedFromFirestoreBean(raw);
         } else {
             cachedResolved = GameDefaults.resolvedFromFirestoreBean(null);
@@ -141,9 +174,12 @@ public class GameDefaultsRepository {
     /**
      * @param gstPercentOrNull when non-null, written as {@code defaultGstPercent}; when null, that field is omitted from the merge so the server value is preserved (non-admin contribution saves).
      * @param displayIntermediateOrNull when non-null, written as {@code displayIntermediateCalculation}; when null, omitted (non-admin saves).
+     * @param showDashboardApprovalCountsOrNull when non-null, written as {@code showDashboardApprovalCounts}; when null, omitted.
      */
     public com.google.android.gms.tasks.Task<Void> saveDefaults(double pointValue, long midGameIncrement,
-            @Nullable Boolean displayIntermediateOrNull, @Nullable Double gstPercentOrNull) {
+            @Nullable Boolean displayIntermediateOrNull,
+            @Nullable Boolean showDashboardApprovalCountsOrNull,
+            @Nullable Double gstPercentOrNull) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         final String uid = user != null ? user.getUid() : "";
         final String updatedByName;
@@ -164,6 +200,9 @@ public class GameDefaultsRepository {
         if (displayIntermediateOrNull != null) {
             map.put("displayIntermediateCalculation", displayIntermediateOrNull);
         }
+        if (showDashboardApprovalCountsOrNull != null) {
+            map.put("showDashboardApprovalCounts", showDashboardApprovalCountsOrNull);
+        }
         map.put("updatedAt", FieldValue.serverTimestamp());
         map.put("updatedByUserId", uid);
         map.put("updatedByUserName", updatedByName);
@@ -174,6 +213,9 @@ public class GameDefaultsRepository {
         final boolean displayForFailurePatch = displayIntermediateOrNull != null
                 ? displayIntermediateOrNull
                 : cachedResolved.isDisplayIntermediateCalculation();
+        final boolean countsForFailurePatch = showDashboardApprovalCountsOrNull != null
+                ? showDashboardApprovalCountsOrNull
+                : cachedResolved.isShowDashboardApprovalCounts();
 
         // Re-fetch after set so updatedAt (serverTimestamp) is materialized in the snapshot.
         return db.collection(COLLECTION).document(DOCUMENT_ID)
@@ -194,6 +236,7 @@ public class GameDefaultsRepository {
                         patch.setDefaultGstPercent(gstForFailurePatch);
                         patch.setDefaultMidGameNewPlayerScoreIncrement(midGameIncrement);
                         patch.setDisplayIntermediateCalculation(displayForFailurePatch);
+                        patch.setShowDashboardApprovalCounts(countsForFailurePatch);
                         patch.setUpdatedByUserId(uid);
                         patch.setUpdatedByUserName(updatedByName);
                         cachedResolved = GameDefaults.resolvedFromFirestoreBean(patch);

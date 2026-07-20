@@ -61,15 +61,19 @@ public class GameDefaultsViewModel extends AndroidViewModel {
     /**
      * @param gstPercentOrNull ignored when {@code isAdmin} is false (repository omits GST field).
      * @param displayIntermediateOrNull ignored when {@code isAdmin} is false (repository omits display field).
+     * @param showDashboardApprovalCountsOrNull saved for all users when non-null.
      */
     public void save(double pointValue, @Nullable Double gstPercentOrNull, long midGameIncrement,
-            @Nullable Boolean displayIntermediateOrNull, boolean isAdmin) {
+            @Nullable Boolean displayIntermediateOrNull,
+            @Nullable Boolean showDashboardApprovalCountsOrNull,
+            boolean isAdmin) {
         loading.setValue(true);
         error.setValue(null);
         saveSuccess.setValue(false);
         Double gstWrite = isAdmin ? gstPercentOrNull : null;
         Boolean displayWrite = isAdmin ? displayIntermediateOrNull : null;
-        repository.saveDefaults(pointValue, midGameIncrement, displayWrite, gstWrite)
+        Boolean countsWrite = showDashboardApprovalCountsOrNull;
+        repository.saveDefaults(pointValue, midGameIncrement, displayWrite, countsWrite, gstWrite)
                 .addOnSuccessListener(aVoid -> {
                     loading.postValue(false);
                     saveSuccess.postValue(true);
@@ -98,5 +102,12 @@ public class GameDefaultsViewModel extends AndroidViewModel {
         repository.saveDisplayIntermediateCalculation(enabled)
                 .addOnFailureListener(e -> error.postValue(
                         e.getMessage() != null ? e.getMessage() : "Failed to save display setting"));
+    }
+
+    public void saveShowDashboardApprovalCounts(boolean enabled) {
+        repository.setShowDashboardApprovalCountsCached(enabled);
+        repository.saveShowDashboardApprovalCounts(enabled)
+                .addOnFailureListener(e -> error.postValue(
+                        e.getMessage() != null ? e.getMessage() : "Failed to save dashboard count setting"));
     }
 }

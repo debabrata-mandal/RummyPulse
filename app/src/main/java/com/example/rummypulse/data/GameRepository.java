@@ -252,6 +252,9 @@ public class GameRepository {
         for (String gameId : gameIds) {
             setupGameDataListener(gameId);
         }
+        for (DocumentSnapshot document : gamesSnapshot.getDocuments()) {
+            applyViewApprovalCountsFromGameSnapshot(document, gameItemsMap.get(document.getId()));
+        }
 
         updateGameItemsList();
     }
@@ -283,7 +286,9 @@ public class GameRepository {
 
         GameItem existing = gameItemsMap.get(gameId);
         if (existing != null) {
+            applyViewApprovalCountsFromGameSnapshot(authDocument, existing);
             if (existing.getPlayers() != null || wasRecentlyUpdatedLocally(gameId)) {
+                updateGameItemsList();
                 return;
             }
             if (!authDocument.getMetadata().isFromCache()) {
@@ -294,6 +299,7 @@ public class GameRepository {
         }
 
         putDashboardPlaceholder(gameId, auth, null);
+        applyViewApprovalCountsFromGameSnapshot(authDocument, gameItemsMap.get(gameId));
 
         String creatorUserId = auth.getCreatorUserId();
         if (creatorUserId != null && !creatorUserId.isEmpty()) {
@@ -312,6 +318,7 @@ public class GameRepository {
                                 ? userSnapshot.getString("photoUrl") : null;
                         if (creatorPhotoUrl != null) {
                             current.setCreatorPhotoUrl(creatorPhotoUrl);
+                            applyViewApprovalCountsFromGameSnapshot(authDocument, current);
                             updateGameItemsList();
                         }
                     });
@@ -419,6 +426,7 @@ public class GameRepository {
                         GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt,
                                 creatorName, null, creatorUserId, gameDisplayName);
                         if (gameItem != null) {
+                            applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                             gameItemsMap.put(gameId, gameItem);
                             updateGameItemsList();
                         }
@@ -434,6 +442,7 @@ public class GameRepository {
                                     GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt,
                                             creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
                                     if (gameItem != null) {
+                                        applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                                         gameItemsMap.put(gameId, gameItem);
                                         updateGameItemsList();
                                     }
@@ -528,6 +537,7 @@ public class GameRepository {
             updated.setCreatorUserId(item.getCreatorUserId());
             updated.setGameDisplayName(item.getGameDisplayName());
             updated.setMyViewAccessStatus(item.getMyViewAccessStatus());
+            copyViewApprovalCounts(item, updated);
             gameItemsMap.put(gameId, updated);
         }
         markLocalDashboardUpdated(gameId);
@@ -823,6 +833,7 @@ public class GameRepository {
                                                             GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
                                                             
                                                             if (gameItem != null && shouldApplyRemoteDashboardGameData(gameId, gameData, documentSnapshot)) {
+                                                                applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                                                                 gameItemsMap.put(gameId, gameItem);
                                                                 checkAndNotifyNewGame(gameItem);
                                                                 updateGameItemsList();
@@ -832,6 +843,7 @@ public class GameRepository {
                                                             // If fetching photo fails, create game item without photo
                                                             GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId, gameDisplayName);
                                                             if (gameItem != null && shouldApplyRemoteDashboardGameData(gameId, gameData, documentSnapshot)) {
+                                                                applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                                                                 gameItemsMap.put(gameId, gameItem);
                                                                 checkAndNotifyNewGame(gameItem);
                                                                 updateGameItemsList();
@@ -841,6 +853,7 @@ public class GameRepository {
                                                 // No creator user ID, create game item without photo
                                                 GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null, gameDisplayName);
                                                 if (gameItem != null && shouldApplyRemoteDashboardGameData(gameId, gameData, documentSnapshot)) {
+                                                    applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                                                     gameItemsMap.put(gameId, gameItem);
                                                     checkAndNotifyNewGame(gameItem);
                                                     updateGameItemsList();
@@ -867,6 +880,81 @@ public class GameRepository {
         }
         gameItemsMap.put(gameId, gameItem);
         updateGameItemsList();
+    }
+
+    private void applyViewApprovalCountsFromGameSnapshot(@Nullable DocumentSnapshot snapshot,
+                                                         @Nullable GameItem item) {
+        if (snapshot == null || item == null) {
+            return;
+        }
+        if (!canShowViewApprovalCounts(snapshot)) {
+            clearViewApprovalCounts(item);
+            return;
+        }
+
+        int requested = 0;
+        int approved = 0;
+        int rejected = 0;
+        String creatorUserId = snapshot.getString("creatorUserId");
+        Object raw = snapshot.get(GameViewApprovalRepository.PENDING_VIEW_REQUESTS_FIELD);
+        if (raw instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> requestsByUser = (Map<String, Object>) raw;
+            for (Map.Entry<String, Object> entry : requestsByUser.entrySet()) {
+                if (creatorUserId != null && creatorUserId.equals(entry.getKey())) {
+                    continue;
+                }
+                if (!(entry.getValue() instanceof Map)) {
+                    continue;
+                }
+                @SuppressWarnings("unchecked")
+                Map<String, Object> requestData = (Map<String, Object>) entry.getValue();
+                Object statusObj = requestData.get("status");
+                GameViewApprovalStatus status = GameViewApprovalStatus.fromFirestore(
+                        statusObj != null ? String.valueOf(statusObj) : null);
+                switch (status) {
+                    case APPROVED:
+                        approved++;
+                        break;
+                    case REJECTED:
+                        rejected++;
+                        break;
+                    case REQUESTED:
+                    default:
+                        requested++;
+                        break;
+                }
+            }
+        }
+        item.setPendingViewRequestCount(requested);
+        item.setApprovedViewRequestCount(approved);
+        item.setRejectedViewRequestCount(rejected);
+    }
+
+    private boolean canShowViewApprovalCounts(@NonNull DocumentSnapshot snapshot) {
+        com.google.firebase.auth.FirebaseUser user =
+                com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            return false;
+        }
+        if (AppUserRoleSession.getInstance().peekRole() == AppUserRoleSession.Role.ADMIN) {
+            return true;
+        }
+        String uid = user.getUid();
+        return uid.equals(snapshot.getString("creatorUserId"))
+                || uid.equals(snapshot.getString("activeEditorUserId"));
+    }
+
+    private static void clearViewApprovalCounts(@NonNull GameItem item) {
+        item.setPendingViewRequestCount(0);
+        item.setApprovedViewRequestCount(0);
+        item.setRejectedViewRequestCount(0);
+    }
+
+    private static void copyViewApprovalCounts(@NonNull GameItem from, @NonNull GameItem to) {
+        to.setPendingViewRequestCount(from.getPendingViewRequestCount());
+        to.setApprovedViewRequestCount(from.getApprovedViewRequestCount());
+        to.setRejectedViewRequestCount(from.getRejectedViewRequestCount());
     }
     
     private void updateGameItemsList() {

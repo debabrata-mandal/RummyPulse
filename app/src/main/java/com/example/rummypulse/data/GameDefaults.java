@@ -11,11 +11,13 @@ public class GameDefaults {
     public static final double FALLBACK_DEFAULT_GST_PERCENT = 25.0;
     public static final long FALLBACK_MID_GAME_INCREMENT = 2L;
     public static final boolean FALLBACK_DISPLAY_INTERMEDIATE_CALCULATION = true;
+    public static final boolean FALLBACK_SHOW_DASHBOARD_APPROVAL_COUNTS = true;
 
     private Double defaultPointValue;
     private Double defaultGstPercent;
     private Long defaultMidGameNewPlayerScoreIncrement;
     private Boolean displayIntermediateCalculation;
+    private Boolean showDashboardApprovalCounts;
     private Timestamp updatedAt;
     private String updatedByUserId;
     private String updatedByUserName;
@@ -58,6 +60,15 @@ public class GameDefaults {
         this.displayIntermediateCalculation = displayIntermediateCalculation;
     }
 
+    /** When true, dashboard game cards show pending/approved/rejected view request counts to managers. */
+    public boolean isShowDashboardApprovalCounts() {
+        return showDashboardApprovalCounts == null || showDashboardApprovalCounts;
+    }
+
+    public void setShowDashboardApprovalCounts(Boolean showDashboardApprovalCounts) {
+        this.showDashboardApprovalCounts = showDashboardApprovalCounts;
+    }
+
     public Timestamp getUpdatedAt() {
         return updatedAt;
     }
@@ -90,6 +101,7 @@ public class GameDefaults {
             g.setDefaultGstPercent(FALLBACK_DEFAULT_GST_PERCENT);
             g.setDefaultMidGameNewPlayerScoreIncrement(FALLBACK_MID_GAME_INCREMENT);
             g.setDisplayIntermediateCalculation(FALLBACK_DISPLAY_INTERMEDIATE_CALCULATION);
+            g.setShowDashboardApprovalCounts(FALLBACK_SHOW_DASHBOARD_APPROVAL_COUNTS);
             return g;
         }
         g.setDefaultPointValue(fromDb.defaultPointValue != null && fromDb.defaultPointValue > 0
@@ -102,6 +114,9 @@ public class GameDefaults {
         g.setDisplayIntermediateCalculation(fromDb.displayIntermediateCalculation != null
                 ? fromDb.displayIntermediateCalculation
                 : FALLBACK_DISPLAY_INTERMEDIATE_CALCULATION);
+        g.setShowDashboardApprovalCounts(fromDb.showDashboardApprovalCounts != null
+                ? fromDb.showDashboardApprovalCounts
+                : FALLBACK_SHOW_DASHBOARD_APPROVAL_COUNTS);
         g.setUpdatedAt(fromDb.updatedAt);
         g.setUpdatedByUserId(fromDb.updatedByUserId);
         g.setUpdatedByUserName(fromDb.updatedByUserName);

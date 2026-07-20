@@ -196,6 +196,7 @@
     <string name="game_defaults_display_intermediate_title">Show live amounts</string>
     <string name="game_defaults_display_intermediate_admin_only_helper">Admins only.</string>
     <string name="cd_game_defaults_display_intermediate_locked">Show live amounts locked. Admins only.</string>
+    <string name="game_defaults_show_dashboard_approval_counts_title">Show dashboard request counts</string>
     <string name="game_view_amount_hidden">—</string>
     <string name="game_defaults_increment_hint">Mid-game new player score increment</string>
     <string name="game_defaults_increment_required">Enter the increment (0 or higher)</string>
@@ -219,6 +220,9 @@
     <string name="view_access_dialog_error_title">Could not verify access</string>
     <string name="dashboard_view_access_pending">Approval pending — waiting for editor</string>
     <string name="dashboard_view_access_rejected">View access denied</string>
+    <string name="dashboard_view_count_pending">Pending %1$d</string>
+    <string name="dashboard_view_count_approved">Approved %1$d</string>
+    <string name="dashboard_view_count_rejected">Rejected %1$d</string>
     <string name="view_requests_section_title">View Requests</string>
     <string name="view_request_approve">Approve</string>
     <string name="view_request_reject">Reject</string>

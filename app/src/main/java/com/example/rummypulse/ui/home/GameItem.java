@@ -21,6 +21,9 @@ public class GameItem {
     private String gameDisplayName;
     /** Current user's view approval for this game: requested, approved, rejected, or null. */
     private String myViewAccessStatus;
+    private int pendingViewRequestCount;
+    private int approvedViewRequestCount;
+    private int rejectedViewRequestCount;
     private List<Player> players;
 
     public GameItem() {
@@ -103,6 +106,9 @@ public class GameItem {
     public String getCreatorUserId() { return creatorUserId; }
     public String getGameDisplayName() { return gameDisplayName; }
     public String getMyViewAccessStatus() { return myViewAccessStatus; }
+    public int getPendingViewRequestCount() { return pendingViewRequestCount; }
+    public int getApprovedViewRequestCount() { return approvedViewRequestCount; }
+    public int getRejectedViewRequestCount() { return rejectedViewRequestCount; }
 
     public boolean isViewAccessPending() {
         return "requested".equalsIgnoreCase(myViewAccessStatus);
@@ -140,7 +146,16 @@ public class GameItem {
     public void setCreatorUserId(String creatorUserId) { this.creatorUserId = creatorUserId; }
     public void setGameDisplayName(String gameDisplayName) { this.gameDisplayName = gameDisplayName; }
     public void setMyViewAccessStatus(String myViewAccessStatus) { this.myViewAccessStatus = myViewAccessStatus; }
+    public void setPendingViewRequestCount(int pendingViewRequestCount) { this.pendingViewRequestCount = Math.max(0, pendingViewRequestCount); }
+    public void setApprovedViewRequestCount(int approvedViewRequestCount) { this.approvedViewRequestCount = Math.max(0, approvedViewRequestCount); }
+    public void setRejectedViewRequestCount(int rejectedViewRequestCount) { this.rejectedViewRequestCount = Math.max(0, rejectedViewRequestCount); }
     public void setPlayers(List<Player> players) { this.players = players; }
+
+    public boolean hasViewRequestCounts() {
+        return pendingViewRequestCount > 0
+                || approvedViewRequestCount > 0
+                || rejectedViewRequestCount > 0;
+    }
 
     // Helper methods for better data handling
     public int getTotalScoreAsInt() {
