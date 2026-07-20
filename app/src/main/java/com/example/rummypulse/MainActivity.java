@@ -7,6 +7,9 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -25,6 +28,8 @@ import com.google.firebase.auth.FirebaseUser;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.AppUserRoleSession;
+import com.example.rummypulse.data.GameRepository;
+import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.ModernUpdateChecker;
 import com.example.rummypulse.utils.PermissionManager;
@@ -55,6 +60,8 @@ public class MainActivity extends AppCompatActivity {
     private NavigationView navigationView;
     private DrawerLayout drawerLayout;
     private NavController navController;
+    private AppUserRoleSession.Role currentNavigationRole = AppUserRoleSession.Role.UNKNOWN;
+    private boolean reviewNeedsAttention = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -135,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
         });
         applyNavigationMenuVisuals();
         configureNavigationFooter();
+        observeReviewAttention();
         
         // Handle navigation item clicks
         navigationView.setNavigationItemSelectedListener(item -> {
@@ -417,10 +425,13 @@ public class MainActivity extends AppCompatActivity {
         }
         if (role == AppUserRoleSession.Role.ADMIN) {
             roleBadgeTextView.setText(R.string.nav_role_admin);
+            roleBadgeTextView.setBackgroundResource(R.drawable.navigation_role_badge_admin);
         } else if (role == AppUserRoleSession.Role.NON_ADMIN) {
             roleBadgeTextView.setText(R.string.nav_role_player);
+            roleBadgeTextView.setBackgroundResource(R.drawable.navigation_role_badge_player);
         } else {
             roleBadgeTextView.setText(R.string.nav_role_checking);
+            roleBadgeTextView.setBackgroundResource(R.drawable.navigation_role_badge_checking);
         }
     }
 
@@ -434,6 +445,7 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void applyReviewMenuIconsFromRole(AppUserRoleSession.Role role) {
+        currentNavigationRole = role != null ? role : AppUserRoleSession.Role.UNKNOWN;
         if (navigationView == null) {
             return;
         }
@@ -444,7 +456,7 @@ public class MainActivity extends AppCompatActivity {
         if (reviewMenuItem != null) {
             if (role == AppUserRoleSession.Role.ADMIN) {
                 reviewMenuItem.setIcon(R.drawable.ic_games_dashboard);
-                reviewMenuItem.setTitle(R.string.menu_game_review);
+                reviewMenuItem.setTitle(buildReviewMenuTitle(reviewNeedsAttention));
             } else {
                 reviewMenuItem.setIcon(R.drawable.ic_lock);
                 reviewMenuItem.setTitle(R.string.menu_game_review);
@@ -455,6 +467,44 @@ public class MainActivity extends AppCompatActivity {
             userManagementMenuItem.setIcon(R.drawable.ic_people);
             userManagementMenuItem.setTitle(R.string.menu_user_management);
         }
+    }
+
+    private void observeReviewAttention() {
+        GameRepository.getDashboardInstance().getGameItems().observe(this, this::updateReviewAttentionFromGames);
+    }
+
+    private void updateReviewAttentionFromGames(List<GameItem> gameItems) {
+        boolean hasAttention = false;
+        if (gameItems != null) {
+            for (GameItem gameItem : gameItems) {
+                if (gameItem != null
+                        && (gameItem.isCompleted() || gameItem.getPendingViewRequestCount() > 0)) {
+                    hasAttention = true;
+                    break;
+                }
+            }
+        }
+        if (reviewNeedsAttention != hasAttention) {
+            reviewNeedsAttention = hasAttention;
+            applyReviewMenuIconsFromRole(currentNavigationRole);
+        }
+    }
+
+    private CharSequence buildReviewMenuTitle(boolean showAttention) {
+        String label = getString(R.string.menu_game_review);
+        if (!showAttention) {
+            return label;
+        }
+
+        String attentionLabel = label + "  •";
+        SpannableString title = new SpannableString(attentionLabel);
+        int markerStart = attentionLabel.length() - 1;
+        title.setSpan(
+                new ForegroundColorSpan(ContextCompat.getColor(this, R.color.warning_orange)),
+                markerStart,
+                attentionLabel.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return title;
     }
 
     /**
