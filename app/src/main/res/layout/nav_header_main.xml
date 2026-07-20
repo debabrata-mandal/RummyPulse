@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_header_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:minHeight="96dp"
@@ -23,7 +24,11 @@
             android:id="@+id/imageView"
             android:layout_width="72dp"
             android:layout_height="72dp"
+            android:background="@drawable/profile_image_circle"
+            android:clipToOutline="true"
             android:contentDescription="@string/nav_header_desc"
+            android:cropToPadding="true"
+            android:padding="4dp"
             android:scaleType="centerCrop"
             app:srcCompat="@drawable/ic_rummy_pulse_logo" />
 

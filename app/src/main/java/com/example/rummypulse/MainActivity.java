@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -40,6 +41,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.rummypulse.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final int NAV_HEADER_BASE_TOP_PADDING_DP = 24;
 
     private AppBarConfiguration mAppBarConfiguration;
     private ActivityMainBinding binding;
@@ -285,6 +288,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateNavigationHeader(NavigationView navigationView, FirebaseUser user) {
         android.view.View headerView = navigationView.getHeaderView(0);
+        applyNavigationHeaderInsets(headerView);
         TextView nameTextView = headerView.findViewById(R.id.nav_header_title);
         ImageView profileImageView = headerView.findViewById(R.id.imageView);
 
@@ -321,6 +325,43 @@ public class MainActivity extends AppCompatActivity {
             nameTextView.setText(R.string.nav_header_title);
             profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo);
         }
+    }
+
+    private void applyNavigationHeaderInsets(android.view.View headerView) {
+        if (headerView == null) {
+            return;
+        }
+
+        int baseTopPadding = dpToPx(NAV_HEADER_BASE_TOP_PADDING_DP);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            headerView.setOnApplyWindowInsetsListener((view, insets) -> {
+                int topInset = insets.getSystemWindowInsetTop();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                        && insets.getDisplayCutout() != null) {
+                    topInset = Math.max(topInset, insets.getDisplayCutout().getSafeInsetTop());
+                }
+                view.setPadding(view.getPaddingLeft(), baseTopPadding + topInset,
+                        view.getPaddingRight(), view.getPaddingBottom());
+                return insets;
+            });
+            headerView.requestApplyInsets();
+        } else {
+            headerView.setPadding(headerView.getPaddingLeft(),
+                    baseTopPadding + getStatusBarHeight(),
+                    headerView.getPaddingRight(), headerView.getPaddingBottom());
+        }
+    }
+
+    private int getStatusBarHeight() {
+        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            return getResources().getDimensionPixelSize(resourceId);
+        }
+        return 0;
+    }
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * getResources().getDisplayMetrics().density);
     }
     
     private void applyReviewMenuIconsFromRole(AppUserRoleSession.Role role) {

@@ -104,15 +104,15 @@ public class ModernToast {
                     FrameLayout.LayoutParams.WRAP_CONTENT
                 );
                 params.gravity = Gravity.TOP;
-                params.topMargin = 80; // 80dp from top (closer to top)
-                params.leftMargin = 16;
-                params.rightMargin = 16;
+                params.topMargin = getTopInset(activity) + dpToPx(activity, 16);
+                params.leftMargin = dpToPx(activity, 16);
+                params.rightMargin = dpToPx(activity, 16);
                 
                 layout.setLayoutParams(params);
                 
                 // Add subtle animation
                 layout.setAlpha(0f);
-                layout.setTranslationY(-50f);
+                layout.setTranslationY(-dpToPx(activity, 16));
                 
                 rootView.addView(layout);
                 android.util.Log.d("ModernToast", "✅ Overlay toast added to root view!");
@@ -130,7 +130,7 @@ public class ModernToast {
                         // Animate out before removing
                         layout.animate()
                             .alpha(0f)
-                            .translationY(-50f)
+                            .translationY(-dpToPx(activity, 16))
                             .setDuration(200)
                             .withEndAction(() -> {
                                 try {
@@ -181,7 +181,8 @@ public class ModernToast {
             Toast toast = new Toast(context);
             toast.setDuration(duration > 3000 ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT);
             toast.setView(layout);
-            toast.setGravity(Gravity.TOP | Gravity.FILL_HORIZONTAL, 0, 100);
+            toast.setGravity(Gravity.TOP | Gravity.FILL_HORIZONTAL, 0,
+                    getTopInset(context) + dpToPx(context, 24));
             
             // Show toast
             toast.show();
@@ -201,7 +202,8 @@ public class ModernToast {
             
             // Try to position at top, fallback to default if fails
             try {
-                toast.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 150);
+                toast.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0,
+                        getTopInset(context) + dpToPx(context, 24));
             } catch (Exception e) {
                 // Use default positioning if setGravity fails
             }
@@ -239,6 +241,34 @@ public class ModernToast {
         // Remove existing emoji if present
         String cleanMessage = message.replaceAll("^[\\p{So}\\p{Cn}]+\\s*", "");
         return prefix + cleanMessage;
+    }
+
+    private static int dpToPx(Context context, int dp) {
+        return Math.round(dp * context.getResources().getDisplayMetrics().density);
+    }
+
+    private static int getTopInset(Context context) {
+        if (context instanceof Activity) {
+            View content = ((Activity) context).findViewById(android.R.id.content);
+            if (content != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                android.view.WindowInsets insets = content.getRootWindowInsets();
+                if (insets != null) {
+                    int statusTop = insets.getSystemWindowInsetTop();
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                            && insets.getDisplayCutout() != null) {
+                        statusTop = Math.max(statusTop, insets.getDisplayCutout().getSafeInsetTop());
+                    }
+                    return statusTop;
+                }
+            }
+        }
+
+        int resourceId = context.getResources().getIdentifier(
+                "status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            return context.getResources().getDimensionPixelSize(resourceId);
+        }
+        return 0;
     }
     
     /**
