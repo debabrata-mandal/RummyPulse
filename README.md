@@ -1,210 +1,233 @@
+<div align="center">
+
 # RummyPulse
 
-Android app for running 10-round Rummy sessions: live scoring, multi-user sync, GST/contribution tracking, admin review, and monthly reports. Built with Java, Android Views, MVVM, and Firebase.
+### Live Rummy scoring that keeps every player and every device in sync
 
-![Android](https://img.shields.io/badge/Android-7%2B-3DDC84?style=flat-square&logo=android&logoColor=white)
-![Java](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-Firestore-039BE5?style=flat-square&logo=Firebase&logoColor=white)
+Run 10-round games, enter scores safely, calculate settlements, review completed
+games, and produce monthly contribution reports from one Android app.
 
-## Features
+[![Android 7+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/about/versions/nougat)
+[![Java 11](https://img.shields.io/badge/Java-11-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/11/)
+[![Firebase](https://img.shields.io/badge/Firebase-Firestore-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/docs/firestore)
+[![Build](https://img.shields.io/github/actions/workflow/status/debabrata-mandal/RummyPulse/android-build.yml?branch=main&style=for-the-badge&label=build)](https://github.com/debabrata-mandal/RummyPulse/actions/workflows/android-build.yml)
 
-### Dashboard
-- Create games with configurable point value and contribution (GST) percent
-- Optional AI-suggested game titles via Groq at build time
-- Join active games or reopen completed ones
-- Real-time game list synced from Firestore
+[Download the latest APK](https://github.com/debabrata-mandal/RummyPulse/releases/latest)
+·
+[View all releases](https://github.com/debabrata-mandal/RummyPulse/releases)
 
-### Game view (`JoinGameActivity`)
-- 10-round score tracking with standings, net amounts, and contribution totals
-- View mode for spectators; edit mode with PIN for score entry and corrections
-- QR code and game PIN for sharing access
-- Real-time Firestore listener for multi-device updates
-- Text-to-speech announcements for scores and game completion (configurable)
-- **Show live amounts** (game default): when off, settlement amounts appear after round 6; when on, from round 1
+</div>
 
-### Review (admin)
-- Approve completed games into the approved-games archive
-- Bulk approve; edit economics (point value / contribution %) before approval
-- GST summary per game
+## App preview
 
-### Reports
-- Expandable monthly summaries built from approved games
-- Admins can rebuild a selected month on demand
-
-### Game defaults
-- Shared Firestore config: default point value, contribution %, mid-game player score increment, show-live-amounts toggle
-- Contribution % and show-live-amounts are admin-only fields
-
-### Users (admin)
-- Manage app user roles (`admin_user` vs standard users)
-
-### Updates & version gate
-- In-app update checks against [GitHub Releases](https://github.com/debabrata-mandal/RummyPulse/releases)
-- Firebase Remote Config minimum `versionCode` blocks outdated builds on release installs
-- Debug builds skip the version gate for local development
-
-## Requirements
-
-| | |
+| Dashboard | Admin review |
 |---|---|
-| **Android** | 7.0+ (API 24), target SDK 34 |
-| **Storage** | ~50 MB |
-| **Network** | Required for Firebase sync |
+| <img src="docs/screenshots/dashboard.png" width="360" alt="RummyPulse dashboard with sanitized demo data"> | <img src="docs/screenshots/review.png" width="360" alt="RummyPulse admin review with multi-select controls and sanitized demo data"> |
 
-## Install (end users)
+<sub>Screenshots use sanitized demo names and contain no account identifiers.</sub>
 
-RummyPulse is distributed as an APK via GitHub Releases (not on the Play Store).
+## What RummyPulse does
 
-1. Enable install from unknown sources on your device.
-2. Download the latest APK from [Releases](https://github.com/debabrata-mandal/RummyPulse/releases).
-3. Open the APK and follow the install prompt.
+| Area | Capabilities |
+|---|---|
+| **Live games** | Create, join, share by PIN or QR code, and follow updates across devices |
+| **Score entry** | Enter a full round player by player, preserve unfinished local drafts, then save the round in one write |
+| **Settlement** | Track standings, point value, winner contribution, and net amounts |
+| **Game access** | Spectator mode plus PIN-protected edit access and corrections |
+| **Admin review** | Edit economics, approve completed games, or select and atomically delete multiple games |
+| **Reports** | Browse monthly summaries and rebuild a selected month |
+| **Administration** | Manage user roles, game defaults, amount visibility, and voice announcements |
+| **Updates** | Install releases in-app and enforce a remotely configured minimum supported version |
 
-## Development setup
+## Designed for unreliable connections
 
-### Prerequisites
+Firestore persistence keeps previously loaded data available when the network drops.
+The app launches immediately for an authenticated user and clearly shows offline
+state instead of blocking startup.
 
-- Android Studio (recent stable; Ladybug or newer recommended)
-- JDK 17
-- Android SDK with API 34 (compile) / 24+ (min)
-- Git and `adb` on PATH for device deploy
+| Operation | Offline behavior |
+|---|---|
+| Open the app and view cached games | Available |
+| Continue an unfinished round-score draft | Preserved locally |
+| Create a new game | Blocked with a clear connection message |
+| Commit scores, approve, or delete games | Requires the server |
+| Refresh Remote Config | Fails open; the last activated minimum-version value remains effective |
 
-### Clone and open
+## Install
+
+RummyPulse is distributed as an APK through GitHub Releases.
+
+1. Download the latest APK from [Releases](https://github.com/debabrata-mandal/RummyPulse/releases/latest).
+2. Allow installation from the browser or file manager when Android asks.
+3. Open the APK and complete installation.
+4. Sign in with a Google account registered for the app.
+
+> RummyPulse is not currently distributed through the Google Play Store.
+
+## Development
+
+### Requirements
+
+- Android Studio with Android SDK 34
+- JDK 17 for Gradle and CI
+- Android 7.0 or newer device/emulator (API 24+)
+- A Firebase Android configuration for `com.example.rummypulse`
+- `adb` on `PATH` when using the deploy task
+
+The build toolchain runs on JDK 17; application source compatibility is Java 11.
+
+### Get started
 
 ```bash
 git clone https://github.com/debabrata-mandal/RummyPulse.git
 cd RummyPulse
 ```
 
-Open the project in Android Studio and sync Gradle.
+Place your Firebase configuration at:
 
-### Build & deploy
-
-```bash
-# Debug APK
-./gradlew assembleDebug          # Windows: gradlew.bat assembleDebug
-
-# Install on emulator/USB device and launch login screen
-./gradlew deployDebug            # Windows: gradlew.bat deployDebug
-
-# Release APK (local; uses release.keystore if present, else debug keystore)
-./gradlew assembleRelease
+```text
+app/google-services.json
 ```
 
-After editing under `app/`, run `deployDebug` to install and launch on a connected device or emulator.
+Then build and test:
 
-### Firebase
+```bash
+# macOS / Linux
+./gradlew testDebugUnitTest assembleDebug
 
-1. Create a project in the [Firebase Console](https://console.firebase.google.com).
-2. Add an Android app with package `com.example.rummypulse`.
-3. Download `google-services.json` into the `app/` directory (gitignored).
-4. Enable **Firestore** and **Email/Password Authentication**.
-5. Deploy [firestore.rules](firestore.rules) to your project.
+# Windows
+gradlew.bat testDebugUnitTest assembleDebug
+```
 
-**Firestore collections (v2):**
+Install and launch the debug build on a connected device:
+
+```bash
+# macOS / Linux
+./gradlew deployDebug
+
+# Windows
+gradlew.bat deployDebug
+```
+
+The debug APK is generated at
+`app/build/outputs/apk/debug/app-debug.apk`.
+
+## Firebase configuration
+
+Create a Firebase Android app with package name `com.example.rummypulse`, then:
+
+1. Enable **Google** as a Firebase Authentication provider.
+2. Register the signing certificate SHA-1 used by your debug/release build.
+3. Enable Cloud Firestore.
+4. Enable Remote Config.
+5. Deploy [`firestore.rules`](firestore.rules).
+
+### Firestore collections
 
 | Collection | Purpose |
 |---|---|
-| `games_v2` | Game metadata (status, creator, PIN hash) |
-| `gameData_v2` | Players, scores, economics |
-| `approvedGames_v2` | Archived games after admin approval |
-| `approvedGamesReport_v2` | Pre-aggregated monthly report documents |
-| `gameDefaults_v2` | Shared defaults (`config` document) |
+| `games_v2` | Game metadata, status, creator, and access information |
+| `gameData_v2` | Players, rounds, scores, and game economics |
+| `gameViewApprovals_v2` | Per-user requests and view approvals |
+| `approvedGames_v2` | Finalized games moved out of review |
+| `approvedGamesReport_v2` | Pre-aggregated monthly reports |
+| `gameDefaults_v2` | Shared game defaults |
 | `appUser_v2` | User profiles and roles |
 
-**Remote Config:** Add a **Number** parameter `min_supported_version_code` (not Text). Release builds below this `versionCode` are blocked until the user updates. Must match the same Firebase project as `google-services.json`.
+### Remote Config
 
-### Optional: Groq game name suggestions
+| Parameter | Type | Purpose |
+|---|---|---|
+| `min_supported_version_code` | Number | Blocks release builds with a lower `versionCode` |
+| `update_url` | String | Destination shown on the mandatory-update screen |
 
-When a Groq API key is present at **build time**, the create-game dialog can suggest a short title. Without a key, the app builds and runs normally; suggestions are skipped.
+Release builds check the last activated value immediately and refresh it in the
+background. A successful refresh can enforce a newly raised minimum during the
+same session. Network failures do not block startup. Debug builds skip the
+mandatory-update gate.
 
-Configure via the first match found:
+## Optional AI game names
 
-1. Gradle property (`gradle.properties`, `~/.gradle/gradle.properties`, or `-P`)
-2. Environment variable (CI / shell)
-3. Root `local.properties` (gitignored)
+The create-game dialog can suggest short names through Groq. The feature is
+optional; builds work without a key.
+
+Configuration is resolved in this order:
+
+1. Gradle property
+2. Environment variable
+3. Root `local.properties`
 
 ```properties
 GROQ_API_KEY=gsk_your_key_here
-GROQ_MODEL_ID=llama-3.1-8b-instant   # optional
+GROQ_MODEL_ID=llama-3.1-8b-instant
 ```
 
-Get a free key from [console.groq.com](https://console.groq.com/). Keys embedded in the APK are extractable; a backend proxy is safer for wide distribution.
-
-## CI/CD
-
-Pushes to `main` trigger [.github/workflows/android-build.yml](.github/workflows/android-build.yml):
-
-1. Bump `versionName` from the latest `v*.*.*` tag using conventional commit prefixes
-2. Set `versionCode` to the GitHub Actions run number
-3. Build a signed release APK
-4. Publish a GitHub Release with the APK attached
-
-### Commit → version bump
-
-| Prefix | Bump |
-|---|---|
-| `feat:` / `feature:` | Minor (`1.1.0`) |
-| `fix:` / `bugfix:` / `hotfix:` | Patch |
-| `chore:` / `docs:` / `style:` / `refactor:` / `perf:` / `test:` | Patch |
-| `BREAKING CHANGE:` / `!:` | Major |
-
-### GitHub Actions secrets
-
-| Secret | Purpose |
-|---|---|
-| `GOOGLE_SERVICES_JSON` | Full contents of `app/google-services.json` |
-| `RELEASE_KEYSTORE_BASE64` | Base64-encoded release keystore |
-| `GROQ_API_KEY` | Optional; enables AI name suggestions in CI builds |
-| `GROQ_MODEL_ID` | Optional Groq model override |
+> The key is compiled into the APK and can be extracted. Use a backend proxy
+> before distributing the app to an untrusted audience.
 
 ## Architecture
 
-| Layer | Stack |
-|---|---|
-| Language | Java |
-| UI | Android Views, ViewBinding, Material Components |
-| Pattern | MVVM (Fragments + ViewModels + LiveData) |
-| Backend | Firebase Auth, Firestore, Remote Config |
-| Navigation | Navigation Component + drawer |
-| Build | Gradle Kotlin DSL, AGP 8.13 |
-
-### Project layout
-
+```text
+Android Views + Material Components
+              │
+      Fragments / Activities
+              │
+     ViewModels + LiveData
+              │
+          Repositories
+              │
+Firebase Auth · Firestore · Remote Config
 ```
+
+```text
 app/src/main/java/com/example/rummypulse/
-├── data/              # Models, repositories, Firestore access
+├── data/              Models, policies, repositories, and Firestore access
 ├── ui/
-│   ├── dashboard/     # Game list & create
-│   ├── home/          # Admin review & GST approval
-│   ├── join/          # JoinGameViewModel
-│   ├── reports/       # Monthly reports
-│   ├── gamedefaults/  # Shared defaults editor
+│   ├── dashboard/     Dashboard and game creation
+│   ├── home/          Admin review
+│   ├── join/          Live-game ViewModel
+│   ├── reports/       Monthly reporting
+│   ├── gamedefaults/  Shared configuration
 │   └── usermanagement/
-├── utils/             # Updates, version gate, toasts, Groq client
+├── utils/             Auth, updates, version gate, network, and UI helpers
 ├── JoinGameActivity.java
 ├── LoginActivity.java
 └── MainActivity.java
 ```
 
-### Notable components
+| Component | Technology |
+|---|---|
+| UI | Android Views, ViewBinding, Material Components |
+| State | MVVM, ViewModel, LiveData |
+| Backend | Firebase Authentication, Firestore, Remote Config |
+| Navigation | Navigation Component and navigation drawer |
+| Build | Gradle Kotlin DSL, Android Gradle Plugin 8.13 |
+| Tests | JUnit 4 |
 
-- `GameRepository` / `GameDefaultsRepository` — Firestore reads and writes
-- `JoinGameActivity` — Live game UI, scoring, announcements, amount visibility
-- `ModernUpdateChecker` — GitHub release polling and in-app APK install flow
-- `VersionGate` — Remote Config minimum version enforcement
-- `AppUserRoleSession` — Cached admin vs non-admin role for navigation gating
+## Release workflow
 
-## Contributing
+The `Android Build and Release` workflow runs for pull requests and pushes to
+`main`. A push to `main` builds a signed APK and publishes a GitHub Release.
 
-1. Fork the repo and create a feature branch.
-2. Use conventional commit prefixes (`feat:`, `fix:`, etc.) so CI versioning works.
-3. Open a pull request against `main`.
+The first line of the commit message controls semantic versioning:
+
+| Prefix | Version change |
+|---|---|
+| `feat:` or `feature:` | Minor |
+| `fix:`, `bugfix:`, or `hotfix:` | Patch |
+| `chore:`, `docs:`, `style:`, `refactor:`, `perf:`, or `test:` | Patch |
+| Breaking-change marker | Major |
+
+Required repository secrets:
+
+- `GOOGLE_SERVICES_JSON`
+- `RELEASE_KEYSTORE_BASE64`
+- `GROQ_API_KEY` and `GROQ_MODEL_ID` (optional)
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+No license file is currently included in this repository.
 
-## Author
+## Maintainer
 
-**Debabrata Mandal**  
-GitHub: [@debabrata-mandal](https://github.com/debabrata-mandal) · debabrata.developer@gmail.com
+[Debabrata Mandal](https://github.com/debabrata-mandal)
