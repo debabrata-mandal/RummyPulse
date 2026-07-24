@@ -1263,6 +1263,87 @@ public class GameRepository {
                 });
     }
 
+    /**
+     * Deletes selected review games and their known view-approval records in one atomic batch.
+     * A verification cleanup handles approval records created during the preparation race.
+     */
+    public void deleteGames(
+            List<String> requestedGameIds,
+            Runnable onSuccess,
+            Consumer<String> onFailure) {
+        LinkedHashMap<String, String> uniqueIds = new LinkedHashMap<>();
+        if (requestedGameIds != null) {
+            for (String gameId : requestedGameIds) {
+                if (gameId != null && !gameId.trim().isEmpty()) {
+                    uniqueIds.put(gameId, gameId);
+                }
+            }
+        }
+        List<String> gameIds = new ArrayList<>(uniqueIds.keySet());
+        try {
+            DeleteBatchValidator.validateSelectionCount(gameIds.size());
+        } catch (IllegalArgumentException error) {
+            reportDeleteFailure(error.getMessage(), onFailure);
+            return;
+        }
+
+        viewApprovalRepository.loadDocumentReferencesForGames(
+                gameIds,
+                new GameViewApprovalRepository.DocumentReferencesCallback() {
+                    @Override
+                    public void onSuccess(@NonNull List<DocumentReference> approvalReferences) {
+                        try {
+                            DeleteBatchValidator.validateWriteCount(
+                                    gameIds.size(), approvalReferences.size());
+                        } catch (IllegalArgumentException error) {
+                            reportDeleteFailure(error.getMessage(), onFailure);
+                            return;
+                        }
+
+                        WriteBatch batch = db.batch();
+                        for (String gameId : gameIds) {
+                            batch.delete(db.collection(FirestoreCollections.GAMES)
+                                    .document(gameId));
+                            batch.delete(db.collection(FirestoreCollections.GAME_DATA)
+                                    .document(gameId));
+                        }
+                        for (DocumentReference reference : approvalReferences) {
+                            batch.delete(reference);
+                        }
+                        batch.commit()
+                                .addOnSuccessListener(unused -> {
+                                    loadAllGames();
+                                    viewApprovalRepository.cleanupAfterGamesRemoved(gameIds);
+                                    if (onSuccess != null) {
+                                        onSuccess.run();
+                                    }
+                                })
+                                .addOnFailureListener(error -> reportDeleteFailure(
+                                        "Delete failed; no games were changed. "
+                                                + safeErrorMessage(error),
+                                        onFailure));
+                    }
+
+                    @Override
+                    public void onError(@NonNull String message) {
+                        reportDeleteFailure(message, onFailure);
+                    }
+                });
+    }
+
+    private void reportDeleteFailure(String message, Consumer<String> onFailure) {
+        errorLiveData.setValue(message);
+        if (onFailure != null) {
+            onFailure.accept(message);
+        }
+    }
+
+    private static String safeErrorMessage(Exception error) {
+        return error.getMessage() != null
+                ? error.getMessage()
+                : error.getClass().getSimpleName();
+    }
+
     public void updateGameStatus(String gameId, String newStatus) {
         // Update the game status in the original gameData collection
         db.collection(FirestoreCollections.GAME_DATA)

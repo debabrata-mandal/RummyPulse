@@ -119,6 +119,16 @@
     <string name="review_contribution_amt_label">CONTRIB</string>
     <string name="review_approve">Approve</string>
     <string name="review_delete">Delete</string>
+    <string name="review_select_game">Select game</string>
+    <string name="review_select_all">Select all</string>
+    <string name="review_selected_none">None selected</string>
+    <string name="review_selected_count">%1$d selected</string>
+    <string name="review_delete_selected">Delete</string>
+    <string name="review_delete_selected_title">Delete selected games?</string>
+    <string name="review_delete_selected_message">Permanently delete %1$d selected game(s) and their related data? This cannot be undone.</string>
+    <string name="review_delete_selected_progress">Deleting %1$d game(s)…</string>
+    <string name="review_delete_selected_success_one">1 game deleted.</string>
+    <string name="review_delete_selected_success_many">%1$d games deleted.</string>
     <string name="review_access_restricted">Administrator access required</string>
     <string name="review_access_restricted_detail">This screen is limited to admin accounts. Contact an administrator if you need access.</string>
     <string name="review_edit_economics_title">Edit point value &amp; contribution</string>

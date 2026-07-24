@@ -35,6 +35,8 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
     private HomeViewModel homeViewModel;
     private boolean adminViewConfigured;
     private boolean lockedViewConfigured;
+    private boolean updatingSelectionControls;
+    private boolean bulkDeleteInProgress;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -99,9 +101,16 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
         homeViewModel.getGameItems().observe(getViewLifecycleOwner(), gameItems -> {
-            tableAdapter = new TableAdapter(gameItems);
-            tableAdapter.setOnGameActionListener(this);
-            recyclerView.setAdapter(tableAdapter);
+            if (tableAdapter == null) {
+                tableAdapter = new TableAdapter(gameItems);
+                tableAdapter.setOnGameActionListener(this);
+                tableAdapter.setOnSelectionChangedListener(this::updateSelectionControls);
+                recyclerView.setAdapter(tableAdapter);
+            } else {
+                tableAdapter.submitItems(gameItems);
+            }
+            binding.reviewBulkActions.setVisibility(
+                    tableAdapter.getItemCount() > 0 ? View.VISIBLE : View.GONE);
         });
 
         homeViewModel.getCompletedGames().observe(getViewLifecycleOwner(), completedGames -> {
@@ -117,6 +126,12 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         binding.swipeRefresh.setEnabled(false);
         binding.btnRefresh.setOnClickListener(v -> refreshGames());
         binding.btnApproveAll.setOnClickListener(v -> onApproveAllClicked());
+        binding.checkboxSelectAll.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (!updatingSelectionControls && tableAdapter != null) {
+                tableAdapter.selectAll(isChecked);
+            }
+        });
+        binding.btnDeleteSelected.setOnClickListener(v -> onDeleteSelectedClicked());
 
         homeViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
@@ -239,6 +254,71 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> {
                 })
+                .show();
+    }
+
+    private void updateSelectionControls(int selectedCount, boolean allSelected) {
+        if (binding == null || tableAdapter == null) {
+            return;
+        }
+        updatingSelectionControls = true;
+        binding.checkboxSelectAll.setChecked(allSelected);
+        updatingSelectionControls = false;
+        binding.checkboxSelectAll.setEnabled(
+                !bulkDeleteInProgress && tableAdapter.getItemCount() > 0);
+        binding.textSelectedGames.setText(selectedCount == 0
+                ? getString(R.string.review_selected_none)
+                : getString(R.string.review_selected_count, selectedCount));
+        binding.btnDeleteSelected.setEnabled(
+                !bulkDeleteInProgress && selectedCount > 0);
+    }
+
+    private void onDeleteSelectedClicked() {
+        if (tableAdapter == null || bulkDeleteInProgress || getContext() == null) {
+            return;
+        }
+        List<String> selectedGameIds = tableAdapter.getSelectedGameIds();
+        int selectedCount = selectedGameIds.size();
+        if (selectedCount == 0) {
+            return;
+        }
+
+        new AlertDialog.Builder(getContext(), R.style.DarkDialogTheme)
+                .setTitle(R.string.review_delete_selected_title)
+                .setMessage(getString(R.string.review_delete_selected_message, selectedCount))
+                .setPositiveButton(R.string.review_delete_selected, (dialog, which) -> {
+                    bulkDeleteInProgress = true;
+                    updateSelectionControls(selectedCount, false);
+                    com.example.rummypulse.utils.ModernToast.progress(
+                            getContext(),
+                            getString(R.string.review_delete_selected_progress, selectedCount));
+                    homeViewModel.deleteGames(
+                            selectedGameIds,
+                            () -> {
+                                if (!isAdded() || binding == null || getContext() == null) {
+                                    return;
+                                }
+                                bulkDeleteInProgress = false;
+                                tableAdapter.clearSelection();
+                                com.example.rummypulse.utils.ModernToast.success(
+                                        getContext(),
+                                        selectedCount == 1
+                                                ? getString(R.string.review_delete_selected_success_one)
+                                                : getString(
+                                                        R.string.review_delete_selected_success_many,
+                                                        selectedCount));
+                            },
+                            error -> {
+                                if (!isAdded() || binding == null || tableAdapter == null) {
+                                    return;
+                                }
+                                bulkDeleteInProgress = false;
+                                updateSelectionControls(
+                                        tableAdapter.getSelectedGameIds().size(),
+                                        false);
+                            });
+                })
+                .setNegativeButton(android.R.string.cancel, null)
                 .show();
     }
 

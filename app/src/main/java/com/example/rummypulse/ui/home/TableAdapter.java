@@ -24,17 +24,25 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.rummypulse.R;
 import com.example.rummypulse.data.Player;
 import com.example.rummypulse.utils.DisplayNameUtils;
+import com.google.android.material.checkbox.MaterialCheckBox;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHolder> {
     private List<GameItem> gameItems;
     private OnGameActionListener actionListener;
+    private OnSelectionChangedListener selectionChangedListener;
+    private final ReviewSelectionModel selection = new ReviewSelectionModel();
 
     public interface OnGameActionListener {
         void onApproveGst(GameItem game, int position);
         void onDeleteGame(GameItem game, int position);
         void onEditGameEconomics(GameItem game, int position);
+    }
+
+    public interface OnSelectionChangedListener {
+        void onSelectionChanged(int selectedCount, boolean allSelected);
     }
 
     public TableAdapter(List<GameItem> gameItems) {
@@ -43,6 +51,36 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
 
     public void setOnGameActionListener(OnGameActionListener listener) {
         this.actionListener = listener;
+    }
+
+    public void setOnSelectionChangedListener(OnSelectionChangedListener listener) {
+        this.selectionChangedListener = listener;
+        notifySelectionChanged();
+    }
+
+    public void submitItems(List<GameItem> items) {
+        gameItems = items != null ? items : new ArrayList<>();
+        selection.retainAvailable(availableGameIds());
+        notifyDataSetChanged();
+        notifySelectionChanged();
+    }
+
+    public void selectAll(boolean select) {
+        if (select) {
+            selection.selectAll(availableGameIds());
+        } else {
+            selection.clear();
+        }
+        notifyDataSetChanged();
+        notifySelectionChanged();
+    }
+
+    public void clearSelection() {
+        selectAll(false);
+    }
+
+    public List<String> getSelectedGameIds() {
+        return selection.snapshot();
     }
 
     @NonNull
@@ -56,6 +94,14 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         @Override
         public void onBindViewHolder(@NonNull TableViewHolder holder, int position) {
             GameItem item = gameItems.get(position);
+            String gameId = item.getGameId();
+
+            holder.selectGameCheckBox.setOnCheckedChangeListener(null);
+            holder.selectGameCheckBox.setChecked(selection.isSelected(gameId));
+            holder.selectGameCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                selection.setSelected(gameId, isChecked);
+                notifySelectionChanged();
+            });
 
             String rowTitle = titleForGameRow(item);
 
@@ -185,6 +231,23 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     @Override
     public int getItemCount() {
         return gameItems.size();
+    }
+
+    private List<String> availableGameIds() {
+        List<String> ids = new ArrayList<>();
+        for (GameItem item : gameItems) {
+            if (item != null && item.getGameId() != null && !item.getGameId().trim().isEmpty()) {
+                ids.add(item.getGameId());
+            }
+        }
+        return ids;
+    }
+
+    private void notifySelectionChanged() {
+        if (selectionChangedListener != null) {
+            selectionChangedListener.onSelectionChanged(
+                    selection.size(), selection.areAllSelected(availableGameIds()));
+        }
     }
 
     private String formatNumber(String number) {
@@ -419,6 +482,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             TextView gameIdHeaderText, gameCreatedSummaryText, gamePinText, pointValueText, playersText, gstPercentageText, gstAmountText, ageText, statusText;
             ImageView iconViewPin;
             View btnApproveGst, btnDeleteGame;
+            MaterialCheckBox selectGameCheckBox;
 
             public TableViewHolder(@NonNull View itemView) {
                 super(itemView);
@@ -431,6 +495,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 gstAmountText = itemView.findViewById(R.id.text_gst_amount);
                 ageText = itemView.findViewById(R.id.text_age);
                 statusText = itemView.findViewById(R.id.text_status);
+                selectGameCheckBox = itemView.findViewById(R.id.checkbox_select_game);
                 iconViewPin = itemView.findViewById(R.id.icon_view_pin);
                 btnApproveGst = itemView.findViewById(R.id.btn_approve_gst);
                 btnDeleteGame = itemView.findViewById(R.id.btn_delete_game);

@@ -180,6 +180,57 @@
                     android:textStyle="bold"
                     android:letterSpacing="0.08" />
 
+                <LinearLayout
+                    android:id="@+id/review_bulk_actions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginEnd="16dp"
+                    android:background="@drawable/bg_dashboard_metric_tile"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="4dp">
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/checkbox_select_all"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:buttonTint="@color/accent_blue"
+                        android:text="@string/review_select_all"
+                        android:textColor="@color/text_primary"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/text_selected_games"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="@string/review_selected_none"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_delete_selected"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:enabled="false"
+                        android:minWidth="0dp"
+                        android:text="@string/review_delete_selected"
+                        android:textAllCaps="false"
+                        android:textColor="@color/error_red"
+                        app:cornerRadius="10dp"
+                        app:icon="@drawable/ic_delete"
+                        app:iconTint="@color/error_red"
+                        app:strokeColor="@color/error_red" />
+                </LinearLayout>
+
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/recycler_view_table"
                     android:layout_width="match_parent"
