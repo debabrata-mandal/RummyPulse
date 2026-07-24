@@ -10,28 +10,26 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.rummypulse.BuildConfig;
 import com.example.rummypulse.MinimumVersionActivity;
 import com.example.rummypulse.R;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings;
 
+import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Fetches Firebase Remote Config and blocks the app when the installed {@link BuildConfig#VERSION_CODE}
- * is below {@code min_supported_version_code}. Fails open on fetch errors so a bad network or RC
- * outage does not brick the app.
+ * Enforces cached mandatory-update configuration without delaying startup, then refreshes Remote
+ * Config in the background. Network failures fail open so an outage cannot prevent app startup.
  */
 public final class VersionGate {
 
     private static final String TAG = "VersionGate";
+    private static final long FETCH_INTERVAL_SECONDS = 60L * 60L;
+    private static final long FETCH_TIMEOUT_SECONDS = 10L;
 
-    /** After a successful gate, {@link MainActivity} may skip a redundant RC fetch within this window. */
-    private static final long SKIP_REMOTE_FETCH_WINDOW_MS = 5 * 60 * 1000L;
-
-    private static final Object GATE_SKIP_LOCK = new Object();
-    private static long lastGatePassedElapsedRealtimeMs;
-    private static int lastGatePassedVersionCode = -1;
+    private static final Object REFRESH_LOCK = new Object();
+    private static boolean refreshInProgress;
+    private static WeakReference<AppCompatActivity> latestActivity = new WeakReference<>(null);
 
     public static final String KEY_MIN_SUPPORTED_VERSION_CODE = "min_supported_version_code";
     public static final String KEY_UPDATE_URL = "update_url";
@@ -39,116 +37,119 @@ public final class VersionGate {
     private VersionGate() {}
 
     /**
-     * After {@link AppCompatActivity#setContentView} with a loading layout, call this and run
-     * {@code onAllowed} on the main thread when the user may proceed.
+     * Checks the last activated Remote Config value synchronously.
+     *
+     * @return true when the activity was redirected to the mandatory-update screen.
      */
-    public static void runWhenAllowed(@NonNull final AppCompatActivity activity, @NonNull final Runnable onAllowed) {
-        runWhenAllowed(activity, onAllowed, false);
+    public static boolean redirectIfCachedVersionRequiresUpdate(
+            @NonNull AppCompatActivity activity) {
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "DEBUG build: skipping cached minimum-version gate");
+            return false;
+        }
+
+        FirebaseRemoteConfig remoteConfig = FirebaseRemoteConfig.getInstance();
+        long startedAt = SystemClock.elapsedRealtime();
+        boolean redirected = redirectIfUpdateRequired(activity, remoteConfig);
+        Log.d(TAG, "Cached version check completed in "
+                + (SystemClock.elapsedRealtime() - startedAt) + " ms");
+        return redirected;
     }
 
     /**
-     * @param skipRemoteConfigFetchIfRecent when true, skips fetch/activate if this process recently passed
-     *                                      the version gate for the same {@link BuildConfig#VERSION_CODE}
-     *                                      (e.g. MainActivity immediately after LoginActivity).
+     * Starts one process-wide fetch-and-activate operation. Repeated calls update the activity that
+     * should receive a newly discovered mandatory-update redirect without starting another fetch.
      */
-    public static void runWhenAllowed(
-            @NonNull final AppCompatActivity activity,
-            @NonNull final Runnable onAllowed,
-            boolean skipRemoteConfigFetchIfRecent) {
-        // Debug installs are often older than Remote Config min_supported_version_code; skipping the gate
-        // avoids blocking local development. Release builds still enforce the minimum.
+    public static void refreshInBackground(@NonNull AppCompatActivity activity) {
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "DEBUG build: skipping Remote Config version gate");
-            recordGatePassedForSkip();
-            activity.runOnUiThread(onAllowed);
+            Log.d(TAG, "DEBUG build: skipping background Remote Config refresh");
             return;
         }
 
-        final FirebaseRemoteConfig rc = FirebaseRemoteConfig.getInstance();
+        synchronized (REFRESH_LOCK) {
+            latestActivity = new WeakReference<>(activity);
+            if (refreshInProgress) {
+                Log.d(TAG, "Remote Config refresh already running");
+                return;
+            }
+            refreshInProgress = true;
+        }
+
+        long startedAt = SystemClock.elapsedRealtime();
+        FirebaseRemoteConfig remoteConfig = FirebaseRemoteConfig.getInstance();
+        FirebaseRemoteConfigSettings settings = new FirebaseRemoteConfigSettings.Builder()
+                .setMinimumFetchIntervalInSeconds(FETCH_INTERVAL_SECONDS)
+                .setFetchTimeoutInSeconds(FETCH_TIMEOUT_SECONDS)
+                .build();
 
         Map<String, Object> defaults = new HashMap<>();
         defaults.put(KEY_MIN_SUPPORTED_VERSION_CODE, 0L);
-        defaults.put(KEY_UPDATE_URL, activity.getString(R.string.default_apk_download_page));
+        defaults.put(
+                KEY_UPDATE_URL,
+                activity.getString(R.string.default_apk_download_page));
 
-        if (skipRemoteConfigFetchIfRecent && canSkipRemoteConfigFetch()) {
-            Log.d(TAG, "Skipping Remote Config fetch/activate (recent gate pass for same versionCode)");
-            rc.setDefaultsAsync(defaults)
-                    .addOnCompleteListener(activity, task -> applyGate(activity, rc, onAllowed));
-            return;
-        }
-
-        rc.setDefaultsAsync(defaults)
-                .addOnCompleteListener(activity, new OnCompleteListener<Void>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Void> task) {
-                        if (!task.isSuccessful()) {
-                            Log.w(TAG, "Remote Config setDefaults failed; continuing with fetch", task.getException());
-                        }
-                        // fetch(0) ignores the SDK throttle (e.g. 3600s in release). Without this, a device can keep
-                        // an old min_supported_version_code for up to an hour after you publish a higher minimum.
-                        rc.fetch(0L)
-                                .addOnCompleteListener(activity, new OnCompleteListener<Void>() {
-                                    @Override
-                                    public void onComplete(@NonNull Task<Void> fetchTask) {
-                                        if (!fetchTask.isSuccessful()) {
-                                            Log.w(TAG, "Remote Config fetch failed; allowing app", fetchTask.getException());
-                                            recordGatePassedForSkip();
-                                            activity.runOnUiThread(onAllowed);
-                                            return;
-                                        }
-                                        rc.activate()
-                                                .addOnCompleteListener(activity, new OnCompleteListener<Boolean>() {
-                                                    @Override
-                                                    public void onComplete(@NonNull Task<Boolean> activateTask) {
-                                                        if (!activateTask.isSuccessful()) {
-                                                            Log.w(TAG, "Remote Config activate failed; allowing app",
-                                                                    activateTask.getException());
-                                                            recordGatePassedForSkip();
-                                                            activity.runOnUiThread(onAllowed);
-                                                            return;
-                                                        }
-                                                        applyGate(activity, rc, onAllowed);
-                                                    }
-                                                });
-                                    }
-                                });
+        remoteConfig.setConfigSettingsAsync(settings)
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "Remote Config settings failed; continuing", task.getException());
                     }
+                    return remoteConfig.setDefaultsAsync(defaults);
+                })
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "Remote Config defaults failed; continuing", task.getException());
+                    }
+                    return remoteConfig.fetchAndActivate();
+                })
+                .addOnCompleteListener(task -> {
+                    synchronized (REFRESH_LOCK) {
+                        refreshInProgress = false;
+                    }
+
+                    long elapsed = SystemClock.elapsedRealtime() - startedAt;
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "Background Remote Config refresh failed after "
+                                + elapsed + " ms; keeping app available", task.getException());
+                        return;
+                    }
+
+                    Log.d(TAG, "Background Remote Config refresh completed in "
+                            + elapsed + " ms; activated=" + task.getResult());
+                    AppCompatActivity target;
+                    synchronized (REFRESH_LOCK) {
+                        target = latestActivity.get();
+                    }
+                    if (target == null || target.isFinishing() || target.isDestroyed()) {
+                        return;
+                    }
+                    target.runOnUiThread(() -> {
+                        if (!target.isFinishing() && !target.isDestroyed()) {
+                            redirectIfUpdateRequired(target, remoteConfig);
+                        }
+                    });
                 });
     }
 
-    private static boolean canSkipRemoteConfigFetch() {
-        synchronized (GATE_SKIP_LOCK) {
-            if (lastGatePassedVersionCode != BuildConfig.VERSION_CODE) {
-                return false;
-            }
-            long elapsed = SystemClock.elapsedRealtime() - lastGatePassedElapsedRealtimeMs;
-            return elapsed >= 0 && elapsed < SKIP_REMOTE_FETCH_WINDOW_MS;
-        }
-    }
+    private static boolean redirectIfUpdateRequired(
+            @NonNull AppCompatActivity activity,
+            @NonNull FirebaseRemoteConfig remoteConfig) {
+        long minimumVersionCode = remoteConfig.getLong(KEY_MIN_SUPPORTED_VERSION_CODE);
+        String updateUrl = remoteConfig.getString(KEY_UPDATE_URL);
+        int currentVersionCode = BuildConfig.VERSION_CODE;
+        Log.d(TAG, "Resolved app versionCode=" + currentVersionCode
+                + " minimum=" + minimumVersionCode);
 
-    private static void recordGatePassedForSkip() {
-        synchronized (GATE_SKIP_LOCK) {
-            lastGatePassedElapsedRealtimeMs = SystemClock.elapsedRealtime();
-            lastGatePassedVersionCode = BuildConfig.VERSION_CODE;
+        if (minimumVersionCode <= 0 || currentVersionCode >= minimumVersionCode) {
+            return false;
         }
-    }
 
-    private static void applyGate(@NonNull AppCompatActivity activity, FirebaseRemoteConfig rc, @NonNull Runnable onAllowed) {
-        long minCode = rc.getLong(KEY_MIN_SUPPORTED_VERSION_CODE);
-        String updateUrl = rc.getString(KEY_UPDATE_URL);
-        int current = BuildConfig.VERSION_CODE;
-        Log.d(TAG, "Resolved: app versionCode=" + current
-                + " remote min_supported_version_code=" + minCode);
-        if (minCode > 0 && current < minCode) {
-            Log.w(TAG, "Version blocked: current=" + current + " min=" + minCode);
-            Intent intent = new Intent(activity, MinimumVersionActivity.class);
-            intent.putExtra(MinimumVersionActivity.EXTRA_UPDATE_URL, updateUrl);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            activity.startActivity(intent);
-            activity.finish();
-            return;
-        }
-        recordGatePassedForSkip();
-        activity.runOnUiThread(onAllowed);
+        Log.w(TAG, "Version blocked: current=" + currentVersionCode
+                + " minimum=" + minimumVersionCode);
+        Intent intent = new Intent(activity, MinimumVersionActivity.class);
+        intent.putExtra(MinimumVersionActivity.EXTRA_UPDATE_URL, updateUrl);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        activity.startActivity(intent);
+        activity.finish();
+        return true;
     }
 }

@@ -7,6 +7,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
@@ -66,8 +67,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_version_gate_loading);
-        VersionGate.runWhenAllowed(this, () -> continueMainOnCreateAfterVersionGate(savedInstanceState), true);
+        long startupStartedAt = SystemClock.elapsedRealtime();
+        if (VersionGate.redirectIfCachedVersionRequiresUpdate(this)) {
+            return;
+        }
+        continueMainOnCreateAfterVersionGate(savedInstanceState);
+        android.util.Log.d("MainActivity", "Main UI initialized in "
+                + (SystemClock.elapsedRealtime() - startupStartedAt) + " ms");
+        VersionGate.refreshInBackground(this);
     }
 
     private void continueMainOnCreateAfterVersionGate(Bundle savedInstanceState) {

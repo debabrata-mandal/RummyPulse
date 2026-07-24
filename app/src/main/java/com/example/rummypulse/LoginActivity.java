@@ -2,6 +2,9 @@ package com.example.rummypulse;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
 
@@ -15,7 +18,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.ApiException;
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
@@ -29,16 +31,42 @@ public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
     private static final int RC_SIGN_IN = 9001;
+    private static final long SIGN_IN_SLOW_NETWORK_MS = 15_000L;
 
     private ActivityLoginBinding binding;
     private FirebaseAuth mAuth;
     private GoogleSignInClient mGoogleSignInClient;
+    private final Handler loginHandler = new Handler(Looper.getMainLooper());
+    private Runnable slowNetworkNotice;
+    private boolean googleSignInInProgress;
+    private long startupStartedAt;
+    private long googleSignInStartedAt;
+    private AuthAttempt authAttempt;
+
+    private static final class AuthAttempt {
+        final String idToken;
+        final Task<AuthResult> task;
+        final long startedAt;
+        boolean retryQueued;
+
+        AuthAttempt(String idToken, Task<AuthResult> task, long startedAt) {
+            this.idToken = idToken;
+            this.task = task;
+            this.startedAt = startedAt;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_version_gate_loading);
-        VersionGate.runWhenAllowed(this, () -> setupLoginUi(savedInstanceState));
+        startupStartedAt = SystemClock.elapsedRealtime();
+        if (VersionGate.redirectIfCachedVersionRequiresUpdate(this)) {
+            return;
+        }
+        setupLoginUi(savedInstanceState);
+        Log.d(TAG, "Login UI shown in "
+                + (SystemClock.elapsedRealtime() - startupStartedAt) + " ms");
+        VersionGate.refreshInBackground(this);
     }
 
     private void setupLoginUi(Bundle savedInstanceState) {
@@ -63,6 +91,7 @@ public class LoginActivity extends AppCompatActivity {
                 signIn();
             }
         });
+        binding.retryButton.setOnClickListener(v -> retrySignIn());
 
         // Check if user is already signed in with better logging
         FirebaseUser currentUser = mAuth.getCurrentUser();
@@ -88,9 +117,17 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void signIn() {
+        if (googleSignInInProgress || hasPendingAuthAttempt()) {
+            return;
+        }
+        googleSignInInProgress = true;
+        googleSignInStartedAt = SystemClock.elapsedRealtime();
         // Show loading state
         binding.signInButton.setEnabled(false);
         binding.progressBar.setVisibility(View.VISIBLE);
+        binding.loginStatus.setText(R.string.login_status_choose_account);
+        binding.loginStatus.setVisibility(View.VISIBLE);
+        binding.retryButton.setVisibility(View.GONE);
         
         Intent signInIntent = mGoogleSignInClient.getSignInIntent();
         startActivityForResult(signInIntent, RC_SIGN_IN);
@@ -102,6 +139,9 @@ public class LoginActivity extends AppCompatActivity {
 
         // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
         if (requestCode == RC_SIGN_IN) {
+            googleSignInInProgress = false;
+            Log.d(TAG, "Google sign-in returned in "
+                    + (SystemClock.elapsedRealtime() - googleSignInStartedAt) + " ms");
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             try {
                 // Google Sign In was successful, authenticate with Firebase
@@ -124,37 +164,113 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void firebaseAuthWithGoogle(String idToken) {
+        if (hasPendingAuthAttempt()) {
+            return;
+        }
         AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
-        mAuth.signInWithCredential(credential)
-                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
-                            Log.d(TAG, "signInWithCredential:success");
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            
-                            if (user != null) {
-                                Log.d(TAG, "Firebase Auth successful for user: " + user.getEmail());
-                                AuthStateManager.getInstance(LoginActivity.this).saveAuthState(user);
-                                com.example.rummypulse.utils.ModernToast.success(LoginActivity.this,
-                                        "Welcome, " + user.getDisplayName() + "!");
-                                startMainActivity();
-                            } else {
-                                startMainActivity();
-                            }
-                        } else {
-                            Exception ex = task.getException();
-                            Log.w(TAG, "signInWithCredential:failure", ex);
-                            String detail = ex != null && ex.getMessage() != null ? ex.getMessage() : "unknown";
-                            showError("Sign-in failed: " + truncateForToast(detail));
-                            resetUI();
-                        }
-                    }
-                });
+        long startedAt = SystemClock.elapsedRealtime();
+        authAttempt = new AuthAttempt(
+                idToken,
+                mAuth.signInWithCredential(credential),
+                startedAt);
+        observeAuthAttempt(authAttempt);
+    }
+
+    private void observeAuthAttempt(@NonNull AuthAttempt attempt) {
+        showFirebaseAuthInProgress();
+        scheduleSlowNetworkNotice(attempt);
+        attempt.task.addOnCompleteListener(this, task -> handleAuthComplete(attempt, task));
+    }
+
+    private void handleAuthComplete(
+            @NonNull AuthAttempt completedAttempt,
+            @NonNull Task<AuthResult> task) {
+        if (completedAttempt != authAttempt) {
+            return;
+        }
+        cancelSlowNetworkNotice();
+        Log.d(TAG, "Firebase authentication completed in "
+                + (SystemClock.elapsedRealtime() - completedAttempt.startedAt) + " ms");
+        authAttempt = null;
+
+        if (task.isSuccessful()) {
+            Log.d(TAG, "signInWithCredential:success");
+            FirebaseUser user = mAuth.getCurrentUser();
+            if (user != null) {
+                Log.d(TAG, "Firebase Auth successful for user: " + user.getEmail());
+                AuthStateManager.getInstance(LoginActivity.this).saveAuthState(user);
+                com.example.rummypulse.utils.ModernToast.success(
+                        LoginActivity.this,
+                        "Welcome, " + user.getDisplayName() + "!");
+            }
+            startMainActivity();
+            return;
+        }
+
+        Exception exception = task.getException();
+        Log.w(TAG, "signInWithCredential:failure", exception);
+        if (completedAttempt.retryQueued) {
+            binding.loginStatus.setText(R.string.login_status_retrying);
+            firebaseAuthWithGoogle(completedAttempt.idToken);
+            return;
+        }
+
+        String detail = exception != null && exception.getMessage() != null
+                ? exception.getMessage()
+                : "unknown";
+        showError("Sign-in failed: " + truncateForToast(detail));
+        showRetryState(R.string.login_status_failed);
+    }
+
+    private void scheduleSlowNetworkNotice(@NonNull AuthAttempt attempt) {
+        cancelSlowNetworkNotice();
+        slowNetworkNotice = () -> {
+            if (authAttempt != attempt || attempt.task.isComplete()) {
+                return;
+            }
+            binding.loginStatus.setText(R.string.login_status_slow_network);
+            binding.loginStatus.setVisibility(View.VISIBLE);
+            binding.retryButton.setEnabled(true);
+            binding.retryButton.setVisibility(View.VISIBLE);
+            Log.w(TAG, "Firebase authentication exceeded "
+                    + SIGN_IN_SLOW_NETWORK_MS + " ms");
+        };
+        loginHandler.postDelayed(slowNetworkNotice, SIGN_IN_SLOW_NETWORK_MS);
+    }
+
+    private void cancelSlowNetworkNotice() {
+        if (slowNetworkNotice != null) {
+            loginHandler.removeCallbacks(slowNetworkNotice);
+            slowNetworkNotice = null;
+        }
+    }
+
+    private void retrySignIn() {
+        if (hasPendingAuthAttempt()) {
+            authAttempt.retryQueued = true;
+            binding.loginStatus.setText(R.string.login_status_retry_queued);
+            binding.retryButton.setEnabled(false);
+            return;
+        }
+        signIn();
+    }
+
+    private boolean hasPendingAuthAttempt() {
+        return authAttempt != null && !authAttempt.task.isComplete();
+    }
+
+    private void showFirebaseAuthInProgress() {
+        binding.signInButton.setEnabled(false);
+        binding.progressBar.setVisibility(View.VISIBLE);
+        binding.loginStatus.setText(R.string.login_status_signing_in);
+        binding.loginStatus.setVisibility(View.VISIBLE);
+        binding.retryButton.setVisibility(View.GONE);
     }
 
     private void startMainActivity() {
+        Log.d(TAG, "Opening MainActivity "
+                + (SystemClock.elapsedRealtime() - startupStartedAt)
+                + " ms after LoginActivity start");
         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
@@ -166,8 +282,29 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void resetUI() {
+        googleSignInInProgress = false;
+        cancelSlowNetworkNotice();
         binding.signInButton.setEnabled(true);
         binding.progressBar.setVisibility(View.GONE);
+        binding.loginStatus.setVisibility(View.GONE);
+        binding.retryButton.setVisibility(View.GONE);
+        binding.retryButton.setEnabled(true);
+    }
+
+    private void showRetryState(int statusText) {
+        cancelSlowNetworkNotice();
+        binding.signInButton.setEnabled(true);
+        binding.progressBar.setVisibility(View.GONE);
+        binding.loginStatus.setText(statusText);
+        binding.loginStatus.setVisibility(View.VISIBLE);
+        binding.retryButton.setEnabled(true);
+        binding.retryButton.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    protected void onDestroy() {
+        cancelSlowNetworkNotice();
+        super.onDestroy();
     }
 
     private static String truncateForToast(String message) {

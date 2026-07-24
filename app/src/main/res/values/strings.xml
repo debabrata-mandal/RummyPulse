@@ -58,6 +58,13 @@
     <string name="default_apk_download_page" translatable="false">https://github.com/debabrata-mandal/RummyPulse/releases</string>
     <string name="minimum_version_update">Update app</string>
     <string name="minimum_version_exit">Exit</string>
+    <string name="login_status_choose_account">Choose a Google account…</string>
+    <string name="login_status_signing_in">Signing in securely…</string>
+    <string name="login_status_slow_network">This is taking longer than expected. Check your connection and retry.</string>
+    <string name="login_status_retry_queued">Retry ready. Waiting for the current sign-in attempt to finish…</string>
+    <string name="login_status_retrying">Retrying sign-in…</string>
+    <string name="login_status_failed">Sign-in failed. Please try again.</string>
+    <string name="login_retry">Retry</string>
 
     <string name="update_progress_title">Updating RummyPulse</string>
     <string name="update_progress_preparing">Preparing…</string>
