@@ -9,32 +9,33 @@ import androidx.lifecycle.ViewModel;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.UserRole;
+import com.google.firebase.firestore.DocumentSnapshot;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * ViewModel for User Management functionality
- * Handles loading all users and updating user roles
+ * Handles bounded user pages and local role updates for User Management.
  */
 public class UserManagementViewModel extends ViewModel {
 
     private static final String TAG = "UserManagementViewModel";
-    
-    private final AppUserRepository appUserRepository;
-    private final MutableLiveData<List<AppUser>> users;
-    private final MutableLiveData<Boolean> loading;
-    private final MutableLiveData<String> error;
-    private final MutableLiveData<Boolean> roleUpdateSuccess;
 
-    public UserManagementViewModel() {
-        appUserRepository = new AppUserRepository();
-        users = new MutableLiveData<>();
-        loading = new MutableLiveData<>();
-        error = new MutableLiveData<>();
-        roleUpdateSuccess = new MutableLiveData<>();
-    }
+    private final AppUserRepository appUserRepository = new AppUserRepository();
+    private final MutableLiveData<List<AppUser>> users = new MutableLiveData<>(new ArrayList<>());
+    private final MutableLiveData<Boolean> loading = new MutableLiveData<>(false);
+    private final MutableLiveData<Boolean> loadingMore = new MutableLiveData<>(false);
+    private final MutableLiveData<String> error = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> roleUpdateSuccess = new MutableLiveData<>();
+
+    private DocumentSnapshot nextCursor;
+    private boolean hasMore = true;
+    private boolean pageRequestInProgress;
+    private boolean refreshQueued;
 
     public LiveData<List<AppUser>> getUsers() {
         return users;
@@ -42,6 +43,10 @@ public class UserManagementViewModel extends ViewModel {
 
     public LiveData<Boolean> getLoading() {
         return loading;
+    }
+
+    public LiveData<Boolean> getLoadingMore() {
+        return loadingMore;
     }
 
     public LiveData<String> getError() {
@@ -53,79 +58,138 @@ public class UserManagementViewModel extends ViewModel {
     }
 
     /**
-     * Load all users from the database
+     * Explicit refresh: clears the cursor and reloads the first bounded page.
      */
     public void loadAllUsers() {
-        loading.setValue(true);
+        if (pageRequestInProgress) {
+            refreshQueued = true;
+            return;
+        }
+        nextCursor = null;
+        hasMore = true;
+        loadPage(true);
+    }
+
+    public void loadNextPage() {
+        if (pageRequestInProgress || !hasMore) {
+            return;
+        }
+        loadPage(false);
+    }
+
+    private void loadPage(boolean replaceExisting) {
+        pageRequestInProgress = true;
         error.setValue(null);
-        
-        Log.d(TAG, "Loading all users...");
-        
-        appUserRepository.getAllUsers(new AppUserRepository.AllUsersCallback() {
-            @Override
-            public void onSuccess(List<AppUser> userList) {
-                Log.d(TAG, "Successfully loaded " + userList.size() + " users");
-                
-                // Sort users: Admins first, then regular users, both alphabetically by name
-                Collections.sort(userList, new Comparator<AppUser>() {
+        if (replaceExisting) {
+            loading.setValue(true);
+        } else {
+            loadingMore.setValue(true);
+        }
+
+        appUserRepository.getUsersPage(
+                replaceExisting ? null : nextCursor,
+                AppUserRepository.USER_PAGE_SIZE,
+                new AppUserRepository.UsersPageCallback() {
                     @Override
-                    public int compare(AppUser user1, AppUser user2) {
-                        // First, compare by role (Admin comes before Regular)
-                        boolean isAdmin1 = user1.getRole() == UserRole.ADMIN_USER;
-                        boolean isAdmin2 = user2.getRole() == UserRole.ADMIN_USER;
-                        
-                        if (isAdmin1 && !isAdmin2) {
-                            return -1; // user1 is admin, user2 is not - user1 comes first
-                        } else if (!isAdmin1 && isAdmin2) {
-                            return 1; // user2 is admin, user1 is not - user2 comes first
-                        } else {
-                            // Both have same role, sort alphabetically by name
-                            String name1 = user1.getDisplayName() != null ? user1.getDisplayName() : "";
-                            String name2 = user2.getDisplayName() != null ? user2.getDisplayName() : "";
-                            return name1.compareToIgnoreCase(name2);
-                        }
+                    public void onSuccess(AppUserRepository.UsersPage page) {
+                        List<AppUser> merged = replaceExisting
+                                ? new ArrayList<>()
+                                : new ArrayList<>(safeUsers());
+                        mergeByUserId(merged, page.users);
+                        sortUsers(merged);
+                        users.setValue(merged);
+                        nextCursor = page.nextCursor;
+                        hasMore = page.hasMore && page.nextCursor != null;
+                        finishPageRequest();
+                        Log.d(TAG, "Displayed " + merged.size()
+                                + " users; hasMore=" + hasMore);
+                    }
+
+                    @Override
+                    public void onFailure(Exception exception) {
+                        error.setValue("Failed to load users: " + exception.getMessage());
+                        finishPageRequest();
                     }
                 });
-                
-                Log.d(TAG, "Users sorted: Admins first, then regular users (both alphabetically)");
-                users.setValue(userList);
-                loading.setValue(false);
-            }
+    }
 
-            @Override
-            public void onFailure(Exception exception) {
-                Log.e(TAG, "Failed to load users", exception);
-                error.setValue("Failed to load users: " + exception.getMessage());
-                loading.setValue(false);
-            }
-        });
+    private void finishPageRequest() {
+        pageRequestInProgress = false;
+        loading.setValue(false);
+        loadingMore.setValue(false);
+        if (refreshQueued) {
+            refreshQueued = false;
+            loadAllUsers();
+        }
     }
 
     /**
-     * Update a user's role
+     * Applies the confirmed role write to the existing row without a document read or list reload.
      */
     public void updateUserRole(String userId, UserRole newRole) {
         loading.setValue(true);
         error.setValue(null);
         roleUpdateSuccess.setValue(false);
-        
-        Log.d(TAG, "Updating user role for userId: " + userId + " to " + newRole.getDisplayName());
-        
+
         appUserRepository.updateUserRole(userId, newRole, new AppUserRepository.AppUserCallback() {
             @Override
             public void onSuccess(AppUser updatedUser) {
-                Log.d(TAG, "Successfully updated user role: " + updatedUser.getDisplayName() + 
-                          " to " + updatedUser.getRole().getDisplayName());
+                List<AppUser> updatedList = new ArrayList<>(safeUsers());
+                boolean found = false;
+                for (AppUser user : updatedList) {
+                    if (userId.equals(user.getUserId())) {
+                        user.setRole(newRole);
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) {
+                    sortUsers(updatedList);
+                    users.setValue(updatedList);
+                }
                 loading.setValue(false);
                 roleUpdateSuccess.setValue(true);
+                Log.d(TAG, "Applied role update locally for " + userId);
             }
 
             @Override
             public void onFailure(Exception exception) {
-                Log.e(TAG, "Failed to update user role", exception);
                 error.setValue("Failed to update user role: " + exception.getMessage());
                 loading.setValue(false);
                 roleUpdateSuccess.setValue(false);
+            }
+        });
+    }
+
+    private List<AppUser> safeUsers() {
+        List<AppUser> current = users.getValue();
+        return current != null ? current : Collections.emptyList();
+    }
+
+    private static void mergeByUserId(List<AppUser> destination, List<AppUser> incoming) {
+        Map<String, AppUser> merged = new LinkedHashMap<>();
+        for (AppUser user : destination) {
+            merged.put(user.getUserId(), user);
+        }
+        for (AppUser user : incoming) {
+            merged.put(user.getUserId(), user);
+        }
+        destination.clear();
+        destination.addAll(merged.values());
+    }
+
+    static void sortUsers(List<AppUser> userList) {
+        userList.sort(new Comparator<AppUser>() {
+            @Override
+            public int compare(AppUser first, AppUser second) {
+                boolean firstAdmin = first.getRole() == UserRole.ADMIN_USER;
+                boolean secondAdmin = second.getRole() == UserRole.ADMIN_USER;
+                if (firstAdmin != secondAdmin) {
+                    return firstAdmin ? -1 : 1;
+                }
+                String firstName = first.getDisplayName() != null ? first.getDisplayName() : "";
+                String secondName = second.getDisplayName() != null ? second.getDisplayName() : "";
+                return firstName.compareToIgnoreCase(secondName);
             }
         });
     }

@@ -63,6 +63,8 @@ public class MainActivity extends AppCompatActivity {
     private NavController navController;
     private AppUserRoleSession.Role currentNavigationRole = AppUserRoleSession.Role.UNKNOWN;
     private boolean reviewNeedsAttention = false;
+    private boolean initialAppUserSyncCompleted;
+    private boolean hasStartedOnce;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             android.util.Log.d("MainActivity", "User authenticated: " + currentUser.getEmail());
             authStateManager.saveAuthState(currentUser);
-            AppUserRoleSession.getInstance().startForCurrentUser();
+            AppUserRoleSession.getInstance().startForCurrentUser(false);
             ensureAppUserDocument(currentUser);
         }
 
@@ -208,7 +210,10 @@ public class MainActivity extends AppCompatActivity {
         // Add auth listener when activity starts
         if (mAuth != null && mAuthListener != null) {
             mAuth.addAuthStateListener(mAuthListener);
-            AppUserRoleSession.getInstance().refreshForCurrentUser();
+            if (hasStartedOnce && initialAppUserSyncCompleted) {
+                AppUserRoleSession.getInstance().refreshForCurrentUser();
+            }
+            hasStartedOnce = true;
         }
     }
 
@@ -294,13 +299,14 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(AppUser appUser) {
                 android.util.Log.d("MainActivity", "appUser document synced: " + appUser.getUserId());
-                if (!AppUserRoleSession.getInstance().hasCachedRoleForCurrentUser()) {
-                    AppUserRoleSession.getInstance().refreshForCurrentUser(true);
-                }
+                initialAppUserSyncCompleted = true;
+                AppUserRoleSession.getInstance()
+                        .applyVerifiedRole(appUser.getUserId(), appUser.getRole());
             }
 
             @Override
             public void onFailure(Exception exception) {
+                initialAppUserSyncCompleted = true;
                 android.util.Log.w("MainActivity",
                         "appUser sync failed — user may be missing from Users list until next successful sync",
                         exception);

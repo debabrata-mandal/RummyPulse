@@ -35,6 +35,7 @@ public class UserManagementFragment extends Fragment {
     private FragmentUserManagementBinding binding;
     private UserManagementViewModel userManagementViewModel;
     private UserManagementAdapter adapter;
+    private LinearLayoutManager layoutManager;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -55,8 +56,21 @@ public class UserManagementFragment extends Fragment {
 
     private void setupRecyclerView() {
         adapter = new UserManagementAdapter(new ArrayList<>(), this::onRoleChangeClicked);
-        binding.recyclerViewUsers.setLayoutManager(new LinearLayoutManager(getContext()));
+        layoutManager = new LinearLayoutManager(getContext());
+        binding.recyclerViewUsers.setLayoutManager(layoutManager);
         binding.recyclerViewUsers.setAdapter(adapter);
+        binding.recyclerViewUsers.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                if (dy > 0
+                        && layoutManager != null
+                        && layoutManager.findLastVisibleItemPosition()
+                        >= Math.max(0, adapter.getItemCount() - 5)) {
+                    userManagementViewModel.loadNextPage();
+                }
+            }
+        });
     }
 
     private void setupSwipeRefresh() {
@@ -84,10 +98,17 @@ public class UserManagementFragment extends Fragment {
             }
         });
 
+        userManagementViewModel.getLoadingMore().observe(getViewLifecycleOwner(), isLoading -> {
+            binding.paginationProgressBar.setVisibility(
+                    Boolean.TRUE.equals(isLoading) ? View.VISIBLE : View.GONE);
+        });
+
         userManagementViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
                 Log.e(TAG, "Error: " + error);
-                showError(error);
+                if (adapter.getItemCount() == 0) {
+                    showError(error);
+                }
                 com.example.rummypulse.utils.ModernToast.error(getContext(), "Error: " + error);
             }
         });
@@ -95,8 +116,6 @@ public class UserManagementFragment extends Fragment {
         userManagementViewModel.getRoleUpdateSuccess().observe(getViewLifecycleOwner(), success -> {
             if (success != null && success) {
                 com.example.rummypulse.utils.ModernToast.success(getContext(), "User role updated successfully");
-                // Refresh the list to show updated roles
-                userManagementViewModel.loadAllUsers();
             }
         });
     }

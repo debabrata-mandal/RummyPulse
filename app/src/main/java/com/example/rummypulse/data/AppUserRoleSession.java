@@ -75,6 +75,15 @@ public final class AppUserRoleSession {
      * Repeated calls for the same account do not reset the visible role.
      */
     public void startForCurrentUser() {
+        startForCurrentUser(true);
+    }
+
+    /**
+     * Binds to the current account and optionally starts a dedicated role read. Startup user
+     * synchronization can pass false and feed its transaction result into {@link #applyVerifiedRole}
+     * so the same appUser document is not read twice.
+     */
+    public void startForCurrentUser(boolean refreshImmediately) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             stop();
@@ -97,7 +106,24 @@ public final class AppUserRoleSession {
                         : "No cached role for " + uid);
             }
         }
-        refreshForCurrentUser();
+        if (refreshImmediately) {
+            refreshForCurrentUser();
+        }
+    }
+
+    /**
+     * Applies a role returned by another authoritative server operation, such as the startup
+     * appUser transaction.
+     */
+    public synchronized void applyVerifiedRole(String uid, UserRole verifiedRole) {
+        if (uid == null || !uid.equals(currentUid)) {
+            return;
+        }
+        Role confirmed = verifiedRole == UserRole.ADMIN_USER ? Role.ADMIN : Role.NON_ADMIN;
+        cacheRole(uid, confirmed);
+        publishRole(confirmed);
+        lastRefreshStartedAt = SystemClock.elapsedRealtime();
+        Log.d(TAG, "Applied role from startup user synchronization: " + confirmed);
     }
 
     /**
