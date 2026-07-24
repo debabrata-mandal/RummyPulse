@@ -10,6 +10,7 @@ import androidx.lifecycle.MutableLiveData;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1263,72 +1265,21 @@ public class GameRepository {
      * @param onAfterFullSuccess optional; runs after game is written to approvedGames and removed from games/gameData
      */
     public void approveGame(GameItem gameItem, Runnable onAfterFullSuccess) {
-        // Get the original game data to extract player information
-        db.collection(FirestoreCollections.GAME_DATA)
-                .document(gameItem.getGameId())
-                .get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        try {
-                            GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
-                            if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
-                                GameData gameData = gameDataWrapper.getData();
-                                
-                                // Create simplified player scores map (name -> total score)
-                                Map<String, Integer> playerScores = new HashMap<>();
-                                if (gameData.getPlayers() != null) {
-                                    for (Player player : gameData.getPlayers()) {
-                                        playerScores.put(player.getName(), player.getTotalScore());
-                                    }
-                                }
-                                
-                                // Create approved game data without PIN
-                                ApprovedGameData approvedGameData = new ApprovedGameData(
-                                        gameItem.getGameId(),
-                                        gameData.getNumPlayers(),
-                                        gameData.getPointValue(),
-                                        gameData.getGstPercent(),
-                                        playerScores,
-                                        com.google.firebase.Timestamp.now(),
-                                        gameDataWrapper.getVersion(),
-                                        gameItem.getGstAmount(),
-                                        gameItem.getGameStatus(),
-                                        gameItem.getCreationDateTime()
-                                );
-                                
-                                // Save to approved games collection
-                                db.collection(FirestoreCollections.APPROVED_GAMES)
-                                        .document(gameItem.getGameId())
-                                        .set(approvedGameData)
-                                        .addOnSuccessListener(aVoid -> {
-                                            deleteApprovedGame(gameItem.getGameId(), onAfterFullSuccess);
-                                        })
-                                        .addOnFailureListener(e -> {
-                                            errorLiveData.setValue("Failed to approve game: " + e.getMessage());
-                                        });
-                            } else {
-                                errorLiveData.setValue("Failed to load game data for approval");
-                            }
-                        } catch (Exception e) {
-                            errorLiveData.setValue("Error processing game data: " + e.getMessage());
-                        }
-                    } else {
-                        errorLiveData.setValue("Game data not found for approval");
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    errorLiveData.setValue("Failed to load game data: " + e.getMessage());
-                });
+        if (gameItem == null || !gameItem.isCompleted()) {
+            errorLiveData.setValue("Game must be completed before approval.");
+            return;
+        }
+        List<GameItem> single = new ArrayList<>();
+        single.add(gameItem);
+        approveGamesAtomically(single, onAfterFullSuccess);
     }
 
     /**
-     * Approve every completed game in the list, one after another (avoids overlapping reloads).
+     * Approves every completed game in one all-or-nothing Firestore transaction.
      */
     public void approveAllCompletedGames(List<GameItem> games, Runnable onAllComplete) {
         if (games == null || games.isEmpty()) {
-            if (onAllComplete != null) {
-                onAllComplete.run();
-            }
+            errorLiveData.setValue("No completed games to approve.");
             return;
         }
         List<GameItem> completed = new ArrayList<>();
@@ -1341,43 +1292,149 @@ public class GameRepository {
             errorLiveData.setValue("No completed games to approve.");
             return;
         }
-        approveSequentially(completed, 0, onAllComplete);
+        approveGamesAtomically(completed, onAllComplete);
     }
 
-    private void approveSequentially(List<GameItem> list, int index, Runnable onAllComplete) {
-        if (index >= list.size()) {
-            if (onAllComplete != null) {
-                onAllComplete.run();
+    private void approveGamesAtomically(List<GameItem> requested, Runnable onSuccess) {
+        LinkedHashMap<String, GameItem> uniqueById = new LinkedHashMap<>();
+        for (GameItem game : requested) {
+            if (game == null || game.getGameId() == null || game.getGameId().trim().isEmpty()) {
+                errorLiveData.setValue("Approval validation failed: a selected game has no id.");
+                return;
             }
+            uniqueById.put(game.getGameId(), game);
+        }
+        List<GameItem> games = new ArrayList<>(uniqueById.values());
+        try {
+            ApprovalBatchValidator.validateSelectionCount(games.size());
+        } catch (IllegalArgumentException error) {
+            errorLiveData.setValue(error.getMessage());
             return;
         }
-        approveGame(list.get(index), () -> approveSequentially(list, index + 1, onAllComplete));
+
+        List<String> gameIds = new ArrayList<>(uniqueById.keySet());
+        long preparationStartedAt = android.os.SystemClock.elapsedRealtime();
+        viewApprovalRepository.loadDocumentReferencesForGames(
+                gameIds,
+                new GameViewApprovalRepository.DocumentReferencesCallback() {
+                    @Override
+                    public void onSuccess(@NonNull List<DocumentReference> cleanupReferences) {
+                        try {
+                            ApprovalBatchValidator.validateWriteCount(
+                                    games.size(), cleanupReferences.size());
+                        } catch (IllegalArgumentException error) {
+                            errorLiveData.setValue(error.getMessage());
+                            return;
+                        }
+                        runApprovalTransaction(
+                                games,
+                                gameIds,
+                                cleanupReferences,
+                                preparationStartedAt,
+                                onSuccess);
+                    }
+
+                    @Override
+                    public void onError(@NonNull String message) {
+                        errorLiveData.setValue(message);
+                    }
+                });
     }
 
-    private void deleteApprovedGame(String gameId, Runnable onAfterSuccess) {
-        viewApprovalRepository.deleteAllForGame(gameId);
-        // Delete from both collections after successful approval
-        db.collection(FirestoreCollections.GAMES).document(gameId).delete()
-                .addOnSuccessListener(aVoid -> {
-                    // After deleting from games collection, delete from gameData collection
-                    db.collection(FirestoreCollections.GAME_DATA).document(gameId).delete()
-                            .addOnSuccessListener(aVoid1 -> {
-                                // Reload the list after deletion
-                                loadAllGames();
-                                // Reload approved games to update total GST
-                                loadApprovedGames();
-                                System.out.println("Successfully approved and deleted game: " + gameId);
-                                if (onAfterSuccess != null) {
-                                    onAfterSuccess.run();
-                                }
-                            })
-                            .addOnFailureListener(e -> {
-                                errorLiveData.setValue("Failed to delete approved game data: " + e.getMessage());
-                            });
+    private void runApprovalTransaction(
+            List<GameItem> games,
+            List<String> gameIds,
+            List<DocumentReference> cleanupReferences,
+            long startedAt,
+            Runnable onSuccess) {
+        db.runTransaction(transaction -> {
+                    List<DocumentSnapshot> gameDataSnapshots = new ArrayList<>();
+                    for (String gameId : gameIds) {
+                        gameDataSnapshots.add(transaction.get(
+                                db.collection(FirestoreCollections.GAME_DATA)
+                                        .document(gameId)));
+                    }
+
+                    List<ApprovedGameData> approvedGames = new ArrayList<>();
+                    for (int index = 0; index < games.size(); index++) {
+                        GameItem gameItem = games.get(index);
+                        DocumentSnapshot snapshot = gameDataSnapshots.get(index);
+                        if (!snapshot.exists()) {
+                            throw new IllegalStateException(
+                                    "Validation failed for game " + gameItem.getGameId()
+                                            + ": gameData_v2 document is missing.");
+                        }
+                        GameDataWrapper wrapper = snapshot.toObject(GameDataWrapper.class);
+                        GameData gameData = ApprovalBatchValidator.validateGameData(
+                                gameItem.getGameId(), wrapper);
+                        approvedGames.add(buildApprovedGame(gameItem, wrapper, gameData));
+                    }
+
+                    for (int index = 0; index < games.size(); index++) {
+                        String gameId = gameIds.get(index);
+                        transaction.set(
+                                db.collection(FirestoreCollections.APPROVED_GAMES)
+                                        .document(gameId),
+                                approvedGames.get(index));
+                        transaction.delete(
+                                db.collection(FirestoreCollections.GAMES).document(gameId));
+                        transaction.delete(
+                                db.collection(FirestoreCollections.GAME_DATA).document(gameId));
+                    }
+                    for (DocumentReference cleanupReference : cleanupReferences) {
+                        transaction.delete(cleanupReference);
+                    }
+                    return games.size();
                 })
-                .addOnFailureListener(e -> {
-                    errorLiveData.setValue("Failed to delete approved game: " + e.getMessage());
+                .addOnSuccessListener(approvedCount -> {
+                    long elapsed = android.os.SystemClock.elapsedRealtime() - startedAt;
+                    android.util.Log.d("GameRepository",
+                            "Atomic approval committed: games=" + approvedCount
+                                    + " reads=" + approvedCount
+                                    + " writes=" + (approvedCount * 3
+                                    + cleanupReferences.size())
+                                    + " elapsedMs=" + elapsed);
+                    loadAllGames();
+                    loadApprovedGames();
+                    viewApprovalRepository.cleanupAfterGamesRemoved(gameIds);
+                    if (onSuccess != null) {
+                        onSuccess.run();
+                    }
+                })
+                .addOnFailureListener(error -> {
+                    String detail = error.getMessage() != null
+                            ? error.getMessage()
+                            : error.getClass().getSimpleName();
+                    errorLiveData.setValue("Atomic approval failed; no games were changed. "
+                            + detail);
                 });
+    }
+
+    private ApprovedGameData buildApprovedGame(
+            GameItem gameItem,
+            GameDataWrapper wrapper,
+            GameData gameData) {
+        Map<String, Integer> playerScores = new HashMap<>();
+        if (gameData.getPlayers() != null) {
+            for (Player player : gameData.getPlayers()) {
+                playerScores.put(player.getName(), player.getTotalScore());
+            }
+        }
+        String gstAmount = gameItem.getGstAmount();
+        if (gstAmount == null || gstAmount.trim().isEmpty()) {
+            gstAmount = Double.toString(gameData.getGstAmount());
+        }
+        return new ApprovedGameData(
+                gameItem.getGameId(),
+                gameData.getNumPlayers(),
+                gameData.getPointValue(),
+                gameData.getGstPercent(),
+                playerScores,
+                com.google.firebase.Timestamp.now(),
+                wrapper.getVersion(),
+                gstAmount,
+                "Completed",
+                gameItem.getCreationDateTime());
     }
 
     private void updateGameStatusInOriginal(String gameId, String newStatus) {

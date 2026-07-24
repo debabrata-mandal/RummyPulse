@@ -215,8 +215,12 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 .setTitle("Approve Game")
                 .setMessage("Are you sure you want to approve this completed game? This will finalize the game and move it to the approved games list.")
                 .setPositiveButton("Approve", (dialog, which) -> {
-                    homeViewModel.approveGame(game);
-                    com.example.rummypulse.utils.ModernToast.success(getContext(), "✅ Game approved successfully!");
+                    homeViewModel.approveGame(game, () -> {
+                        if (isAdded() && getContext() != null) {
+                            com.example.rummypulse.utils.ModernToast.success(
+                                    getContext(), "✅ Game approved successfully!");
+                        }
+                    });
                 })
                 .setNegativeButton("Cancel", (dialog, which) -> {
                 })

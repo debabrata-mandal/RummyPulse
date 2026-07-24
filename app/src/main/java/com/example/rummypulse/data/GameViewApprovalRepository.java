@@ -56,6 +56,12 @@ public class GameViewApprovalRepository {
         void onError(String message);
     }
 
+    public interface DocumentReferencesCallback {
+        void onSuccess(@NonNull List<DocumentReference> references);
+
+        void onError(@NonNull String message);
+    }
+
     private final FirebaseFirestore db;
 
     public GameViewApprovalRepository() {
@@ -531,6 +537,112 @@ public class GameViewApprovalRepository {
                     }
                     batch.commit();
                 });
+    }
+
+    /**
+     * Resolves existing approval document references for a group of games. Firestore whereIn
+     * accepts at most 30 values, so larger selections are queried in bounded chunks.
+     */
+    public void loadDocumentReferencesForGames(
+            @NonNull List<String> gameIds,
+            @NonNull DocumentReferencesCallback callback) {
+        if (gameIds.isEmpty()) {
+            callback.onSuccess(new ArrayList<>());
+            return;
+        }
+        loadDocumentReferenceChunk(gameIds, 0, new ArrayList<>(), callback);
+    }
+
+    private void loadDocumentReferenceChunk(
+            List<String> gameIds,
+            int offset,
+            List<DocumentReference> collected,
+            DocumentReferencesCallback callback) {
+        if (offset >= gameIds.size()) {
+            callback.onSuccess(collected);
+            return;
+        }
+        int end = Math.min(offset + 30, gameIds.size());
+        List<String> chunk = new ArrayList<>(gameIds.subList(offset, end));
+        db.collection(FirestoreCollections.GAME_VIEW_APPROVALS)
+                .whereIn("gameId", chunk)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    for (DocumentSnapshot document : snapshot.getDocuments()) {
+                        collected.add(document.getReference());
+                    }
+                    loadDocumentReferenceChunk(gameIds, end, collected, callback);
+                })
+                .addOnFailureListener(error -> callback.onError(
+                        "Failed to prepare view-approval cleanup: " + error.getMessage()));
+    }
+
+    /**
+     * Best-effort cleanup for approval documents created during the pre-transaction query race.
+     * Existing references are deleted atomically by the approval transaction; this performs two
+     * bounded verification passes after the source games have been removed.
+     */
+    public void cleanupAfterGamesRemoved(@NonNull List<String> gameIds) {
+        cleanupAfterGamesRemoved(gameIds, 0);
+    }
+
+    private void cleanupAfterGamesRemoved(List<String> gameIds, int attempt) {
+        loadDocumentReferencesForGames(gameIds, new DocumentReferencesCallback() {
+            @Override
+            public void onSuccess(@NonNull List<DocumentReference> references) {
+                deleteReferenceChunks(references, 0, new SimpleCallback() {
+                    @Override
+                    public void onSuccess() {
+                        if (attempt < 1) {
+                            cleanupAfterGamesRemoved(gameIds, attempt + 1);
+                        }
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        retryOrLog(message);
+                    }
+
+                    private void retryOrLog(String message) {
+                        if (attempt < 1) {
+                            cleanupAfterGamesRemoved(gameIds, attempt + 1);
+                        } else {
+                            android.util.Log.w("GameViewApproval", message);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onError(@NonNull String message) {
+                if (attempt < 1) {
+                    cleanupAfterGamesRemoved(gameIds, attempt + 1);
+                } else {
+                    android.util.Log.w("GameViewApproval", message);
+                }
+            }
+        });
+    }
+
+    private void deleteReferenceChunks(
+            List<DocumentReference> references,
+            int offset,
+            SimpleCallback callback) {
+        if (offset >= references.size()) {
+            callback.onSuccess();
+            return;
+        }
+        int end = Math.min(offset + 450, references.size());
+        WriteBatch batch = db.batch();
+        for (int index = offset; index < end; index++) {
+            batch.delete(references.get(index));
+        }
+        batch.commit()
+                .addOnSuccessListener(unused ->
+                        deleteReferenceChunks(references, end, callback))
+                .addOnFailureListener(error ->
+                        callback.onError("View-approval cleanup retry failed: "
+                                + error.getMessage()));
     }
 
     private static void dispatchOutcome(@NonNull GameViewApprovalStatus status,

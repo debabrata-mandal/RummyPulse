@@ -147,6 +147,10 @@ public class HomeViewModel extends ViewModel {
         gameRepository.approveGame(gameItem);
     }
 
+    public void approveGame(GameItem gameItem, Runnable onSuccess) {
+        gameRepository.approveGame(gameItem, onSuccess);
+    }
+
     public void approveAllCompletedGames(List<GameItem> items, Runnable onAllComplete) {
         gameRepository.approveAllCompletedGames(items, onAllComplete);
     }
