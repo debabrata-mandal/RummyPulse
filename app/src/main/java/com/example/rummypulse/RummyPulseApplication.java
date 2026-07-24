@@ -24,6 +24,7 @@ public class RummyPulseApplication extends Application {
         
         // Initialize Firebase
         FirebaseApp.initializeApp(this);
+        AppUserRoleSession.getInstance().initialize(this);
         
         // Configure Firebase Auth for better persistence
         FirebaseAuth firebaseAuth = FirebaseAuth.getInstance();

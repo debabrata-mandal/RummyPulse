@@ -208,6 +208,7 @@ public class MainActivity extends AppCompatActivity {
         // Add auth listener when activity starts
         if (mAuth != null && mAuthListener != null) {
             mAuth.addAuthStateListener(mAuthListener);
+            AppUserRoleSession.getInstance().refreshForCurrentUser();
         }
     }
 
@@ -293,6 +294,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onSuccess(AppUser appUser) {
                 android.util.Log.d("MainActivity", "appUser document synced: " + appUser.getUserId());
+                if (!AppUserRoleSession.getInstance().hasCachedRoleForCurrentUser()) {
+                    AppUserRoleSession.getInstance().refreshForCurrentUser(true);
+                }
             }
 
             @Override
