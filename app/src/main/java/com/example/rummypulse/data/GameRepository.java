@@ -60,6 +60,11 @@ public class GameRepository {
     private com.google.firebase.firestore.ListenerRegistration myViewApprovalsListener;
     /** When JoinGame saves locally, remote refresh must not overwrite until Firestore catches up. */
     private final Map<String, Long> localDashboardUpdatedAtMs = new HashMap<>();
+    /** Latest server version accepted for each game, used to reject older snapshots. */
+    private final Map<String, com.google.firebase.Timestamp> latestDashboardVersions =
+            new HashMap<>();
+    /** Invalidates slow auth/photo callbacks when newer game data has already arrived. */
+    private final Map<String, Long> dashboardUpdateTokens = new HashMap<>();
     
     // Track seen games
     private Set<String> seenGameIds = new HashSet<>();
@@ -211,8 +216,12 @@ public class GameRepository {
      * Prevents stale in-flight {@link #fetchGameData} callbacks from repopulating the UI from old {@link #gameIdsOrder}.
      */
     private void resetGameListStateForEmptyQuery() {
+        for (String gameId : new ArrayList<>(gameIdsOrder)) {
+            invalidateDashboardUpdates(gameId);
+        }
         gameItemsMap.clear();
         gameIdsOrder.clear();
+        latestDashboardVersions.clear();
         gameItemsLiveData.setValue(new ArrayList<>());
     }
 
@@ -220,12 +229,16 @@ public class GameRepository {
      * Removes per-game listeners and clears state when the realtime games snapshot is empty (Dashboard).
      */
     private void clearGameDataListenersAndResetGameListState() {
+        for (String gameId : new ArrayList<>(gameIdsOrder)) {
+            invalidateDashboardUpdates(gameId);
+        }
         for (com.google.firebase.firestore.ListenerRegistration listener : gameDataListeners.values()) {
             listener.remove();
         }
         gameDataListeners.clear();
         gameItemsMap.clear();
         gameIdsOrder.clear();
+        latestDashboardVersions.clear();
         gameItemsLiveData.setValue(new ArrayList<>());
     }
 
@@ -253,6 +266,8 @@ public class GameRepository {
                 entry.getValue().remove();
                 iterator.remove();
                 gameItemsMap.remove(entry.getKey());
+                latestDashboardVersions.remove(entry.getKey());
+                invalidateDashboardUpdates(entry.getKey());
                 System.out.println("Removed listener and data for gameData: " + entry.getKey());
             }
         }
@@ -385,6 +400,11 @@ public class GameRepository {
      * Prefers server data so offline cache cannot revert round/player counts.
      */
     private void refreshDashboardRowFromGameData(String gameId) {
+        refreshDashboardRowFromGameData(gameId, false);
+    }
+
+    private void refreshDashboardRowFromGameData(
+            String gameId, boolean serverOnly) {
         if (gameId == null || gameId.isEmpty()) {
             return;
         }
@@ -392,11 +412,19 @@ public class GameRepository {
                 db.collection(FirestoreCollections.GAME_DATA).document(gameId);
         ref.get(Source.SERVER)
                 .addOnSuccessListener(snapshot -> applyGameDataRefreshSnapshot(gameId, snapshot))
-                .addOnFailureListener(e -> ref.get()
-                        .addOnSuccessListener(snapshot -> applyGameDataRefreshSnapshot(gameId, snapshot))
-                        .addOnFailureListener(e2 ->
-                                System.out.println("Dashboard row refresh failed for " + gameId + ": "
-                                        + e2.getMessage())));
+                .addOnFailureListener(e -> {
+                    if (serverOnly) {
+                        errorLiveData.setValue(
+                                "Could not refresh the latest game status. Check your connection.");
+                        return;
+                    }
+                    ref.get()
+                            .addOnSuccessListener(snapshot ->
+                                    applyGameDataRefreshSnapshot(gameId, snapshot))
+                            .addOnFailureListener(e2 ->
+                                    System.out.println("Dashboard row refresh failed for "
+                                            + gameId + ": " + e2.getMessage()));
+                });
     }
 
     private void applyGameDataRefreshSnapshot(String gameId, DocumentSnapshot snapshot) {
@@ -410,20 +438,25 @@ public class GameRepository {
         if (wrapper == null || wrapper.getData() == null) {
             return;
         }
-        if (!shouldApplyRemoteDashboardGameData(gameId, wrapper.getData(), snapshot)) {
+        long updateToken = beginDashboardRemoteUpdate(
+                gameId, wrapper.getData(), wrapper.getLastUpdated(), snapshot);
+        if (updateToken < 0) {
             System.out.println("Skipping stale dashboard server refresh for " + gameId);
             return;
         }
-        upgradeDashboardItemFromGameData(gameId, wrapper.getData(), wrapper.getLastUpdated());
+        upgradeDashboardItemFromGameData(
+                gameId, wrapper.getData(), wrapper.getLastUpdated(), updateToken);
     }
 
     private void upgradeDashboardItemFromGameData(String gameId, GameData gameData,
-                                                  com.google.firebase.Timestamp fallbackCreatedAt) {
+                                                  com.google.firebase.Timestamp fallbackCreatedAt,
+                                                  long updateToken) {
         db.collection(FirestoreCollections.GAMES)
                 .document(gameId)
                 .get()
                 .addOnSuccessListener(authSnapshot -> {
-                    if (!gameIdsOrder.contains(gameId)) {
+                    if (!gameIdsOrder.contains(gameId)
+                            || !isDashboardUpdateCurrent(gameId, updateToken)) {
                         return;
                     }
                     GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
@@ -435,6 +468,9 @@ public class GameRepository {
                             ? gameAuth.getCreatedAt() : fallbackCreatedAt;
 
                     Runnable publish = () -> {
+                        if (!isDashboardUpdateCurrent(gameId, updateToken)) {
+                            return;
+                        }
                         GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt,
                                 creatorName, null, creatorUserId, gameDisplayName);
                         if (gameItem != null) {
@@ -449,6 +485,9 @@ public class GameRepository {
                                 .document(creatorUserId)
                                 .get()
                                 .addOnSuccessListener(userSnapshot -> {
+                                    if (!isDashboardUpdateCurrent(gameId, updateToken)) {
+                                        return;
+                                    }
                                     String creatorPhotoUrl = userSnapshot.exists()
                                             ? userSnapshot.getString("photoUrl") : null;
                                     GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt,
@@ -561,26 +600,63 @@ public class GameRepository {
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
             return;
         }
-        long now = android.os.SystemClock.elapsedRealtime();
         for (String gameId : new ArrayList<>(gameIdsOrder)) {
-            Long localAt = localDashboardUpdatedAtMs.get(gameId);
-            if (localAt != null && now - localAt < 30_000) {
-                continue;
-            }
-            if (gameDataListeners.containsKey(gameId)) {
-                refreshDashboardRowFromGameData(gameId);
-            }
+            refreshDashboardRowFromGameData(gameId, true);
         }
     }
 
     private void markLocalDashboardUpdated(@NonNull String gameId) {
         localDashboardUpdatedAtMs.put(gameId, android.os.SystemClock.elapsedRealtime());
+        invalidateDashboardUpdates(gameId);
+    }
+
+    private void invalidateDashboardUpdates(@NonNull String gameId) {
+        dashboardUpdateTokens.put(
+                gameId, dashboardUpdateTokens.getOrDefault(gameId, 0L) + 1L);
     }
 
     private boolean wasRecentlyUpdatedLocally(@NonNull String gameId) {
         Long localAt = localDashboardUpdatedAtMs.get(gameId);
         return localAt != null
                 && android.os.SystemClock.elapsedRealtime() - localAt < 60_000;
+    }
+
+    private long beginDashboardRemoteUpdate(
+            @NonNull String gameId,
+            @NonNull GameData remote,
+            @Nullable com.google.firebase.Timestamp remoteVersion,
+            @Nullable DocumentSnapshot snapshot) {
+        if (!shouldApplyRemoteDashboardGameData(gameId, remote, snapshot)) {
+            return -1L;
+        }
+        com.google.firebase.Timestamp latestVersion =
+                latestDashboardVersions.get(gameId);
+        if (remoteVersion != null && latestVersion != null
+                && compareTimestamps(remoteVersion, latestVersion) < 0) {
+            return -1L;
+        }
+        if (remoteVersion != null && (latestVersion == null
+                || compareTimestamps(remoteVersion, latestVersion) > 0)) {
+            latestDashboardVersions.put(gameId, remoteVersion);
+        }
+        long token = dashboardUpdateTokens.getOrDefault(gameId, 0L) + 1L;
+        dashboardUpdateTokens.put(gameId, token);
+        return token;
+    }
+
+    private boolean isDashboardUpdateCurrent(
+            @NonNull String gameId, long updateToken) {
+        return gameIdsOrder.contains(gameId)
+                && dashboardUpdateTokens.getOrDefault(gameId, 0L) == updateToken;
+    }
+
+    private static int compareTimestamps(
+            @NonNull com.google.firebase.Timestamp left,
+            @NonNull com.google.firebase.Timestamp right) {
+        int seconds = Long.compare(left.getSeconds(), right.getSeconds());
+        return seconds != 0
+                ? seconds
+                : Integer.compare(left.getNanoseconds(), right.getNanoseconds());
     }
 
     /**
@@ -604,6 +680,13 @@ public class GameRepository {
             return false;
         }
 
+        String localStatus = local.getGameStatus();
+        String remoteStatus = remote.getGameStatus();
+        if (DashboardFreshnessPolicy.isProgressRegression(
+                localStatus, remoteStatus)) {
+            return false;
+        }
+
         Long localAt = localDashboardUpdatedAtMs.get(gameId);
         if (localAt == null) {
             return true;
@@ -614,31 +697,19 @@ public class GameRepository {
             return true;
         }
 
-        int localRound = parseRoundNumber(local.getGameStatus());
-        int remoteRound = parseRoundNumber(remote.getGameStatus());
-        if (localRound > 0 && remoteRound > 0 && remoteRound < localRound) {
-            return false;
-        }
+        int localProgress =
+                DashboardFreshnessPolicy.progressRank(localStatus);
+        int remoteProgress =
+                DashboardFreshnessPolicy.progressRank(remoteStatus);
 
         if (snapshot != null && snapshot.getMetadata().isFromCache() && ageMs < 15_000) {
-            if (remotePlayers <= localPlayers && localRound > 0
-                    && (remoteRound <= 0 || remoteRound <= localRound)) {
+            if (remotePlayers <= localPlayers && localProgress >= 0
+                    && remoteProgress >= 0 && remoteProgress <= localProgress) {
                 return false;
             }
         }
 
         return true;
-    }
-
-    private static int parseRoundNumber(@Nullable String status) {
-        if (status != null && status.startsWith("R")) {
-            try {
-                return Integer.parseInt(status.substring(1));
-            } catch (NumberFormatException ignored) {
-                // fall through
-            }
-        }
-        return -1;
     }
 
     private void syncDashboardSummaryOnGameDoc(String gameId, GameData gameData) {
@@ -814,7 +885,10 @@ public class GameRepository {
                             GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
                             if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
                                 GameData gameData = gameDataWrapper.getData();
-                                if (!shouldApplyRemoteDashboardGameData(gameId, gameData, documentSnapshot)) {
+                                long updateToken = beginDashboardRemoteUpdate(
+                                        gameId, gameData, gameDataWrapper.getLastUpdated(),
+                                        documentSnapshot);
+                                if (updateToken < 0) {
                                     System.out.println("Skipping stale dashboard listener snapshot for " + gameId);
                                     return;
                                 }
@@ -823,6 +897,9 @@ public class GameRepository {
                                         .document(gameId)
                                         .get()
                                         .addOnSuccessListener(authSnapshot -> {
+                                            if (!isDashboardUpdateCurrent(gameId, updateToken)) {
+                                                return;
+                                            }
                                             GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
                                             String pin = gameAuth != null ? gameAuth.getPin() : "0000";
                                             String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
@@ -838,13 +915,16 @@ public class GameRepository {
                                                         .document(creatorUserId)
                                                         .get()
                                                         .addOnSuccessListener(userSnapshot -> {
+                                                            if (!isDashboardUpdateCurrent(gameId, updateToken)) {
+                                                                return;
+                                                            }
                                                             String creatorPhotoUrl = null;
                                                             if (userSnapshot.exists()) {
                                                                 creatorPhotoUrl = userSnapshot.getString("photoUrl");
                                                             }
                                                             GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
                                                             
-                                                            if (gameItem != null && shouldApplyRemoteDashboardGameData(gameId, gameData, documentSnapshot)) {
+                                                            if (gameItem != null && isDashboardUpdateCurrent(gameId, updateToken)) {
                                                                 applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                                                                 gameItemsMap.put(gameId, gameItem);
                                                                 checkAndNotifyNewGame(gameItem);
@@ -854,7 +934,7 @@ public class GameRepository {
                                                         .addOnFailureListener(e -> {
                                                             // If fetching photo fails, create game item without photo
                                                             GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId, gameDisplayName);
-                                                            if (gameItem != null && shouldApplyRemoteDashboardGameData(gameId, gameData, documentSnapshot)) {
+                                                            if (gameItem != null && isDashboardUpdateCurrent(gameId, updateToken)) {
                                                                 applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                                                                 gameItemsMap.put(gameId, gameItem);
                                                                 checkAndNotifyNewGame(gameItem);
@@ -864,7 +944,7 @@ public class GameRepository {
                                             } else {
                                                 // No creator user ID, create game item without photo
                                                 GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null, gameDisplayName);
-                                                if (gameItem != null && shouldApplyRemoteDashboardGameData(gameId, gameData, documentSnapshot)) {
+                                                if (gameItem != null && isDashboardUpdateCurrent(gameId, updateToken)) {
                                                     applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                                                     gameItemsMap.put(gameId, gameItem);
                                                     checkAndNotifyNewGame(gameItem);

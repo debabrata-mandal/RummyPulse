@@ -113,6 +113,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             updateLiveStatusChip();
             com.example.rummypulse.utils.ModernToast.progress(getContext(), "🔄 Refreshing active games...");
             dashboardViewModel.loadGames();
+            dashboardViewModel.refreshCreatorDashboardRows();
         });
         
         // Set swipe refresh colors
