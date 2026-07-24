@@ -20,7 +20,9 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.transition.AutoTransition;
 import androidx.transition.TransitionManager;
@@ -54,6 +56,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     private boolean hasRealtimeData = false;
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
+    private Runnable openCreateDialogNetworkUpdater;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -242,9 +245,29 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         networkCallback = new ConnectivityManager.NetworkCallback() {
             @Override
             public void onAvailable(@NonNull Network network) {
-                isNetworkAvailable = true;
+                isNetworkAvailable = checkNetworkAvailable();
                 if (isAdded()) {
-                    requireActivity().runOnUiThread(() -> updateLiveStatusChip());
+                    requireActivity().runOnUiThread(() -> {
+                        updateLiveStatusChip();
+                        if (openCreateDialogNetworkUpdater != null) {
+                            openCreateDialogNetworkUpdater.run();
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onCapabilitiesChanged(
+                    @NonNull Network network,
+                    @NonNull NetworkCapabilities networkCapabilities) {
+                isNetworkAvailable = checkNetworkAvailable();
+                if (isAdded()) {
+                    requireActivity().runOnUiThread(() -> {
+                        updateLiveStatusChip();
+                        if (openCreateDialogNetworkUpdater != null) {
+                            openCreateDialogNetworkUpdater.run();
+                        }
+                    });
                 }
             }
 
@@ -252,7 +275,12 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             public void onLost(@NonNull Network network) {
                 isNetworkAvailable = checkNetworkAvailable();
                 if (isAdded()) {
-                    requireActivity().runOnUiThread(() -> updateLiveStatusChip());
+                    requireActivity().runOnUiThread(() -> {
+                        updateLiveStatusChip();
+                        if (openCreateDialogNetworkUpdater != null) {
+                            openCreateDialogNetworkUpdater.run();
+                        }
+                    });
                 }
             }
         };
@@ -267,11 +295,9 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             return false;
         }
         NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(network);
-        return capabilities != null && (
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-                        || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
-                        || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-        );
+        return capabilities != null
+                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
     }
 
     private void updateLiveStatusChip() {
@@ -339,6 +365,9 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         ImageButton btnPointDecrement = dialogView.findViewById(R.id.btn_point_value_decrement);
         ImageButton btnPointIncrement = dialogView.findViewById(R.id.btn_point_value_increment);
         TextView textContributionPercentDisplay = dialogView.findViewById(R.id.text_contribution_percent_display);
+        View layoutCreationStatus = dialogView.findViewById(R.id.layout_creation_status);
+        View progressCreation = dialogView.findViewById(R.id.progress_creation);
+        TextView textCreationStatus = dialogView.findViewById(R.id.text_creation_status);
         Button btnCancel = dialogView.findViewById(R.id.btn_cancel);
         Button btnCreate = dialogView.findViewById(R.id.btn_create);
 
@@ -349,14 +378,108 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 .setCancelable(true)
                 .create();
 
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        final boolean[] nameGenerationInProgress = {false};
+        final boolean[] retryMode = {false};
+        final boolean[] successShown = {false};
+
+        dashboardViewModel.resetGameCreationState();
+
+        Runnable renderCreationAvailability = () -> {
+            DashboardViewModel.GameCreationState state =
+                    dashboardViewModel.getGameCreationState().getValue();
+            DashboardViewModel.GameCreationStatus status = state != null
+                    ? state.status
+                    : DashboardViewModel.GameCreationStatus.IDLE;
+            boolean active = status == DashboardViewModel.GameCreationStatus.CREATING
+                    || status == DashboardViewModel.GameCreationStatus.RETRY_QUEUED;
+            boolean slow = status == DashboardViewModel.GameCreationStatus.SLOW;
+            boolean error = status == DashboardViewModel.GameCreationStatus.ERROR;
+            retryMode[0] = slow || error;
+
+            if (status == DashboardViewModel.GameCreationStatus.SUCCESS) {
+                if (!successShown[0] && isAdded() && getContext() != null) {
+                    successShown[0] = true;
+                    com.example.rummypulse.utils.ModernToast.success(
+                            getContext(), "Game created successfully.");
+                    dialog.dismiss();
+                }
+                return;
+            }
+
+            if (active || slow || error) {
+                layoutCreationStatus.setVisibility(View.VISIBLE);
+                textCreationStatus.setTextColor(
+                        ContextCompat.getColor(requireContext(), R.color.text_secondary));
+                textCreationStatus.setText(state != null && state.message != null
+                        ? state.message
+                        : "Creating game…");
+                progressCreation.setVisibility(active ? View.VISIBLE : View.GONE);
+            } else if (!isNetworkAvailable) {
+                layoutCreationStatus.setVisibility(View.VISIBLE);
+                progressCreation.setVisibility(View.GONE);
+                textCreationStatus.setTextColor(
+                        ContextCompat.getColor(requireContext(), R.color.error_red));
+                textCreationStatus.setText(R.string.dialog_create_game_offline);
+            } else {
+                layoutCreationStatus.setVisibility(View.GONE);
+                textCreationStatus.setTextColor(
+                        ContextCompat.getColor(requireContext(), R.color.text_secondary));
+            }
+
+            btnCreate.setText(retryMode[0]
+                    ? R.string.dialog_create_game_retry
+                    : active
+                    ? R.string.dialog_create_game_creating
+                    : R.string.dialog_create_game_confirm);
+            btnCreate.setEnabled(!active
+                    && !nameGenerationInProgress[0]
+                    && isNetworkAvailable);
+            btnGenerateGameName.setEnabled(!active
+                    && !nameGenerationInProgress[0]
+                    && isNetworkAvailable
+                    && GroqGameNameService.isConfigured());
+            btnCancel.setEnabled(!dashboardViewModel.isGameCreationInProgress());
+            dialog.setCancelable(!dashboardViewModel.isGameCreationInProgress());
+            dialog.setCanceledOnTouchOutside(!dashboardViewModel.isGameCreationInProgress());
+        };
+
+        openCreateDialogNetworkUpdater = () -> {
+            isNetworkAvailable = checkNetworkAvailable();
+            renderCreationAvailability.run();
+        };
+
+        Observer<DashboardViewModel.GameCreationState> creationObserver =
+                state -> renderCreationAvailability.run();
+        dashboardViewModel.getGameCreationState().observe(
+                getViewLifecycleOwner(), creationObserver);
+
+        dialog.setOnDismissListener(ignored -> {
+            dashboardViewModel.getGameCreationState().removeObserver(creationObserver);
+            openCreateDialogNetworkUpdater = null;
+            dashboardViewModel.resetGameCreationState();
+        });
+
+        btnCancel.setOnClickListener(v -> {
+            if (!dashboardViewModel.isGameCreationInProgress()) {
+                dialog.dismiss();
+            }
+        });
 
         btnGenerateGameName.setOnClickListener(v -> {
+            isNetworkAvailable = checkNetworkAvailable();
+            if (!isNetworkAvailable) {
+                layoutCreationStatus.setVisibility(View.VISIBLE);
+                progressCreation.setVisibility(View.GONE);
+                textCreationStatus.setText(R.string.dialog_create_game_offline);
+                renderCreationAvailability.run();
+                return;
+            }
             if (!GroqGameNameService.isConfigured()) {
                 com.example.rummypulse.utils.ModernToast.error(getContext(),
                         getString(R.string.dialog_game_name_groq_missing));
                 return;
             }
+            nameGenerationInProgress[0] = true;
             btnGenerateGameName.setEnabled(false);
             layoutGameDisplayName.setHint(getString(R.string.dialog_game_name_generating));
             GroqGameNameService.suggestNameWithRetries(name -> {
@@ -364,6 +487,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                     return;
                 }
                 layoutGameDisplayName.setHint(defaultGameNameHint);
+                nameGenerationInProgress[0] = false;
                 btnGenerateGameName.setEnabled(true);
                 if (name != null && !name.isEmpty()) {
                     editGameDisplayName.setText(name);
@@ -371,10 +495,12 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                     com.example.rummypulse.utils.ModernToast.error(getContext(),
                             getString(R.string.dialog_game_name_generate_failed));
                 }
+                renderCreationAvailability.run();
             });
         });
 
-        if (GroqGameNameService.isConfigured()) {
+        if (GroqGameNameService.isConfigured() && isNetworkAvailable) {
+            nameGenerationInProgress[0] = true;
             btnCreate.setEnabled(false);
             btnGenerateGameName.setEnabled(false);
             layoutGameDisplayName.setHint(getString(R.string.dialog_game_name_generating));
@@ -383,11 +509,13 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                     return;
                 }
                 layoutGameDisplayName.setHint(defaultGameNameHint);
+                nameGenerationInProgress[0] = false;
                 if (name != null && !name.isEmpty()) {
                     editGameDisplayName.setText(name);
                 }
                 btnCreate.setEnabled(true);
                 btnGenerateGameName.setEnabled(true);
+                renderCreationAvailability.run();
             });
         } else {
             editGameDisplayName.setText("");
@@ -454,6 +582,18 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         refreshContributionFieldUi.run();
 
         btnCreate.setOnClickListener(v -> {
+            isNetworkAvailable = checkNetworkAvailable();
+            if (!isNetworkAvailable) {
+                layoutCreationStatus.setVisibility(View.VISIBLE);
+                progressCreation.setVisibility(View.GONE);
+                textCreationStatus.setText(R.string.dialog_create_game_offline);
+                renderCreationAvailability.run();
+                return;
+            }
+            if (retryMode[0]) {
+                dashboardViewModel.retryGameCreation();
+                return;
+            }
             if (!tryCommitPointField(layoutPointValue, editPointValue, pointValueState)) {
                 return;
             }
@@ -466,14 +606,12 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                     ? editGameDisplayName.getText().toString().trim()
                     : "";
             dashboardViewModel.createNewGame(pointValue, gstPercentage, displayName);
-            dialog.dismiss();
-            com.example.rummypulse.utils.ModernToast.success(getContext(),
-                    "🎮 Creating new game with you as Player 1...");
         });
 
         final double[] baselinePoint = {pointValueState[0]};
 
         dialog.show();
+        renderCreationAvailability.run();
 
         Window window = dialog.getWindow();
         if (window != null) {
@@ -518,6 +656,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 // No-op: callback may not be registered.
             }
         }
+        openCreateDialogNetworkUpdater = null;
         binding = null;
     }
 

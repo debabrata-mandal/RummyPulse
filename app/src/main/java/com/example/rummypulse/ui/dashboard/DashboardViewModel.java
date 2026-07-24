@@ -1,5 +1,8 @@
 package com.example.rummypulse.ui.dashboard;
 
+import android.os.Handler;
+import android.os.Looper;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -8,29 +11,56 @@ import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.utils.DisplayNameUtils;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.GameViewApprovalRepository;
+import com.example.rummypulse.data.GameCreationPolicy;
 import com.example.rummypulse.ui.home.GameItem;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.example.rummypulse.utils.PinUtils;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 
 public class DashboardViewModel extends ViewModel {
 
     private final GameRepository gameRepository;
-    private final GameViewApprovalRepository viewApprovalRepository;
     private final MutableLiveData<List<GameItem>> mInProgressGames;
     private final MutableLiveData<List<GameItem>> mCompletedGames;
     private final MutableLiveData<String> mActiveGamesCount;
     private final MutableLiveData<String> mCompletedGamesCount;
     private final MutableLiveData<String> newGameCreated;
     private final MutableLiveData<GameCreationData> gameCreationEvent;
+    private final MutableLiveData<GameCreationState> gameCreationState;
     private final java.util.Set<String> seenGameIds = new java.util.HashSet<>();
+    private final Handler creationHandler = new Handler(Looper.getMainLooper());
+    private CreationRequest activeCreationRequest;
+    private Runnable creationSlowNotice;
+    private boolean creationInProgress;
+    private boolean retryQueued;
+
+    public enum GameCreationStatus {
+        IDLE,
+        CREATING,
+        SLOW,
+        RETRY_QUEUED,
+        SUCCESS,
+        ERROR
+    }
+
+    public static final class GameCreationState {
+        public final GameCreationStatus status;
+        public final String message;
+
+        private GameCreationState(GameCreationStatus status, String message) {
+            this.status = status;
+            this.message = message;
+        }
+    }
     
     // Helper class to hold game creation data
     public static class GameCreationData {
@@ -45,15 +75,46 @@ public class DashboardViewModel extends ViewModel {
         }
     }
 
+    private static final class CreationRequest {
+        final String requestId;
+        final String gameId;
+        final String pin;
+        final String creatorUserId;
+        final String creatorName;
+        final double pointValue;
+        final double gstPercentage;
+        final String displayName;
+
+        CreationRequest(
+                String requestId,
+                String gameId,
+                String pin,
+                String creatorUserId,
+                String creatorName,
+                double pointValue,
+                double gstPercentage,
+                String displayName) {
+            this.requestId = requestId;
+            this.gameId = gameId;
+            this.pin = pin;
+            this.creatorUserId = creatorUserId;
+            this.creatorName = creatorName;
+            this.pointValue = pointValue;
+            this.gstPercentage = gstPercentage;
+            this.displayName = displayName;
+        }
+    }
+
     public DashboardViewModel() {
         gameRepository = GameRepository.getDashboardInstance();
-        viewApprovalRepository = new GameViewApprovalRepository();
         mInProgressGames = new MutableLiveData<>();
         mCompletedGames = new MutableLiveData<>();
         mActiveGamesCount = new MutableLiveData<>();
         mCompletedGamesCount = new MutableLiveData<>();
         newGameCreated = new MutableLiveData<>();
         gameCreationEvent = new MutableLiveData<>();
+        gameCreationState = new MutableLiveData<>(
+                new GameCreationState(GameCreationStatus.IDLE, null));
         
         // Observe all games and filter for in-progress and completed ones
         gameRepository.getGameItems().observeForever(allGames -> {
@@ -177,6 +238,22 @@ public class DashboardViewModel extends ViewModel {
     public LiveData<GameCreationData> getGameCreationEvent() {
         return gameCreationEvent;
     }
+
+    public LiveData<GameCreationState> getGameCreationState() {
+        return gameCreationState;
+    }
+
+    public boolean isGameCreationInProgress() {
+        return creationInProgress;
+    }
+
+    public void resetGameCreationState() {
+        if (!creationInProgress) {
+            activeCreationRequest = null;
+            retryQueued = false;
+            gameCreationState.setValue(new GameCreationState(GameCreationStatus.IDLE, null));
+        }
+    }
     
     public void clearGameCreationEvent() {
         gameCreationEvent.setValue(null);
@@ -208,31 +285,64 @@ public class DashboardViewModel extends ViewModel {
     }
 
     public void createNewGame(double pointValue, double gstPercentage, String optionalDisplayName) {
-        // Generate Game ID (9 characters, uppercase)
-        String gameId = generateGameId();
-        
-        // Generate 4-digit PIN (avoid "0000")
-        String pin = PinUtils.generatePin();
-        
-        // Get current user info
+        if (creationInProgress) {
+            return;
+        }
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String creatorUserId = currentUser != null ? currentUser.getUid() : "anonymous";
-        String creatorName = currentUser != null ? 
-            (currentUser.getDisplayName() != null ? currentUser.getDisplayName() : currentUser.getEmail()) 
-            : "Anonymous User";
+        if (currentUser == null) {
+            gameCreationState.setValue(new GameCreationState(
+                    GameCreationStatus.ERROR,
+                    "Your session is unavailable. Sign in again and retry."));
+            return;
+        }
+        String creatorName = currentUser.getDisplayName() != null
+                ? currentUser.getDisplayName()
+                : currentUser.getEmail();
+        activeCreationRequest = new CreationRequest(
+                UUID.randomUUID().toString(),
+                generateGameId(),
+                PinUtils.generatePin(),
+                currentUser.getUid(),
+                creatorName != null ? creatorName : "User",
+                pointValue,
+                gstPercentage,
+                optionalDisplayName != null ? optionalDisplayName.trim() : "");
+        retryQueued = false;
+        runCreationTransaction(activeCreationRequest);
+    }
 
-        // Create initial game data (similar to HTML implementation)
+    public void retryGameCreation() {
+        if (activeCreationRequest == null) {
+            gameCreationState.setValue(new GameCreationState(
+                    GameCreationStatus.ERROR,
+                    "Nothing to retry. Enter the game details again."));
+            return;
+        }
+        if (creationInProgress) {
+            retryQueued = true;
+            gameCreationState.setValue(new GameCreationState(
+                    GameCreationStatus.RETRY_QUEUED,
+                    "Retry ready. Waiting for the current attempt to finish safely…"));
+            return;
+        }
+        retryQueued = false;
+        runCreationTransaction(activeCreationRequest);
+    }
+
+    private void runCreationTransaction(CreationRequest request) {
+        creationInProgress = true;
+        gameCreationState.setValue(new GameCreationState(
+                GameCreationStatus.CREATING,
+                "Creating game securely…"));
+        scheduleCreationSlowNotice(request);
+
         Map<String, Object> initialGameData = new HashMap<>();
         initialGameData.put("numPlayers", 2);
-        initialGameData.put("pointValue", pointValue);
-        initialGameData.put("gstPercent", gstPercentage);
-        
-        // Create initial players array with creator as first player
+        initialGameData.put("pointValue", request.pointValue);
+        initialGameData.put("gstPercent", request.gstPercentage);
         List<Map<String, Object>> players = new ArrayList<>();
-        
-        // First player is the creator (first name only in standings)
         Map<String, Object> creatorPlayer = new HashMap<>();
-        String creatorPlayerName = DisplayNameUtils.firstName(creatorName);
+        String creatorPlayerName = DisplayNameUtils.firstName(request.creatorName);
         if (creatorPlayerName.isEmpty()) {
             creatorPlayerName = "You";
         }
@@ -240,10 +350,8 @@ public class DashboardViewModel extends ViewModel {
         creatorPlayer.put("scores", new ArrayList<>(java.util.Collections.nCopies(10, -1)));
         creatorPlayer.put("randomNumber", null);
         creatorPlayer.put("isCreator", true); // Mark as creator
-        creatorPlayer.put("userId", creatorUserId); // Store user ID for identification
+        creatorPlayer.put("userId", request.creatorUserId);
         players.add(creatorPlayer);
-        
-        // Second player is a placeholder
         Map<String, Object> player2 = new HashMap<>();
         player2.put("name", "Player 2");
         player2.put("scores", new ArrayList<>(java.util.Collections.nCopies(10, -1)));
@@ -251,68 +359,139 @@ public class DashboardViewModel extends ViewModel {
         player2.put("isCreator", false);
         player2.put("userId", null);
         players.add(player2);
-        
         initialGameData.put("players", players);
-
-        // Human-readable title lives only on games/{gameId}; always set (empty string if no Groq name).
-        String displayLabel = optionalDisplayName != null ? optionalDisplayName.trim() : "";
-
-        // Save to Firebase Firestore
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        
-        // Save authentication data to 'games' collection (with creator info)
-        Map<String, Object> authData = new HashMap<>();
-        authData.put("gameId", gameId);
-        authData.put("pin", pin);
-        authData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-        authData.put("creatorUserId", creatorUserId);
-        authData.put("creatorName", creatorName);
-        authData.put("version", "1.0");
-        authData.put("displayName", displayLabel);
-        authData.put("pinGeneration", 1L);
-        authData.put("activeEditorUserId", creatorUserId);
-        authData.put("activeEditorName", creatorName);
-        authData.put("dashboardPointValue", pointValue);
-        authData.put("dashboardNumPlayers", 2);
-        authData.put("dashboardGstPercent", gstPercentage);
-        authData.put("dashboardGameStatus", "R1");
-        
-        // Add creation timestamp to game data as well for easy access
         initialGameData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
-        
-        db.collection(FirestoreCollections.GAMES).document(gameId)
-            .set(authData)
-            .addOnSuccessListener(aVoid -> {
-                // Save game data to 'gameData' collection
-                Map<String, Object> gameDataDoc = new HashMap<>();
-                gameDataDoc.put("data", initialGameData);
-                gameDataDoc.put("lastUpdated", com.google.firebase.firestore.FieldValue.serverTimestamp());
-                gameDataDoc.put("version", "1.0");
-                gameDataDoc.put("editGeneration", 1L);
-                
-                db.collection(FirestoreCollections.GAME_DATA).document(gameId)
-                    .set(gameDataDoc)
-                    .addOnSuccessListener(aVoid2 -> {
-                        viewApprovalRepository.seedCreatorApproval(gameId, creatorUserId, creatorName);
 
-                        // Realtime games listener already active — avoid reset/race from loadGames()
-                        
-                        // Trigger navigation to the new game with edit access
-                        newGameCreated.setValue(gameId);
-                        
-                        // Trigger game creation event with game ID, creator name, and point value (NOT PIN for security)
-                        gameCreationEvent.setValue(new GameCreationData(gameId, creatorName, pointValue));
-                        
-                        android.util.Log.d("GameCreation", "Game created successfully with creator: " + creatorName);
-                    })
-                    .addOnFailureListener(e -> {
-                        // Handle error
-                        android.util.Log.e("GameCreation", "Failed to create game", e);
-                    });
-            })
-            .addOnFailureListener(e -> {
-                // Handle error
-            });
+        Map<String, Object> authData = new HashMap<>();
+        authData.put("gameId", request.gameId);
+        authData.put("pin", request.pin);
+        authData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        authData.put("creatorUserId", request.creatorUserId);
+        authData.put("creatorName", request.creatorName);
+        authData.put("version", "1.0");
+        authData.put("displayName", request.displayName);
+        authData.put("pinGeneration", 1L);
+        authData.put("activeEditorUserId", request.creatorUserId);
+        authData.put("activeEditorName", request.creatorName);
+        authData.put("dashboardPointValue", request.pointValue);
+        authData.put("dashboardNumPlayers", 2);
+        authData.put("dashboardGstPercent", request.gstPercentage);
+        authData.put("dashboardGameStatus", "R1");
+
+        Map<String, Object> gameDataDoc = new HashMap<>();
+        gameDataDoc.put("data", initialGameData);
+        gameDataDoc.put("lastUpdated", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        gameDataDoc.put("version", "1.0");
+        gameDataDoc.put("editGeneration", 1L);
+
+        Map<String, Object> creatorApproval = new HashMap<>();
+        creatorApproval.put("gameId", request.gameId);
+        creatorApproval.put("userId", request.creatorUserId);
+        creatorApproval.put("userDisplayName", request.creatorName);
+        creatorApproval.put("status", "approved");
+        creatorApproval.put("requestedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        creatorApproval.put("lastUpdatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        com.google.firebase.firestore.DocumentReference authRef =
+                db.collection(FirestoreCollections.GAMES).document(request.gameId);
+        com.google.firebase.firestore.DocumentReference dataRef =
+                db.collection(FirestoreCollections.GAME_DATA).document(request.gameId);
+        com.google.firebase.firestore.DocumentReference approvalRef =
+                db.collection(FirestoreCollections.GAME_VIEW_APPROVALS)
+                        .document(GameViewApprovalRepository.documentId(
+                                request.gameId, request.creatorUserId));
+
+        db.runTransaction(transaction -> {
+                    com.google.firebase.firestore.DocumentSnapshot existing =
+                            transaction.get(authRef);
+                    if (existing.exists()) {
+                        String existingRequest = existing.getString("creationRequestId");
+                        if (request.requestId.equals(existingRequest)) {
+                            return request.gameId;
+                        }
+                        throw new IllegalStateException(
+                                "Generated game id already exists. Please retry.");
+                    }
+                    authData.put("creationRequestId", request.requestId);
+                    transaction.set(authRef, authData);
+                    transaction.set(dataRef, gameDataDoc);
+                    transaction.set(approvalRef, creatorApproval);
+                    return request.gameId;
+                })
+                .addOnSuccessListener(gameId -> handleCreationSuccess(request))
+                .addOnFailureListener(error -> handleCreationFailure(request, error));
+    }
+
+    private void scheduleCreationSlowNotice(CreationRequest request) {
+        cancelCreationSlowNotice();
+        creationSlowNotice = () -> {
+            if (creationInProgress && activeCreationRequest == request) {
+                gameCreationState.setValue(new GameCreationState(
+                        GameCreationStatus.SLOW,
+                        "The network is taking longer than expected. You can queue one safe retry."));
+            }
+        };
+        creationHandler.postDelayed(
+                creationSlowNotice,
+                GameCreationPolicy.SLOW_NETWORK_NOTICE_MS);
+    }
+
+    private void handleCreationSuccess(CreationRequest request) {
+        if (activeCreationRequest != request) {
+            return;
+        }
+        cancelCreationSlowNotice();
+        creationInProgress = false;
+        retryQueued = false;
+        gameCreationState.setValue(new GameCreationState(
+                GameCreationStatus.SUCCESS,
+                "Game created successfully."));
+        newGameCreated.setValue(request.gameId);
+        gameCreationEvent.setValue(new GameCreationData(
+                request.gameId, request.creatorName, request.pointValue));
+        android.util.Log.d("GameCreation", "Atomic game creation committed: "
+                + request.gameId);
+    }
+
+    private void handleCreationFailure(CreationRequest request, Exception error) {
+        if (activeCreationRequest != request) {
+            return;
+        }
+        cancelCreationSlowNotice();
+        creationInProgress = false;
+        android.util.Log.e("GameCreation", "Atomic game creation failed", error);
+        if (retryQueued) {
+            retryQueued = false;
+            runCreationTransaction(request);
+            return;
+        }
+        gameCreationState.setValue(new GameCreationState(
+                GameCreationStatus.ERROR,
+                creationErrorMessage(error)));
+    }
+
+    private static String creationErrorMessage(Exception error) {
+        if (error instanceof FirebaseFirestoreException) {
+            FirebaseFirestoreException.Code code =
+                    ((FirebaseFirestoreException) error).getCode();
+            if (code == FirebaseFirestoreException.Code.UNAVAILABLE
+                    || code == FirebaseFirestoreException.Code.DEADLINE_EXCEEDED) {
+                return "Could not reach the server. Check your internet connection and retry.";
+            }
+            if (code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                return "Permission denied while creating the game. Sign in again or contact support.";
+            }
+        }
+        String detail = error.getMessage();
+        return detail != null ? detail : "Game creation failed. Please retry.";
+    }
+
+    private void cancelCreationSlowNotice() {
+        if (creationSlowNotice != null) {
+            creationHandler.removeCallbacks(creationSlowNotice);
+            creationSlowNotice = null;
+        }
     }
 
     private String generateGameId() {
@@ -346,6 +525,7 @@ public class DashboardViewModel extends ViewModel {
     @Override
     protected void onCleared() {
         super.onCleared();
+        cancelCreationSlowNotice();
         // Clean up listeners when ViewModel is destroyed
         if (gameRepository != null) {
             gameRepository.removeListeners();

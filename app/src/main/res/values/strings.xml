@@ -87,6 +87,9 @@
     <string name="dialog_new_game_title">🎮 New Game</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="dialog_create_game_confirm">Create game</string>
+    <string name="dialog_create_game_creating">Creating…</string>
+    <string name="dialog_create_game_retry">Retry</string>
+    <string name="dialog_create_game_offline">You’re offline. Connect to the internet to create this game.</string>
     <string name="dialog_create_game_subtitle">Create a new game.</string>
     <string name="dialog_point_value_section_title">Point value</string>
     <string name="dialog_game_name_section_title">✨ Game name</string>
