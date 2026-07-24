@@ -169,7 +169,10 @@ public class GameRepository {
         System.out.println("GameRepository: Fetched " + querySnapshot.size() + " documents");
         List<String> gameIds = new ArrayList<>();
         for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-            gameIds.add(document.getId());
+            if (GameCreationPolicy.isReady(
+                    document.getString("initializationStatus"))) {
+                gameIds.add(document.getId());
+            }
         }
         if (gameIds.isEmpty()) {
             System.out.println("GameRepository: No games found in database");
@@ -233,7 +236,10 @@ public class GameRepository {
     private void loadGameDataForIdsWithListeners(QuerySnapshot gamesSnapshot) {
         List<String> gameIds = new ArrayList<>();
         for (DocumentSnapshot document : gamesSnapshot.getDocuments()) {
-            gameIds.add(document.getId());
+            if (GameCreationPolicy.isReady(
+                    document.getString("initializationStatus"))) {
+                gameIds.add(document.getId());
+            }
         }
 
         gameIdsOrder = new ArrayList<>(gameIds);
@@ -255,7 +261,11 @@ public class GameRepository {
             setupGameDataListener(gameId);
         }
         for (DocumentSnapshot document : gamesSnapshot.getDocuments()) {
-            applyViewApprovalCountsFromGameSnapshot(document, gameItemsMap.get(document.getId()));
+            if (GameCreationPolicy.isReady(
+                    document.getString("initializationStatus"))) {
+                applyViewApprovalCountsFromGameSnapshot(
+                        document, gameItemsMap.get(document.getId()));
+            }
         }
 
         updateGameItemsList();

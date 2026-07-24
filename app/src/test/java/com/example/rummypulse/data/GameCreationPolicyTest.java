@@ -27,4 +27,15 @@ public class GameCreationPolicyTest {
     public void slowNetworkNoticeIsBoundedToFifteenSeconds() {
         assertEquals(15_000L, GameCreationPolicy.SLOW_NETWORK_NOTICE_MS);
     }
+
+    @Test
+    public void pendingBootstrapGameIsHidden() {
+        assertFalse(GameCreationPolicy.isReady(GameCreationPolicy.INITIALIZATION_PENDING));
+    }
+
+    @Test
+    public void finalizedAndLegacyGamesAreVisible() {
+        assertTrue(GameCreationPolicy.isReady(GameCreationPolicy.INITIALIZATION_READY));
+        assertTrue(GameCreationPolicy.isReady(null));
+    }
 }

@@ -50,6 +50,12 @@ public class JoinGameViewModel extends AndroidViewModel {
         void onError(String message);
     }
 
+    public interface RoundSaveCallback {
+        void onSuccess();
+
+        void onError(String message);
+    }
+
     private final FirebaseFirestore db;
     private final GameViewApprovalRepository viewApprovalRepository;
     private final GameRepository gameRepository;
@@ -71,6 +77,7 @@ public class JoinGameViewModel extends AndroidViewModel {
 
     /** {@code pinGeneration} held when edit access was last claimed on this device. */
     private long activeEditGeneration;
+    private boolean roundSaveInProgress;
 
     public JoinGameViewModel(@NonNull Application application) {
         super(application);
@@ -613,6 +620,119 @@ public class JoinGameViewModel extends AndroidViewModel {
                 })
                 .addOnFailureListener(e ->
                         errorMessage.setValue("Failed to save game data: " + e.getMessage()));
+    }
+
+    /**
+     * Commits a completed round and its dashboard summary together. The transaction
+     * verifies that this user still owns the same edit generation before writing.
+     */
+    public void saveCompletedRoundAtomically(String gameId, GameData updatedGameData,
+            RoundSaveCallback callback) {
+        if (TextUtils.isEmpty(gameId) || updatedGameData == null) {
+            callback.onError("Invalid game data.");
+            return;
+        }
+        if (roundSaveInProgress) {
+            callback.onError("This round is already being saved.");
+            return;
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (!canSaveGameData() || user == null) {
+            callback.onError("Only the active editor can save round scores.");
+            return;
+        }
+
+        final long expectedGeneration = getActiveEditGeneration();
+        final String expectedEditorUserId = user.getUid();
+        final DocumentReference gameRef =
+                db.collection(FirestoreCollections.GAMES).document(gameId);
+        final DocumentReference gameDataRef =
+                db.collection(FirestoreCollections.GAME_DATA).document(gameId);
+        final Map<String, Object> gameDataDoc =
+                buildGameDataDocument(updatedGameData, expectedGeneration);
+        final Map<String, Object> dashboardSummary =
+                buildDashboardSummary(updatedGameData);
+
+        roundSaveInProgress = true;
+        db.runTransaction(transaction -> {
+            DocumentSnapshot authSnapshot = transaction.get(gameRef);
+            DocumentSnapshot dataSnapshot = transaction.get(gameDataRef);
+            if (!authSnapshot.exists() || !dataSnapshot.exists()) {
+                throw new IllegalStateException("Game data is no longer available.");
+            }
+
+            GameAuth remoteAuth = authSnapshot.toObject(GameAuth.class);
+            if (remoteAuth == null
+                    || !expectedEditorUserId.equals(remoteAuth.getActiveEditorUserId())
+                    || remoteAuth.getPinGenerationOrDefault() != expectedGeneration) {
+                throw new IllegalStateException(
+                        "Edit access changed. Reopen the game before saving.");
+            }
+            Long remoteDataGeneration = dataSnapshot.getLong("editGeneration");
+            long actualDataGeneration = remoteDataGeneration != null && remoteDataGeneration > 0
+                    ? remoteDataGeneration
+                    : 1L;
+            if (actualDataGeneration != expectedGeneration) {
+                throw new IllegalStateException(
+                        "Edit access changed. Reopen the game before saving.");
+            }
+
+            transaction.set(gameDataRef, gameDataDoc);
+            transaction.update(gameRef, dashboardSummary);
+            return null;
+        }).addOnSuccessListener(ignored -> {
+            roundSaveInProgress = false;
+            gameData.setValue(updatedGameData);
+            gameRepository.updateLocalDashboardFromGameData(gameId, updatedGameData);
+            callback.onSuccess();
+        }).addOnFailureListener(error -> {
+            roundSaveInProgress = false;
+            String message = error.getMessage();
+            callback.onError(message == null || message.trim().isEmpty()
+                    ? "Could not save this round. Check your connection and retry."
+                    : message);
+        });
+    }
+
+    private static Map<String, Object> buildGameDataDocument(
+            GameData updatedGameData, long editGeneration) {
+        Map<String, Object> cleanGameData = new HashMap<>();
+        cleanGameData.put("numPlayers", updatedGameData.getPlayers() != null
+                ? updatedGameData.getPlayers().size()
+                : updatedGameData.getNumPlayers());
+        cleanGameData.put("pointValue", updatedGameData.getPointValue());
+        cleanGameData.put("gstPercent", updatedGameData.getGstPercent());
+        cleanGameData.put("players", updatedGameData.getPlayers());
+        cleanGameData.put("version", updatedGameData.getVersion());
+        if (updatedGameData.getMidGameJoinActiveRound() != null) {
+            cleanGameData.put("midGameJoinActiveRound",
+                    updatedGameData.getMidGameJoinActiveRound());
+        }
+        if (updatedGameData.getMidGameJoinBackfillScore() != null) {
+            cleanGameData.put("midGameJoinBackfillScore",
+                    updatedGameData.getMidGameJoinBackfillScore());
+        }
+
+        Map<String, Object> gameDataDoc = new HashMap<>();
+        gameDataDoc.put("data", cleanGameData);
+        gameDataDoc.put("lastUpdated",
+                com.google.firebase.firestore.FieldValue.serverTimestamp());
+        gameDataDoc.put("version", "1.0");
+        gameDataDoc.put("editGeneration", editGeneration);
+        return gameDataDoc;
+    }
+
+    private static Map<String, Object> buildDashboardSummary(GameData gameData) {
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("dashboardPointValue", gameData.getPointValue());
+        summary.put("dashboardNumPlayers", gameData.getPlayers() != null
+                ? gameData.getPlayers().size()
+                : gameData.getNumPlayers());
+        summary.put("dashboardGstPercent", gameData.getGstPercent());
+        String status = gameData.getGameStatus();
+        summary.put("dashboardGameStatus",
+                status != null && !status.trim().isEmpty() ? status.trim() : "R1");
+        return summary;
     }
 
     public void clearMessages() {

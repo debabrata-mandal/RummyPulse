@@ -147,6 +147,10 @@
     <string name="dialog_enter_round_score_invalid">Enter a valid whole number (0 or higher).</string>
     <string name="dialog_enter_round_score_next">Next</string>
     <string name="dialog_enter_round_score_done">Done</string>
+    <string name="dialog_enter_round_score_saving">Saving…</string>
+    <string name="dialog_enter_round_score_retry">Retry</string>
+    <string name="dialog_enter_round_score_saved">Round %1$d saved.</string>
+    <string name="dialog_enter_round_score_save_failed">Could not save this round: %1$s</string>
     <string name="enter_round_scores_all_done">Everyone has a score for this round.</string>
     <string name="enter_round_scores_game_over">Game is complete — tap the edit icon to fix earlier rounds.</string>
 

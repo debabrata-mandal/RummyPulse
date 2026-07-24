@@ -33,6 +33,7 @@ import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.data.GameAuth;
 import com.example.rummypulse.data.GameViewApproval;
 import com.example.rummypulse.data.GameViewApprovalStatus;
+import com.example.rummypulse.data.RoundScoreDraft;
 import com.example.rummypulse.databinding.ActivityJoinGameBinding;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
@@ -95,6 +96,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private static final int LIVE_AMOUNTS_REVEAL_AFTER_ROUND = 6;
     private static final long GAME_COMPLETION_BUFFER_MS = 2000; // 2 seconds buffer after pending announcements
     private static final long MAX_GAME_COMPLETION_DELAY_MS = 10000; // Maximum 10 seconds delay
+    private static final String ROUND_DRAFT_PREFERENCES = "round_score_drafts";
     
     // Bulk update detection
     private long lastScoreChangeTime = 0;
@@ -105,6 +107,8 @@ public class JoinGameActivity extends AppCompatActivity {
 
     /** Sequential score-entry dialog; dismissed in {@link #onPause()} to avoid leaks. */
     private AlertDialog activeSequentialScoreDialog;
+    /** Scores remain local until every required player in this round is reviewed. */
+    private RoundScoreDraft activeRoundScoreDraft;
 
     /** Cached admin flag so View Requests works before/without edit access. */
     private boolean isAppAdmin;
@@ -787,11 +791,16 @@ public class JoinGameActivity extends AppCompatActivity {
 
     /** Saves any debounced score changes and syncs the dashboard before leaving the game screen. */
     private void flushPendingGameSave() {
-        if (saveRunnable != null) {
+        boolean hasPendingSave = saveRunnable != null;
+        if (hasPendingSave) {
             saveHandler.removeCallbacks(saveRunnable);
             saveRunnable = null;
         }
         if (viewModel == null || currentGameId == null) {
+            return;
+        }
+        if (!hasPendingSave) {
+            GameRepository.getDashboardInstance().forcePublishDashboard();
             return;
         }
         if (!viewModel.canSaveGameData()) {
@@ -1806,7 +1815,22 @@ public class JoinGameActivity extends AppCompatActivity {
             if (live == null || live.getPlayers() == null || live.getPlayers().isEmpty()) {
                 return;
             }
-            showSequentialScoreDialogForPlayer(live, selectedRound[0], 0, true);
+            restoreLocalRoundDraft(live);
+            boolean canResumeCorrection = activeRoundScoreDraft != null
+                    && activeRoundScoreDraft.isCorrectionMode()
+                    && activeRoundScoreDraft.getRound1Based() == selectedRound[0]
+                    && activeRoundScoreDraft.getPlayerCount() == live.getPlayers().size();
+            if (!canResumeCorrection) {
+                activeRoundScoreDraft =
+                        RoundScoreDraft.start(live, selectedRound[0], true);
+                persistLocalRoundDraft(live);
+            }
+            int nextPlayer = activeRoundScoreDraft.findNextUnreviewed(0);
+            if (nextPlayer < 0) {
+                nextPlayer = activeRoundScoreDraft.getPlayerCount() - 1;
+            }
+            showSequentialScoreDialogForPlayer(
+                    live, selectedRound[0], nextPlayer, true);
         });
 
         dialog.show();
@@ -2062,13 +2086,6 @@ public class JoinGameActivity extends AppCompatActivity {
         return 0;
     }
 
-    private boolean isPlayerRoundCompleteForRound(int playerIndex, int round1Based, com.example.rummypulse.data.GameData gameData) {
-        if (gameData.getPlayers() == null || playerIndex < 0 || playerIndex >= gameData.getPlayers().size()) {
-            return false;
-        }
-        return isPlayerRoundCompleteForRound(gameData.getPlayers().get(playerIndex), round1Based);
-    }
-
     private boolean isPlayerRoundCompleteForRound(com.example.rummypulse.data.Player player, int round1Based) {
         if (player == null || player.getScores() == null || player.getScores().size() < round1Based) {
             return false;
@@ -2077,44 +2094,78 @@ public class JoinGameActivity extends AppCompatActivity {
         return existing != null && existing >= 0;
     }
 
-    private int findFirstPlayerIncompleteForRound(com.example.rummypulse.data.GameData gameData, int round1Based, int startFromIndex) {
-        if (gameData.getPlayers() == null) {
-            return -1;
+    private void persistLocalRoundDraft(com.example.rummypulse.data.GameData gameData) {
+        if (currentGameId == null || activeRoundScoreDraft == null
+                || gameData == null || gameData.getPlayers() == null) {
+            return;
         }
-        for (int p = startFromIndex; p < gameData.getPlayers().size(); p++) {
-            if (!isPlayerRoundCompleteForRound(p, round1Based, gameData)) {
-                return p;
+        String stored = viewModel.getActiveEditGeneration()
+                + ";"
+                + playerListFingerprint(gameData)
+                + ";"
+                + activeRoundScoreDraft.serialize();
+        getSharedPreferences(ROUND_DRAFT_PREFERENCES, MODE_PRIVATE)
+                .edit()
+                .putString(roundDraftPreferenceKey(), stored)
+                .commit();
+    }
+
+    private void restoreLocalRoundDraft(com.example.rummypulse.data.GameData gameData) {
+        if (activeRoundScoreDraft != null || currentGameId == null
+                || gameData == null || gameData.getPlayers() == null) {
+            return;
+        }
+        String stored = getSharedPreferences(ROUND_DRAFT_PREFERENCES, MODE_PRIVATE)
+                .getString(roundDraftPreferenceKey(), null);
+        if (stored == null) {
+            return;
+        }
+        try {
+            String[] parts = stored.split(";", 3);
+            if (parts.length != 3
+                    || Long.parseLong(parts[0]) != viewModel.getActiveEditGeneration()
+                    || !parts[1].equals(playerListFingerprint(gameData))) {
+                clearLocalRoundDraft();
+                return;
             }
-        }
-        return -1;
-    }
-
-    private boolean hasAnotherIncompletePlayerAfter(com.example.rummypulse.data.GameData gameData, int round1Based, int afterPlayerIndex) {
-        return findFirstPlayerIncompleteForRound(gameData, round1Based, afterPlayerIndex + 1) >= 0;
-    }
-
-    private void ensurePlayerScoresList(com.example.rummypulse.data.Player player) {
-        java.util.List<Integer> scores = player.getScores();
-        if (scores == null) {
-            scores = new java.util.ArrayList<>();
-            player.setScores(scores);
-        }
-        while (scores.size() < 10) {
-            scores.add(-1);
+            RoundScoreDraft restored = RoundScoreDraft.deserialize(parts[2]);
+            if (restored.getPlayerCount() != gameData.getPlayers().size()) {
+                clearLocalRoundDraft();
+                return;
+            }
+            activeRoundScoreDraft = restored;
+        } catch (RuntimeException invalidDraft) {
+            clearLocalRoundDraft();
         }
     }
 
-    private void persistPlayerRoundScoreFromDialog(com.example.rummypulse.data.GameData gameData,
-            com.example.rummypulse.data.Player player, int playerIndex, int round0Based, int score) {
-        ensurePlayerScoresList(player);
-        player.getScores().set(round0Based, score);
-        refreshPlayerTotalScoreOnCard(playerIndex, gameData);
-        saveGameDataWithDebounce(gameData);
-        announceScoreWithDebounce(player.getName(), score, playerIndex, round0Based + 1);
-        updateStandings(gameData);
-        updateCurrentRound(gameData);
-        updateScoreEntryButtonsVisibility(gameData);
-        announceGameCompletion(gameData);
+    private void clearLocalRoundDraft() {
+        if (currentGameId == null) {
+            return;
+        }
+        getSharedPreferences(ROUND_DRAFT_PREFERENCES, MODE_PRIVATE)
+                .edit()
+                .remove(roundDraftPreferenceKey())
+                .commit();
+    }
+
+    private String roundDraftPreferenceKey() {
+        return "game_" + currentGameId;
+    }
+
+    private static String playerListFingerprint(
+            com.example.rummypulse.data.GameData gameData) {
+        StringBuilder identity = new StringBuilder();
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            identity.append(player.getUserId() != null ? player.getUserId() : "")
+                    .append('|')
+                    .append(player.getName() != null ? player.getName() : "")
+                    .append('|')
+                    .append(player.getRandomNumber() != null
+                            ? player.getRandomNumber() : "")
+                    .append(';');
+        }
+        return Integer.toHexString(identity.toString().hashCode());
     }
 
     private void startSequentialRoundScoreEntryFlow() {
@@ -2136,12 +2187,28 @@ public class JoinGameActivity extends AppCompatActivity {
             ModernToast.info(this, getString(R.string.enter_round_scores_all_done));
             return;
         }
-        int firstPlayer = findFirstPlayerIncompleteForRound(gameData, round1, 0);
+        restoreLocalRoundDraft(gameData);
+        boolean canResumeDraft = activeRoundScoreDraft != null
+                && !activeRoundScoreDraft.isCorrectionMode()
+                && activeRoundScoreDraft.getRound1Based() == round1
+                && activeRoundScoreDraft.getPlayerCount() == gameData.getPlayers().size();
+        if (!canResumeDraft) {
+            activeRoundScoreDraft = RoundScoreDraft.start(gameData, round1, false);
+            persistLocalRoundDraft(gameData);
+        }
+        int firstPlayer = activeRoundScoreDraft.findNextUnreviewed(0);
+        if (firstPlayer < 0 && activeRoundScoreDraft.isComplete()) {
+            // A completed draft can remain after a network failure while the activity
+            // was backgrounded. Reopen its final player so the editor can retry.
+            firstPlayer = activeRoundScoreDraft.getPlayerCount() - 1;
+        }
         if (firstPlayer < 0) {
+            activeRoundScoreDraft = null;
             ModernToast.info(this, getString(R.string.enter_round_scores_all_done));
             return;
         }
-        showSequentialScoreDialogForPlayer(gameData, round1, firstPlayer, false);
+        showSequentialScoreDialogForPlayer(gameData, round1, firstPlayer,
+                activeRoundScoreDraft.isCorrectionMode());
     }
 
     private void showSequentialScoreDialogForPlayer(com.example.rummypulse.data.GameData gameData, int round1Based, int playerIndex) {
@@ -2154,6 +2221,13 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         gameData = liveData;
+        if (activeRoundScoreDraft == null
+                || activeRoundScoreDraft.getRound1Based() != round1Based
+                || activeRoundScoreDraft.getPlayerCount() != gameData.getPlayers().size()) {
+            activeRoundScoreDraft =
+                    RoundScoreDraft.start(gameData, round1Based, correctionMode);
+            persistLocalRoundDraft(gameData);
+        }
         com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
 
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_enter_round_score, null, false);
@@ -2178,17 +2252,13 @@ public class JoinGameActivity extends AppCompatActivity {
         progressView.setText(getString(R.string.dialog_enter_round_score_player_progress, playerIndex + 1, numPlayers));
         progressBar.setMax(numPlayers);
         progressBar.setProgress(playerIndex + 1);
-        boolean hasMore = correctionMode
-                ? playerIndex + 1 < numPlayers
-                : hasAnotherIncompletePlayerAfter(gameData, round1Based, playerIndex);
+        boolean hasMore =
+                activeRoundScoreDraft.findNextUnreviewed(playerIndex + 1) >= 0;
         btnConfirm.setText(getString(hasMore ? R.string.dialog_enter_round_score_next : R.string.dialog_enter_round_score_done));
 
-        Integer existing = null;
-        if (player.getScores() != null && player.getScores().size() >= round1Based) {
-            existing = player.getScores().get(round1Based - 1);
-        }
-        if (existing != null && existing >= 0) {
-            scoreEdit.setText(String.valueOf(existing));
+        int draftScore = activeRoundScoreDraft.getScore(playerIndex);
+        if (draftScore >= 0) {
+            scoreEdit.setText(String.valueOf(draftScore));
         } else {
             scoreEdit.setText("");
         }
@@ -2200,6 +2270,8 @@ public class JoinGameActivity extends AppCompatActivity {
 
         AlertDialog dialog = builder.create();
         activeSequentialScoreDialog = dialog;
+        final RoundScoreDraft draftForDialog = activeRoundScoreDraft;
+        final boolean[] saveInProgress = {false};
 
         btnCancel.setOnClickListener(v -> {
             dialog.dismiss();
@@ -2216,6 +2288,9 @@ public class JoinGameActivity extends AppCompatActivity {
         final int finalPlayerIndex = playerIndex;
         final boolean finalCorrectionMode = correctionMode;
         btnConfirm.setOnClickListener(v -> {
+            if (saveInProgress[0]) {
+                return;
+            }
             String text = scoreEdit.getText().toString().trim();
             if (text.isEmpty()) {
                 layoutScore.setError(getString(R.string.dialog_enter_round_score_invalid));
@@ -2236,27 +2311,76 @@ public class JoinGameActivity extends AppCompatActivity {
 
             com.example.rummypulse.data.GameData gd = viewModel.getGameData().getValue();
             if (gd == null || gd.getPlayers() == null || finalPlayerIndex >= gd.getPlayers().size()) {
+                activeRoundScoreDraft = null;
+                clearLocalRoundDraft();
                 dialog.dismiss();
                 return;
             }
             com.example.rummypulse.data.Player p = gd.getPlayers().get(finalPlayerIndex);
-            persistPlayerRoundScoreFromDialog(gd, p, finalPlayerIndex, finalRound1 - 1, value);
-            dialog.dismiss();
-
-            com.example.rummypulse.data.GameData gdAfter = viewModel.getGameData().getValue();
-            if (gdAfter == null || gdAfter.getPlayers() == null) {
-                return;
-            }
-            int next;
-            if (finalCorrectionMode) {
-                next = finalPlayerIndex + 1 < gdAfter.getPlayers().size() ? finalPlayerIndex + 1 : -1;
-            } else {
-                next = findFirstPlayerIncompleteForRound(gdAfter, finalRound1, finalPlayerIndex + 1);
-            }
+            draftForDialog.recordScore(finalPlayerIndex, value);
+            persistLocalRoundDraft(gd);
+            announceScoreWithDebounce(
+                    p.getName(), value, finalPlayerIndex, finalRound1);
+            int next = draftForDialog.findNextUnreviewed(finalPlayerIndex + 1);
             if (next >= 0) {
+                dialog.dismiss();
+                com.example.rummypulse.data.GameData gdAfter =
+                        viewModel.getGameData().getValue();
                 new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
                         () -> showSequentialScoreDialogForPlayer(gdAfter, finalRound1, next, finalCorrectionMode), 120);
+                return;
             }
+
+            final com.example.rummypulse.data.GameData completedRound;
+            try {
+                completedRound = draftForDialog.applyToCopy(gd);
+            } catch (RuntimeException error) {
+                layoutScore.setError(error.getMessage());
+                return;
+            }
+
+            saveInProgress[0] = true;
+            btnConfirm.setEnabled(false);
+            btnConfirm.setText(R.string.dialog_enter_round_score_saving);
+            btnCancel.setEnabled(false);
+            scoreEdit.setEnabled(false);
+            dialog.setCancelable(false);
+            dialog.setCanceledOnTouchOutside(false);
+
+            viewModel.saveCompletedRoundAtomically(
+                    currentGameId, completedRound, new JoinGameViewModel.RoundSaveCallback() {
+                        @Override
+                        public void onSuccess() {
+                            saveInProgress[0] = false;
+                            clearLocalRoundDraft();
+                            activeRoundScoreDraft = null;
+                            dialog.dismiss();
+                            updateStandings(completedRound);
+                            updateCurrentRound(completedRound);
+                            updateScoreEntryButtonsVisibility(completedRound);
+                            announceGameCompletion(completedRound);
+                            ModernToast.success(JoinGameActivity.this,
+                                    getString(R.string.dialog_enter_round_score_saved,
+                                            finalRound1));
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            saveInProgress[0] = false;
+                            if (isFinishing() || isDestroyed()) {
+                                return;
+                            }
+                            layoutScore.setError(getString(
+                                    R.string.dialog_enter_round_score_save_failed,
+                                    message));
+                            btnConfirm.setEnabled(true);
+                            btnConfirm.setText(R.string.dialog_enter_round_score_retry);
+                            btnCancel.setEnabled(true);
+                            scoreEdit.setEnabled(true);
+                            dialog.setCancelable(true);
+                            dialog.setCanceledOnTouchOutside(true);
+                        }
+                    });
         });
 
         dialog.show();
@@ -3470,6 +3594,7 @@ public class JoinGameActivity extends AppCompatActivity {
         saveRunnable = new Runnable() {
             @Override
             public void run() {
+                saveRunnable = null;
                 viewModel.saveGameData(currentGameId, gameData);
             }
         };

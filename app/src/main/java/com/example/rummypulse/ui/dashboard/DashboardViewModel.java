@@ -377,6 +377,9 @@ public class DashboardViewModel extends ViewModel {
         authData.put("dashboardNumPlayers", 2);
         authData.put("dashboardGstPercent", request.gstPercentage);
         authData.put("dashboardGameStatus", "R1");
+        authData.put("creationRequestId", request.requestId);
+        authData.put("initializationStatus",
+                GameCreationPolicy.INITIALIZATION_PENDING);
 
         Map<String, Object> gameDataDoc = new HashMap<>();
         gameDataDoc.put("data", initialGameData);
@@ -402,6 +405,9 @@ public class DashboardViewModel extends ViewModel {
                         .document(GameViewApprovalRepository.documentId(
                                 request.gameId, request.creatorUserId));
 
+        // The deployed rules authorize gameData/approval creation by reading the
+        // already-existing games_v2 document. Bootstrap that authorization document
+        // first, but keep it hidden until the atomic finalization transaction commits.
         db.runTransaction(transaction -> {
                     com.google.firebase.firestore.DocumentSnapshot existing =
                             transaction.get(authRef);
@@ -413,10 +419,37 @@ public class DashboardViewModel extends ViewModel {
                         throw new IllegalStateException(
                                 "Generated game id already exists. Please retry.");
                     }
-                    authData.put("creationRequestId", request.requestId);
                     transaction.set(authRef, authData);
+                    return request.gameId;
+                })
+                .addOnSuccessListener(gameId -> finalizeCreationTransaction(
+                        request, authRef, dataRef, approvalRef,
+                        gameDataDoc, creatorApproval))
+                .addOnFailureListener(error -> handleCreationFailure(request, error));
+    }
+
+    private void finalizeCreationTransaction(
+            CreationRequest request,
+            com.google.firebase.firestore.DocumentReference authRef,
+            com.google.firebase.firestore.DocumentReference dataRef,
+            com.google.firebase.firestore.DocumentReference approvalRef,
+            Map<String, Object> gameDataDoc,
+            Map<String, Object> creatorApproval) {
+        FirebaseFirestore.getInstance().runTransaction(transaction -> {
+                    com.google.firebase.firestore.DocumentSnapshot auth =
+                            transaction.get(authRef);
+                    if (!auth.exists()
+                            || !request.requestId.equals(
+                            auth.getString("creationRequestId"))
+                            || !request.creatorUserId.equals(
+                            auth.getString("creatorUserId"))) {
+                        throw new IllegalStateException(
+                                "Game initialization ownership changed. Please retry.");
+                    }
                     transaction.set(dataRef, gameDataDoc);
                     transaction.set(approvalRef, creatorApproval);
+                    transaction.update(authRef, "initializationStatus",
+                            GameCreationPolicy.INITIALIZATION_READY);
                     return request.gameId;
                 })
                 .addOnSuccessListener(gameId -> handleCreationSuccess(request))
