@@ -123,6 +123,25 @@ public class PlayerConsolidationViewModel extends ViewModel {
         selectedGameIds.setValue(updated);
     }
 
+    public void pruneUnavailableGameSelections(List<GameItem> availableGames) {
+        Set<String> availableIds = new HashSet<>();
+        if (availableGames != null) {
+            for (GameItem game : availableGames) {
+                if (game != null && game.getGameId() != null) {
+                    availableIds.add(game.getGameId());
+                }
+            }
+        }
+        Set<String> current = selectedGameIds.getValue();
+        if (current == null || current.isEmpty()) {
+            return;
+        }
+        Set<String> updated = new HashSet<>(current);
+        if (updated.retainAll(availableIds)) {
+            selectedGameIds.setValue(updated);
+        }
+    }
+
     public int getSelectedCount() {
         Set<String> ids = selectedGameIds.getValue();
         return ids != null ? ids.size() : 0;
@@ -409,6 +428,15 @@ public class PlayerConsolidationViewModel extends ViewModel {
     }
 
     public void resetConsolidation(List<GameItem> selectedGames) {
+        Set<String> validSelectedIds = new HashSet<>();
+        if (selectedGames != null) {
+            for (GameItem game : selectedGames) {
+                if (game != null && game.getGameId() != null) {
+                    validSelectedIds.add(game.getGameId());
+                }
+            }
+        }
+        selectedGameIds.setValue(validSelectedIds);
         List<ConsolidatedPlayerGroup> groups = PlayerConsolidationEngine.buildInitialGroups(selectedGames);
         selectedEntryIds.setValue(new HashSet<>());
         groupSelectionOrder.clear();

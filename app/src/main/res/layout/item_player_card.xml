@@ -15,15 +15,20 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <ImageView
+        <TextView
+            android:id="@+id/btn_map_player"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@drawable/ic_gamepad"
-            android:tint="#2196F3"
             android:background="@drawable/circle_background"
-            android:padding="8dp"
             android:layout_marginEnd="12dp"
-            android:contentDescription="@null" />
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/map_player_icon_description"
+            android:gravity="center"
+            android:text="P"
+            android:textColor="@color/accent_blue"
+            android:textSize="15sp"
+            android:textStyle="bold" />
 
         <LinearLayout
             android:layout_width="0dp"

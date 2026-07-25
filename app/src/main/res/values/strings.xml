@@ -329,4 +329,23 @@
     <string name="view_request_status_rejected">Rejected</string>
     <string name="view_request_requested_at">Requested %1$s</string>
     <string name="view_request_decided_at">Updated %1$s</string>
+    <string name="map_player_title">Link real player</string>
+    <string name="map_player_subtitle">Choose the app user who is playing as %1$s.</string>
+    <string name="map_player_search_hint">Search by name or email</string>
+    <string name="map_player_no_users">No matching users found.</string>
+    <string name="map_player_unlink">Remove link</string>
+    <string name="map_player_icon_description">Link this player to an app user</string>
+    <string name="map_player_linked_icon_description">Linked to %1$s. Tap to change.</string>
+    <string name="map_player_editor_only">Only the current editor can link players.</string>
+    <string name="map_player_already_linked">%1$s is already linked to %2$s.</string>
+    <string name="map_player_linked">Linked %1$s to %2$s.</string>
+    <string name="map_player_unlinked">Removed the real-user link for %1$s.</string>
+    <string name="map_player_load_failed">Could not load the player list. Check your connection and try again.</string>
+    <string name="map_player_currently_linked">Currently linked</string>
+    <string name="map_player_email_linked">%1$s • Currently linked</string>
+    <string name="map_player_selected">Selected user</string>
+    <string name="map_player_current_mapping">Currently linked to %1$s</string>
+    <string name="map_player_current_mapping_with_email">Currently linked to %1$s\n%2$s</string>
+    <string name="map_player_linked_user_unavailable">This player is linked, but that user is not available in the current list.</string>
+    <string name="unknown_user">Unknown user</string>
 </resources>

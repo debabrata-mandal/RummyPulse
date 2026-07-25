@@ -31,10 +31,16 @@ import java.util.Map;
 public class AppUserRepository {
     private static final String TAG = "AppUserRepository";
     public static final int USER_PAGE_SIZE = 50;
+    /** Keep the player picker directory warm across game screens for six hours. */
+    private static final long USER_DIRECTORY_CACHE_TTL_MS = 6L * 60L * 60L * 1000L;
 
     private static final Object SYNC_LOCK = new Object();
     private static final Map<String, SyncCacheEntry> RECENT_SYNCS = new HashMap<>();
     private static final Map<String, List<AppUserCallback>> IN_FLIGHT_SYNCS = new HashMap<>();
+    private static final Object DIRECTORY_LOCK = new Object();
+    private static List<AppUser> cachedUserDirectory;
+    private static long cachedUserDirectoryAt;
+    private static List<UsersCallback> inFlightDirectoryCallbacks;
 
     private final FirebaseFirestore db;
 
@@ -233,6 +239,92 @@ public class AppUserRepository {
         query.get().addOnCompleteListener(task -> handleUsersPage(task, boundedSize, callback));
     }
 
+    /**
+     * Returns the complete user directory from a process-wide six-hour cache. Concurrent callers
+     * join the same paginated Firestore fetch, so opening several game/player dialogs never starts
+     * duplicate reads.
+     */
+    public void getUsersCached(UsersCallback callback) {
+        if (callback == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        synchronized (DIRECTORY_LOCK) {
+            if (cachedUserDirectory != null
+                    && now - cachedUserDirectoryAt < USER_DIRECTORY_CACHE_TTL_MS) {
+                callback.onSuccess(new ArrayList<>(cachedUserDirectory));
+                return;
+            }
+            if (inFlightDirectoryCallbacks != null) {
+                inFlightDirectoryCallbacks.add(callback);
+                return;
+            }
+            inFlightDirectoryCallbacks = new ArrayList<>();
+            inFlightDirectoryCallbacks.add(callback);
+        }
+        loadUserDirectoryPage(null, new ArrayList<>());
+    }
+
+    private void loadUserDirectoryPage(
+            @Nullable DocumentSnapshot after,
+            List<AppUser> accumulated) {
+        getUsersPage(after, USER_PAGE_SIZE, new UsersPageCallback() {
+            @Override
+            public void onSuccess(UsersPage page) {
+                accumulated.addAll(page.users);
+                if (page.hasMore && page.nextCursor != null) {
+                    loadUserDirectoryPage(page.nextCursor, accumulated);
+                    return;
+                }
+                completeDirectorySuccess(accumulated);
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                completeDirectoryFailure(exception);
+            }
+        });
+    }
+
+    private static void completeDirectorySuccess(List<AppUser> users) {
+        List<UsersCallback> callbacks;
+        List<AppUser> snapshot = new ArrayList<>(users);
+        synchronized (DIRECTORY_LOCK) {
+            cachedUserDirectory = snapshot;
+            cachedUserDirectoryAt = System.currentTimeMillis();
+            callbacks = inFlightDirectoryCallbacks;
+            inFlightDirectoryCallbacks = null;
+        }
+        if (callbacks != null) {
+            for (UsersCallback callback : callbacks) {
+                callback.onSuccess(new ArrayList<>(snapshot));
+            }
+        }
+    }
+
+    private static void completeDirectoryFailure(Exception exception) {
+        List<UsersCallback> callbacks;
+        List<AppUser> stale;
+        synchronized (DIRECTORY_LOCK) {
+            callbacks = inFlightDirectoryCallbacks;
+            inFlightDirectoryCallbacks = null;
+            stale = cachedUserDirectory == null
+                    ? null
+                    : new ArrayList<>(cachedUserDirectory);
+        }
+        if (callbacks != null) {
+            for (UsersCallback callback : callbacks) {
+                if (stale != null) {
+                    callback.onSuccess(new ArrayList<>(stale));
+                } else {
+                    callback.onFailure(exception != null
+                            ? exception
+                            : new Exception("Could not load users"));
+                }
+            }
+        }
+    }
+
     private void handleUsersPage(
             Task<QuerySnapshot> task,
             int pageSize,
@@ -382,6 +474,11 @@ public class AppUserRepository {
 
     public interface UsersPageCallback {
         void onSuccess(UsersPage page);
+        void onFailure(Exception exception);
+    }
+
+    public interface UsersCallback {
+        void onSuccess(List<AppUser> users);
         void onFailure(Exception exception);
     }
 }

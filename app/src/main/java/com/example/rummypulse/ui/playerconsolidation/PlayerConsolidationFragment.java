@@ -62,6 +62,7 @@ public class PlayerConsolidationFragment extends Fragment {
 
         viewModel.getGameItems().observe(getViewLifecycleOwner(), games -> {
             currentGames = games != null ? games : new ArrayList<>();
+            viewModel.pruneUnavailableGameSelections(currentGames);
             gameAdapter.setGameItems(currentGames);
             boolean isEmpty = currentGames.isEmpty();
             binding.emptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
@@ -193,7 +194,7 @@ public class PlayerConsolidationFragment extends Fragment {
 
     private void updateGameSelectionUi(Set<String> selectedIds) {
         gameAdapter.setSelectedIds(selectedIds);
-        int count = selectedIds != null ? selectedIds.size() : 0;
+        int count = viewModel.getSelectedGames(currentGames).size();
         binding.btnContinue.setEnabled(count >= 2);
         binding.btnContinue.setText(getString(R.string.player_consolidation_continue, count));
     }

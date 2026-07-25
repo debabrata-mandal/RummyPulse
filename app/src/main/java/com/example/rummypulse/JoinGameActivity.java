@@ -12,11 +12,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.GridLayout;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,7 +29,9 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserManager;
+import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.data.GameAuth;
@@ -48,6 +52,8 @@ import com.google.zxing.WriterException;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
@@ -112,6 +118,8 @@ public class JoinGameActivity extends AppCompatActivity {
 
     /** Cached admin flag so View Requests works before/without edit access. */
     private boolean isAppAdmin;
+    private final AppUserRepository appUserRepository = new AppUserRepository();
+    private List<AppUser> cachedDirectoryUsers;
 
     /** When true, score {@link EditText} watchers skip persistence (programmatic sync from dialog). */
     @Override
@@ -1185,6 +1193,7 @@ public class JoinGameActivity extends AppCompatActivity {
         viewModel.getEditAccessGranted().observe(this, granted -> {
             refreshViewRequestsSection();
             if (granted) {
+                prefetchPlayerDirectory();
                 binding.textAdminMode.setVisibility(View.VISIBLE);
                 // Show Players section and Add Player FAB when edit access is granted
                 binding.playersSection.setVisibility(View.VISIBLE);
@@ -1596,6 +1605,7 @@ public class JoinGameActivity extends AppCompatActivity {
             
             // Set player name
             EditText playerName = playerCardView.findViewById(R.id.text_player_name);
+            TextView mapPlayerButton = playerCardView.findViewById(R.id.btn_map_player);
             playerName.setText(player.getName());
             
             // Add text change listener for player name
@@ -1616,6 +1626,7 @@ public class JoinGameActivity extends AppCompatActivity {
                     String newName = s.toString().trim();
                     if (!newName.isEmpty()) {
                         player.setName(newName);
+                        bindMapPlayerButton(mapPlayerButton, player);
                         // Save the updated game data to Firebase (with debouncing)
                         saveGameDataWithDebounce(gameData);
                         // Update standings table to reflect name change
@@ -1663,6 +1674,16 @@ public class JoinGameActivity extends AppCompatActivity {
                 showDeletePlayerConfirmation(player, gameData);
             });
 
+            bindMapPlayerButton(mapPlayerButton, player);
+            mapPlayerButton.setOnClickListener(v -> {
+                Boolean canEdit = viewModel.getEditAccessGranted().getValue();
+                if (!Boolean.TRUE.equals(canEdit)) {
+                    ModernToast.info(this, getString(R.string.map_player_editor_only));
+                    return;
+                }
+                showMapPlayerDialog(player, gameData, mapPlayerButton, playerName);
+            });
+
             // Setup drag handle and drag-and-drop functionality (edit mode only)
             ImageView dragHandle = playerCardView.findViewById(R.id.drag_handle);
             Boolean editAccess = viewModel.getEditAccessGranted().getValue();
@@ -1680,6 +1701,318 @@ public class JoinGameActivity extends AppCompatActivity {
             binding.playersContainer.addView(playerCardView);
         }
         refreshAllPlayerTotalScores(gameData);
+    }
+
+    private void prefetchPlayerDirectory() {
+        appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
+            @Override
+            public void onSuccess(List<AppUser> users) {
+                cachedDirectoryUsers = sortDirectoryUsers(users);
+                refreshPlayerAvatars();
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                // The picker shows a retryable error if the user opens it before a later retry.
+            }
+        });
+    }
+
+    private List<AppUser> sortDirectoryUsers(List<AppUser> users) {
+        List<AppUser> sorted = users == null ? new ArrayList<>() : new ArrayList<>(users);
+        sorted.sort(Comparator.comparing(
+                this::userDisplayName,
+                String.CASE_INSENSITIVE_ORDER));
+        return sorted;
+    }
+
+    private void bindMapPlayerButton(TextView button, com.example.rummypulse.data.Player player) {
+        if (button == null || player == null) {
+            return;
+        }
+        boolean linked = !TextUtils.isEmpty(player.getUserId());
+        button.setText(playerAvatarInitials(player));
+        button.setBackgroundResource(R.drawable.circle_background);
+        button.setTextColor(ContextCompat.getColor(
+                this,
+                linked ? android.R.color.holo_green_dark : android.R.color.holo_blue_dark));
+        button.setAlpha(linked ? 1f : 0.78f);
+        button.setContentDescription(linked
+                ? getString(R.string.map_player_linked_icon_description, player.getName())
+                : getString(R.string.map_player_icon_description));
+    }
+
+    private void showMapPlayerDialog(
+            com.example.rummypulse.data.Player player,
+            com.example.rummypulse.data.GameData gameData,
+            TextView mapButton,
+            EditText playerNameView) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_map_player, null);
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .create();
+        TextView subtitle = dialogView.findViewById(R.id.text_map_player_subtitle);
+        TextView currentMapping = dialogView.findViewById(R.id.text_current_mapping);
+        EditText search = dialogView.findViewById(R.id.input_user_search);
+        ListView list = dialogView.findViewById(R.id.list_users);
+        ProgressBar progress = dialogView.findViewById(R.id.progress_users);
+        TextView empty = dialogView.findViewById(R.id.text_users_empty);
+        Button unlink = dialogView.findViewById(R.id.btn_unlink_user);
+        Button cancel = dialogView.findViewById(R.id.btn_cancel_mapping);
+
+        subtitle.setText(getString(R.string.map_player_subtitle, player.getName()));
+        unlink.setVisibility(TextUtils.isEmpty(player.getUserId()) ? View.GONE : View.VISIBLE);
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        unlink.setOnClickListener(v -> {
+            String oldName = player.getName();
+            player.setUserId(null);
+            viewModel.saveGameData(currentGameId, gameData);
+            bindMapPlayerButton(mapButton, player);
+            dialog.dismiss();
+            ModernToast.success(this, getString(R.string.map_player_unlinked, oldName));
+        });
+
+        dialog.show();
+        progress.setVisibility(View.VISIBLE);
+        list.setVisibility(View.GONE);
+        empty.setVisibility(View.GONE);
+        appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
+            @Override
+            public void onSuccess(List<AppUser> users) {
+                cachedDirectoryUsers = sortDirectoryUsers(users);
+                if (dialog.isShowing()) {
+                    bindUserDirectory(dialog, player, gameData, mapButton, playerNameView,
+                            search, list, progress, empty, currentMapping,
+                            cachedDirectoryUsers);
+                }
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                if (dialog.isShowing()) {
+                    progress.setVisibility(View.GONE);
+                    empty.setVisibility(View.VISIBLE);
+                    empty.setText(R.string.map_player_load_failed);
+                }
+            }
+        });
+    }
+
+    private void bindUserDirectory(
+            AlertDialog dialog,
+            com.example.rummypulse.data.Player player,
+            com.example.rummypulse.data.GameData gameData,
+            TextView mapButton,
+            EditText playerNameView,
+            EditText search,
+            ListView list,
+            ProgressBar progress,
+            TextView empty,
+            TextView currentMapping,
+            List<AppUser> allUsers) {
+        List<AppUser> visibleUsers = new ArrayList<>(allUsers);
+        ArrayAdapter<AppUser> adapter = new ArrayAdapter<AppUser>(
+                this, R.layout.item_map_user, R.id.text_user_name, visibleUsers) {
+            @Override
+            public View getView(int position, View convertView, android.view.ViewGroup parent) {
+                View row = super.getView(position, convertView, parent);
+                AppUser user = getItem(position);
+                TextView title = row.findViewById(R.id.text_user_name);
+                TextView detail = row.findViewById(R.id.text_user_detail);
+                ImageView selectedIcon = row.findViewById(R.id.icon_user_selected);
+                boolean isSelected = user != null
+                        && !TextUtils.isEmpty(player.getUserId())
+                        && player.getUserId().equals(user.getUserId());
+                title.setText(userDisplayName(user));
+                detail.setText(userDetail(user, player.getUserId()));
+                selectedIcon.setVisibility(isSelected ? View.VISIBLE : View.GONE);
+                row.setBackgroundResource(isSelected
+                        ? R.drawable.user_mapping_selected_background
+                        : R.drawable.user_mapping_row_background);
+                return row;
+            }
+        };
+        list.setAdapter(adapter);
+        progress.setVisibility(View.GONE);
+        updateUserListVisibility(list, empty, visibleUsers);
+        int linkedUserIndex = findLinkedUserIndex(allUsers, player.getUserId());
+        if (!TextUtils.isEmpty(player.getUserId())) {
+            currentMapping.setVisibility(View.VISIBLE);
+            if (linkedUserIndex >= 0) {
+                AppUser linkedUser = allUsers.get(linkedUserIndex);
+                String email = linkedUser.getEmail();
+                currentMapping.setText(TextUtils.isEmpty(email)
+                        ? getString(R.string.map_player_current_mapping,
+                                userDisplayName(linkedUser))
+                        : getString(R.string.map_player_current_mapping_with_email,
+                                userDisplayName(linkedUser), email));
+                list.setItemChecked(linkedUserIndex, true);
+                list.post(() -> list.setSelection(Math.max(0, linkedUserIndex - 1)));
+            } else {
+                currentMapping.setText(R.string.map_player_linked_user_unavailable);
+            }
+        } else {
+            currentMapping.setVisibility(View.GONE);
+        }
+
+        search.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable editable) {
+                String query = editable.toString().trim().toLowerCase(Locale.ROOT);
+                visibleUsers.clear();
+                for (AppUser user : allUsers) {
+                    String haystack = (userDisplayName(user) + " "
+                            + (user.getEmail() == null ? "" : user.getEmail()))
+                            .toLowerCase(Locale.ROOT);
+                    if (query.isEmpty() || haystack.contains(query)) {
+                        visibleUsers.add(user);
+                    }
+                }
+                adapter.notifyDataSetChanged();
+                updateUserListVisibility(list, empty, visibleUsers);
+            }
+        });
+
+        list.setOnItemClickListener((parent, row, position, id) -> {
+            AppUser selected = visibleUsers.get(position);
+            com.example.rummypulse.data.Player existing =
+                    findPlayerLinkedTo(gameData, selected.getUserId(), player);
+            if (existing != null) {
+                ModernToast.warning(this, getString(
+                        R.string.map_player_already_linked,
+                        userDisplayName(selected),
+                        existing.getName()));
+                return;
+            }
+            String gamePlayerName = player.getName();
+            String actualName = userPlayerFirstName(selected);
+            player.setUserId(selected.getUserId());
+            player.setName(actualName);
+            playerNameView.setText(actualName);
+            viewModel.saveGameData(currentGameId, gameData);
+            bindMapPlayerButton(mapButton, player);
+            generateStandingsTable(gameData);
+            dialog.dismiss();
+            ModernToast.success(this, getString(
+                    R.string.map_player_linked, gamePlayerName, actualName));
+        });
+    }
+
+    private int findLinkedUserIndex(List<AppUser> users, String linkedUserId) {
+        if (users == null || TextUtils.isEmpty(linkedUserId)) {
+            return -1;
+        }
+        for (int index = 0; index < users.size(); index++) {
+            AppUser user = users.get(index);
+            if (user != null && linkedUserId.equals(user.getUserId())) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private void updateUserListVisibility(
+            ListView list, TextView empty, List<AppUser> users) {
+        boolean hasUsers = users != null && !users.isEmpty();
+        list.setVisibility(hasUsers ? View.VISIBLE : View.GONE);
+        empty.setVisibility(hasUsers ? View.GONE : View.VISIBLE);
+        if (!hasUsers) {
+            empty.setText(R.string.map_player_no_users);
+        }
+    }
+
+    private com.example.rummypulse.data.Player findPlayerLinkedTo(
+            com.example.rummypulse.data.GameData gameData,
+            String userId,
+            com.example.rummypulse.data.Player excluded) {
+        if (gameData == null || gameData.getPlayers() == null || TextUtils.isEmpty(userId)) {
+            return null;
+        }
+        for (com.example.rummypulse.data.Player candidate : gameData.getPlayers()) {
+            if (candidate != excluded && userId.equals(candidate.getUserId())) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private String userDisplayName(AppUser user) {
+        if (user == null) {
+            return getString(R.string.unknown_user);
+        }
+        if (!TextUtils.isEmpty(user.getDisplayName())) {
+            return user.getDisplayName().trim();
+        }
+        if (!TextUtils.isEmpty(user.getEmail())) {
+            return user.getEmail().trim();
+        }
+        return getString(R.string.unknown_user);
+    }
+
+    private String userPlayerFirstName(AppUser user) {
+        String displayName = userDisplayName(user).trim();
+        String firstToken = displayName.split("\\s+", 2)[0];
+        int emailSeparator = firstToken.indexOf('@');
+        return emailSeparator > 0
+                ? firstToken.substring(0, emailSeparator)
+                : firstToken;
+    }
+
+    private String playerAvatarInitials(com.example.rummypulse.data.Player player) {
+        String sourceName = player == null ? "" : player.getName();
+        if (player != null && !TextUtils.isEmpty(player.getUserId())
+                && cachedDirectoryUsers != null) {
+            for (AppUser user : cachedDirectoryUsers) {
+                if (player.getUserId().equals(user.getUserId())) {
+                    sourceName = userDisplayName(user);
+                    break;
+                }
+            }
+        }
+        return initialsForName(sourceName);
+    }
+
+    private String initialsForName(String name) {
+        if (TextUtils.isEmpty(name)) {
+            return "?";
+        }
+        String[] parts = name.trim().split("\\s+");
+        String first = parts[0].substring(0, 1);
+        String last = parts.length > 1
+                ? parts[parts.length - 1].substring(0, 1)
+                : "";
+        return (first + last).toUpperCase(Locale.ROOT);
+    }
+
+    private void refreshPlayerAvatars() {
+        com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+        if (gameData == null || gameData.getPlayers() == null) {
+            return;
+        }
+        int count = Math.min(
+                binding.playersContainer.getChildCount(),
+                gameData.getPlayers().size());
+        for (int index = 0; index < count; index++) {
+            View card = binding.playersContainer.getChildAt(index);
+            TextView avatar = card.findViewById(R.id.btn_map_player);
+            if (avatar != null) {
+                bindMapPlayerButton(avatar, gameData.getPlayers().get(index));
+            }
+        }
+    }
+
+    private String userDetail(AppUser user, String linkedUserId) {
+        String email = user == null || TextUtils.isEmpty(user.getEmail())
+                ? ""
+                : user.getEmail().trim();
+        if (user != null && user.getUserId() != null
+                && user.getUserId().equals(linkedUserId)) {
+            return email.isEmpty()
+                    ? getString(R.string.map_player_currently_linked)
+                    : getString(R.string.map_player_email_linked, email);
+        }
+        return email;
     }
 
     private void bindPlayerTotalScore(TextView totalScoreView, com.example.rummypulse.data.Player player) {
