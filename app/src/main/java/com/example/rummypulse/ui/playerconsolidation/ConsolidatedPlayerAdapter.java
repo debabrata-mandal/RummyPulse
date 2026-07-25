@@ -54,6 +54,17 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         ConsolidatedPlayerGroup group = groups.get(position);
         holder.displayNameText.setText(group.getDisplayName());
+        String displayName = group.getDisplayName();
+        holder.avatarInitialText.setText(
+                displayName == null || displayName.trim().isEmpty()
+                        ? "?"
+                        : displayName.trim().substring(0, 1).toUpperCase());
+        int gameCount = group.getMembers().size();
+        holder.gameCountText.setText(holder.itemView.getContext().getString(
+                gameCount == 1
+                        ? R.string.player_consolidation_game_count_one
+                        : R.string.player_consolidation_game_count,
+                gameCount));
 
         bindSubtitle(holder, group);
         bindAmounts(holder, group);
@@ -88,10 +99,23 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
     }
 
     private void bindAmounts(ViewHolder holder, ConsolidatedPlayerGroup group) {
+        bindSignedAmount(holder.grossAmountText, group.getTotalGrossAmount());
+        holder.contributionAmountText.setText(
+                ConsolidationAmountFormatter.formatAmount(group.getTotalContribution()));
+        bindSignedAmount(holder.baseNetAmountText, group.getTotalNetAmount());
+        bindSignedAmount(holder.adjustmentAmountText, group.getNetAdjustment());
+
         double net = group.getAdjustedNetAmount();
-        holder.netAmountText.setText(ConsolidationAmountFormatter.formatSignedAmount(net));
+        holder.netAmountText.setText(
+                ConsolidationAmountFormatter.formatSignedAmount(net));
         holder.netAmountText.setTextColor(
                 ConsolidationAmountFormatter.getSignedAmountColor(holder.itemView.getContext(), net));
+    }
+
+    private void bindSignedAmount(TextView view, double amount) {
+        view.setText(ConsolidationAmountFormatter.formatSignedAmount(amount));
+        view.setTextColor(ConsolidationAmountFormatter.getSignedAmountColor(
+                view.getContext(), amount));
     }
 
     private void bindSelection(ViewHolder holder, ConsolidatedPlayerGroup group) {
@@ -124,15 +148,27 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
     static class ViewHolder extends RecyclerView.ViewHolder {
         final MaterialCardView card;
         final TextView displayNameText;
+        final TextView avatarInitialText;
+        final TextView gameCountText;
         final TextView aliasesText;
         final TextView netAmountText;
+        final TextView grossAmountText;
+        final TextView contributionAmountText;
+        final TextView baseNetAmountText;
+        final TextView adjustmentAmountText;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             card = itemView.findViewById(R.id.card_player);
             displayNameText = itemView.findViewById(R.id.text_display_name);
+            avatarInitialText = itemView.findViewById(R.id.text_avatar_initial);
+            gameCountText = itemView.findViewById(R.id.text_game_count);
             aliasesText = itemView.findViewById(R.id.text_aliases);
             netAmountText = itemView.findViewById(R.id.text_net_amount);
+            grossAmountText = itemView.findViewById(R.id.text_gross_amount);
+            contributionAmountText = itemView.findViewById(R.id.text_contribution_amount);
+            baseNetAmountText = itemView.findViewById(R.id.text_base_net_amount);
+            adjustmentAmountText = itemView.findViewById(R.id.text_adjustment_amount);
         }
     }
 }

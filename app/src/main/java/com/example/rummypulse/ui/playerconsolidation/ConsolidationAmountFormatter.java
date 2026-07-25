@@ -6,6 +6,9 @@ import androidx.core.content.ContextCompat;
 
 import com.example.rummypulse.R;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 public final class ConsolidationAmountFormatter {
 
     private ConsolidationAmountFormatter() {
@@ -23,7 +26,13 @@ public final class ConsolidationAmountFormatter {
     }
 
     public static String formatContribution(double amount) {
-        return "₹" + Math.round(amount);
+        return formatAmount(amount);
+    }
+
+    public static String formatAmount(double amount) {
+        BigDecimal rounded = BigDecimal.valueOf(amount).setScale(2, RoundingMode.HALF_UP);
+        String value = rounded.stripTrailingZeros().toPlainString();
+        return "₹" + value;
     }
 
     public static int getSignedAmountColor(Context context, double amount) {
