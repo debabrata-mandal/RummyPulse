@@ -94,13 +94,18 @@ service cloud.firestore {
         || canManageViewApprovals(resource.data.gameId)
       );
       allow create: if isAuthenticated()
-          && approvalId == request.resource.data.gameId + '_' + request.auth.uid
-          && request.resource.data.userId == request.auth.uid
+          && approvalId == request.resource.data.gameId + '_' + request.resource.data.userId
           && (
-            request.resource.data.status == 'requested'
+            (
+              request.resource.data.userId == request.auth.uid
+              && request.resource.data.status == 'requested'
+            )
             || (
               request.resource.data.status == 'approved'
-              && isGameCreator(request.resource.data.gameId)
+              && (
+                isGameCreator(request.resource.data.gameId)
+                || canManageViewApprovals(request.resource.data.gameId)
+              )
             )
           );
       allow update: if isAuthenticated()

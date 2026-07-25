@@ -99,7 +99,6 @@ public class JoinGameActivity extends AppCompatActivity {
     private static final String REAL_PLAYER_CARD_TAG = "real_player_card";
     private static final long VIEW_MODE_DEBOUNCE_MS = 2000; // 2 seconds for view mode
     private static final long BULK_UPDATE_DEBOUNCE_MS = 6000; // 6 seconds for bulk updates
-    private static final int LIVE_AMOUNTS_REVEAL_AFTER_ROUND = 6;
     private static final long GAME_COMPLETION_BUFFER_MS = 2000; // 2 seconds buffer after pending announcements
     private static final long MAX_GAME_COMPLETION_DELAY_MS = 10000; // Maximum 10 seconds delay
     private static final String ROUND_DRAFT_PREFERENCES = "round_score_drafts";
@@ -121,7 +120,9 @@ public class JoinGameActivity extends AppCompatActivity {
     private final AppUserRepository appUserRepository = new AppUserRepository();
     private List<AppUser> cachedDirectoryUsers;
 
-    /** When true, score {@link EditText} watchers skip persistence (programmatic sync from dialog). */
+    /** Prevents a programmatic mapped-name update from scheduling a second game-data write. */
+    private boolean suppressPlayerNamePersistence;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -1501,11 +1502,7 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Update Total Contribution Amount (rounded, no decimals)
         double totalContribution = calculateTotalContribution(gameData);
-        if (shouldShowStandingAmounts(gameData)) {
-            binding.textHeaderTotalContribution.setText("₹" + Math.round(totalContribution));
-        } else {
-            binding.textHeaderTotalContribution.setText(getString(R.string.game_view_amount_hidden));
-        }
+        binding.textHeaderTotalContribution.setText("₹" + Math.round(totalContribution));
         
         // Game PIN is not shown in the compact header (same layout in edit and view mode)
         updateHeaderPinVisibility();
@@ -1607,6 +1604,7 @@ public class JoinGameActivity extends AppCompatActivity {
             EditText playerName = playerCardView.findViewById(R.id.text_player_name);
             TextView mapPlayerButton = playerCardView.findViewById(R.id.btn_map_player);
             playerName.setText(player.getName());
+            applyMappedPlayerNameLock(playerName, player);
             
             // Add text change listener for player name
             playerName.addTextChangedListener(new android.text.TextWatcher() {
@@ -1622,6 +1620,9 @@ public class JoinGameActivity extends AppCompatActivity {
 
                 @Override
                 public void afterTextChanged(android.text.Editable s) {
+                    if (suppressPlayerNamePersistence) {
+                        return;
+                    }
                     // Update player name in the data model
                     String newName = s.toString().trim();
                     if (!newName.isEmpty()) {
@@ -1681,7 +1682,19 @@ public class JoinGameActivity extends AppCompatActivity {
                     ModernToast.info(this, getString(R.string.map_player_editor_only));
                     return;
                 }
-                showMapPlayerDialog(player, gameData, mapPlayerButton, playerName);
+                com.example.rummypulse.data.GameData latestGameData =
+                        viewModel.getGameData().getValue();
+                if (latestGameData == null || latestGameData.getPlayers() == null
+                        || playerIndex >= latestGameData.getPlayers().size()) {
+                    ModernToast.error(this, "Latest game data is unavailable. Please retry.");
+                    return;
+                }
+                showMapPlayerDialog(
+                        playerIndex,
+                        latestGameData.getPlayers().get(playerIndex),
+                        latestGameData,
+                        mapPlayerButton,
+                        playerName);
             });
 
             // Setup drag handle and drag-and-drop functionality (edit mode only)
@@ -1742,7 +1755,23 @@ public class JoinGameActivity extends AppCompatActivity {
                 : getString(R.string.map_player_icon_description));
     }
 
+    private void applyMappedPlayerNameLock(
+            EditText playerName,
+            com.example.rummypulse.data.Player player) {
+        if (playerName == null || player == null) {
+            return;
+        }
+        boolean mapped = !TextUtils.isEmpty(player.getUserId());
+        playerName.setEnabled(!mapped);
+        playerName.setFocusable(!mapped);
+        playerName.setFocusableInTouchMode(!mapped);
+        playerName.setCursorVisible(!mapped);
+        playerName.setLongClickable(!mapped);
+        playerName.setAlpha(1f);
+    }
+
     private void showMapPlayerDialog(
+            int playerIndex,
             com.example.rummypulse.data.Player player,
             com.example.rummypulse.data.GameData gameData,
             TextView mapButton,
@@ -1768,6 +1797,7 @@ public class JoinGameActivity extends AppCompatActivity {
             player.setUserId(null);
             viewModel.saveGameData(currentGameId, gameData);
             bindMapPlayerButton(mapButton, player);
+            applyMappedPlayerNameLock(playerNameView, player);
             dialog.dismiss();
             ModernToast.success(this, getString(R.string.map_player_unlinked, oldName));
         });
@@ -1781,7 +1811,8 @@ public class JoinGameActivity extends AppCompatActivity {
             public void onSuccess(List<AppUser> users) {
                 cachedDirectoryUsers = sortDirectoryUsers(users);
                 if (dialog.isShowing()) {
-                    bindUserDirectory(dialog, player, gameData, mapButton, playerNameView,
+                    bindUserDirectory(dialog, playerIndex, player, gameData,
+                            mapButton, playerNameView,
                             search, list, progress, empty, currentMapping,
                             cachedDirectoryUsers);
                 }
@@ -1800,6 +1831,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void bindUserDirectory(
             AlertDialog dialog,
+            int playerIndex,
             com.example.rummypulse.data.Player player,
             com.example.rummypulse.data.GameData gameData,
             TextView mapButton,
@@ -1886,16 +1918,56 @@ public class JoinGameActivity extends AppCompatActivity {
                 return;
             }
             String gamePlayerName = player.getName();
+            String previousUserId = player.getUserId();
             String actualName = userPlayerFirstName(selected);
+            cancelPendingGameSave();
             player.setUserId(selected.getUserId());
             player.setName(actualName);
+            suppressPlayerNamePersistence = true;
             playerNameView.setText(actualName);
-            viewModel.saveGameData(currentGameId, gameData);
-            bindMapPlayerButton(mapButton, player);
-            generateStandingsTable(gameData);
-            dialog.dismiss();
-            ModernToast.success(this, getString(
-                    R.string.map_player_linked, gamePlayerName, actualName));
+            suppressPlayerNamePersistence = false;
+            applyMappedPlayerNameLock(playerNameView, player);
+            list.setEnabled(false);
+            search.setEnabled(false);
+            progress.setVisibility(View.VISIBLE);
+
+            viewModel.linkPlayerAndApproveViewAccess(
+                    currentGameId,
+                    playerIndex,
+                    actualName,
+                    selected.getUserId(),
+                    userDisplayName(selected),
+                    new JoinGameViewModel.PlayerLinkCallback() {
+                        @Override
+                        public void onSuccess() {
+                            bindMapPlayerButton(mapButton, player);
+                            com.example.rummypulse.data.GameData savedGameData =
+                                    viewModel.getGameData().getValue();
+                            if (savedGameData != null) {
+                                generateStandingsTable(savedGameData);
+                            }
+                            dialog.dismiss();
+                            ModernToast.success(JoinGameActivity.this, getString(
+                                    R.string.map_player_linked,
+                                    gamePlayerName,
+                                    actualName));
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            player.setUserId(previousUserId);
+                            player.setName(gamePlayerName);
+                            suppressPlayerNamePersistence = true;
+                            playerNameView.setText(gamePlayerName);
+                            suppressPlayerNamePersistence = false;
+                            bindMapPlayerButton(mapButton, player);
+                            applyMappedPlayerNameLock(playerNameView, player);
+                            list.setEnabled(true);
+                            search.setEnabled(true);
+                            progress.setVisibility(View.GONE);
+                            ModernToast.error(JoinGameActivity.this, message);
+                        }
+                    });
         });
     }
 
@@ -2771,15 +2843,19 @@ public class JoinGameActivity extends AppCompatActivity {
         return 10;
     }
     
-    /**
-     * Whether standings and header should show settlement amounts (net / total contribution).
-     * When intermediate calculation is off in game defaults, amounts appear only after round 6 is complete.
-     */
-    private boolean shouldShowStandingAmounts(com.example.rummypulse.data.GameData gameData) {
-        if (gameData != null && isRoundComplete(LIVE_AMOUNTS_REVEAL_AFTER_ROUND, gameData)) {
-            return true;
-        }
-        return com.example.rummypulse.data.GameDefaultsRepository.getInstance(getApplicationContext())
+    private boolean shouldShowStandingAmountForPlayer(
+            com.example.rummypulse.data.GameData gameData,
+            com.example.rummypulse.data.Player player) {
+        boolean playerIsMapped = player != null && !TextUtils.isEmpty(player.getUserId());
+        return com.example.rummypulse.data.GameAmountVisibilityPolicy.shouldShowPlayerAmount(
+                isLiveAmountDisplayEnabled(),
+                gameData != null && isGameCompleted(gameData),
+                playerIsMapped);
+    }
+
+    private boolean isLiveAmountDisplayEnabled() {
+        return com.example.rummypulse.data.GameDefaultsRepository
+                .getInstance(getApplicationContext())
                 .isDisplayIntermediateCalculationEnabled();
     }
 
@@ -2797,7 +2873,7 @@ public class JoinGameActivity extends AppCompatActivity {
         if (netAmountText == null) {
             return;
         }
-        if (!shouldShowStandingAmounts(gameData)) {
+        if (!shouldShowStandingAmountForPlayer(gameData, standing.player)) {
             applyStandingNetAmountPlaceholder(netAmountText);
             return;
         }
@@ -2813,6 +2889,10 @@ public class JoinGameActivity extends AppCompatActivity {
     private boolean isGameCompleted(com.example.rummypulse.data.GameData gameData) {
         // Always check game data directly for round 10 completion
         // This works reliably in both edit and view modes
+        if (gameData == null || gameData.getPlayers() == null
+                || gameData.getPlayers().isEmpty()) {
+            return false;
+        }
         for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
             if (player.getScores() == null || player.getScores().size() < 10) {
                 return false; // Player doesn't have 10 rounds
@@ -3908,6 +3988,13 @@ public class JoinGameActivity extends AppCompatActivity {
     private android.os.Handler saveHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable saveRunnable;
     private static final int SAVE_DELAY_MS = 1000; // 1 second delay
+
+    private void cancelPendingGameSave() {
+        if (saveRunnable != null) {
+            saveHandler.removeCallbacks(saveRunnable);
+            saveRunnable = null;
+        }
+    }
     
     private void saveGameDataWithDebounce(com.example.rummypulse.data.GameData gameData) {
         if (viewModel == null || !viewModel.canSaveGameData()) {
@@ -3919,9 +4006,7 @@ public class JoinGameActivity extends AppCompatActivity {
                     .updateLocalDashboardFromGameData(currentGameId, gameData);
         }
         // Cancel any pending save
-        if (saveRunnable != null) {
-            saveHandler.removeCallbacks(saveRunnable);
-        }
+        cancelPendingGameSave();
         
         // Schedule a new save
         saveRunnable = new Runnable() {
@@ -4661,9 +4746,9 @@ public class JoinGameActivity extends AppCompatActivity {
         text.append("👥 *Players:* ").append(gameData.getNumPlayers()).append("\n");
         text.append("💰 *Point Value:* ₹").append(String.format("%.2f", gameData.getPointValue())).append("\n");
         text.append("📊 *Contribution %:* ").append(String.format("%.0f", gameData.getGstPercent())).append("%\n");
-        if (shouldShowStandingAmounts(gameData)) {
-            text.append("💵 *Total Contribution:* ₹").append(String.format("%.0f", totalContribution)).append("\n");
-        }
+        text.append("💵 *Total Contribution:* ₹")
+                .append(String.format("%.0f", totalContribution))
+                .append("\n");
         text.append("━━━━━━━━━━━━━━━━━━━━━━\n");
         
         // Sort by total score (ascending - lower is better)
@@ -4686,7 +4771,7 @@ public class JoinGameActivity extends AppCompatActivity {
             // Compact format: Rank Name • Score: X • Net: ₹Y
             text.append(rankEmoji).append(" *").append(standing.player.getName()).append("*");
             text.append(" • Score: ").append(standing.totalScore);
-            if (shouldShowStandingAmounts(gameData)) {
+            if (shouldShowStandingAmountForPlayer(gameData, standing.player)) {
                 text.append(" • Net: ₹").append(String.format("%.0f", standing.netAmount));
             }
             text.append("\n");

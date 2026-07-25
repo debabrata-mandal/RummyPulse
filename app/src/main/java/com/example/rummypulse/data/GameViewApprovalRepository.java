@@ -30,7 +30,7 @@ import java.util.Map;
 public class GameViewApprovalRepository {
 
     /** Denormalized index on {@code games_v2} so editors can list requests without collection-query rules. */
-    static final String PENDING_VIEW_REQUESTS_FIELD = "pendingViewRequests";
+    public static final String PENDING_VIEW_REQUESTS_FIELD = "pendingViewRequests";
 
     public enum ViewAccessOutcome {
         GRANTED,

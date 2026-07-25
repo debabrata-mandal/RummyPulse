@@ -56,6 +56,12 @@ public class JoinGameViewModel extends AndroidViewModel {
         void onError(String message);
     }
 
+    public interface PlayerLinkCallback {
+        void onSuccess();
+
+        void onError(String message);
+    }
+
     private final FirebaseFirestore db;
     private final GameViewApprovalRepository viewApprovalRepository;
     private final GameRepository gameRepository;
@@ -620,6 +626,128 @@ public class JoinGameViewModel extends AndroidViewModel {
                 })
                 .addOnFailureListener(e ->
                         errorMessage.setValue("Failed to save game data: " + e.getMessage()));
+    }
+
+    /**
+     * Saves the player-to-user mapping and grants that user view access atomically.
+     * The deterministic approval document ID makes this safe to repeat.
+     */
+    public void linkPlayerAndApproveViewAccess(
+            String gameId,
+            int playerIndex,
+            String linkedPlayerName,
+            String linkedUserId,
+            String linkedUserDisplayName,
+            PlayerLinkCallback callback) {
+        if (TextUtils.isEmpty(gameId) || playerIndex < 0
+                || TextUtils.isEmpty(linkedPlayerName)
+                || TextUtils.isEmpty(linkedUserId)) {
+            callback.onError("Invalid player mapping.");
+            return;
+        }
+        FirebaseUser editor = FirebaseAuth.getInstance().getCurrentUser();
+        if (!canSaveGameData() || editor == null) {
+            callback.onError("Only the active editor can link a player.");
+            return;
+        }
+
+        final long expectedGeneration = getActiveEditGeneration();
+        final String expectedEditorUserId = editor.getUid();
+        final DocumentReference gameRef =
+                db.collection(FirestoreCollections.GAMES).document(gameId);
+        final DocumentReference gameDataRef =
+                db.collection(FirestoreCollections.GAME_DATA).document(gameId);
+        final DocumentReference approvalRef =
+                db.collection(FirestoreCollections.GAME_VIEW_APPROVALS)
+                        .document(GameViewApprovalRepository.documentId(
+                                gameId, linkedUserId));
+
+        db.runTransaction(transaction -> {
+            DocumentSnapshot authSnapshot = transaction.get(gameRef);
+            DocumentSnapshot currentDataSnapshot = transaction.get(gameDataRef);
+            DocumentSnapshot approvalSnapshot = transaction.get(approvalRef);
+            if (!authSnapshot.exists() || !currentDataSnapshot.exists()) {
+                throw new IllegalStateException("Game data is no longer available.");
+            }
+
+            GameAuth remoteAuth = authSnapshot.toObject(GameAuth.class);
+            if (remoteAuth == null
+                    || !expectedEditorUserId.equals(remoteAuth.getActiveEditorUserId())
+                    || remoteAuth.getPinGenerationOrDefault() != expectedGeneration) {
+                throw new IllegalStateException(
+                        "Edit access changed. Reopen the game before linking this player.");
+            }
+            Long remoteDataGeneration = currentDataSnapshot.getLong("editGeneration");
+            long actualDataGeneration = remoteDataGeneration != null
+                    && remoteDataGeneration > 0
+                    ? remoteDataGeneration
+                    : 1L;
+            if (actualDataGeneration != expectedGeneration) {
+                throw new IllegalStateException(
+                        "Edit access changed. Reopen the game before linking this player.");
+            }
+
+            GameDataWrapper latestWrapper =
+                    currentDataSnapshot.toObject(GameDataWrapper.class);
+            GameData latestGameData =
+                    latestWrapper != null ? latestWrapper.getData() : null;
+            if (latestGameData == null || latestGameData.getPlayers() == null
+                    || playerIndex >= latestGameData.getPlayers().size()) {
+                throw new IllegalStateException(
+                        "The player list changed. Refresh the game and retry.");
+            }
+            com.example.rummypulse.data.PlayerMappingPatch.apply(
+                    latestGameData,
+                    playerIndex,
+                    linkedPlayerName,
+                    linkedUserId);
+            Map<String, Object> latestGameDataDoc =
+                    buildGameDataDocument(latestGameData, expectedGeneration);
+
+            String approvalDisplayName = TextUtils.isEmpty(linkedUserDisplayName)
+                    ? linkedUserId
+                    : linkedUserDisplayName;
+            Object requestedAt = approvalSnapshot.exists()
+                    ? approvalSnapshot.get("requestedAt")
+                    : null;
+            if (requestedAt == null) {
+                requestedAt = com.google.firebase.firestore.FieldValue.serverTimestamp();
+            }
+
+            Map<String, Object> approvalData = new HashMap<>();
+            approvalData.put("gameId", gameId);
+            approvalData.put("userId", linkedUserId);
+            approvalData.put("userDisplayName", approvalDisplayName);
+            approvalData.put("status", "approved");
+            approvalData.put("requestedAt", requestedAt);
+            approvalData.put("lastUpdatedAt",
+                    com.google.firebase.firestore.FieldValue.serverTimestamp());
+
+            Map<String, Object> mirroredApproval = new HashMap<>();
+            mirroredApproval.put("userDisplayName", approvalDisplayName);
+            mirroredApproval.put("status", "approved");
+            mirroredApproval.put("requestedAt", requestedAt);
+            mirroredApproval.put("lastUpdatedAt",
+                    com.google.firebase.firestore.FieldValue.serverTimestamp());
+
+            transaction.set(gameDataRef, latestGameDataDoc);
+            transaction.set(approvalRef, approvalData);
+            transaction.update(
+                    gameRef,
+                    GameViewApprovalRepository.PENDING_VIEW_REQUESTS_FIELD
+                            + "." + linkedUserId,
+                    mirroredApproval);
+            return latestGameData;
+        }).addOnSuccessListener(savedGameData -> {
+            gameData.setValue(savedGameData);
+            gameRepository.updateLocalDashboardFromGameData(gameId, savedGameData);
+            callback.onSuccess();
+        }).addOnFailureListener(error -> {
+            String message = error.getMessage();
+            callback.onError(message == null || message.trim().isEmpty()
+                    ? "Could not link this player. Check your connection and retry."
+                    : message);
+        });
     }
 
     /**

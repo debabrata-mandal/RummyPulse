@@ -51,7 +51,7 @@ public class GameDefaults {
         this.defaultMidGameNewPlayerScoreIncrement = defaultMidGameNewPlayerScoreIncrement;
     }
 
-    /** When true, standings show net amounts while rounds are in progress; when false, amounts appear only after round 6 is complete. */
+    /** When true, standings show live amounts; when false, amounts appear only after the game ends. */
     public boolean isDisplayIntermediateCalculation() {
         return displayIntermediateCalculation == null || displayIntermediateCalculation;
     }
