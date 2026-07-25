@@ -8,6 +8,8 @@ import java.util.List;
 
 public final class ConsolidatedSettlementCalculator {
 
+    public static final String CONTRIBUTION_RECIPIENT = "Contribution";
+
     private ConsolidatedSettlementCalculator() {
     }
 
@@ -54,7 +56,7 @@ public final class ConsolidatedSettlementCalculator {
                 if (group == null) {
                     continue;
                 }
-                long balance = toPaise(group.getAdjustedNetAmount());
+                long balance = toWholeRupeesPaise(group.getAdjustedNetAmount());
                 if (balance < 0) {
                     long debt = -balance;
                     debtors.add(new Balance(group.getDisplayName(), debt));
@@ -70,12 +72,37 @@ public final class ConsolidatedSettlementCalculator {
             return new Result(Status.ALL_SETTLED, new ArrayList<>(), 0);
         }
 
+        long rawTotalDebt = 0;
+        long rawTotalCredit = 0;
+        if (groups != null) {
+            for (ConsolidatedPlayerGroup group : groups) {
+                if (group == null) {
+                    continue;
+                }
+                long rawBalance = toPaise(group.getAdjustedNetAmount());
+                if (rawBalance < 0) {
+                    rawTotalDebt += -rawBalance;
+                } else {
+                    rawTotalCredit += rawBalance;
+                }
+            }
+        }
+
         long contributionPaise = Math.max(0, toPaise(totalContribution));
-        long contributionGap = totalDebt - totalCredit;
+        long contributionGap = rawTotalDebt - rawTotalCredit;
         long roundingTolerancePaise = calculateRoundingTolerancePaise(groups);
         if (contributionGap < 0
                 || Math.abs(contributionGap - contributionPaise) > roundingTolerancePaise) {
             return new Result(Status.UNBALANCED_INPUT, new ArrayList<>(), 0);
+        }
+
+        // Player cards display whole rupees, so cash settlement must use the same
+        // rounded balances. Treat the contribution pool as an explicit receiver
+        // instead of scaling every debtor down and silently dropping that money.
+        long roundedContributionGap = totalDebt - totalCredit;
+        if (roundedContributionGap > 0) {
+            creditors.add(new Balance(CONTRIBUTION_RECIPIENT, roundedContributionGap));
+            totalCredit += roundedContributionGap;
         }
 
         Comparator<Balance> largestFirst = Comparator
@@ -105,7 +132,7 @@ public final class ConsolidatedSettlementCalculator {
         return new Result(
                 payments.isEmpty() ? Status.ALL_SETTLED : Status.SUCCESS,
                 payments,
-                totalCredit);
+                totalDebt);
     }
 
     private static long toPaise(double amount) {
@@ -113,6 +140,10 @@ public final class ConsolidatedSettlementCalculator {
                 .movePointRight(2)
                 .setScale(0, RoundingMode.HALF_UP)
                 .longValue();
+    }
+
+    private static long toWholeRupeesPaise(double amount) {
+        return Math.round(amount) * 100L;
     }
 
     /*

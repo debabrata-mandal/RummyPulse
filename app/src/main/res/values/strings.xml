@@ -270,7 +270,7 @@
     <string name="player_consolidation_net_column">NET</string>
     <string name="player_consolidation_adjustment_column">ADJUSTMENT</string>
     <string name="player_consolidation_contribution_collected">Total contribution collected</string>
-    <string name="player_consolidation_contribution_info">Informational only · not part of player settlement</string>
+    <string name="player_consolidation_contribution_info">Collected during settlement by the Contribution recipient</string>
     <string name="player_consolidation_sitting_summary">Sitting summary</string>
     <string name="player_consolidation_total_gross">Gross winnings</string>
     <string name="player_consolidation_total_contribution">Contribution</string>
