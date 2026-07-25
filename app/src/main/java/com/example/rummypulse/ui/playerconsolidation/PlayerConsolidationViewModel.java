@@ -16,6 +16,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class PlayerConsolidationViewModel extends ViewModel {
@@ -26,6 +27,13 @@ public class PlayerConsolidationViewModel extends ViewModel {
     private final MutableLiveData<Set<String>> selectedEntryIds = new MutableLiveData<>(new HashSet<>());
     private final MutableLiveData<ConsolidationTotals> consolidationTotals =
             new MutableLiveData<>(new ConsolidationTotals(0, 0));
+    private final MutableLiveData<ConsolidatedSettlementCalculator.Result> settlementResult =
+            new MutableLiveData<>(ConsolidatedSettlementCalculator.calculate(
+                    new ArrayList<>(), 0));
+    private final MutableLiveData<List<BalanceAdjustment>> balanceAdjustments =
+            new MutableLiveData<>(new ArrayList<>());
+    private final MutableLiveData<Boolean> mappingsConfirmed =
+            new MutableLiveData<>(false);
 
     private boolean consolidationInitialized;
     private String lastInitializedGameKey = "";
@@ -61,6 +69,41 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     public LiveData<ConsolidationTotals> getConsolidationTotals() {
         return consolidationTotals;
+    }
+
+    public LiveData<ConsolidatedSettlementCalculator.Result> getSettlementResult() {
+        return settlementResult;
+    }
+
+    public LiveData<List<BalanceAdjustment>> getBalanceAdjustments() {
+        return balanceAdjustments;
+    }
+
+    public List<ConsolidatedPlayerGroup> getAvailableGroups() {
+        List<ConsolidatedPlayerGroup> groups = playerGroups.getValue();
+        return groups == null ? new ArrayList<>() : new ArrayList<>(groups);
+    }
+
+    public LiveData<Boolean> getMappingsConfirmed() {
+        return mappingsConfirmed;
+    }
+
+    public boolean areMappingsConfirmed() {
+        return Boolean.TRUE.equals(mappingsConfirmed.getValue());
+    }
+
+    public void confirmMappings() {
+        List<ConsolidatedPlayerGroup> groups = playerGroups.getValue();
+        if (groups == null || groups.isEmpty()) {
+            return;
+        }
+        selectedEntryIds.setValue(new HashSet<>());
+        groupSelectionOrder.clear();
+        mappingsConfirmed.setValue(true);
+    }
+
+    public void editMappings() {
+        mappingsConfirmed.setValue(false);
     }
 
     public void toggleGameSelection(String gameId) {
@@ -119,6 +162,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
         lastSelectedGamesContentHash = computeSelectedGamesContentHash(selectedGames);
         selectedEntryIds.setValue(new HashSet<>());
         groupSelectionOrder.clear();
+        balanceAdjustments.setValue(new ArrayList<>());
+        mappingsConfirmed.setValue(false);
         playerGroups.setValue(groups);
         publishDerivedLists(groups);
     }
@@ -237,7 +282,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
         return null;
     }
 
-    public boolean applyTransfer(String fromGroupId, String toGroupId, double amount) {
+    public boolean applyTransfer(String fromGroupId, String toGroupId, double amount,
+                                 @Nullable String reason) {
         if (amount <= 0 || TextUtils.isEmpty(fromGroupId) || TextUtils.isEmpty(toGroupId)
                 || fromGroupId.equals(toGroupId)) {
             return false;
@@ -260,10 +306,56 @@ public class PlayerConsolidationViewModel extends ViewModel {
         }
         fromGroup.applyNetAdjustmentDelta(-amount);
         toGroup.applyNetAdjustmentDelta(amount);
+        List<BalanceAdjustment> currentAdjustments = balanceAdjustments.getValue();
+        List<BalanceAdjustment> updatedAdjustments = currentAdjustments == null
+                ? new ArrayList<>()
+                : new ArrayList<>(currentAdjustments);
+        updatedAdjustments.add(new BalanceAdjustment(
+                UUID.randomUUID().toString(),
+                fromGroup.getGroupId(),
+                toGroup.getGroupId(),
+                fromGroup.getDisplayName(),
+                toGroup.getDisplayName(),
+                amount,
+                reason != null ? reason.trim() : "",
+                System.currentTimeMillis()));
+        balanceAdjustments.setValue(updatedAdjustments);
         selectedEntryIds.setValue(new HashSet<>());
         groupSelectionOrder.clear();
         publishDerivedLists(groups);
         return true;
+    }
+
+    public void deleteAdjustment(String adjustmentId) {
+        if (TextUtils.isEmpty(adjustmentId)) {
+            return;
+        }
+        List<BalanceAdjustment> current = balanceAdjustments.getValue();
+        List<ConsolidatedPlayerGroup> groups = playerGroups.getValue();
+        if (current == null || groups == null) {
+            return;
+        }
+        BalanceAdjustment target = null;
+        for (BalanceAdjustment adjustment : current) {
+            if (adjustmentId.equals(adjustment.getAdjustmentId())) {
+                target = adjustment;
+                break;
+            }
+        }
+        if (target == null) {
+            return;
+        }
+        for (ConsolidatedPlayerGroup group : groups) {
+            if (target.getFromGroupId().equals(group.getGroupId())) {
+                group.applyNetAdjustmentDelta(target.getAmount());
+            } else if (target.getToGroupId().equals(group.getGroupId())) {
+                group.applyNetAdjustmentDelta(-target.getAmount());
+            }
+        }
+        List<BalanceAdjustment> updated = new ArrayList<>(current);
+        updated.remove(target);
+        balanceAdjustments.setValue(updated);
+        publishDerivedLists(groups);
     }
 
     public List<String> getSelectedEntryNames() {
@@ -296,6 +388,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
                 currentGroups, selectedIds, displayName);
         selectedEntryIds.setValue(new HashSet<>());
         groupSelectionOrder.clear();
+        mappingsConfirmed.setValue(false);
         playerGroups.setValue(merged);
         publishDerivedLists(merged);
     }
@@ -310,6 +403,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
                 currentGroups, group.getGroupId());
         selectedEntryIds.setValue(new HashSet<>());
         groupSelectionOrder.clear();
+        mappingsConfirmed.setValue(false);
         playerGroups.setValue(split);
         publishDerivedLists(split);
     }
@@ -318,6 +412,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
         List<ConsolidatedPlayerGroup> groups = PlayerConsolidationEngine.buildInitialGroups(selectedGames);
         selectedEntryIds.setValue(new HashSet<>());
         groupSelectionOrder.clear();
+        balanceAdjustments.setValue(new ArrayList<>());
+        mappingsConfirmed.setValue(false);
         lastSelectedGamesContentHash = computeSelectedGamesContentHash(selectedGames);
         playerGroups.setValue(groups);
         publishDerivedLists(groups);
@@ -341,6 +437,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
         PlayerConsolidationEngine.RefreshResult result =
                 PlayerConsolidationEngine.refreshGroupsFromGames(currentGroups, selectedGames);
         lastSelectedGamesContentHash = contentHash;
+        mappingsConfirmed.setValue(false);
         publishDerivedLists(result.getGroups());
         return result.hadMissingMembers()
                 ? RefreshOutcome.REFRESHED_WITH_MISSING_MEMBERS
@@ -376,12 +473,17 @@ public class PlayerConsolidationViewModel extends ViewModel {
     private void publishDerivedLists(List<ConsolidatedPlayerGroup> groups) {
         if (groups == null) {
             consolidationTotals.setValue(new ConsolidationTotals(0, 0));
+            settlementResult.setValue(ConsolidatedSettlementCalculator.calculate(
+                    new ArrayList<>(), 0));
             return;
         }
         List<ConsolidatedPlayerGroup> sortedGroups = new ArrayList<>(groups);
         sortedGroups.sort(Comparator.comparing(group -> group.getDisplayName().toLowerCase()));
         playerGroups.setValue(sortedGroups);
-        consolidationTotals.setValue(ConsolidationTotals.fromGroups(sortedGroups));
+        ConsolidationTotals totals = ConsolidationTotals.fromGroups(sortedGroups);
+        consolidationTotals.setValue(totals);
+        settlementResult.setValue(ConsolidatedSettlementCalculator.calculate(
+                sortedGroups, totals.getTotalContribution()));
     }
 
     private String buildGameKey(List<GameItem> selectedGames) {

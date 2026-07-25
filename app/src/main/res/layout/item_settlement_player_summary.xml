@@ -2,11 +2,10 @@
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/card_player"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="4dp"
-    android:layout_marginVertical="5dp"
+    android:layout_marginVertical="6dp"
     android:clickable="true"
     android:focusable="true"
     android:foreground="?android:attr/selectableItemBackground"
@@ -30,7 +29,7 @@
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/text_avatar_initial"
+                android:id="@+id/text_summary_avatar"
                 android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:background="@drawable/circle_background"
@@ -49,16 +48,18 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/text_display_name"
+                    android:id="@+id/text_summary_name"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     tools:text="Amit" />
 
                 <TextView
-                    android:id="@+id/text_game_count"
+                    android:id="@+id/text_summary_games_subtitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -81,7 +82,7 @@
                     android:textSize="10sp" />
 
                 <TextView
-                    android:id="@+id/text_net_amount"
+                    android:id="@+id/text_summary_final"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -89,23 +90,21 @@
                     android:textStyle="bold"
                     tools:text="+₹1,648" />
             </LinearLayout>
-        </LinearLayout>
 
-        <TextView
-            android:id="@+id/text_aliases"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            tools:text="Amit (Card Blazer) · amit (Card Rush)" />
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:contentDescription="@string/player_consolidation_edit_mappings"
+                android:padding="8dp"
+                android:src="@drawable/ic_edit"
+                app:tint="@color/accent_blue" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="14dp"
             android:baselineAligned="false"
             android:orientation="horizontal">
 
@@ -123,13 +122,13 @@
                     android:textSize="10sp" />
 
                 <TextView
-                    android:id="@+id/text_gross_amount"
+                    android:id="@+id/text_summary_gross"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    tools:text="₹1,400" />
+                    tools:text="-₹1,180" />
             </LinearLayout>
 
             <LinearLayout
@@ -147,7 +146,7 @@
                     android:textSize="10sp" />
 
                 <TextView
-                    android:id="@+id/text_contribution_amount"
+                    android:id="@+id/text_summary_contribution"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
@@ -173,7 +172,7 @@
                     android:textSize="10sp" />
 
                 <TextView
-                    android:id="@+id/text_base_net_amount"
+                    android:id="@+id/text_summary_net"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
@@ -198,7 +197,7 @@
                     android:textSize="10sp" />
 
                 <TextView
-                    android:id="@+id/text_adjustment_amount"
+                    android:id="@+id/text_summary_adjustment"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
@@ -208,6 +207,13 @@
                     tools:text="+₹500" />
             </LinearLayout>
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/text_summary_games"
+            android:layout_width="1dp"
+            android:layout_height="1dp"
+            android:visibility="gone"
+            tools:text="3" />
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

@@ -90,6 +90,7 @@
         tools:visibility="visible">
 
         <androidx.core.widget.NestedScrollView
+            android:id="@+id/scroll_mapping_settlement"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
@@ -132,7 +133,66 @@
                 tools:itemCount="2"
                 tools:listitem="@layout/item_consolidation_selected_game_status" />
 
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_mapping_step"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginBottom="14dp"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/accent_blue"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_dashboard_game_card"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="14dp">
+
+                    <ImageView
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/circle_background"
+                        android:backgroundTint="@color/accent_blue"
+                        android:contentDescription="@null"
+                        android:padding="9dp"
+                        android:src="@drawable/ic_link_players"
+                        app:tint="@android:color/white" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/text_mapping_step_title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/player_consolidation_mapping_step_title"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/text_mapping_step_subtitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/player_consolidation_mapping_step_subtitle"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <TextView
+                android:id="@+id/text_map_instructions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingStart="20dp"
@@ -141,14 +201,6 @@
                 android:text="@string/player_consolidation_consolidated_title"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
                 android:textColor="@color/text_primary" />
-
-            <include
-                android:id="@+id/consolidation_totals_summary"
-                layout="@layout/item_consolidation_totals_summary"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:visibility="gone"
-                tools:visibility="visible" />
 
             <TextView
                 android:id="@+id/text_no_consolidated_players"
@@ -171,6 +223,543 @@
                 tools:listitem="@layout/item_consolidated_player" />
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_confirm_mappings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="12dp"
+                android:minHeight="52dp"
+                android:text="@string/player_consolidation_confirm_mappings"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_confirm_mapping"
+                app:iconGravity="textStart"
+                app:iconTint="@android:color/white" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_edit_mappings"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="12dp"
+                android:minHeight="48dp"
+                android:text="@string/player_consolidation_edit_mappings"
+                android:visibility="gone"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_edit"
+                app:iconGravity="textStart"
+                app:iconTint="@color/accent_blue"
+                tools:visibility="visible" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_player_summary_table"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="6dp"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/divider_color"
+                app:strokeWidth="1dp"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_dashboard_game_card"
+                    android:orientation="vertical"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="8dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="12dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/player_consolidation_consolidated_title"
+                            android:textColor="@color/accent_blue_light"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/player_consolidation_tap_edit_mapping"
+                            android:textColor="@color/accent_blue_light"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="10dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="8dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.45"
+                            android:text="@string/player_consolidation_table_player"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="8sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.45"
+                            android:gravity="center"
+                            android:text="@string/player_consolidation_table_games"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="8sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.05"
+                            android:gravity="center"
+                            android:text="@string/player_consolidation_table_gross"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="8sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.05"
+                            android:gravity="center"
+                            android:text="@string/player_consolidation_table_contribution"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="7sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.0"
+                            android:gravity="center"
+                            android:text="@string/player_consolidation_table_net"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="8sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.95"
+                            android:gravity="center"
+                            android:text="@string/player_consolidation_table_adjustment"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="7sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.15"
+                            android:gravity="center"
+                            android:text="@string/player_consolidation_table_final"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="7sp" />
+
+                        <Space
+                            android:layout_width="22dp"
+                            android:layout_height="1dp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/divider_color"
+                        android:visibility="gone" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recycler_settlement_player_summary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
+                        tools:itemCount="5"
+                        tools:listitem="@layout/item_settlement_player_summary" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/divider_color"
+                        android:visibility="gone" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="8dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.45"
+                            android:text="@string/player_consolidation_table_total"
+                            android:textColor="@color/accent_blue_light"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/text_player_table_total_games"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.45"
+                            android:gravity="center"
+                            android:textColor="@color/text_primary"
+                            android:textSize="9sp"
+                            tools:text="15" />
+
+                        <TextView
+                            android:id="@+id/text_player_table_total_gross"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.05"
+                            android:gravity="center"
+                            android:textColor="@color/text_primary"
+                            android:textSize="9sp"
+                            tools:text="₹0" />
+
+                        <TextView
+                            android:id="@+id/text_player_table_total_contribution"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.05"
+                            android:gravity="center"
+                            android:textColor="@color/warning_orange"
+                            android:textSize="9sp"
+                            tools:text="₹275" />
+
+                        <TextView
+                            android:id="@+id/text_player_table_total_net"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.0"
+                            android:gravity="center"
+                            android:textColor="@color/text_primary"
+                            android:textSize="9sp"
+                            tools:text="₹0" />
+
+                        <TextView
+                            android:id="@+id/text_player_table_total_adjustment"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="0.95"
+                            android:gravity="center"
+                            android:textColor="@color/text_primary"
+                            android:textSize="9sp"
+                            tools:text="₹0" />
+
+                        <TextView
+                            android:id="@+id/text_player_table_total_final"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.15"
+                            android:gravity="center"
+                            android:textColor="@color/text_primary"
+                            android:textSize="9sp"
+                            tools:text="₹0" />
+
+                        <Space
+                            android:layout_width="22dp"
+                            android:layout_height="1dp" />
+                    </LinearLayout>
+
+            <TextView
+                android:id="@+id/text_selected_games_label"
+                android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:drawableStart="@drawable/ic_info"
+                        android:drawablePadding="7dp"
+                        android:paddingHorizontal="12dp"
+                        android:paddingTop="8dp"
+                        android:text="@string/player_consolidation_final_balance_info"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="10sp"
+                        app:drawableTint="@color/accent_blue_light" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <include
+                android:id="@+id/consolidation_totals_summary"
+                layout="@layout/item_consolidation_totals_summary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_balance_adjustments"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/divider_color"
+                app:strokeWidth="1dp"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_dashboard_game_card"
+                    android:orientation="vertical"
+                    android:paddingTop="14dp"
+                    android:paddingBottom="8dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp">
+
+                        <ImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:background="@drawable/circle_background"
+                            android:backgroundTint="@color/background_tertiary"
+                            android:contentDescription="@null"
+                            android:padding="7dp"
+                            android:src="@drawable/ic_balance_adjustment"
+                            app:tint="@color/accent_blue_light" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/text_mapping_players_title"
+                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/player_consolidation_adjustments_title"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="@string/player_consolidation_adjustments_subtitle"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_transfer_amount"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:minHeight="40dp"
+                            android:text="@string/player_consolidation_add_adjustment"
+                            android:textSize="11sp"
+                            app:cornerRadius="9dp"
+                            app:icon="@drawable/ic_balance_adjustment"
+                            app:iconGravity="textStart"
+                            app:iconSize="18dp"
+                            app:iconTint="@color/accent_blue" />
+                    </LinearLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recycler_balance_adjustments"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
+                        tools:itemCount="1"
+                        tools:listitem="@layout/item_balance_adjustment" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_settlement"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="12dp"
+                android:layout_marginTop="12dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="3dp"
+                app:strokeColor="@color/accent_blue"
+                app:strokeWidth="1dp"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_dashboard_game_card"
+                    android:orientation="vertical"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="10dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp">
+
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/circle_background"
+                            android:backgroundTint="@color/accent_blue"
+                            android:contentDescription="@null"
+                            android:padding="9dp"
+                            android:src="@drawable/ic_link_players"
+                            app:tint="@android:color/white" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/player_consolidation_settle_up"
+                                android:textColor="@color/text_primary"
+                                android:textSize="19sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:text="@string/player_consolidation_settlement_subtitle"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/layout_settlement_metrics"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="16dp"
+                        android:layout_marginTop="14dp"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="6dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/professional_row_background"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/player_consolidation_player_payments"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+
+                            <TextView
+                                android:id="@+id/text_settlement_total"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:textColor="@color/success_green"
+                                android:textSize="17sp"
+                                android:textStyle="bold"
+                                tools:text="₹1,200" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/professional_row_background"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/player_consolidation_payment_count"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+
+                            <TextView
+                                android:id="@+id/text_settlement_count"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:textColor="@color/accent_blue_light"
+                                android:textSize="17sp"
+                                android:textStyle="bold"
+                                tools:text="3" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_settlement_empty"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:paddingHorizontal="20dp"
+                        android:paddingTop="20dp"
+                        android:paddingBottom="14dp"
+                        android:text="@string/player_consolidation_all_settled"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+
+                    <TextView
+                        android:id="@+id/text_settlement_warning"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:paddingHorizontal="20dp"
+                        android:paddingTop="20dp"
+                        android:paddingBottom="14dp"
+                        android:text="@string/player_consolidation_settlement_unbalanced"
+                        android:textColor="@color/error_red"
+                        android:textSize="14sp"
+                        android:visibility="gone" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recycler_settlement_payments"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
+                        tools:itemCount="3"
+                        tools:listitem="@layout/item_settlement_payment" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_reset_mappings"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
@@ -178,6 +767,9 @@
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="8dp"
                 android:text="@string/player_consolidation_reset"
+                app:icon="@drawable/ic_reset_mapping"
+                app:iconGravity="textStart"
+                app:iconTint="@color/accent_blue"
                 app:cornerRadius="12dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -188,21 +780,12 @@
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="8dp"
                 android:text="@string/player_consolidation_change_games"
+                app:icon="@drawable/ic_change_games"
+                app:iconGravity="textStart"
+                app:iconTint="@color/accent_blue"
                 app:cornerRadius="12dp" />
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_transfer_amount"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="8dp"
-            android:text="@string/player_consolidation_transfer_amount"
-            android:visibility="gone"
-            app:cornerRadius="12dp"
-            tools:visibility="visible" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_unlink_selected"
@@ -214,6 +797,9 @@
             android:text="@string/player_consolidation_unlink_selected"
             android:visibility="gone"
             app:cornerRadius="12dp"
+            app:icon="@drawable/ic_link_players"
+            app:iconGravity="textStart"
+            app:iconTint="@color/accent_blue"
             tools:visibility="visible" />
 
         <com.google.android.material.button.MaterialButton
@@ -226,6 +812,9 @@
             android:text="@string/player_consolidation_link_selected"
             android:visibility="gone"
             app:cornerRadius="12dp"
+            app:icon="@drawable/ic_link_players"
+            app:iconGravity="textStart"
+            app:iconTint="@android:color/white"
             tools:visibility="visible" />
     </LinearLayout>
 

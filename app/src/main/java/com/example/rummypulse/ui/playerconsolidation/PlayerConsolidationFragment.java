@@ -10,7 +10,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.RadioButton;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -24,6 +24,7 @@ import com.example.rummypulse.databinding.FragmentPlayerConsolidationBinding;
 import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.utils.ModernToast;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +37,12 @@ public class PlayerConsolidationFragment extends Fragment {
     private ConsolidationGameAdapter gameAdapter;
     private ConsolidatedPlayerAdapter consolidatedAdapter;
     private SelectedGamesStatusAdapter selectedGamesStatusAdapter;
+    private SettlementPaymentAdapter settlementPaymentAdapter;
+    private SettlementPlayerSummaryAdapter settlementPlayerSummaryAdapter;
+    private BalanceAdjustmentAdapter balanceAdjustmentAdapter;
     private List<GameItem> currentGames = new ArrayList<>();
+    private boolean hasPlayerGroups;
+    private boolean mappingsConfirmed;
 
     @Nullable
     @Override
@@ -83,7 +89,11 @@ public class PlayerConsolidationFragment extends Fragment {
 
     private void setupMapPlayersStep() {
         consolidatedAdapter = new ConsolidatedPlayerAdapter();
-        consolidatedAdapter.setOnGroupToggleListener(viewModel::toggleGroupSelection);
+        consolidatedAdapter.setOnGroupToggleListener(group -> {
+            if (!mappingsConfirmed) {
+                viewModel.toggleGroupSelection(group);
+            }
+        });
 
         selectedGamesStatusAdapter = new SelectedGamesStatusAdapter();
         LinearLayoutManager selectedGamesLayoutManager = new LinearLayoutManager(requireContext());
@@ -98,19 +108,69 @@ public class PlayerConsolidationFragment extends Fragment {
         binding.recyclerConsolidatedPlayers.setAdapter(consolidatedAdapter);
         binding.recyclerConsolidatedPlayers.setNestedScrollingEnabled(false);
 
+        settlementPlayerSummaryAdapter = new SettlementPlayerSummaryAdapter();
+        settlementPlayerSummaryAdapter.setEditMappingsListener(() -> {
+            viewModel.editMappings();
+            binding.scrollMappingSettlement.post(
+                    () -> binding.scrollMappingSettlement.scrollTo(0, 0));
+        });
+        LinearLayoutManager playerSummaryLayoutManager =
+                new LinearLayoutManager(requireContext());
+        playerSummaryLayoutManager.setAutoMeasureEnabled(true);
+        binding.recyclerSettlementPlayerSummary.setLayoutManager(
+                playerSummaryLayoutManager);
+        binding.recyclerSettlementPlayerSummary.setAdapter(
+                settlementPlayerSummaryAdapter);
+        binding.recyclerSettlementPlayerSummary.setNestedScrollingEnabled(false);
+
+        settlementPaymentAdapter = new SettlementPaymentAdapter();
+        LinearLayoutManager settlementLayoutManager = new LinearLayoutManager(requireContext());
+        settlementLayoutManager.setAutoMeasureEnabled(true);
+        binding.recyclerSettlementPayments.setLayoutManager(settlementLayoutManager);
+        binding.recyclerSettlementPayments.setAdapter(settlementPaymentAdapter);
+        binding.recyclerSettlementPayments.setNestedScrollingEnabled(false);
+
+        balanceAdjustmentAdapter = new BalanceAdjustmentAdapter();
+        balanceAdjustmentAdapter.setOnDeleteAdjustmentListener(
+                adjustment -> viewModel.deleteAdjustment(adjustment.getAdjustmentId()));
+        LinearLayoutManager adjustmentLayoutManager = new LinearLayoutManager(requireContext());
+        adjustmentLayoutManager.setAutoMeasureEnabled(true);
+        binding.recyclerBalanceAdjustments.setLayoutManager(adjustmentLayoutManager);
+        binding.recyclerBalanceAdjustments.setAdapter(balanceAdjustmentAdapter);
+        binding.recyclerBalanceAdjustments.setNestedScrollingEnabled(false);
+
         viewModel.getPlayerGroups().observe(getViewLifecycleOwner(), groups -> {
             consolidatedAdapter.setGroups(groups);
+            settlementPlayerSummaryAdapter.setGroups(groups);
+            updatePlayerTableTotals(groups);
             boolean isEmpty = groups == null || groups.isEmpty();
+            hasPlayerGroups = !isEmpty;
             binding.textNoConsolidatedPlayers.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
             binding.recyclerConsolidatedPlayers.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
-            binding.consolidationTotalsSummary.getRoot().setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+            updateStageVisibility();
         });
 
         viewModel.getSelectedEntryIds().observe(getViewLifecycleOwner(), this::updateEntrySelectionUi);
         viewModel.getConsolidationTotals().observe(getViewLifecycleOwner(), this::updateTotalsSummary);
+        viewModel.getSettlementResult().observe(
+                getViewLifecycleOwner(), this::updateSettlementUi);
+        viewModel.getBalanceAdjustments().observe(getViewLifecycleOwner(), adjustments -> {
+            balanceAdjustmentAdapter.setAdjustments(adjustments);
+        });
+        viewModel.getMappingsConfirmed().observe(getViewLifecycleOwner(), confirmed -> {
+            mappingsConfirmed = Boolean.TRUE.equals(confirmed);
+            updateStageVisibility();
+            updateEntrySelectionUi(viewModel.getSelectedEntryIds().getValue());
+        });
 
         binding.btnLinkSelected.setOnClickListener(v -> showLinkDialog());
         binding.btnUnlinkSelected.setOnClickListener(v -> showUnlinkDialog());
+        binding.btnConfirmMappings.setOnClickListener(v -> {
+            viewModel.confirmMappings();
+            binding.scrollMappingSettlement.post(
+                    () -> binding.scrollMappingSettlement.scrollTo(0, 0));
+        });
+        binding.btnEditMappings.setOnClickListener(v -> viewModel.editMappings());
         binding.btnTransferAmount.setOnClickListener(v -> showTransferDialog());
         binding.fabRefreshGameData.setOnClickListener(v -> {
             PlayerConsolidationViewModel.RefreshOutcome outcome =
@@ -140,9 +200,89 @@ public class PlayerConsolidationFragment extends Fragment {
 
     private void updateEntrySelectionUi(Set<String> selectedIds) {
         consolidatedAdapter.setSelectedEntryIds(selectedIds);
-        binding.btnUnlinkSelected.setVisibility(viewModel.canUnlinkSelected() ? View.VISIBLE : View.GONE);
-        binding.btnLinkSelected.setVisibility(viewModel.canLinkSelected() ? View.VISIBLE : View.GONE);
-        binding.btnTransferAmount.setVisibility(viewModel.canTransferBetweenSelected() ? View.VISIBLE : View.GONE);
+        binding.btnUnlinkSelected.setVisibility(
+                !mappingsConfirmed && viewModel.canUnlinkSelected()
+                        ? View.VISIBLE : View.GONE);
+        binding.btnLinkSelected.setVisibility(
+                !mappingsConfirmed && viewModel.canLinkSelected()
+                        ? View.VISIBLE : View.GONE);
+    }
+
+    private void updateStageVisibility() {
+        if (binding == null) {
+            return;
+        }
+        boolean showMappingControls = hasPlayerGroups && !mappingsConfirmed;
+        boolean showSettlement = hasPlayerGroups && mappingsConfirmed;
+
+        binding.textMapInstructions.setVisibility(
+                showMappingControls ? View.VISIBLE : View.GONE);
+        binding.textSelectedGamesLabel.setVisibility(
+                showMappingControls ? View.VISIBLE : View.GONE);
+        binding.recyclerSelectedGamesStatus.setVisibility(
+                showMappingControls ? View.VISIBLE : View.GONE);
+        binding.cardMappingStep.setVisibility(
+                showMappingControls ? View.VISIBLE : View.GONE);
+        binding.textMappingPlayersTitle.setVisibility(
+                showMappingControls ? View.VISIBLE : View.GONE);
+        binding.recyclerConsolidatedPlayers.setVisibility(
+                showMappingControls ? View.VISIBLE : View.GONE);
+        binding.textNoConsolidatedPlayers.setVisibility(
+                !mappingsConfirmed && !hasPlayerGroups ? View.VISIBLE : View.GONE);
+        binding.btnConfirmMappings.setVisibility(
+                showMappingControls ? View.VISIBLE : View.GONE);
+        binding.btnEditMappings.setVisibility(View.GONE);
+        binding.cardPlayerSummaryTable.setVisibility(
+                showSettlement ? View.VISIBLE : View.GONE);
+        binding.consolidationTotalsSummary.getRoot().setVisibility(
+                showSettlement ? View.VISIBLE : View.GONE);
+        binding.cardBalanceAdjustments.setVisibility(
+                showSettlement ? View.VISIBLE : View.GONE);
+        binding.cardSettlement.setVisibility(showSettlement ? View.VISIBLE : View.GONE);
+        binding.fabRefreshGameData.setVisibility(
+                showMappingControls ? View.VISIBLE : View.GONE);
+
+        binding.textMappingStepTitle.setText(mappingsConfirmed
+                ? R.string.player_consolidation_mapping_confirmed_title
+                : R.string.player_consolidation_mapping_step_title);
+        binding.textMappingStepSubtitle.setText(mappingsConfirmed
+                ? R.string.player_consolidation_mapping_confirmed_subtitle
+                : R.string.player_consolidation_mapping_step_subtitle);
+    }
+
+    private void updatePlayerTableTotals(List<ConsolidatedPlayerGroup> groups) {
+        int gameEntries = 0;
+        double gross = 0;
+        double contribution = 0;
+        double net = 0;
+        double adjustment = 0;
+        if (groups != null) {
+            for (ConsolidatedPlayerGroup group : groups) {
+                gameEntries += group.getMembers().size();
+                gross += group.getTotalGrossAmount();
+                contribution += group.getTotalContribution();
+                net += group.getTotalNetAmount();
+                adjustment += group.getNetAdjustment();
+            }
+        }
+        double tolerance = gameEntries * 0.5;
+        double normalizedGross = Math.abs(gross) <= tolerance ? 0 : gross;
+        double normalizedNet = Math.abs(net + contribution) <= tolerance
+                ? 0 : net + contribution;
+        double normalizedFinal = Math.abs(net + adjustment + contribution) <= tolerance
+                ? 0 : net + adjustment + contribution;
+
+        binding.textPlayerTableTotalGames.setText(String.valueOf(gameEntries));
+        binding.textPlayerTableTotalGross.setText(
+                ConsolidationAmountFormatter.formatSignedAmount(normalizedGross));
+        binding.textPlayerTableTotalContribution.setText(
+                ConsolidationAmountFormatter.formatAmount(contribution));
+        binding.textPlayerTableTotalNet.setText(
+                ConsolidationAmountFormatter.formatSignedAmount(normalizedNet));
+        binding.textPlayerTableTotalAdjustment.setText(
+                ConsolidationAmountFormatter.formatSignedAmount(adjustment));
+        binding.textPlayerTableTotalFinal.setText(
+                ConsolidationAmountFormatter.formatSignedAmount(normalizedFinal));
     }
 
     private void updateSelectedGamesStatus() {
@@ -161,12 +301,45 @@ public class PlayerConsolidationFragment extends Fragment {
             binding.consolidationTotalsSummary.getRoot().setVisibility(View.GONE);
             return;
         }
-        binding.consolidationTotalsSummary.getRoot().setVisibility(View.VISIBLE);
         binding.consolidationTotalsSummary.textTotalContribution.setText(
                 ConsolidationAmountFormatter.formatContribution(totals.getTotalContribution()));
         binding.consolidationTotalsSummary.textTotalContribution.setTextColor(
                 ConsolidationAmountFormatter.getContributionColor(
                         requireContext(), totals.getTotalContribution()));
+        binding.consolidationTotalsSummary.textSummaryContribution.setText(
+                ConsolidationAmountFormatter.formatContribution(
+                        totals.getTotalContribution()));
+        binding.consolidationTotalsSummary.textTotalGross.setText(
+                ConsolidationAmountFormatter.formatAmount(
+                        totals.getTotalGrossWinnings()));
+        binding.consolidationTotalsSummary.textNetPlayerBalance.setText(
+                ConsolidationAmountFormatter.formatSignedAmount(
+                        totals.getNetPlayerBalance()));
+        binding.consolidationTotalsSummary.textNetPlayerBalance.setTextColor(
+                ConsolidationAmountFormatter.getSignedAmountColor(
+                        requireContext(), totals.getNetPlayerBalance()));
+    }
+
+    private void updateSettlementUi(ConsolidatedSettlementCalculator.Result result) {
+        if (result == null) {
+            binding.cardSettlement.setVisibility(View.GONE);
+            return;
+        }
+
+        boolean unbalanced = result.getStatus()
+                == ConsolidatedSettlementCalculator.Status.UNBALANCED_INPUT;
+        boolean allSettled = result.getStatus()
+                == ConsolidatedSettlementCalculator.Status.ALL_SETTLED;
+
+        settlementPaymentAdapter.setPayments(result.getPayments());
+        binding.recyclerSettlementPayments.setVisibility(
+                unbalanced || allSettled ? View.GONE : View.VISIBLE);
+        binding.layoutSettlementMetrics.setVisibility(unbalanced ? View.GONE : View.VISIBLE);
+        binding.textSettlementEmpty.setVisibility(allSettled ? View.VISIBLE : View.GONE);
+        binding.textSettlementWarning.setVisibility(unbalanced ? View.VISIBLE : View.GONE);
+        binding.textSettlementTotal.setText(ConsolidationAmountFormatter.formatAmount(
+                result.getPlayerPaymentTotalPaise() / 100.0));
+        binding.textSettlementCount.setText(String.valueOf(result.getPayments().size()));
     }
 
     private void showMapPlayersStep(boolean initializeIfNeeded) {
@@ -255,21 +428,36 @@ public class PlayerConsolidationFragment extends Fragment {
     }
 
     private void showTransferDialog() {
-        ConsolidatedPlayerGroup defaultFrom = viewModel.getDefaultTransferFromGroup();
-        ConsolidatedPlayerGroup defaultTo = viewModel.getDefaultTransferToGroup();
-        if (defaultFrom == null || defaultTo == null) {
+        List<ConsolidatedPlayerGroup> groups = viewModel.getAvailableGroups();
+        if (groups.size() < 2) {
             return;
         }
 
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_transfer_amount, null);
-        RadioButton radioFromFirst = dialogView.findViewById(R.id.radio_from_first);
-        RadioButton radioFromSecond = dialogView.findViewById(R.id.radio_from_second);
+        MaterialAutoCompleteTextView fromInput =
+                dialogView.findViewById(R.id.input_adjustment_from);
+        MaterialAutoCompleteTextView toInput =
+                dialogView.findViewById(R.id.input_adjustment_to);
         TextInputEditText amountInput = dialogView.findViewById(R.id.input_transfer_amount);
+        TextInputEditText reasonInput = dialogView.findViewById(R.id.input_adjustment_reason);
 
-        radioFromFirst.setText(formatTransferFromOption(defaultFrom));
-        radioFromSecond.setText(formatTransferFromOption(defaultTo));
-        radioFromFirst.setTag(defaultFrom.getGroupId());
-        radioFromSecond.setTag(defaultTo.getGroupId());
+        List<String> groupOptions = new ArrayList<>();
+        for (ConsolidatedPlayerGroup group : groups) {
+            groupOptions.add(formatAdjustmentOption(group));
+        }
+        ArrayAdapter<String> dropdownAdapter = new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                groupOptions);
+        fromInput.setAdapter(dropdownAdapter);
+        toInput.setAdapter(dropdownAdapter);
+        fromInput.setText(groupOptions.get(0), false);
+        toInput.setText(groupOptions.get(1), false);
+        final int[] selectedIndexes = {0, 1};
+        fromInput.setOnItemClickListener((parent, view, position, id) ->
+                selectedIndexes[0] = position);
+        toInput.setOnItemClickListener((parent, view, position, id) ->
+                selectedIndexes[1] = position);
 
         AlertDialog dialog = new AlertDialog.Builder(requireContext(), R.style.DarkDialogTheme)
                 .setView(dialogView)
@@ -278,19 +466,24 @@ public class PlayerConsolidationFragment extends Fragment {
 
         dialogView.findViewById(R.id.btn_cancel).setOnClickListener(v -> dialog.dismiss());
         dialogView.findViewById(R.id.btn_apply_transfer).setOnClickListener(v -> {
-            String fromGroupId = radioFromFirst.isChecked()
-                    ? (String) radioFromFirst.getTag()
-                    : (String) radioFromSecond.getTag();
-            String toGroupId = radioFromFirst.isChecked()
-                    ? (String) radioFromSecond.getTag()
-                    : (String) radioFromFirst.getTag();
+            ConsolidatedPlayerGroup fromGroup = groups.get(selectedIndexes[0]);
+            ConsolidatedPlayerGroup toGroup = groups.get(selectedIndexes[1]);
             double amount = parseTransferAmount(amountInput);
+            if (selectedIndexes[0] == selectedIndexes[1]) {
+                ModernToast.error(requireContext(),
+                        getString(R.string.player_consolidation_adjustment_same_player));
+                return;
+            }
             if (amount <= 0) {
                 ModernToast.error(requireContext(),
                         getString(R.string.player_consolidation_transfer_invalid_amount));
                 return;
             }
-            if (viewModel.applyTransfer(fromGroupId, toGroupId, amount)) {
+            String reason = reasonInput.getText() != null
+                    ? reasonInput.getText().toString()
+                    : "";
+            if (viewModel.applyTransfer(
+                    fromGroup.getGroupId(), toGroup.getGroupId(), amount, reason)) {
                 dialog.dismiss();
             }
         });
@@ -300,12 +493,14 @@ public class PlayerConsolidationFragment extends Fragment {
         }
 
         dialog.show();
-        configureDialogWidth(dialog);
+        configureDialogWidth(dialog,
+                R.dimen.dialog_balance_adjustment_max_width,
+                0.94f);
     }
 
-    private String formatTransferFromOption(ConsolidatedPlayerGroup group) {
+    private String formatAdjustmentOption(ConsolidatedPlayerGroup group) {
         return getString(
-                R.string.player_consolidation_transfer_from_option,
+                R.string.player_consolidation_adjustment_option,
                 group.getDisplayName(),
                 ConsolidationAmountFormatter.formatSignedAmount(group.getAdjustedNetAmount()));
     }
@@ -326,11 +521,15 @@ public class PlayerConsolidationFragment extends Fragment {
     }
 
     private void configureDialogWidth(AlertDialog dialog) {
+        configureDialogWidth(dialog, R.dimen.dialog_create_game_max_width, 0.92f);
+    }
+
+    private void configureDialogWidth(AlertDialog dialog, int maxWidthResource, float screenFraction) {
         Window window = dialog.getWindow();
         if (window != null) {
             android.util.DisplayMetrics dm = requireContext().getResources().getDisplayMetrics();
-            int maxPx = getResources().getDimensionPixelSize(R.dimen.dialog_create_game_max_width);
-            int widthPx = Math.min((int) (dm.widthPixels * 0.92f), maxPx);
+            int maxPx = getResources().getDimensionPixelSize(maxWidthResource);
+            int widthPx = Math.min((int) (dm.widthPixels * screenFraction), maxPx);
             window.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT);
         }
     }

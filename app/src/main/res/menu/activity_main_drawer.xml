@@ -18,7 +18,7 @@
             android:title="@string/menu_reports" />
         <item
             android:id="@+id/nav_player_consolidation"
-            android:icon="@drawable/ic_portfolio"
+            android:icon="@drawable/ic_settle_up"
             android:title="@string/menu_player_consolidation" />
     </group>
 
