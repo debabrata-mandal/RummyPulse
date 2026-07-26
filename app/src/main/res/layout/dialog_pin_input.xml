@@ -1,138 +1,135 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:background="@drawable/dialog_background"
+    android:orientation="vertical"
     android:padding="24dp">
 
-    <!-- Header Section -->
-    <LinearLayout
+    <ImageView
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/transfer_pin_icon_background"
+        android:contentDescription="@string/pin_input_icon_description"
+        android:padding="12dp"
+        android:src="@drawable/ic_lock"
+        android:tint="@color/accent_blue" />
+
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/professional_row_background"
-        android:padding="20dp"
-        android:layout_marginBottom="24dp">
+        android:layout_marginTop="14dp"
+        android:gravity="center"
+        android:text="@string/pin_input_title"
+        android:textColor="@color/text_primary"
+        android:textSize="21sp"
+        android:textStyle="bold" />
 
-        <TextView
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:lineSpacingExtra="2dp"
+        android:text="@string/pin_input_message"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:hint="@string/pin_input_hint"
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusTopStart="12dp"
+        app:boxStrokeColor="@color/accent_blue"
+        app:hintTextColor="@color/accent_blue_light">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/edit_pin_input"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🔐 Enter Game PIN"
+            android:layout_height="64dp"
+            android:gravity="center"
+            android:imeOptions="actionDone"
+            android:inputType="numberPassword"
+            android:letterSpacing="0.45"
+            android:maxLength="4"
+            android:padding="12dp"
             android:textColor="@color/text_primary"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginBottom="8dp" />
+            android:textSize="24sp"
+            android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Enter the 4-digit PIN to get edit access and modify game scores"
-            android:textColor="@color/text_secondary"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:lineSpacingExtra="2dp" />
+    </com.google.android.material.textfield.TextInputLayout>
 
-    </LinearLayout>
-
-    <!-- PIN Input Section -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/professional_row_background"
-        android:padding="20dp"
-        android:layout_marginBottom="24dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🔢 Game PIN"
-            android:textColor="@color/accent_blue"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Enter 4-digit PIN"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/edit_pin_input"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="numberPassword"
-                android:maxLength="4"
-                android:textColor="@color/accent_blue"
-                android:textSize="20sp"
-                android:letterSpacing="0.8"
-                android:gravity="center"
-                android:textStyle="bold"
-                android:padding="16dp" />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-    </LinearLayout>
-
-    <!-- Security Notice -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/example_background"
-        android:padding="16dp"
-        android:layout_marginBottom="24dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🛡️ Security Notice"
-            android:textColor="@color/success_green"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Only the game creator has the PIN. With edit access, you can modify scores, add/remove players, and manage the game."
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            android:lineSpacingExtra="2dp" />
-
-    </LinearLayout>
-
-    <!-- Buttons -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/pin_security_note_background"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:gravity="end">
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="12dp">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:contentDescription="@string/pin_input_security_icon_description"
+            android:src="@drawable/ic_shield"
+            android:tint="@color/text_secondary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:lineSpacingExtra="1dp"
+            android:text="@string/pin_input_security_message"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="22dp"
+        android:gravity="center"
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/btn_cancel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="CANCEL"
-            android:textColor="@color/text_primary"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
             android:backgroundTint="@color/card_background"
-            android:strokeColor="@color/text_secondary"
-            android:strokeWidth="2"
-            android:layout_marginEnd="16dp"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+            android:text="@string/pin_input_cancel"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            app:strokeColor="@color/divider_color"
+            app:strokeWidth="1dp" />
 
         <Button
             android:id="@+id/btn_verify"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="VERIFY PIN"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
             android:backgroundTint="@color/accent_blue"
+            android:text="@string/pin_input_verify"
+            android:textAllCaps="false"
             android:textColor="@android:color/white"
-            android:textStyle="bold"
-            style="@style/Widget.MaterialComponents.Button" />
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 

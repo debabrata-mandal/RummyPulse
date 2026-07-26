@@ -224,8 +224,16 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Get views
         android.widget.CheckBox checkboxTransferAccess = dialog.findViewById(R.id.checkbox_transfer_access);
+        View rowTransferAccess = dialog.findViewById(R.id.row_transfer_access);
         Button btnStay = dialog.findViewById(R.id.btn_stay);
         Button btnExit = dialog.findViewById(R.id.btn_exit);
+
+        rowTransferAccess.setOnClickListener(v ->
+                checkboxTransferAccess.setChecked(!checkboxTransferAccess.isChecked()));
+        checkboxTransferAccess.setOnCheckedChangeListener((buttonView, isChecked) ->
+                btnExit.setText(isChecked
+                        ? R.string.exit_dialog_transfer_leave
+                        : R.string.exit_dialog_leave));
         
         // Set up buttons
         btnStay.setOnClickListener(v -> dialog.dismiss());
@@ -253,6 +261,7 @@ public class JoinGameActivity extends AppCompatActivity {
         });
         
         dialog.show();
+        applyActionDialogWidth(dialog);
     }
 
     private static final long TRANSFER_PIN_DONE_COUNTDOWN_MS = 10_000L;
@@ -313,7 +322,22 @@ public class JoinGameActivity extends AppCompatActivity {
         btnDone.setOnClickListener(v -> complete.run());
 
         dialog.show();
+        applyActionDialogWidth(dialog);
         timerRef[0].start();
+    }
+
+    private void applyActionDialogWidth(android.app.Dialog dialog) {
+        Window window = dialog.getWindow();
+        if (window == null) {
+            return;
+        }
+        android.util.DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
+        int maxWidthPx = Math.round(420 * displayMetrics.density);
+        int horizontalMarginsPx = Math.round(32 * displayMetrics.density);
+        int widthPx = Math.min(
+                displayMetrics.widthPixels - horizontalMarginsPx,
+                maxWidthPx);
+        window.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT);
     }
     
     @Override
@@ -1449,6 +1473,7 @@ public class JoinGameActivity extends AppCompatActivity {
         });
         
         dialog.show();
+        applyActionDialogWidth(dialog);
         
         // Show keyboard
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
@@ -2225,15 +2250,20 @@ public class JoinGameActivity extends AppCompatActivity {
         final int[] selectedRound = {0};
         final MaterialButton[] selectedButton = {null};
 
-        final int columnCount = 4;
+        final int columnCount = Math.max(1, Math.min(4, maxPastRound));
         grid.setColumnCount(columnCount);
+        btnContinue.setEnabled(false);
         float density = getResources().getDisplayMetrics().density;
-        int chipMargin = Math.round(6 * density);
-        int chipHeight = Math.round(48 * density);
-        int gridWidth = Math.round(getResources().getDisplayMetrics().widthPixels * 0.82f)
-                - Math.round(80 * density);
-        int chipWidth = Math.max(Math.round(64 * density),
-                (gridWidth - chipMargin * 2 * columnCount) / columnCount);
+        int chipMargin = Math.round(5 * density);
+        int chipHeight = Math.round(52 * density);
+        int availableWidth = Math.min(
+                Math.round(getResources().getDisplayMetrics().widthPixels * 0.82f),
+                Math.round(380 * density));
+        int chipWidth = columnCount <= 2
+                ? Math.round(84 * density)
+                : Math.max(
+                        Math.round(68 * density),
+                        (availableWidth - chipMargin * 2 * columnCount) / columnCount);
 
         for (int round = 1; round <= maxPastRound; round++) {
             MaterialButton chip = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
@@ -2271,6 +2301,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 selectedButton[0] = chip;
                 chip.setChecked(true);
                 selectedRound[0] = roundNum;
+                btnContinue.setEnabled(true);
             });
 
             grid.addView(chip);
@@ -2296,6 +2327,15 @@ public class JoinGameActivity extends AppCompatActivity {
         });
 
         dialog.show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                    android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            window.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     private void showCorrectionPlayerPicker(
@@ -2764,6 +2804,7 @@ public class JoinGameActivity extends AppCompatActivity {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_enter_round_score, null, false);
         TextView titleView = dialogView.findViewById(R.id.text_dialog_round_title);
         TextView subtitleView = dialogView.findViewById(R.id.text_dialog_round_subtitle);
+        TextView avatarView = dialogView.findViewById(R.id.text_dialog_player_avatar);
         TextView nameView = dialogView.findViewById(R.id.text_dialog_player_name);
         TextView progressView = dialogView.findViewById(R.id.text_dialog_progress);
         ProgressBar progressBar = dialogView.findViewById(R.id.progress_bar_dialog);
@@ -2778,6 +2819,7 @@ public class JoinGameActivity extends AppCompatActivity {
         subtitleView.setText(getString(correctionMode
                 ? R.string.dialog_correct_round_score_subtitle
                 : R.string.dialog_enter_round_score_subtitle));
+        bindMapPlayerButton(avatarView, player);
         nameView.setText(player.getName());
         int numPlayers = gameData.getPlayers().size();
         progressView.setText(getString(R.string.dialog_enter_round_score_player_progress, playerIndex + 1, numPlayers));
@@ -2926,7 +2968,8 @@ public class JoinGameActivity extends AppCompatActivity {
         if (window != null) {
             window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
             android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
-            int maxPx = getResources().getDimensionPixelSize(R.dimen.dialog_create_game_max_width);
+            int maxPx = getResources().getDimensionPixelSize(
+                    R.dimen.dialog_score_entry_max_width);
             int widthPx = Math.min((int) (dm.widthPixels * 0.92f), maxPx);
             window.setLayout(widthPx, WindowManager.LayoutParams.WRAP_CONTENT);
         }
@@ -3770,14 +3813,42 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         if (hasAnyEnteredScoreInGame(gameData)) {
-            new AlertDialog.Builder(this, R.style.DarkDialogTheme)
-                    .setTitle(R.string.add_player_confirm_title)
-                    .setMessage(R.string.add_player_confirm_message)
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton(R.string.add_player_confirm_add, (dialog, which) -> addNewPlayerDirectly())
-                    .show();
+            showAddPlayerConfirmation(gameData);
         } else {
             addNewPlayerDirectly();
+        }
+    }
+
+    private void showAddPlayerConfirmation(
+            com.example.rummypulse.data.GameData gameData) {
+        View dialogView = LayoutInflater.from(this).inflate(
+                R.layout.dialog_confirm_add_player, null, false);
+        TextView playerCount = dialogView.findViewById(R.id.text_add_player_count);
+        MaterialButton cancel = dialogView.findViewById(R.id.btn_add_player_cancel);
+        MaterialButton confirm = dialogView.findViewById(R.id.btn_add_player_confirm);
+        playerCount.setText(getString(
+                R.string.add_player_confirm_count,
+                gameData.getPlayers() == null ? 0 : gameData.getPlayers().size()));
+
+        AlertDialog dialog = new AlertDialog.Builder(this, R.style.DarkDialogTheme)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        confirm.setOnClickListener(v -> {
+            dialog.dismiss();
+            addNewPlayerDirectly();
+        });
+        dialog.show();
+
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                    android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            window.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);
         }
     }
 

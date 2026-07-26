@@ -47,8 +47,30 @@
 
     <!-- default_web_client_id is supplied by google-services.json (merged at build time). -->
 
-    <string name="transfer_pin_done_countdown">Done (%1$d)</string>
+    <string name="transfer_pin_title">Edit access transferred</string>
+    <string name="transfer_pin_message">The old PIN no longer works. Share this new PIN with the next scorekeeper.</string>
+    <string name="transfer_pin_label">NEW GAME PIN</string>
+    <string name="transfer_pin_security_hint">Only share it with someone you trust to manage scores.</string>
+    <string name="transfer_pin_icon_description">Secure game PIN</string>
+    <string name="transfer_pin_done_countdown">Done · %1$ds</string>
     <string name="transfer_pin_done">Done</string>
+    <string name="pin_input_title">Enter game PIN</string>
+    <string name="pin_input_message">Enter the 4-digit PIN to manage players and scores.</string>
+    <string name="pin_input_hint">4-digit PIN</string>
+    <string name="pin_input_security_message">Edit access allows changes to scores, players, and game details.</string>
+    <string name="pin_input_icon_description">Game PIN</string>
+    <string name="pin_input_security_icon_description">Edit access information</string>
+    <string name="pin_input_cancel">Cancel</string>
+    <string name="pin_input_verify">Verify PIN</string>
+    <string name="exit_dialog_title">Leave this game?</string>
+    <string name="exit_dialog_message">Your edit access will remain saved on this device.</string>
+    <string name="exit_dialog_transfer_title">Transfer edit access</string>
+    <string name="exit_dialog_transfer_message">Create a new PIN for the next scorekeeper and remove access from this device.</string>
+    <string name="exit_dialog_stay">Stay</string>
+    <string name="exit_dialog_leave">Leave game</string>
+    <string name="exit_dialog_transfer_leave">Transfer &amp; leave</string>
+    <string name="exit_dialog_icon_description">Leave game</string>
+    <string name="exit_dialog_transfer_icon_description">Transfer edit access</string>
     <string name="edit_access_transferred_offline">Edit access was transferred while you were offline. Your unsaved changes were discarded.</string>
     <string name="round_saved_offline_pending_sync">Round saved offline — pending sync.</string>
     <string name="round_saved_syncing_background">Round %1$d saved — syncing in background.</string>
@@ -182,6 +204,7 @@
     <string name="player_card_total_label">Total</string>
     <string name="dialog_pick_past_round_title">Correct past round</string>
     <string name="dialog_pick_past_round_subtitle">Select a round to update scores</string>
+    <string name="dialog_pick_past_round_hint">Choose the completed round that contains the score you want to correct.</string>
     <string name="dialog_pick_round_item">Round %1$d</string>
     <string name="dialog_pick_round_chip">R%1$d</string>
     <string name="dialog_pick_past_round_continue">Continue</string>
@@ -190,7 +213,9 @@
 
     <!-- Add player confirmation when scores already exist -->
     <string name="add_player_confirm_title">Add another player?</string>
-    <string name="add_player_confirm_message">Adding a player changes the game for everyone. Do you want to continue?</string>
+    <string name="add_player_confirm_message">This game already has recorded scores. The new player will receive an automatic catch-up score for completed rounds.</string>
+    <string name="add_player_confirm_count">Current game · %1$d players</string>
+    <string name="add_player_confirm_preserved">Existing players and their scores will remain unchanged.</string>
     <string name="add_player_confirm_add">Add player</string>
 
     <!-- Navigation -->

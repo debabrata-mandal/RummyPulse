@@ -1,66 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:background="@drawable/dialog_background"
+    android:orientation="vertical"
     android:padding="24dp">
 
-    <LinearLayout
+    <ImageView
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/transfer_pin_icon_background"
+        android:contentDescription="@string/exit_dialog_icon_description"
+        android:padding="12dp"
+        android:src="@drawable/ic_logout"
+        android:tint="@color/accent_blue" />
+
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/professional_row_background"
-        android:padding="18dp"
-        android:layout_marginBottom="16dp">
+        android:layout_marginTop="14dp"
+        android:gravity="center"
+        android:text="@string/exit_dialog_title"
+        android:textColor="@color/text_primary"
+        android:textSize="21sp"
+        android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🚪 Leave game screen?"
-            android:textColor="@color/text_primary"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="💾 Without transfer, saved edit access stays on this device."
-            android:textColor="@color/text_secondary"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:lineSpacingExtra="2dp" />
-
-    </LinearLayout>
-
-    <LinearLayout
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:lineSpacingExtra="2dp"
+        android:text="@string/exit_dialog_message"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:id="@+id/row_transfer_access"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="22dp"
+        android:background="@drawable/transfer_access_option_background"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:minHeight="88dp"
         android:orientation="horizontal"
-        android:background="@drawable/professional_row_background"
-        android:padding="14dp"
-        android:layout_marginBottom="20dp"
-        android:gravity="center_vertical">
+        android:padding="14dp">
 
-        <CheckBox
-            android:id="@+id/checkbox_transfer_access"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:buttonTint="@color/accent_blue" />
+        <ImageView
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/transfer_pin_icon_background"
+            android:contentDescription="@string/exit_dialog_transfer_icon_description"
+            android:padding="9dp"
+            android:src="@drawable/ic_lock"
+            android:tint="@color/accent_blue_light" />
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginStart="8dp">
+            android:orientation="vertical">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="🔑 Transfer edit access"
+                android:text="@string/exit_dialog_transfer_title"
                 android:textColor="@color/text_primary"
                 android:textSize="15sp"
                 android:textStyle="bold" />
@@ -69,45 +78,59 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Generates a new PIN and invalidates the old one. Shows the new PIN so you can pass edit access to someone else. This phone will lose edit access immediately."
+                android:lineSpacingExtra="1dp"
+                android:text="@string/exit_dialog_transfer_message"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                android:lineSpacingExtra="3dp" />
+                android:textSize="12sp" />
 
         </LinearLayout>
+
+        <CheckBox
+            android:id="@+id/checkbox_transfer_access"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:buttonTint="@color/accent_blue"
+            android:gravity="center"
+            android:minWidth="48dp"
+            android:minHeight="48dp" />
 
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center">
+        android:layout_marginTop="22dp"
+        android:gravity="center"
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/btn_stay"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="50dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="6dp"
             android:layout_weight="1"
-            android:text="Stay"
-            android:textColor="@android:color/white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:background="@drawable/approve_button_background"
             android:backgroundTint="@color/card_background"
-            android:layout_marginEnd="8dp" />
+            android:text="@string/exit_dialog_stay"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            app:strokeColor="@color/divider_color"
+            app:strokeWidth="1dp" />
 
         <Button
             android:id="@+id/btn_exit"
+            style="@style/Widget.MaterialComponents.Button"
             android:layout_width="0dp"
-            android:layout_height="50dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="6dp"
             android:layout_weight="1"
-            android:text="Leave"
+            android:backgroundTint="@color/accent_blue"
+            android:text="@string/exit_dialog_leave"
+            android:textAllCaps="false"
             android:textColor="@android:color/white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:background="@drawable/delete_button_background"
-            android:layout_marginStart="8dp" />
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 

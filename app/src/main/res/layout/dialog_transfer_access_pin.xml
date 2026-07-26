@@ -2,80 +2,91 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:background="@drawable/dialog_background"
+    android:orientation="vertical"
     android:padding="24dp">
 
-    <!-- Header Section -->
+    <ImageView
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/transfer_pin_icon_background"
+        android:contentDescription="@string/transfer_pin_icon_description"
+        android:padding="12dp"
+        android:src="@drawable/ic_lock"
+        android:tint="@color/accent_blue" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:gravity="center"
+        android:text="@string/transfer_pin_title"
+        android:textColor="@color/text_primary"
+        android:textSize="21sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:lineSpacingExtra="2dp"
+        android:text="@string/transfer_pin_message"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="22dp"
+        android:background="@drawable/transfer_pin_code_background"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:background="@drawable/professional_row_background"
-        android:padding="20dp"
-        android:layout_marginBottom="24dp">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🔑 Reveal game secret PIN"
-            android:textColor="@color/text_primary"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="The saved PIN was removed on this device. Share the code below with whoever should manage scores next."
-            android:textColor="@color/text_secondary"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:lineSpacingExtra="2dp" />
-
-    </LinearLayout>
-
-    <!-- PIN display -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/professional_row_background"
-        android:padding="20dp"
-        android:layout_marginBottom="24dp"
-        android:gravity="center_horizontal">
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="18dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="GAME PIN"
-            android:textColor="@color/accent_blue"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.08"
-            android:layout_marginBottom="8dp" />
+            android:letterSpacing="0.1"
+            android:text="@string/transfer_pin_label"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/text_transfer_pin"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/accent_blue"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.15" />
+            android:layout_marginTop="6dp"
+            android:letterSpacing="0.18"
+            android:textColor="@color/accent_blue_light"
+            android:textSize="34sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:text="@string/transfer_pin_security_hint"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp" />
 
     <Button
         android:id="@+id/btn_transfer_pin_done"
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:text="Done (10)"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
-        android:textStyle="bold"
+        android:layout_height="48dp"
+        android:layout_marginTop="22dp"
         android:background="@drawable/approve_button_background"
-        android:backgroundTint="@color/accent_blue" />
+        android:backgroundTint="@color/accent_blue"
+        android:text="@string/transfer_pin_done"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        android:textSize="15sp"
+        android:textStyle="bold" />
 
 </LinearLayout>
