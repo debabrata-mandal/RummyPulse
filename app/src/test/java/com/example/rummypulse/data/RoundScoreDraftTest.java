@@ -86,6 +86,18 @@ public class RoundScoreDraftTest {
     }
 
     @Test
+    public void targetedCorrectionAppliesOnlyReviewedPlayer() {
+        GameData source = gameWithScores(4, 5);
+        RoundScoreDraft draft = RoundScoreDraft.start(source, 1, true);
+
+        draft.recordScore(0, 14);
+        GameData corrected = draft.applyReviewedToCopy(source);
+
+        assertEquals(Arrays.asList(14, 5), firstRound(corrected));
+        assertEquals(Arrays.asList(4, 5), firstRound(source));
+    }
+
+    @Test
     public void normalPartiallyPersistedRoundSkipsExistingPlayers() {
         GameData source = gameWithScores(3, -1, -1);
         RoundScoreDraft draft = RoundScoreDraft.start(source, 1, false);

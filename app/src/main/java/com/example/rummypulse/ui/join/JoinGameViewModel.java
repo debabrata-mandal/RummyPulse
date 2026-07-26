@@ -12,16 +12,19 @@ import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.data.GameAuth;
 import com.example.rummypulse.data.GameData;
+import com.example.rummypulse.data.GameDataPatchPolicy;
 import com.example.rummypulse.data.GameDataWrapper;
 import com.example.rummypulse.data.GameViewApproval;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.GameViewApprovalRepository;
+import com.example.rummypulse.data.RoundScorePatch;
 import com.example.rummypulse.utils.PinUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Source;
 
@@ -52,6 +55,10 @@ public class JoinGameViewModel extends AndroidViewModel {
 
     public interface RoundSaveCallback {
         void onSuccess();
+
+        default void onSavedOffline() {
+            onError("Round saved locally and is waiting for a connection.");
+        }
 
         void onError(String message);
     }
@@ -475,11 +482,14 @@ public class JoinGameViewModel extends AndroidViewModel {
         }
 
         DocumentReference gameRef = db.collection(FirestoreCollections.GAMES).document(gameId);
+        DocumentReference gameDataRef =
+                db.collection(FirestoreCollections.GAME_DATA).document(gameId);
 
         db.runTransaction(transaction -> {
             DocumentSnapshot snapshot = transaction.get(gameRef);
-            if (!snapshot.exists()) {
-                throw new IllegalStateException("Game not found");
+            DocumentSnapshot dataSnapshot = transaction.get(gameDataRef);
+            if (!snapshot.exists() || !dataSnapshot.exists()) {
+                throw new IllegalStateException("Game data is no longer available.");
             }
 
             GameAuth auth = snapshot.toObject(GameAuth.class);
@@ -493,6 +503,7 @@ public class JoinGameViewModel extends AndroidViewModel {
             updates.put("activeEditorUserId", com.google.firebase.firestore.FieldValue.delete());
             updates.put("activeEditorName", com.google.firebase.firestore.FieldValue.delete());
             transaction.update(gameRef, updates);
+            transaction.update(gameDataRef, "editGeneration", newGen);
 
             return new TransferResult(newPin, newGen);
         }).addOnSuccessListener(result -> {
@@ -501,6 +512,8 @@ public class JoinGameViewModel extends AndroidViewModel {
             editAccessGranted.setValue(false);
             GameAuth currentAuth = gameAuth.getValue();
             if (currentAuth != null) {
+                currentAuth.setPin(result.newPin);
+                currentAuth.setPinGeneration(result.newPinGeneration);
                 currentAuth.setActiveEditorUserId(null);
                 currentAuth.setActiveEditorName(null);
                 gameAuth.setValue(currentAuth);
@@ -600,32 +613,36 @@ public class JoinGameViewModel extends AndroidViewModel {
             return;
         }
 
-        Map<String, Object> cleanGameData = new HashMap<>();
-        cleanGameData.put("numPlayers", updatedGameData.getPlayers() != null
-                ? updatedGameData.getPlayers().size()
-                : updatedGameData.getNumPlayers());
-        cleanGameData.put("pointValue", updatedGameData.getPointValue());
-        cleanGameData.put("gstPercent", updatedGameData.getGstPercent());
-        cleanGameData.put("players", updatedGameData.getPlayers());
-        cleanGameData.put("version", updatedGameData.getVersion());
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            errorMessage.setValue("Only the active editor can save game data.");
+            return;
+        }
+        final long expectedGeneration = getActiveEditGeneration();
+        final String expectedEditorUserId = user.getUid();
+        final DocumentReference gameRef =
+                db.collection(FirestoreCollections.GAMES).document(gameId);
+        final DocumentReference gameDataRef =
+                db.collection(FirestoreCollections.GAME_DATA).document(gameId);
 
-        Map<String, Object> gameDataDoc = new HashMap<>();
-        gameDataDoc.put("data", cleanGameData);
-        gameDataDoc.put("lastUpdated", com.google.firebase.firestore.FieldValue.serverTimestamp());
-        gameDataDoc.put("version", "1.0");
-        gameDataDoc.put("editGeneration", getActiveEditGeneration());
+        db.runTransaction(transaction -> {
+            DocumentSnapshot authSnapshot = transaction.get(gameRef);
+            DocumentSnapshot dataSnapshot = transaction.get(gameDataRef);
+            validateEditorSnapshot(
+                    authSnapshot, dataSnapshot, expectedEditorUserId, expectedGeneration);
 
-        gameRepository.updateLocalDashboardFromGameData(gameId, updatedGameData);
-        gameRepository.syncDashboardSummaryForGame(gameId, updatedGameData);
-
-        db.collection(FirestoreCollections.GAME_DATA).document(gameId)
-                .set(gameDataDoc)
-                .addOnSuccessListener(aVoid -> {
-                    gameData.setValue(updatedGameData);
-                    gameRepository.syncDashboardSummaryForGame(gameId, updatedGameData);
-                })
-                .addOnFailureListener(e ->
-                        errorMessage.setValue("Failed to save game data: " + e.getMessage()));
+            GameDataWrapper latestWrapper = dataSnapshot.toObject(GameDataWrapper.class);
+            GameData latest = latestWrapper != null ? latestWrapper.getData() : null;
+            GameData merged = GameDataPatchPolicy.preserveLatestScores(updatedGameData, latest);
+            transaction.set(gameDataRef,
+                    buildGameDataDocument(merged, expectedGeneration));
+            transaction.update(gameRef, buildDashboardSummary(merged));
+            return merged;
+        }).addOnSuccessListener(merged -> {
+            gameData.setValue(merged);
+            gameRepository.updateLocalDashboardFromGameData(gameId, merged);
+        }).addOnFailureListener(e ->
+                errorMessage.setValue("Failed to save game data: " + e.getMessage()));
     }
 
     /**
@@ -635,6 +652,9 @@ public class JoinGameViewModel extends AndroidViewModel {
     public void linkPlayerAndApproveViewAccess(
             String gameId,
             int playerIndex,
+            String expectedPlayerName,
+            Integer expectedRandomNumber,
+            String expectedUserId,
             String linkedPlayerName,
             String linkedUserId,
             String linkedUserDisplayName,
@@ -691,14 +711,28 @@ public class JoinGameViewModel extends AndroidViewModel {
                     currentDataSnapshot.toObject(GameDataWrapper.class);
             GameData latestGameData =
                     latestWrapper != null ? latestWrapper.getData() : null;
-            if (latestGameData == null || latestGameData.getPlayers() == null
-                    || playerIndex >= latestGameData.getPlayers().size()) {
+            int latestPlayerIndex =
+                    com.example.rummypulse.data.PlayerMappingPatch.findPlayerIndex(
+                            latestGameData,
+                            playerIndex,
+                            expectedPlayerName,
+                            expectedRandomNumber,
+                            expectedUserId);
+            if (latestPlayerIndex < 0) {
                 throw new IllegalStateException(
                         "The player list changed. Refresh the game and retry.");
             }
+            for (int i = 0; i < latestGameData.getPlayers().size(); i++) {
+                if (i != latestPlayerIndex
+                        && linkedUserId.equals(
+                                latestGameData.getPlayers().get(i).getUserId())) {
+                    throw new IllegalStateException(
+                            "That user is already linked to another player.");
+                }
+            }
             com.example.rummypulse.data.PlayerMappingPatch.apply(
                     latestGameData,
-                    playerIndex,
+                    latestPlayerIndex,
                     linkedPlayerName,
                     linkedUserId);
             Map<String, Object> latestGameDataDoc =
@@ -751,12 +785,94 @@ public class JoinGameViewModel extends AndroidViewModel {
     }
 
     /**
+     * Clears a player mapping and revokes that user's view approval in one
+     * transaction, including the mirrored request entry on the game document.
+     */
+    public void unlinkPlayerAndRevokeViewAccess(
+            String gameId,
+            int playerIndex,
+            String expectedPlayerName,
+            Integer expectedRandomNumber,
+            String linkedUserId,
+            PlayerLinkCallback callback) {
+        if (TextUtils.isEmpty(gameId) || playerIndex < 0
+                || TextUtils.isEmpty(linkedUserId)) {
+            callback.onError("Invalid player mapping.");
+            return;
+        }
+        FirebaseUser editor = FirebaseAuth.getInstance().getCurrentUser();
+        if (!canSaveGameData() || editor == null) {
+            callback.onError("Only the active editor can unlink a player.");
+            return;
+        }
+
+        final long expectedGeneration = getActiveEditGeneration();
+        final String expectedEditorUserId = editor.getUid();
+        final DocumentReference gameRef =
+                db.collection(FirestoreCollections.GAMES).document(gameId);
+        final DocumentReference gameDataRef =
+                db.collection(FirestoreCollections.GAME_DATA).document(gameId);
+        final DocumentReference approvalRef =
+                db.collection(FirestoreCollections.GAME_VIEW_APPROVALS)
+                        .document(GameViewApprovalRepository.documentId(
+                                gameId, linkedUserId));
+
+        db.runTransaction(transaction -> {
+            DocumentSnapshot authSnapshot = transaction.get(gameRef);
+            DocumentSnapshot dataSnapshot = transaction.get(gameDataRef);
+            validateEditorSnapshot(
+                    authSnapshot,
+                    dataSnapshot,
+                    expectedEditorUserId,
+                    expectedGeneration);
+
+            GameDataWrapper latestWrapper = dataSnapshot.toObject(GameDataWrapper.class);
+            GameData latestGameData =
+                    latestWrapper != null ? latestWrapper.getData() : null;
+            int latestPlayerIndex =
+                    com.example.rummypulse.data.PlayerMappingPatch.findPlayerIndex(
+                            latestGameData,
+                            playerIndex,
+                            expectedPlayerName,
+                            expectedRandomNumber,
+                            linkedUserId);
+            if (latestPlayerIndex < 0
+                    || !linkedUserId.equals(
+                            latestGameData.getPlayers().get(latestPlayerIndex).getUserId())) {
+                throw new IllegalStateException(
+                        "The player mapping changed. Refresh the game and retry.");
+            }
+            com.example.rummypulse.data.PlayerMappingPatch.clear(
+                    latestGameData, latestPlayerIndex);
+            transaction.set(
+                    gameDataRef,
+                    buildGameDataDocument(latestGameData, expectedGeneration));
+            transaction.delete(approvalRef);
+            transaction.update(
+                    gameRef,
+                    GameViewApprovalRepository.PENDING_VIEW_REQUESTS_FIELD
+                            + "." + linkedUserId,
+                    com.google.firebase.firestore.FieldValue.delete());
+            return latestGameData;
+        }).addOnSuccessListener(savedGameData -> {
+            gameData.setValue(savedGameData);
+            gameRepository.updateLocalDashboardFromGameData(gameId, savedGameData);
+            callback.onSuccess();
+        }).addOnFailureListener(error -> {
+            String message = error.getMessage();
+            callback.onError(message == null || message.trim().isEmpty()
+                    ? "Could not remove this player link. Check your connection and retry."
+                    : message);
+        });
+    }
+
+    /**
      * Commits a completed round and its dashboard summary together. The transaction
      * verifies that this user still owns the same edit generation before writing.
      */
-    public void saveCompletedRoundAtomically(String gameId, GameData updatedGameData,
+    public void saveCompletedRoundAtomically(String gameId, RoundScorePatch patch,
             RoundSaveCallback callback) {
-        if (TextUtils.isEmpty(gameId) || updatedGameData == null) {
+        if (TextUtils.isEmpty(gameId) || patch == null) {
             callback.onError("Invalid game data.");
             return;
         }
@@ -771,55 +887,82 @@ public class JoinGameViewModel extends AndroidViewModel {
         }
 
         final long expectedGeneration = getActiveEditGeneration();
+        if (patch.getEditGeneration() != expectedGeneration) {
+            callback.onError("Edit access changed. Reopen the game before saving.");
+            return;
+        }
         final String expectedEditorUserId = user.getUid();
         final DocumentReference gameRef =
                 db.collection(FirestoreCollections.GAMES).document(gameId);
         final DocumentReference gameDataRef =
                 db.collection(FirestoreCollections.GAME_DATA).document(gameId);
-        final Map<String, Object> gameDataDoc =
-                buildGameDataDocument(updatedGameData, expectedGeneration);
-        final Map<String, Object> dashboardSummary =
-                buildDashboardSummary(updatedGameData);
-
         roundSaveInProgress = true;
         db.runTransaction(transaction -> {
             DocumentSnapshot authSnapshot = transaction.get(gameRef);
             DocumentSnapshot dataSnapshot = transaction.get(gameDataRef);
-            if (!authSnapshot.exists() || !dataSnapshot.exists()) {
-                throw new IllegalStateException("Game data is no longer available.");
-            }
-
-            GameAuth remoteAuth = authSnapshot.toObject(GameAuth.class);
-            if (remoteAuth == null
-                    || !expectedEditorUserId.equals(remoteAuth.getActiveEditorUserId())
-                    || remoteAuth.getPinGenerationOrDefault() != expectedGeneration) {
-                throw new IllegalStateException(
-                        "Edit access changed. Reopen the game before saving.");
-            }
-            Long remoteDataGeneration = dataSnapshot.getLong("editGeneration");
-            long actualDataGeneration = remoteDataGeneration != null && remoteDataGeneration > 0
-                    ? remoteDataGeneration
-                    : 1L;
-            if (actualDataGeneration != expectedGeneration) {
-                throw new IllegalStateException(
-                        "Edit access changed. Reopen the game before saving.");
-            }
-
-            transaction.set(gameDataRef, gameDataDoc);
-            transaction.update(gameRef, dashboardSummary);
-            return null;
-        }).addOnSuccessListener(ignored -> {
+            validateEditorSnapshot(
+                    authSnapshot, dataSnapshot, expectedEditorUserId, expectedGeneration);
+            GameDataWrapper latestWrapper = dataSnapshot.toObject(GameDataWrapper.class);
+            GameData latest = latestWrapper != null ? latestWrapper.getData() : null;
+            GameData patched = patch.applyToLatest(latest);
+            transaction.set(gameDataRef,
+                    buildGameDataDocument(patched, expectedGeneration));
+            transaction.update(gameRef, buildDashboardSummary(patched));
+            return patched;
+        }).addOnSuccessListener(patched -> {
             roundSaveInProgress = false;
-            gameData.setValue(updatedGameData);
-            gameRepository.updateLocalDashboardFromGameData(gameId, updatedGameData);
+            gameData.setValue(patched);
+            gameRepository.updateLocalDashboardFromGameData(gameId, patched);
             callback.onSuccess();
         }).addOnFailureListener(error -> {
             roundSaveInProgress = false;
+            if (error instanceof FirebaseFirestoreException
+                    && ((FirebaseFirestoreException) error).getCode()
+                    == FirebaseFirestoreException.Code.UNAVAILABLE) {
+                callback.onSavedOffline();
+                return;
+            }
             String message = error.getMessage();
             callback.onError(message == null || message.trim().isEmpty()
                     ? "Could not save this round. Check your connection and retry."
                     : message);
         });
+    }
+
+    public void applyPendingRoundLocally(RoundScorePatch patch) {
+        GameData current = gameData.getValue();
+        if (patch != null && current != null) {
+            gameData.setValue(patch.applyToLatest(current));
+        }
+    }
+
+    public void replaceLocalGameData(GameData localGameData) {
+        if (localGameData != null) {
+            gameData.setValue(localGameData);
+        }
+    }
+
+    private static void validateEditorSnapshot(DocumentSnapshot authSnapshot,
+            DocumentSnapshot dataSnapshot, String expectedEditorUserId,
+            long expectedGeneration) {
+        if (!authSnapshot.exists() || !dataSnapshot.exists()) {
+            throw new IllegalStateException("Game data is no longer available.");
+        }
+        GameAuth remoteAuth = authSnapshot.toObject(GameAuth.class);
+        if (remoteAuth == null
+                || !expectedEditorUserId.equals(remoteAuth.getActiveEditorUserId())
+                || remoteAuth.getPinGenerationOrDefault() != expectedGeneration) {
+            throw new IllegalStateException(
+                    "Edit access changed. Reopen the game before saving.");
+        }
+        Long remoteDataGeneration = dataSnapshot.getLong("editGeneration");
+        long actualDataGeneration = remoteDataGeneration != null && remoteDataGeneration > 0
+                ? remoteDataGeneration
+                : 1L;
+        if (actualDataGeneration != expectedGeneration) {
+            throw new IllegalStateException(
+                    "Edit access changed. Reopen the game before saving.");
+        }
     }
 
     private static Map<String, Object> buildGameDataDocument(

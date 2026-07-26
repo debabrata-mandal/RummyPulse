@@ -87,6 +87,15 @@ public final class RoundScoreDraft {
         return findNextUnreviewed(0) < 0;
     }
 
+    public boolean hasReviewedScore() {
+        for (boolean value : reviewed) {
+            if (value) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public String serialize() {
         StringBuilder encoded = new StringBuilder("1|")
                 .append(round1Based).append('|')
@@ -143,6 +152,17 @@ public final class RoundScoreDraft {
         if (!isComplete()) {
             throw new IllegalStateException("All player scores must be reviewed first.");
         }
+        return applyReviewedToCopy(source);
+    }
+
+    /**
+     * Applies only reviewed players. This is used by targeted past-round
+     * corrections so the editor does not need to traverse every player.
+     */
+    public GameData applyReviewedToCopy(GameData source) {
+        if (!hasReviewedScore()) {
+            throw new IllegalStateException("At least one player score must be reviewed.");
+        }
         if (source == null || source.getPlayers() == null
                 || source.getPlayers().size() != scores.length) {
             throw new IllegalArgumentException("Player list changed while entering scores.");
@@ -156,7 +176,9 @@ public final class RoundScoreDraft {
             while (copiedScores.size() < 10) {
                 copiedScores.add(-1);
             }
-            copiedScores.set(round1Based - 1, scores[i]);
+            if (reviewed[i]) {
+                copiedScores.set(round1Based - 1, scores[i]);
+            }
             copiedPlayers.add(copy);
         }
 

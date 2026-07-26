@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Preserve the original icon surface exactly. -->
+    <item android:drawable="@drawable/circle_background" />
+
+    <!-- Add only a strong outer ring. -->
+    <item>
+        <shape android:shape="oval">
+            <stroke
+                android:width="2dp"
+                android:color="#FF4CAF50" />
+        </shape>
+    </item>
+
+    <!-- Inset second ring; its center remains transparent. -->
+    <item
+        android:insetLeft="4dp"
+        android:insetTop="4dp"
+        android:insetRight="4dp"
+        android:insetBottom="4dp">
+        <shape android:shape="oval">
+            <stroke
+                android:width="1dp"
+                android:color="#FF4CAF50" />
+        </shape>
+    </item>
+
+</layer-list>

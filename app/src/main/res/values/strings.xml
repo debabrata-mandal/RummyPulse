@@ -50,6 +50,18 @@
     <string name="transfer_pin_done_countdown">Done (%1$d)</string>
     <string name="transfer_pin_done">Done</string>
     <string name="edit_access_transferred_offline">Edit access was transferred while you were offline. Your unsaved changes were discarded.</string>
+    <string name="round_saved_offline_pending_sync">Round saved offline — pending sync.</string>
+    <string name="round_saved_syncing_background">Round %1$d saved — syncing in background.</string>
+    <string name="dialog_correct_round_choose_player">Choose player to correct in round %1$d</string>
+    <string name="dialog_correct_round_score_save">Save change</string>
+    <string name="dialog_correct_player_title">Choose a player</string>
+    <string name="dialog_correct_player_subtitle">Whose score needs correction?</string>
+    <string name="dialog_correct_player_hint">Only the selected player’s score will change. Everyone else stays untouched.</string>
+    <string name="dialog_correct_player_round_badge">R%1$d</string>
+    <string name="dialog_correct_player_current_score">Current score · %1$d points</string>
+    <string name="dialog_correct_player_edit_action">Edit this player’s score</string>
+    <string name="pending_round_edit_access_changed">A pending round belongs to an older edit session. It was kept locally and was not uploaded.</string>
+    <string name="pending_round_sync_conflict">Pending round was kept locally: %1$s</string>
 
     <string name="version_gate_loading">Checking for updates…</string>
     <string name="minimum_version_title">Update required</string>
@@ -339,7 +351,11 @@
     <string name="map_player_editor_only">Only the current editor can link players.</string>
     <string name="map_player_already_linked">%1$s is already linked to %2$s.</string>
     <string name="map_player_linked">Linked %1$s to %2$s.</string>
+    <string name="map_player_linking_background">Linking %1$s to %2$s in the background…</string>
+    <string name="map_player_background_failed">Could not link this player: %1$s Tap the player icon to retry.</string>
     <string name="map_player_unlinked">Removed the real-user link for %1$s.</string>
+    <string name="map_player_unlinking_background">Removing %1$s’s link and view access in the background…</string>
+    <string name="map_player_unlink_background_failed">Could not remove this link: %1$s Tap the player icon to retry.</string>
     <string name="map_player_load_failed">Could not load the player list. Check your connection and try again.</string>
     <string name="map_player_currently_linked">Currently linked</string>
     <string name="map_player_email_linked">%1$s • Currently linked</string>

@@ -46,6 +46,21 @@ service cloud.firestore {
           && request.resource.data.editGeneration == gamePinGeneration(gameId);
     }
 
+    function isAtomicEditGenerationTransfer(gameId) {
+      let gameBefore = get(/databases/$(database)/documents/games_v2/$(gameId)).data;
+      let gameAfter = getAfter(/databases/$(database)/documents/games_v2/$(gameId)).data;
+      let previousGeneration = gameBefore.keys().hasAll(['pinGeneration'])
+          ? gameBefore.pinGeneration
+          : 1;
+      return isAuthenticated()
+          && gameBefore.activeEditorUserId == request.auth.uid
+          && gameAfter.pinGeneration == previousGeneration + 1
+          && !gameAfter.keys().hasAll(['activeEditorUserId'])
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['editGeneration'])
+          && request.resource.data.editGeneration == gameAfter.pinGeneration;
+    }
+
     function isAdminGameEconomicsUpdate() {
       return isAdmin()
           && resource.data.keys().hasAll(['data'])
@@ -64,7 +79,8 @@ service cloud.firestore {
 
     function canUpdateGameData(gameId) {
       return (isActiveEditor(gameId) && validEditGeneration(gameId))
-          || isAdminGameEconomicsUpdate();
+          || isAdminGameEconomicsUpdate()
+          || isAtomicEditGenerationTransfer(gameId);
     }
 
     match /games_v2/{gameId} {

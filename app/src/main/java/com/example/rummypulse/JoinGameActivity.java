@@ -38,6 +38,7 @@ import com.example.rummypulse.data.GameAuth;
 import com.example.rummypulse.data.GameViewApproval;
 import com.example.rummypulse.data.GameViewApprovalStatus;
 import com.example.rummypulse.data.RoundScoreDraft;
+import com.example.rummypulse.data.RoundScorePatch;
 import com.example.rummypulse.databinding.ActivityJoinGameBinding;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
@@ -56,6 +57,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class JoinGameActivity extends AppCompatActivity {
 
@@ -102,6 +104,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private static final long GAME_COMPLETION_BUFFER_MS = 2000; // 2 seconds buffer after pending announcements
     private static final long MAX_GAME_COMPLETION_DELAY_MS = 10000; // Maximum 10 seconds delay
     private static final String ROUND_DRAFT_PREFERENCES = "round_score_drafts";
+    private static final String PENDING_ROUND_PREFERENCES = "pending_round_scores";
     
     // Bulk update detection
     private long lastScoreChangeTime = 0;
@@ -114,6 +117,9 @@ public class JoinGameActivity extends AppCompatActivity {
     private AlertDialog activeSequentialScoreDialog;
     /** Scores remain local until every required player in this round is reviewed. */
     private RoundScoreDraft activeRoundScoreDraft;
+    private boolean restoringPendingRounds;
+    private boolean pendingRoundSyncInProgress;
+    private Runnable pendingRoundAfterSync;
 
     /** Cached admin flag so View Requests works before/without edit access. */
     private boolean isAppAdmin;
@@ -314,7 +320,7 @@ public class JoinGameActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         refreshGameDefaultsAndStandings();
-        checkEditSessionIfNeeded(null);
+        checkEditSessionIfNeeded(() -> retryPendingRoundSaves(null));
         refreshAppAdminFlag();
     }
 
@@ -1128,11 +1134,22 @@ public class JoinGameActivity extends AppCompatActivity {
 
         viewModel.getGameData().observe(this, gameData -> {
             if (gameData != null) {
+                Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+                if (Boolean.TRUE.equals(editAccess) && !restoringPendingRounds) {
+                    com.example.rummypulse.data.GameData withPending =
+                            applyPendingRoundsToCopy(gameData);
+                    if (withPending != gameData) {
+                        restoringPendingRounds = true;
+                        viewModel.replaceLocalGameData(withPending);
+                        return;
+                    }
+                } else if (restoringPendingRounds) {
+                    restoringPendingRounds = false;
+                }
                 refreshViewRequestsSection();
                 displayGameData(gameData);
                 
                 // Set up real-time listener if in view mode (no edit access)
-                Boolean editAccess = viewModel.getEditAccessGranted().getValue();
                 if (editAccess == null || !editAccess) {
                     System.out.println("Game data loaded in VIEW MODE - setting up real-time listener");
                     setupRealtimeListener();
@@ -1217,6 +1234,9 @@ public class JoinGameActivity extends AppCompatActivity {
                 String pin = viewModel.getGamePin().getValue();
                 if (currentGameId != null && pin != null) {
                     savePin(currentGameId, pin, viewModel.getActiveEditGeneration());
+                }
+                if (isNetworkAvailable()) {
+                    retryPendingRoundSaves(null);
                 }
                 
                 // Show online/offline indicator when edit access is granted
@@ -1745,7 +1765,9 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         boolean linked = !TextUtils.isEmpty(player.getUserId());
         button.setText(playerAvatarInitials(player));
-        button.setBackgroundResource(R.drawable.circle_background);
+        button.setBackgroundResource(linked
+                ? R.drawable.linked_player_double_ring
+                : R.drawable.circle_background);
         button.setTextColor(ContextCompat.getColor(
                 this,
                 linked ? android.R.color.holo_green_dark : android.R.color.holo_blue_dark));
@@ -1794,12 +1816,49 @@ public class JoinGameActivity extends AppCompatActivity {
         cancel.setOnClickListener(v -> dialog.dismiss());
         unlink.setOnClickListener(v -> {
             String oldName = player.getName();
-            player.setUserId(null);
-            viewModel.saveGameData(currentGameId, gameData);
-            bindMapPlayerButton(mapButton, player);
-            applyMappedPlayerNameLock(playerNameView, player);
+            String linkedUserId = player.getUserId();
+            if (TextUtils.isEmpty(linkedUserId)) {
+                dialog.dismiss();
+                return;
+            }
+            com.example.rummypulse.data.Player optimisticPlayer =
+                    new com.example.rummypulse.data.Player();
+            optimisticPlayer.setName(oldName);
+            optimisticPlayer.setRandomNumber(player.getRandomNumber());
+            bindMapPlayerButton(mapButton, optimisticPlayer);
+            applyMappedPlayerNameLock(playerNameView, optimisticPlayer);
+            mapButton.setEnabled(false);
             dialog.dismiss();
-            ModernToast.success(this, getString(R.string.map_player_unlinked, oldName));
+            ModernToast.info(this, getString(
+                    R.string.map_player_unlinking_background, oldName));
+
+            viewModel.unlinkPlayerAndRevokeViewAccess(
+                    currentGameId,
+                    playerIndex,
+                    oldName,
+                    player.getRandomNumber(),
+                    linkedUserId,
+                    new JoinGameViewModel.PlayerLinkCallback() {
+                        @Override
+                        public void onSuccess() {
+                            player.setUserId(null);
+                            mapButton.setEnabled(true);
+                            bindMapPlayerButton(mapButton, player);
+                            applyMappedPlayerNameLock(playerNameView, player);
+                            ModernToast.success(JoinGameActivity.this,
+                                    getString(R.string.map_player_unlinked, oldName));
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            mapButton.setEnabled(true);
+                            bindMapPlayerButton(mapButton, player);
+                            applyMappedPlayerNameLock(playerNameView, player);
+                            ModernToast.error(JoinGameActivity.this, getString(
+                                    R.string.map_player_unlink_background_failed,
+                                    message));
+                        }
+                    });
         });
 
         dialog.show();
@@ -1921,32 +1980,45 @@ public class JoinGameActivity extends AppCompatActivity {
             String previousUserId = player.getUserId();
             String actualName = userPlayerFirstName(selected);
             cancelPendingGameSave();
-            player.setUserId(selected.getUserId());
-            player.setName(actualName);
+            com.example.rummypulse.data.Player optimisticPlayer =
+                    new com.example.rummypulse.data.Player();
+            optimisticPlayer.setName(actualName);
+            optimisticPlayer.setUserId(selected.getUserId());
+            optimisticPlayer.setRandomNumber(player.getRandomNumber());
             suppressPlayerNamePersistence = true;
             playerNameView.setText(actualName);
             suppressPlayerNamePersistence = false;
-            applyMappedPlayerNameLock(playerNameView, player);
-            list.setEnabled(false);
-            search.setEnabled(false);
-            progress.setVisibility(View.VISIBLE);
+            applyMappedPlayerNameLock(playerNameView, optimisticPlayer);
+            bindMapPlayerButton(mapButton, optimisticPlayer);
+            mapButton.setEnabled(false);
+            dialog.dismiss();
+            ModernToast.info(this, getString(
+                    R.string.map_player_linking_background,
+                    gamePlayerName,
+                    actualName));
 
             viewModel.linkPlayerAndApproveViewAccess(
                     currentGameId,
                     playerIndex,
+                    gamePlayerName,
+                    player.getRandomNumber(),
+                    previousUserId,
                     actualName,
                     selected.getUserId(),
                     userDisplayName(selected),
                     new JoinGameViewModel.PlayerLinkCallback() {
                         @Override
                         public void onSuccess() {
+                            player.setUserId(selected.getUserId());
+                            player.setName(actualName);
+                            mapButton.setEnabled(true);
                             bindMapPlayerButton(mapButton, player);
+                            applyMappedPlayerNameLock(playerNameView, player);
                             com.example.rummypulse.data.GameData savedGameData =
                                     viewModel.getGameData().getValue();
                             if (savedGameData != null) {
                                 generateStandingsTable(savedGameData);
                             }
-                            dialog.dismiss();
                             ModernToast.success(JoinGameActivity.this, getString(
                                     R.string.map_player_linked,
                                     gamePlayerName,
@@ -1960,12 +2032,12 @@ public class JoinGameActivity extends AppCompatActivity {
                             suppressPlayerNamePersistence = true;
                             playerNameView.setText(gamePlayerName);
                             suppressPlayerNamePersistence = false;
+                            mapButton.setEnabled(true);
                             bindMapPlayerButton(mapButton, player);
                             applyMappedPlayerNameLock(playerNameView, player);
-                            list.setEnabled(true);
-                            search.setEnabled(true);
-                            progress.setVisibility(View.GONE);
-                            ModernToast.error(JoinGameActivity.this, message);
+                            generateStandingsTable(gameData);
+                            ModernToast.error(JoinGameActivity.this, getString(
+                                    R.string.map_player_background_failed, message));
                         }
                     });
         });
@@ -2220,25 +2292,79 @@ public class JoinGameActivity extends AppCompatActivity {
             if (live == null || live.getPlayers() == null || live.getPlayers().isEmpty()) {
                 return;
             }
-            restoreLocalRoundDraft(live);
-            boolean canResumeCorrection = activeRoundScoreDraft != null
-                    && activeRoundScoreDraft.isCorrectionMode()
-                    && activeRoundScoreDraft.getRound1Based() == selectedRound[0]
-                    && activeRoundScoreDraft.getPlayerCount() == live.getPlayers().size();
-            if (!canResumeCorrection) {
-                activeRoundScoreDraft =
-                        RoundScoreDraft.start(live, selectedRound[0], true);
-                persistLocalRoundDraft(live);
-            }
-            int nextPlayer = activeRoundScoreDraft.findNextUnreviewed(0);
-            if (nextPlayer < 0) {
-                nextPlayer = activeRoundScoreDraft.getPlayerCount() - 1;
-            }
-            showSequentialScoreDialogForPlayer(
-                    live, selectedRound[0], nextPlayer, true);
+            showCorrectionPlayerPicker(live, selectedRound[0]);
         });
 
         dialog.show();
+    }
+
+    private void showCorrectionPlayerPicker(
+            com.example.rummypulse.data.GameData gameData, int round1Based) {
+        View dialogView = LayoutInflater.from(this).inflate(
+                R.layout.dialog_correct_player_picker, null, false);
+        TextView roundBadge =
+                dialogView.findViewById(R.id.text_correct_player_round_badge);
+        LinearLayout playerRows =
+                dialogView.findViewById(R.id.container_correct_player_rows);
+        MaterialButton cancel =
+                dialogView.findViewById(R.id.btn_correct_player_cancel);
+        roundBadge.setText(getString(
+                R.string.dialog_correct_player_round_badge, round1Based));
+
+        AlertDialog dialog = new AlertDialog.Builder(this, R.style.DarkDialogTheme)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create();
+
+        for (int i = 0; i < gameData.getPlayers().size(); i++) {
+            final int playerIndex = i;
+            com.example.rummypulse.data.Player player =
+                    gameData.getPlayers().get(i);
+            View row = LayoutInflater.from(this).inflate(
+                    R.layout.item_correct_player, playerRows, false);
+            TextView avatar = row.findViewById(R.id.text_correct_player_avatar);
+            TextView name = row.findViewById(R.id.text_correct_player_name);
+            TextView score = row.findViewById(R.id.text_correct_player_score);
+
+            String playerName = TextUtils.isEmpty(player.getName())
+                    ? getString(R.string.dialog_enter_round_score_section_player)
+                    : player.getName().trim();
+            avatar.setText(playerName.substring(0, 1).toUpperCase(Locale.getDefault()));
+            name.setText(playerName);
+            int currentScore = 0;
+            if (player.getScores() != null
+                    && player.getScores().size() >= round1Based
+                    && player.getScores().get(round1Based - 1) != null
+                    && player.getScores().get(round1Based - 1) >= 0) {
+                currentScore = player.getScores().get(round1Based - 1);
+            }
+            score.setText(getString(
+                    R.string.dialog_correct_player_current_score, currentScore));
+            row.setOnClickListener(v -> {
+                dialog.dismiss();
+                activeRoundScoreDraft =
+                        RoundScoreDraft.start(gameData, round1Based, true);
+                persistLocalRoundDraft(gameData);
+                showSequentialScoreDialogForPlayer(
+                        gameData, round1Based, playerIndex, true);
+            });
+            playerRows.addView(row);
+        }
+
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                    android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            int desiredHeight = Math.round(
+                    (225 + Math.min(gameData.getPlayers().size(), 6) * 77) * dm.density);
+            int height = Math.min(desiredHeight, Math.round(dm.heightPixels * 0.84f));
+            window.setLayout(width, height);
+        }
     }
 
     // Drag and drop variables
@@ -2657,9 +2783,13 @@ public class JoinGameActivity extends AppCompatActivity {
         progressView.setText(getString(R.string.dialog_enter_round_score_player_progress, playerIndex + 1, numPlayers));
         progressBar.setMax(numPlayers);
         progressBar.setProgress(playerIndex + 1);
-        boolean hasMore =
-                activeRoundScoreDraft.findNextUnreviewed(playerIndex + 1) >= 0;
-        btnConfirm.setText(getString(hasMore ? R.string.dialog_enter_round_score_next : R.string.dialog_enter_round_score_done));
+        boolean hasMore = !correctionMode
+                && activeRoundScoreDraft.findNextUnreviewed(playerIndex + 1) >= 0;
+        btnConfirm.setText(getString(correctionMode
+                ? R.string.dialog_correct_round_score_save
+                : (hasMore
+                        ? R.string.dialog_enter_round_score_next
+                        : R.string.dialog_enter_round_score_done)));
 
         int draftScore = activeRoundScoreDraft.getScore(playerIndex);
         if (draftScore >= 0) {
@@ -2726,8 +2856,10 @@ public class JoinGameActivity extends AppCompatActivity {
             persistLocalRoundDraft(gd);
             announceScoreWithDebounce(
                     p.getName(), value, finalPlayerIndex, finalRound1);
-            int next = draftForDialog.findNextUnreviewed(finalPlayerIndex + 1);
-            if (next >= 0) {
+            int next = finalCorrectionMode
+                    ? -1
+                    : draftForDialog.findNextUnreviewed(finalPlayerIndex + 1);
+            if (!finalCorrectionMode && next >= 0) {
                 dialog.dismiss();
                 com.example.rummypulse.data.GameData gdAfter =
                         viewModel.getGameData().getValue();
@@ -2737,55 +2869,55 @@ public class JoinGameActivity extends AppCompatActivity {
             }
 
             final com.example.rummypulse.data.GameData completedRound;
+            final RoundScorePatch pendingPatch;
             try {
-                completedRound = draftForDialog.applyToCopy(gd);
+                if (finalCorrectionMode) {
+                    completedRound = draftForDialog.applyReviewedToCopy(gd);
+                    pendingPatch = RoundScorePatch.forPlayer(
+                            completedRound,
+                            finalRound1,
+                            viewModel.getActiveEditGeneration(),
+                            finalPlayerIndex);
+                } else {
+                    completedRound = draftForDialog.applyToCopy(gd);
+                    pendingPatch = RoundScorePatch.fromGameData(
+                            completedRound,
+                            finalRound1,
+                            false,
+                            viewModel.getActiveEditGeneration());
+                }
+                persistPendingRound(pendingPatch);
             } catch (RuntimeException error) {
                 layoutScore.setError(error.getMessage());
                 return;
             }
 
+            cancelPendingGameSave();
             saveInProgress[0] = true;
-            btnConfirm.setEnabled(false);
-            btnConfirm.setText(R.string.dialog_enter_round_score_saving);
-            btnCancel.setEnabled(false);
-            scoreEdit.setEnabled(false);
-            dialog.setCancelable(false);
-            dialog.setCanceledOnTouchOutside(false);
+            clearLocalRoundDraft();
+            activeRoundScoreDraft = null;
+            viewModel.applyPendingRoundLocally(pendingPatch);
+            dialog.dismiss();
+            saveInProgress[0] = false;
 
-            viewModel.saveCompletedRoundAtomically(
-                    currentGameId, completedRound, new JoinGameViewModel.RoundSaveCallback() {
-                        @Override
-                        public void onSuccess() {
-                            saveInProgress[0] = false;
-                            clearLocalRoundDraft();
-                            activeRoundScoreDraft = null;
-                            dialog.dismiss();
-                            updateStandings(completedRound);
-                            updateCurrentRound(completedRound);
-                            updateScoreEntryButtonsVisibility(completedRound);
-                            announceGameCompletion(completedRound);
-                            ModernToast.success(JoinGameActivity.this,
-                                    getString(R.string.dialog_enter_round_score_saved,
-                                            finalRound1));
-                        }
+            com.example.rummypulse.data.GameData local =
+                    viewModel.getGameData().getValue();
+            if (local == null) {
+                local = completedRound;
+            }
+            updateStandings(local);
+            updateCurrentRound(local);
+            updateScoreEntryButtonsVisibility(local);
+            announceGameCompletion(local);
 
-                        @Override
-                        public void onError(String message) {
-                            saveInProgress[0] = false;
-                            if (isFinishing() || isDestroyed()) {
-                                return;
-                            }
-                            layoutScore.setError(getString(
-                                    R.string.dialog_enter_round_score_save_failed,
-                                    message));
-                            btnConfirm.setEnabled(true);
-                            btnConfirm.setText(R.string.dialog_enter_round_score_retry);
-                            btnCancel.setEnabled(true);
-                            scoreEdit.setEnabled(true);
-                            dialog.setCancelable(true);
-                            dialog.setCanceledOnTouchOutside(true);
-                        }
-                    });
+            if (isNetworkAvailable()) {
+                ModernToast.success(JoinGameActivity.this,
+                        getString(R.string.round_saved_syncing_background, finalRound1));
+                retryPendingRoundSaves(null);
+            } else {
+                ModernToast.info(JoinGameActivity.this,
+                        getString(R.string.round_saved_offline_pending_sync));
+            }
         });
 
         dialog.show();
@@ -4518,12 +4650,181 @@ public class JoinGameActivity extends AppCompatActivity {
                 } else {
                     // Edit mode - validate session then refresh if still valid
                     System.out.println("Network restored in EDIT MODE - validating edit session");
-                    checkEditSessionIfNeeded(this::fetchFreshGameData);
+                    checkEditSessionIfNeeded(
+                            () -> retryPendingRoundSaves(this::fetchFreshGameData));
                 }
                 
                 // Network status indicator already shows connection state, no need for toast
             }
         }, 1000); // 1 second delay
+    }
+
+    private void persistPendingRound(RoundScorePatch patch) {
+        if (currentGameId == null || patch == null) {
+            return;
+        }
+        String key = pendingRoundKey(patch);
+        String existingValue =
+                getSharedPreferences(PENDING_ROUND_PREFERENCES, MODE_PRIVATE)
+                        .getString(key, null);
+        RoundScorePatch valueToStore = patch;
+        if (existingValue != null) {
+            try {
+                valueToStore = RoundScorePatch.deserialize(existingValue).merge(patch);
+            } catch (RuntimeException invalidExisting) {
+                valueToStore = patch;
+            }
+        }
+        getSharedPreferences(PENDING_ROUND_PREFERENCES, MODE_PRIVATE)
+                .edit()
+                .putString(key, valueToStore.serialize())
+                .commit();
+    }
+
+    private void removePendingRound(RoundScorePatch patch) {
+        if (currentGameId == null || patch == null) {
+            return;
+        }
+        String key = pendingRoundKey(patch);
+        String currentValue =
+                getSharedPreferences(PENDING_ROUND_PREFERENCES, MODE_PRIVATE)
+                        .getString(key, null);
+        // Do not remove a newer correction coalesced while this patch was uploading.
+        if (currentValue != null && !currentValue.equals(patch.serialize())) {
+            return;
+        }
+        getSharedPreferences(PENDING_ROUND_PREFERENCES, MODE_PRIVATE)
+                .edit()
+                .remove(key)
+                .commit();
+    }
+
+    private String pendingRoundKey(RoundScorePatch patch) {
+        return currentGameId + "_g" + patch.getEditGeneration()
+                + "_r" + patch.getRound1Based();
+    }
+
+    private List<RoundScorePatch> loadPendingRounds() {
+        List<RoundScorePatch> pending = new ArrayList<>();
+        if (currentGameId == null) {
+            return pending;
+        }
+        String prefix = currentGameId + "_";
+        Map<String, ?> stored =
+                getSharedPreferences(PENDING_ROUND_PREFERENCES, MODE_PRIVATE).getAll();
+        for (Map.Entry<String, ?> entry : stored.entrySet()) {
+            if (!entry.getKey().startsWith(prefix)
+                    || !(entry.getValue() instanceof String)) {
+                continue;
+            }
+            try {
+                pending.add(RoundScorePatch.deserialize((String) entry.getValue()));
+            } catch (RuntimeException invalid) {
+                getSharedPreferences(PENDING_ROUND_PREFERENCES, MODE_PRIVATE)
+                        .edit()
+                        .remove(entry.getKey())
+                        .apply();
+            }
+        }
+        pending.sort(Comparator.comparingInt(RoundScorePatch::getRound1Based));
+        return pending;
+    }
+
+    private com.example.rummypulse.data.GameData applyPendingRoundsToCopy(
+            com.example.rummypulse.data.GameData source) {
+        com.example.rummypulse.data.GameData result = source;
+        long activeGeneration = viewModel.getActiveEditGeneration();
+        boolean changed = false;
+        for (RoundScorePatch patch : loadPendingRounds()) {
+            if (patch.getEditGeneration() != activeGeneration) {
+                continue;
+            }
+            try {
+                result = patch.applyToLatest(result);
+                changed = true;
+            } catch (RuntimeException conflict) {
+                ModernToast.warning(this, conflict.getMessage());
+            }
+        }
+        return changed ? result : source;
+    }
+
+    private void retryPendingRoundSaves(Runnable afterSync) {
+        if (pendingRoundSyncInProgress) {
+            if (afterSync != null) {
+                pendingRoundAfterSync = afterSync;
+            }
+            return;
+        }
+        if (!isNetworkAvailable() || viewModel == null || currentGameId == null
+                || !Boolean.TRUE.equals(viewModel.getEditAccessGranted().getValue())) {
+            if (afterSync != null) {
+                afterSync.run();
+            }
+            return;
+        }
+        long activeGeneration = viewModel.getActiveEditGeneration();
+        List<RoundScorePatch> currentSession = new ArrayList<>();
+        boolean hasOlderSession = false;
+        for (RoundScorePatch patch : loadPendingRounds()) {
+            if (patch.getEditGeneration() == activeGeneration) {
+                currentSession.add(patch);
+            } else {
+                hasOlderSession = true;
+            }
+        }
+        if (hasOlderSession) {
+            ModernToast.warning(this, getString(R.string.pending_round_edit_access_changed));
+        }
+        if (currentSession.isEmpty()) {
+            if (afterSync != null) {
+                afterSync.run();
+            }
+            return;
+        }
+        pendingRoundSyncInProgress = true;
+        retryPendingRoundAtIndex(currentSession, 0, afterSync);
+    }
+
+    private void retryPendingRoundAtIndex(List<RoundScorePatch> pending, int index,
+            Runnable afterSync) {
+        if (index >= pending.size()) {
+            pendingRoundSyncInProgress = false;
+            Runnable completion = afterSync != null ? afterSync : pendingRoundAfterSync;
+            pendingRoundAfterSync = null;
+            // Pick up rounds completed while this serial batch was uploading.
+            retryPendingRoundSaves(completion);
+            return;
+        }
+        RoundScorePatch patch = pending.get(index);
+        viewModel.saveCompletedRoundAtomically(
+                currentGameId, patch, new JoinGameViewModel.RoundSaveCallback() {
+                    @Override
+                    public void onSuccess() {
+                        removePendingRound(patch);
+                        retryPendingRoundAtIndex(pending, index + 1, afterSync);
+                    }
+
+                    @Override
+                    public void onSavedOffline() {
+                        // Keep the durable record; the next connectivity callback retries it.
+                        pendingRoundSyncInProgress = false;
+                        pendingRoundAfterSync = null;
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        pendingRoundSyncInProgress = false;
+                        ModernToast.warning(JoinGameActivity.this,
+                                getString(R.string.pending_round_sync_conflict, message));
+                        Runnable completion =
+                                afterSync != null ? afterSync : pendingRoundAfterSync;
+                        pendingRoundAfterSync = null;
+                        if (completion != null) {
+                            completion.run();
+                        }
+                    }
+                });
     }
     
     /**
