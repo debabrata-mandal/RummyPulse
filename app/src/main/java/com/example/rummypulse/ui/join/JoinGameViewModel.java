@@ -12,7 +12,7 @@ import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.data.GameAuth;
 import com.example.rummypulse.data.GameData;
-import com.example.rummypulse.data.GameDataPatchPolicy;
+import com.example.rummypulse.data.GameDataSchema;
 import com.example.rummypulse.data.GameDataWrapper;
 import com.example.rummypulse.data.GameViewApproval;
 import com.example.rummypulse.data.GameRepository;
@@ -90,6 +90,7 @@ public class JoinGameViewModel extends AndroidViewModel {
 
     /** {@code pinGeneration} held when edit access was last claimed on this device. */
     private long activeEditGeneration;
+    private long latestGameRevision;
     private boolean roundSaveInProgress;
 
     public JoinGameViewModel(@NonNull Application application) {
@@ -153,6 +154,10 @@ public class JoinGameViewModel extends AndroidViewModel {
 
     public long getActiveEditGeneration() {
         return activeEditGeneration > 0 ? activeEditGeneration : 1L;
+    }
+
+    public long getLatestGameRevision() {
+        return latestGameRevision;
     }
 
     public boolean canSaveGameData() {
@@ -586,6 +591,8 @@ public class JoinGameViewModel extends AndroidViewModel {
                         try {
                             GameDataWrapper wrapper = documentSnapshot.toObject(GameDataWrapper.class);
                             if (wrapper != null && wrapper.getData() != null) {
+                                GameDataSchema.normalize(wrapper.getData());
+                                latestGameRevision = revisionOf(documentSnapshot);
                                 gameData.setValue(wrapper.getData());
                             } else {
                                 errorMessage.setValue("Game data is corrupted. Please try again.");
@@ -603,63 +610,18 @@ public class JoinGameViewModel extends AndroidViewModel {
                 });
     }
 
-    public void saveGameData(String gameId, GameData updatedGameData) {
-        if (TextUtils.isEmpty(gameId) || updatedGameData == null) {
-            errorMessage.setValue("Invalid game data");
-            return;
-        }
-        if (!canSaveGameData()) {
-            errorMessage.setValue("Only the active editor can save game data.");
-            return;
-        }
-
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            errorMessage.setValue("Only the active editor can save game data.");
-            return;
-        }
-        final long expectedGeneration = getActiveEditGeneration();
-        final String expectedEditorUserId = user.getUid();
-        final DocumentReference gameRef =
-                db.collection(FirestoreCollections.GAMES).document(gameId);
-        final DocumentReference gameDataRef =
-                db.collection(FirestoreCollections.GAME_DATA).document(gameId);
-
-        db.runTransaction(transaction -> {
-            DocumentSnapshot authSnapshot = transaction.get(gameRef);
-            DocumentSnapshot dataSnapshot = transaction.get(gameDataRef);
-            validateEditorSnapshot(
-                    authSnapshot, dataSnapshot, expectedEditorUserId, expectedGeneration);
-
-            GameDataWrapper latestWrapper = dataSnapshot.toObject(GameDataWrapper.class);
-            GameData latest = latestWrapper != null ? latestWrapper.getData() : null;
-            GameData merged = GameDataPatchPolicy.preserveLatestScores(updatedGameData, latest);
-            transaction.set(gameDataRef,
-                    buildGameDataDocument(merged, expectedGeneration));
-            transaction.update(gameRef, buildDashboardSummary(merged));
-            return merged;
-        }).addOnSuccessListener(merged -> {
-            gameData.setValue(merged);
-            gameRepository.updateLocalDashboardFromGameData(gameId, merged);
-        }).addOnFailureListener(e ->
-                errorMessage.setValue("Failed to save game data: " + e.getMessage()));
-    }
-
     /**
      * Saves the player-to-user mapping and grants that user view access atomically.
      * The deterministic approval document ID makes this safe to repeat.
      */
     public void linkPlayerAndApproveViewAccess(
             String gameId,
-            int playerIndex,
-            String expectedPlayerName,
-            Integer expectedRandomNumber,
-            String expectedUserId,
+            String playerId,
             String linkedPlayerName,
             String linkedUserId,
             String linkedUserDisplayName,
             PlayerLinkCallback callback) {
-        if (TextUtils.isEmpty(gameId) || playerIndex < 0
+        if (TextUtils.isEmpty(gameId) || TextUtils.isEmpty(playerId)
                 || TextUtils.isEmpty(linkedPlayerName)
                 || TextUtils.isEmpty(linkedUserId)) {
             callback.onError("Invalid player mapping.");
@@ -711,13 +673,10 @@ public class JoinGameViewModel extends AndroidViewModel {
                     currentDataSnapshot.toObject(GameDataWrapper.class);
             GameData latestGameData =
                     latestWrapper != null ? latestWrapper.getData() : null;
+            GameDataSchema.normalize(latestGameData);
             int latestPlayerIndex =
                     com.example.rummypulse.data.PlayerMappingPatch.findPlayerIndex(
-                            latestGameData,
-                            playerIndex,
-                            expectedPlayerName,
-                            expectedRandomNumber,
-                            expectedUserId);
+                            latestGameData, playerId);
             if (latestPlayerIndex < 0) {
                 throw new IllegalStateException(
                         "The player list changed. Refresh the game and retry.");
@@ -736,7 +695,10 @@ public class JoinGameViewModel extends AndroidViewModel {
                     linkedPlayerName,
                     linkedUserId);
             Map<String, Object> latestGameDataDoc =
-                    buildGameDataDocument(latestGameData, expectedGeneration);
+                    buildGameDataDocument(
+                            latestGameData,
+                            expectedGeneration,
+                            revisionOf(currentDataSnapshot) + 1L);
 
             String approvalDisplayName = TextUtils.isEmpty(linkedUserDisplayName)
                     ? linkedUserId
@@ -771,10 +733,12 @@ public class JoinGameViewModel extends AndroidViewModel {
                     GameViewApprovalRepository.PENDING_VIEW_REQUESTS_FIELD
                             + "." + linkedUserId,
                     mirroredApproval);
-            return latestGameData;
-        }).addOnSuccessListener(savedGameData -> {
-            gameData.setValue(savedGameData);
-            gameRepository.updateLocalDashboardFromGameData(gameId, savedGameData);
+            return new SavedGameData(
+                    latestGameData, revisionOf(currentDataSnapshot) + 1L);
+        }).addOnSuccessListener(saved -> {
+            latestGameRevision = saved.revision;
+            gameData.setValue(saved.gameData);
+            gameRepository.updateLocalDashboardFromGameData(gameId, saved.gameData);
             callback.onSuccess();
         }).addOnFailureListener(error -> {
             String message = error.getMessage();
@@ -790,12 +754,10 @@ public class JoinGameViewModel extends AndroidViewModel {
      */
     public void unlinkPlayerAndRevokeViewAccess(
             String gameId,
-            int playerIndex,
-            String expectedPlayerName,
-            Integer expectedRandomNumber,
+            String playerId,
             String linkedUserId,
             PlayerLinkCallback callback) {
-        if (TextUtils.isEmpty(gameId) || playerIndex < 0
+        if (TextUtils.isEmpty(gameId) || TextUtils.isEmpty(playerId)
                 || TextUtils.isEmpty(linkedUserId)) {
             callback.onError("Invalid player mapping.");
             return;
@@ -829,13 +791,10 @@ public class JoinGameViewModel extends AndroidViewModel {
             GameDataWrapper latestWrapper = dataSnapshot.toObject(GameDataWrapper.class);
             GameData latestGameData =
                     latestWrapper != null ? latestWrapper.getData() : null;
+            GameDataSchema.normalize(latestGameData);
             int latestPlayerIndex =
                     com.example.rummypulse.data.PlayerMappingPatch.findPlayerIndex(
-                            latestGameData,
-                            playerIndex,
-                            expectedPlayerName,
-                            expectedRandomNumber,
-                            linkedUserId);
+                            latestGameData, playerId);
             if (latestPlayerIndex < 0
                     || !linkedUserId.equals(
                             latestGameData.getPlayers().get(latestPlayerIndex).getUserId())) {
@@ -846,17 +805,22 @@ public class JoinGameViewModel extends AndroidViewModel {
                     latestGameData, latestPlayerIndex);
             transaction.set(
                     gameDataRef,
-                    buildGameDataDocument(latestGameData, expectedGeneration));
+                    buildGameDataDocument(
+                            latestGameData,
+                            expectedGeneration,
+                            revisionOf(dataSnapshot) + 1L));
             transaction.delete(approvalRef);
             transaction.update(
                     gameRef,
                     GameViewApprovalRepository.PENDING_VIEW_REQUESTS_FIELD
                             + "." + linkedUserId,
                     com.google.firebase.firestore.FieldValue.delete());
-            return latestGameData;
-        }).addOnSuccessListener(savedGameData -> {
-            gameData.setValue(savedGameData);
-            gameRepository.updateLocalDashboardFromGameData(gameId, savedGameData);
+            return new SavedGameData(
+                    latestGameData, revisionOf(dataSnapshot) + 1L);
+        }).addOnSuccessListener(saved -> {
+            latestGameRevision = saved.revision;
+            gameData.setValue(saved.gameData);
+            gameRepository.updateLocalDashboardFromGameData(gameId, saved.gameData);
             callback.onSuccess();
         }).addOnFailureListener(error -> {
             String message = error.getMessage();
@@ -904,15 +868,19 @@ public class JoinGameViewModel extends AndroidViewModel {
                     authSnapshot, dataSnapshot, expectedEditorUserId, expectedGeneration);
             GameDataWrapper latestWrapper = dataSnapshot.toObject(GameDataWrapper.class);
             GameData latest = latestWrapper != null ? latestWrapper.getData() : null;
+            GameDataSchema.normalize(latest);
             GameData patched = patch.applyToLatest(latest);
+            GameDataSchema.normalize(patched);
+            long nextRevision = revisionOf(dataSnapshot) + 1L;
             transaction.set(gameDataRef,
-                    buildGameDataDocument(patched, expectedGeneration));
+                    buildGameDataDocument(patched, expectedGeneration, nextRevision));
             transaction.update(gameRef, buildDashboardSummary(patched));
-            return patched;
-        }).addOnSuccessListener(patched -> {
+            return new SavedGameData(patched, nextRevision);
+        }).addOnSuccessListener(saved -> {
             roundSaveInProgress = false;
-            gameData.setValue(patched);
-            gameRepository.updateLocalDashboardFromGameData(gameId, patched);
+            latestGameRevision = saved.revision;
+            gameData.setValue(saved.gameData);
+            gameRepository.updateLocalDashboardFromGameData(gameId, saved.gameData);
             callback.onSuccess();
         }).addOnFailureListener(error -> {
             roundSaveInProgress = false;
@@ -966,30 +934,14 @@ public class JoinGameViewModel extends AndroidViewModel {
     }
 
     private static Map<String, Object> buildGameDataDocument(
-            GameData updatedGameData, long editGeneration) {
-        Map<String, Object> cleanGameData = new HashMap<>();
-        cleanGameData.put("numPlayers", updatedGameData.getPlayers() != null
-                ? updatedGameData.getPlayers().size()
-                : updatedGameData.getNumPlayers());
-        cleanGameData.put("pointValue", updatedGameData.getPointValue());
-        cleanGameData.put("gstPercent", updatedGameData.getGstPercent());
-        cleanGameData.put("players", updatedGameData.getPlayers());
-        cleanGameData.put("version", updatedGameData.getVersion());
-        if (updatedGameData.getMidGameJoinActiveRound() != null) {
-            cleanGameData.put("midGameJoinActiveRound",
-                    updatedGameData.getMidGameJoinActiveRound());
-        }
-        if (updatedGameData.getMidGameJoinBackfillScore() != null) {
-            cleanGameData.put("midGameJoinBackfillScore",
-                    updatedGameData.getMidGameJoinBackfillScore());
-        }
-
+            GameData updatedGameData, long editGeneration, long revision) {
         Map<String, Object> gameDataDoc = new HashMap<>();
-        gameDataDoc.put("data", cleanGameData);
+        gameDataDoc.put("data", GameDataSchema.toFirestoreData(updatedGameData));
         gameDataDoc.put("lastUpdated",
                 com.google.firebase.firestore.FieldValue.serverTimestamp());
-        gameDataDoc.put("version", "1.0");
+        gameDataDoc.put("version", "2.0");
         gameDataDoc.put("editGeneration", editGeneration);
+        gameDataDoc.put("revision", revision);
         return gameDataDoc;
     }
 
@@ -1029,6 +981,12 @@ public class JoinGameViewModel extends AndroidViewModel {
                         try {
                             GameDataWrapper wrapper = documentSnapshot.toObject(GameDataWrapper.class);
                             if (wrapper != null && wrapper.getData() != null) {
+                                GameDataSchema.normalize(wrapper.getData());
+                                long incomingRevision = revisionOf(documentSnapshot);
+                                if (incomingRevision < latestGameRevision) {
+                                    return;
+                                }
+                                latestGameRevision = incomingRevision;
                                 gameData.setValue(wrapper.getData());
                             } else {
                                 errorMessage.setValue("Game data is corrupted. Please try again.");
@@ -1048,7 +1006,33 @@ public class JoinGameViewModel extends AndroidViewModel {
 
     public void updateGameData(GameData newGameData) {
         if (newGameData != null) {
+            GameDataSchema.normalize(newGameData);
             gameData.setValue(newGameData);
+        }
+    }
+
+    public boolean updateGameDataFromSnapshot(GameData newGameData, long revision) {
+        if (newGameData == null || revision < latestGameRevision) {
+            return false;
+        }
+        GameDataSchema.normalize(newGameData);
+        latestGameRevision = revision;
+        gameData.setValue(newGameData);
+        return true;
+    }
+
+    private static long revisionOf(DocumentSnapshot snapshot) {
+        Long revision = snapshot == null ? null : snapshot.getLong("revision");
+        return revision == null || revision < 0 ? 0L : revision;
+    }
+
+    private static final class SavedGameData {
+        final GameData gameData;
+        final long revision;
+
+        SavedGameData(GameData gameData, long revision) {
+            this.gameData = gameData;
+            this.revision = revision;
         }
     }
 

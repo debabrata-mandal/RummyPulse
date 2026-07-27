@@ -340,8 +340,11 @@ public class DashboardViewModel extends ViewModel {
         initialGameData.put("numPlayers", 2);
         initialGameData.put("pointValue", request.pointValue);
         initialGameData.put("gstPercent", request.gstPercentage);
-        List<Map<String, Object>> players = new ArrayList<>();
+        Map<String, Map<String, Object>> playersById = new java.util.LinkedHashMap<>();
+        List<String> playerOrder = new ArrayList<>();
         Map<String, Object> creatorPlayer = new HashMap<>();
+        String creatorPlayerId = java.util.UUID.randomUUID().toString();
+        creatorPlayer.put("playerId", creatorPlayerId);
         String creatorPlayerName = DisplayNameUtils.firstName(request.creatorName);
         if (creatorPlayerName.isEmpty()) {
             creatorPlayerName = "You";
@@ -351,15 +354,21 @@ public class DashboardViewModel extends ViewModel {
         creatorPlayer.put("randomNumber", null);
         creatorPlayer.put("isCreator", true); // Mark as creator
         creatorPlayer.put("userId", request.creatorUserId);
-        players.add(creatorPlayer);
+        playersById.put(creatorPlayerId, creatorPlayer);
+        playerOrder.add(creatorPlayerId);
         Map<String, Object> player2 = new HashMap<>();
+        String player2Id = java.util.UUID.randomUUID().toString();
+        player2.put("playerId", player2Id);
         player2.put("name", "Player 2");
         player2.put("scores", new ArrayList<>(java.util.Collections.nCopies(10, -1)));
         player2.put("randomNumber", null);
         player2.put("isCreator", false);
         player2.put("userId", null);
-        players.add(player2);
-        initialGameData.put("players", players);
+        playersById.put(player2Id, player2);
+        playerOrder.add(player2Id);
+        initialGameData.put("schemaVersion", 2);
+        initialGameData.put("playersById", playersById);
+        initialGameData.put("playerOrder", playerOrder);
         initialGameData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
 
         Map<String, Object> authData = new HashMap<>();
@@ -384,8 +393,9 @@ public class DashboardViewModel extends ViewModel {
         Map<String, Object> gameDataDoc = new HashMap<>();
         gameDataDoc.put("data", initialGameData);
         gameDataDoc.put("lastUpdated", com.google.firebase.firestore.FieldValue.serverTimestamp());
-        gameDataDoc.put("version", "1.0");
+        gameDataDoc.put("version", "2.0");
         gameDataDoc.put("editGeneration", 1L);
+        gameDataDoc.put("revision", 1L);
 
         Map<String, Object> creatorApproval = new HashMap<>();
         creatorApproval.put("gameId", request.gameId);

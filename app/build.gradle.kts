@@ -100,8 +100,16 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.ktx)
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
+    implementation(libs.room.runtime)
+    annotationProcessor("androidx.room:room-compiler:2.7.2")
+    implementation(libs.work.runtime)
+    implementation(libs.gson)
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     testImplementation(libs.junit)
+    testImplementation(libs.room.testing)
+    androidTestImplementation(libs.ext.junit)
+    androidTestImplementation(libs.room.testing)
+    androidTestImplementation("androidx.test:core:1.7.0")
     
     // QR Code generation library
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")

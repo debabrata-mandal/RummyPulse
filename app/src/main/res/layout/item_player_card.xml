@@ -89,6 +89,15 @@
                 android:textSize="12sp"
                 android:visibility="gone" />
 
+            <TextView
+                android:id="@+id/text_player_pending_sync"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/player_change_pending_sync"
+                android:textColor="#FFB300"
+                android:textSize="11sp"
+                android:visibility="gone" />
+
         </LinearLayout>
 
         <LinearLayout

@@ -41,6 +41,11 @@ import com.example.rummypulse.data.RoundScoreDraft;
 import com.example.rummypulse.data.RoundScorePatch;
 import com.example.rummypulse.databinding.ActivityJoinGameBinding;
 import com.example.rummypulse.data.GameRepository;
+import com.example.rummypulse.data.GameDataSchema;
+import com.example.rummypulse.data.sync.GameOperationPayload;
+import com.example.rummypulse.data.sync.GameOperationProjector;
+import com.example.rummypulse.data.sync.GameOperationRepository;
+import com.example.rummypulse.data.sync.GameOperationType;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
 import com.example.rummypulse.utils.ModernToast;
 import com.google.android.material.button.MaterialButton;
@@ -62,6 +67,7 @@ import java.util.Map;
 public class JoinGameActivity extends AppCompatActivity {
 
     private JoinGameViewModel viewModel;
+    private GameOperationRepository operationRepository;
     private ActivityJoinGameBinding binding;
     private String currentGameId;
     
@@ -118,13 +124,22 @@ public class JoinGameActivity extends AppCompatActivity {
     /** Scores remain local until every required player in this round is reviewed. */
     private RoundScoreDraft activeRoundScoreDraft;
     private boolean restoringPendingRounds;
+    private boolean applyingProjectedGameState;
+    private boolean projectingPendingGameState;
     private boolean pendingRoundSyncInProgress;
+    private boolean legacyPendingRoundsMigrationStarted;
+    private boolean roomDraftLoaded;
+    private String cachedRoomDraft;
     private Runnable pendingRoundAfterSync;
 
-    /** Cached admin flag so View Requests works before/without edit access. */
+    /** Global admins may manage view requests without holding game edit access. */
     private boolean isAppAdmin;
     private final AppUserRepository appUserRepository = new AppUserRepository();
     private List<AppUser> cachedDirectoryUsers;
+    private final java.util.Set<String> pendingPlayerIds =
+            new java.util.HashSet<>();
+    private final java.util.Map<java.util.UUID, androidx.work.WorkInfo.State>
+            observedOperationWorkStates = new java.util.HashMap<>();
 
     /** Prevents a programmatic mapped-name update from scheduling a second game-data write. */
     private boolean suppressPlayerNamePersistence;
@@ -146,11 +161,13 @@ public class JoinGameActivity extends AppCompatActivity {
 
         // Initialize ViewModel
         viewModel = new ViewModelProvider(this).get(JoinGameViewModel.class);
+        operationRepository = GameOperationRepository.getInstance(getApplicationContext());
 
         // Initialize views
         initializeViews();
         setupClickListeners();
         observeViewModel();
+        observeOperationSync();
         setupAdminRoleObserver();
         
         // Setup network monitoring
@@ -264,6 +281,35 @@ public class JoinGameActivity extends AppCompatActivity {
         applyActionDialogWidth(dialog);
     }
 
+    private void observeOperationSync() {
+        androidx.work.WorkManager.getInstance(getApplicationContext())
+                .getWorkInfosByTagLiveData("game-operation-sync")
+                .observe(this, workInfos -> {
+                    if (currentGameId == null || workInfos == null) {
+                        return;
+                    }
+                    boolean completedForGame = false;
+                    String gameTag = "game-operation-sync-" + currentGameId;
+                    for (androidx.work.WorkInfo workInfo : workInfos) {
+                        androidx.work.WorkInfo.State previousState =
+                                observedOperationWorkStates.put(
+                                        workInfo.getId(), workInfo.getState());
+                        if (previousState != null
+                                && previousState
+                                != androidx.work.WorkInfo.State.SUCCEEDED
+                                && workInfo.getTags().contains(gameTag)
+                                && workInfo.getState()
+                                == androidx.work.WorkInfo.State.SUCCEEDED) {
+                            completedForGame = true;
+                        }
+                    }
+                    refreshPendingOperationMarkers();
+                    if (completedForGame && isNetworkAvailable()) {
+                        fetchFreshGameData();
+                    }
+                });
+    }
+
     private static final long TRANSFER_PIN_DONE_COUNTDOWN_MS = 10_000L;
 
     private void showTransferAccessPinDialog(String pin) {
@@ -343,6 +389,9 @@ public class JoinGameActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (operationRepository != null && currentGameId != null && isNetworkAvailable()) {
+            operationRepository.resumePendingSync(currentGameId);
+        }
         refreshGameDefaultsAndStandings();
         checkEditSessionIfNeeded(() -> retryPendingRoundSaves(null));
         refreshAppAdminFlag();
@@ -358,9 +407,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void refreshAppAdminFlag() {
         AppUserManager.getInstance().isCurrentUserAdmin(isAdmin -> runOnUiThread(() -> {
-            if (isAdmin) {
-                isAppAdmin = true;
-            }
+            isAppAdmin = isAdmin;
             refreshViewRequestsSection();
         }));
     }
@@ -828,28 +875,9 @@ public class JoinGameActivity extends AppCompatActivity {
         activeSequentialScoreDialog = null;
     }
 
-    /** Saves any debounced score changes and syncs the dashboard before leaving the game screen. */
+    /** Cancels legacy delayed writes; durable operations are already stored in Room. */
     private void flushPendingGameSave() {
-        boolean hasPendingSave = saveRunnable != null;
-        if (hasPendingSave) {
-            saveHandler.removeCallbacks(saveRunnable);
-            saveRunnable = null;
-        }
-        if (viewModel == null || currentGameId == null) {
-            return;
-        }
-        if (!hasPendingSave) {
-            GameRepository.getDashboardInstance().forcePublishDashboard();
-            return;
-        }
-        if (!viewModel.canSaveGameData()) {
-            GameRepository.getDashboardInstance().forcePublishDashboard();
-            return;
-        }
-        com.example.rummypulse.data.GameData liveData = viewModel.getGameData().getValue();
-        if (liveData != null) {
-            viewModel.saveGameData(currentGameId, liveData);
-        }
+        cancelPendingGameSave();
         GameRepository.getDashboardInstance().forcePublishDashboard();
     }
 
@@ -1159,6 +1187,45 @@ public class JoinGameActivity extends AppCompatActivity {
         viewModel.getGameData().observe(this, gameData -> {
             if (gameData != null) {
                 Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+                GameDataSchema.normalize(gameData);
+                if (Boolean.TRUE.equals(editAccess)
+                        && currentGameId != null
+                        && !applyingProjectedGameState
+                        && !projectingPendingGameState) {
+                    projectingPendingGameState = true;
+                    operationRepository.saveAcknowledgedSnapshot(
+                            currentGameId,
+                            gameData,
+                            viewModel.getLatestGameRevision(),
+                            viewModel.getActiveEditGeneration());
+                    operationRepository.projectPending(
+                            currentGameId,
+                            gameData,
+                            new GameOperationRepository.Callback() {
+                                @Override
+                                public void onStored(
+                                        com.example.rummypulse.data.GameData projected) {
+                                    projectingPendingGameState = false;
+                                    applyingProjectedGameState = true;
+                                    viewModel.updateGameData(projected);
+                                }
+
+                                @Override
+                                public void onError(String message) {
+                                    projectingPendingGameState = false;
+                                    ModernToast.warning(
+                                            JoinGameActivity.this, message);
+                                }
+                            });
+                    return;
+                }
+                if (applyingProjectedGameState) {
+                    applyingProjectedGameState = false;
+                }
+                if (Boolean.TRUE.equals(editAccess)) {
+                    migrateLegacyPendingRoundsToOperationQueue(gameData);
+                    loadRoomRoundDraftOnce();
+                }
                 if (Boolean.TRUE.equals(editAccess) && !restoringPendingRounds) {
                     com.example.rummypulse.data.GameData withPending =
                             applyPendingRoundsToCopy(gameData);
@@ -1172,6 +1239,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 }
                 refreshViewRequestsSection();
                 displayGameData(gameData);
+                refreshPendingOperationMarkers();
                 
                 // Set up real-time listener if in view mode (no edit access)
                 if (editAccess == null || !editAccess) {
@@ -1197,7 +1265,8 @@ public class JoinGameActivity extends AppCompatActivity {
                         updateCurrentRound(gameData);
                         updateScoreEntryButtonsVisibility(gameData);
                     } else {
-                        System.out.println("Real player cards already exist - skipping regeneration to preserve user input");
+                        System.out.println("Rendering existing player cards from canonical state");
+                        renderPlayerCardsFromState(gameData);
                         updatePlayersInfo(gameData);
                         updateStandings(gameData);
                         updateCurrentRound(gameData);
@@ -1636,6 +1705,7 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void generatePlayerCards(com.example.rummypulse.data.GameData gameData) {
+        GameDataSchema.normalize(gameData);
         // Clear existing player cards
         binding.playersContainer.removeAllViews();
 
@@ -1643,6 +1713,7 @@ public class JoinGameActivity extends AppCompatActivity {
         for (int i = 0; i < gameData.getPlayers().size(); i++) {
             final int playerIndex = i;
             com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
+            final String stablePlayerId = player.getPlayerId();
             View playerCardView = LayoutInflater.from(this).inflate(R.layout.item_player_card, binding.playersContainer, false);
             
             // Set player name
@@ -1671,12 +1742,11 @@ public class JoinGameActivity extends AppCompatActivity {
                     // Update player name in the data model
                     String newName = s.toString().trim();
                     if (!newName.isEmpty()) {
-                        player.setName(newName);
-                        bindMapPlayerButton(mapPlayerButton, player);
-                        // Save the updated game data to Firebase (with debouncing)
-                        saveGameDataWithDebounce(gameData);
-                        // Update standings table to reflect name change
-                        generateStandingsTable(gameData);
+                        enqueueGameOperation(
+                                GameOperationType.RENAME_PLAYER,
+                                stablePlayerId,
+                                GameOperationPayload.rename(newName),
+                                null);
                     }
                     // Note: If name is empty, we don't update - user can still type
                 }
@@ -1713,6 +1783,12 @@ public class JoinGameActivity extends AppCompatActivity {
                 playerId.setText("#" + player.getRandomNumber());
                 playerId.setVisibility(View.VISIBLE);
             }
+            TextView pendingSync =
+                    playerCardView.findViewById(R.id.text_player_pending_sync);
+            pendingSync.setVisibility(
+                    pendingPlayerIds.contains(stablePlayerId)
+                            ? View.VISIBLE
+                            : View.GONE);
 
             // Setup delete player button
             ImageView deleteButton = playerCardView.findViewById(R.id.btn_delete_player);
@@ -1729,14 +1805,15 @@ public class JoinGameActivity extends AppCompatActivity {
                 }
                 com.example.rummypulse.data.GameData latestGameData =
                         viewModel.getGameData().getValue();
-                if (latestGameData == null || latestGameData.getPlayers() == null
-                        || playerIndex >= latestGameData.getPlayers().size()) {
+                com.example.rummypulse.data.Player latestPlayer =
+                        GameDataSchema.findPlayer(latestGameData, stablePlayerId);
+                if (latestGameData == null || latestPlayer == null) {
                     ModernToast.error(this, "Latest game data is unavailable. Please retry.");
                     return;
                 }
                 showMapPlayerDialog(
-                        playerIndex,
-                        latestGameData.getPlayers().get(playerIndex),
+                        stablePlayerId,
+                        latestPlayer,
                         latestGameData,
                         mapPlayerButton,
                         playerName);
@@ -1756,9 +1833,46 @@ public class JoinGameActivity extends AppCompatActivity {
             bindPlayerTotalScore(totalScoreView, player);
 
             playerCardView.setTag(REAL_PLAYER_CARD_TAG);
+            playerCardView.setTag(R.id.text_player_id, stablePlayerId);
             binding.playersContainer.addView(playerCardView);
         }
         refreshAllPlayerTotalScores(gameData);
+    }
+
+    private void renderPlayerCardsFromState(
+            com.example.rummypulse.data.GameData gameData) {
+        if (gameData == null || gameData.getPlayers() == null
+                || binding.playersContainer.getChildCount()
+                != gameData.getPlayers().size()) {
+            generatePlayerCards(gameData);
+            return;
+        }
+        for (int index = 0; index < gameData.getPlayers().size(); index++) {
+            com.example.rummypulse.data.Player player =
+                    gameData.getPlayers().get(index);
+            View card = binding.playersContainer.getChildAt(index);
+            Object renderedId = card.getTag(R.id.text_player_id);
+            if (!player.getPlayerId().equals(renderedId)) {
+                generatePlayerCards(gameData);
+                return;
+            }
+            EditText name = card.findViewById(R.id.text_player_name);
+            if (!name.hasFocus()
+                    && !player.getName().contentEquals(name.getText())) {
+                suppressPlayerNamePersistence = true;
+                name.setText(player.getName());
+                suppressPlayerNamePersistence = false;
+            }
+            applyMappedPlayerNameLock(name, player);
+            bindMapPlayerButton(card.findViewById(R.id.btn_map_player), player);
+            bindPlayerTotalScore(
+                    card.findViewById(R.id.text_player_total_score), player);
+            TextView pending = card.findViewById(R.id.text_player_pending_sync);
+            pending.setVisibility(
+                    pendingPlayerIds.contains(player.getPlayerId())
+                            ? View.VISIBLE
+                            : View.GONE);
+        }
     }
 
     private void prefetchPlayerDirectory() {
@@ -1818,7 +1932,7 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void showMapPlayerDialog(
-            int playerIndex,
+            String playerId,
             com.example.rummypulse.data.Player player,
             com.example.rummypulse.data.GameData gameData,
             TextView mapButton,
@@ -1846,44 +1960,16 @@ public class JoinGameActivity extends AppCompatActivity {
                 dialog.dismiss();
                 return;
             }
-            com.example.rummypulse.data.Player optimisticPlayer =
-                    new com.example.rummypulse.data.Player();
-            optimisticPlayer.setName(oldName);
-            optimisticPlayer.setRandomNumber(player.getRandomNumber());
-            bindMapPlayerButton(mapButton, optimisticPlayer);
-            applyMappedPlayerNameLock(playerNameView, optimisticPlayer);
-            mapButton.setEnabled(false);
             dialog.dismiss();
             ModernToast.info(this, getString(
                     R.string.map_player_unlinking_background, oldName));
-
-            viewModel.unlinkPlayerAndRevokeViewAccess(
-                    currentGameId,
-                    playerIndex,
-                    oldName,
-                    player.getRandomNumber(),
-                    linkedUserId,
-                    new JoinGameViewModel.PlayerLinkCallback() {
-                        @Override
-                        public void onSuccess() {
-                            player.setUserId(null);
-                            mapButton.setEnabled(true);
-                            bindMapPlayerButton(mapButton, player);
-                            applyMappedPlayerNameLock(playerNameView, player);
-                            ModernToast.success(JoinGameActivity.this,
-                                    getString(R.string.map_player_unlinked, oldName));
-                        }
-
-                        @Override
-                        public void onError(String message) {
-                            mapButton.setEnabled(true);
-                            bindMapPlayerButton(mapButton, player);
-                            applyMappedPlayerNameLock(playerNameView, player);
-                            ModernToast.error(JoinGameActivity.this, getString(
-                                    R.string.map_player_unlink_background_failed,
-                                    message));
-                        }
-                    });
+            enqueueGameOperation(
+                    GameOperationType.UNMAP_USER,
+                    playerId,
+                    new GameOperationPayload(),
+                    () -> ModernToast.success(
+                            JoinGameActivity.this,
+                            getString(R.string.map_player_unlinked, oldName)));
         });
 
         dialog.show();
@@ -1895,7 +1981,7 @@ public class JoinGameActivity extends AppCompatActivity {
             public void onSuccess(List<AppUser> users) {
                 cachedDirectoryUsers = sortDirectoryUsers(users);
                 if (dialog.isShowing()) {
-                    bindUserDirectory(dialog, playerIndex, player, gameData,
+                    bindUserDirectory(dialog, playerId, player, gameData,
                             mapButton, playerNameView,
                             search, list, progress, empty, currentMapping,
                             cachedDirectoryUsers);
@@ -1915,7 +2001,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void bindUserDirectory(
             AlertDialog dialog,
-            int playerIndex,
+            String playerId,
             com.example.rummypulse.data.Player player,
             com.example.rummypulse.data.GameData gameData,
             TextView mapButton,
@@ -1992,80 +2078,70 @@ public class JoinGameActivity extends AppCompatActivity {
 
         list.setOnItemClickListener((parent, row, position, id) -> {
             AppUser selected = visibleUsers.get(position);
+            com.example.rummypulse.data.GameData projected =
+                    viewModel.getGameData().getValue();
             com.example.rummypulse.data.Player existing =
-                    findPlayerLinkedTo(gameData, selected.getUserId(), player);
+                    findPlayerLinkedTo(projected, selected.getUserId(), player);
             if (existing != null) {
-                ModernToast.warning(this, getString(
-                        R.string.map_player_already_linked,
-                        userDisplayName(selected),
-                        existing.getName()));
+                showMappingTransferConfirmation(
+                        existing,
+                        playerId,
+                        selected,
+                        dialog);
                 return;
             }
             String gamePlayerName = player.getName();
-            String previousUserId = player.getUserId();
             String actualName = userPlayerFirstName(selected);
             cancelPendingGameSave();
-            com.example.rummypulse.data.Player optimisticPlayer =
-                    new com.example.rummypulse.data.Player();
-            optimisticPlayer.setName(actualName);
-            optimisticPlayer.setUserId(selected.getUserId());
-            optimisticPlayer.setRandomNumber(player.getRandomNumber());
-            suppressPlayerNamePersistence = true;
-            playerNameView.setText(actualName);
-            suppressPlayerNamePersistence = false;
-            applyMappedPlayerNameLock(playerNameView, optimisticPlayer);
-            bindMapPlayerButton(mapButton, optimisticPlayer);
-            mapButton.setEnabled(false);
             dialog.dismiss();
             ModernToast.info(this, getString(
                     R.string.map_player_linking_background,
                     gamePlayerName,
                     actualName));
-
-            viewModel.linkPlayerAndApproveViewAccess(
-                    currentGameId,
-                    playerIndex,
-                    gamePlayerName,
-                    player.getRandomNumber(),
-                    previousUserId,
-                    actualName,
-                    selected.getUserId(),
-                    userDisplayName(selected),
-                    new JoinGameViewModel.PlayerLinkCallback() {
-                        @Override
-                        public void onSuccess() {
-                            player.setUserId(selected.getUserId());
-                            player.setName(actualName);
-                            mapButton.setEnabled(true);
-                            bindMapPlayerButton(mapButton, player);
-                            applyMappedPlayerNameLock(playerNameView, player);
-                            com.example.rummypulse.data.GameData savedGameData =
-                                    viewModel.getGameData().getValue();
-                            if (savedGameData != null) {
-                                generateStandingsTable(savedGameData);
-                            }
-                            ModernToast.success(JoinGameActivity.this, getString(
+            enqueueGameOperation(
+                    GameOperationType.MAP_USER,
+                    playerId,
+                    GameOperationPayload.mapping(
+                            selected.getUserId(),
+                            userDisplayName(selected),
+                            actualName),
+                    () -> ModernToast.success(
+                            JoinGameActivity.this,
+                            getString(
                                     R.string.map_player_linked,
                                     gamePlayerName,
-                                    actualName));
-                        }
-
-                        @Override
-                        public void onError(String message) {
-                            player.setUserId(previousUserId);
-                            player.setName(gamePlayerName);
-                            suppressPlayerNamePersistence = true;
-                            playerNameView.setText(gamePlayerName);
-                            suppressPlayerNamePersistence = false;
-                            mapButton.setEnabled(true);
-                            bindMapPlayerButton(mapButton, player);
-                            applyMappedPlayerNameLock(playerNameView, player);
-                            generateStandingsTable(gameData);
-                            ModernToast.error(JoinGameActivity.this, getString(
-                                    R.string.map_player_background_failed, message));
-                        }
-                    });
+                                    actualName)));
         });
+    }
+
+    private void showMappingTransferConfirmation(
+            com.example.rummypulse.data.Player source,
+            String targetPlayerId,
+            AppUser selected,
+            AlertDialog mappingDialog) {
+        String actualName = userPlayerFirstName(selected);
+        new AlertDialog.Builder(this)
+                .setTitle("Transfer mapping?")
+                .setMessage(userDisplayName(selected)
+                        + " is currently mapped to "
+                        + source.getName()
+                        + ". Move the mapping to this player?")
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Transfer", (confirmation, which) -> {
+                    mappingDialog.dismiss();
+                    enqueueGameOperation(
+                            GameOperationType.TRANSFER_MAPPING,
+                            targetPlayerId,
+                            GameOperationPayload.transfer(
+                                    source.getPlayerId(),
+                                    selected.getUserId(),
+                                    userDisplayName(selected),
+                                    actualName),
+                            () -> ModernToast.success(
+                                    JoinGameActivity.this,
+                                    "Mapping transferred locally; syncing…"));
+                })
+                .show();
     }
 
     private int findLinkedUserIndex(List<AppUser> users, String linkedUserId) {
@@ -2099,7 +2175,10 @@ public class JoinGameActivity extends AppCompatActivity {
             return null;
         }
         for (com.example.rummypulse.data.Player candidate : gameData.getPlayers()) {
-            if (candidate != excluded && userId.equals(candidate.getUserId())) {
+            boolean samePlayer = excluded != null
+                    && excluded.getPlayerId() != null
+                    && excluded.getPlayerId().equals(candidate.getPlayerId());
+            if (!samePlayer && userId.equals(candidate.getUserId())) {
                 return candidate;
             }
         }
@@ -2410,6 +2489,7 @@ public class JoinGameActivity extends AppCompatActivity {
     // Drag and drop variables
     private View draggedView = null;
     private int draggedIndex = -1;
+    private String draggedPlayerId;
     private float dragStartY = 0;
     private View placeholderView = null;
     private boolean isDragging = false;
@@ -2437,6 +2517,11 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Start drag
                 draggedView = playerCardView;
                 draggedIndex = playerIndex;
+                draggedPlayerId = playerIndex >= 0
+                        && gameData.getPlayers() != null
+                        && playerIndex < gameData.getPlayers().size()
+                        ? gameData.getPlayers().get(playerIndex).getPlayerId()
+                        : null;
                 dragStartY = event.getRawY();
                 isDragging = true;
                 
@@ -2623,24 +2708,26 @@ public class JoinGameActivity extends AppCompatActivity {
         draggedView.setElevation(2f);
         
         // Reorder if position changed
-        if (targetIndex != draggedIndex && targetIndex >= 0 && targetIndex < gameData.getPlayers().size()) {
-            // Reorder players list
-            com.example.rummypulse.data.Player draggedPlayer = gameData.getPlayers().get(draggedIndex);
-            gameData.getPlayers().remove(draggedIndex);
-            
-            // Insert at target position (no adjustment needed since we already removed)
-            gameData.getPlayers().add(targetIndex, draggedPlayer);
-            
-            // Save to Firebase
-            saveGameDataWithDebounce(gameData);
-            
-            // Regenerate player cards to reflect new order
-            generatePlayerCards(gameData);
+        if (targetIndex != draggedIndex && targetIndex >= 0
+                && targetIndex < gameData.getPlayers().size()
+                && draggedPlayerId != null) {
+            GameDataSchema.normalize(gameData);
+            java.util.List<String> order =
+                    new java.util.ArrayList<>(gameData.getPlayerOrder());
+            if (order.remove(draggedPlayerId)) {
+                order.add(Math.min(targetIndex, order.size()), draggedPlayerId);
+                enqueueGameOperation(
+                        GameOperationType.SET_PLAYER_ORDER,
+                        null,
+                        GameOperationPayload.order(order),
+                        null);
+            }
         }
         
         // Reset drag state
         draggedView = null;
         draggedIndex = -1;
+        draggedPlayerId = null;
         dragStartY = 0;
         isDragging = false;
     }
@@ -2679,6 +2766,9 @@ public class JoinGameActivity extends AppCompatActivity {
                 .edit()
                 .putString(roundDraftPreferenceKey(), stored)
                 .commit();
+        cachedRoomDraft = stored;
+        operationRepository.saveRoundDraft(
+                currentGameId, viewModel.getActiveEditGeneration(), stored);
     }
 
     private void restoreLocalRoundDraft(com.example.rummypulse.data.GameData gameData) {
@@ -2688,6 +2778,9 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         String stored = getSharedPreferences(ROUND_DRAFT_PREFERENCES, MODE_PRIVATE)
                 .getString(roundDraftPreferenceKey(), null);
+        if (stored == null) {
+            stored = cachedRoomDraft;
+        }
         if (stored == null) {
             return;
         }
@@ -2718,6 +2811,9 @@ public class JoinGameActivity extends AppCompatActivity {
                 .edit()
                 .remove(roundDraftPreferenceKey())
                 .commit();
+        cachedRoomDraft = null;
+        operationRepository.deleteRoundDraft(
+                currentGameId, viewModel.getActiveEditGeneration());
     }
 
     private String roundDraftPreferenceKey() {
@@ -2728,15 +2824,33 @@ public class JoinGameActivity extends AppCompatActivity {
             com.example.rummypulse.data.GameData gameData) {
         StringBuilder identity = new StringBuilder();
         for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
-            identity.append(player.getUserId() != null ? player.getUserId() : "")
+            identity.append(player.getPlayerId() != null ? player.getPlayerId() : "")
                     .append('|')
-                    .append(player.getName() != null ? player.getName() : "")
-                    .append('|')
-                    .append(player.getRandomNumber() != null
-                            ? player.getRandomNumber() : "")
                     .append(';');
         }
         return Integer.toHexString(identity.toString().hashCode());
+    }
+
+    private void loadRoomRoundDraftOnce() {
+        if (roomDraftLoaded || currentGameId == null || operationRepository == null) {
+            return;
+        }
+        roomDraftLoaded = true;
+        operationRepository.loadRoundDraft(
+                currentGameId,
+                viewModel.getActiveEditGeneration(),
+                serializedDraft -> {
+                    cachedRoomDraft = serializedDraft;
+                    if (serializedDraft != null
+                            && getSharedPreferences(
+                                    ROUND_DRAFT_PREFERENCES, MODE_PRIVATE)
+                                    .getString(roundDraftPreferenceKey(), null) == null) {
+                        getSharedPreferences(ROUND_DRAFT_PREFERENCES, MODE_PRIVATE)
+                                .edit()
+                                .putString(roundDraftPreferenceKey(), serializedDraft)
+                                .apply();
+                    }
+                });
     }
 
     private void startSequentialRoundScoreEntryFlow() {
@@ -2928,7 +3042,6 @@ public class JoinGameActivity extends AppCompatActivity {
                             false,
                             viewModel.getActiveEditGeneration());
                 }
-                persistPendingRound(pendingPatch);
             } catch (RuntimeException error) {
                 layoutScore.setError(error.getMessage());
                 return;
@@ -2936,30 +3049,64 @@ public class JoinGameActivity extends AppCompatActivity {
 
             cancelPendingGameSave();
             saveInProgress[0] = true;
-            clearLocalRoundDraft();
-            activeRoundScoreDraft = null;
-            viewModel.applyPendingRoundLocally(pendingPatch);
-            dialog.dismiss();
-            saveInProgress[0] = false;
-
-            com.example.rummypulse.data.GameData local =
-                    viewModel.getGameData().getValue();
-            if (local == null) {
-                local = completedRound;
-            }
-            updateStandings(local);
-            updateCurrentRound(local);
-            updateScoreEntryButtonsVisibility(local);
-            announceGameCompletion(local);
-
-            if (isNetworkAvailable()) {
-                ModernToast.success(JoinGameActivity.this,
-                        getString(R.string.round_saved_syncing_background, finalRound1));
-                retryPendingRoundSaves(null);
+            java.util.Map<String, Integer> scoresByPlayerId = new java.util.LinkedHashMap<>();
+            if (finalCorrectionMode) {
+                com.example.rummypulse.data.Player completedPlayer =
+                        GameDataSchema.findPlayer(completedRound, p.getPlayerId());
+                if (completedPlayer == null) {
+                    layoutScore.setError("Player identity changed.");
+                    saveInProgress[0] = false;
+                    return;
+                }
+                scoresByPlayerId.put(
+                        completedPlayer.getPlayerId(),
+                        completedPlayer.getScores().get(finalRound1 - 1));
             } else {
-                ModernToast.info(JoinGameActivity.this,
-                        getString(R.string.round_saved_offline_pending_sync));
+                for (com.example.rummypulse.data.Player completedPlayer
+                        : completedRound.getPlayers()) {
+                    scoresByPlayerId.put(
+                            completedPlayer.getPlayerId(),
+                            completedPlayer.getScores().get(finalRound1 - 1));
+                }
             }
+            pendingPlayerIds.addAll(scoresByPlayerId.keySet());
+            operationRepository.enqueue(
+                    currentGameId,
+                    viewModel.getActiveEditGeneration(),
+                    viewModel.getGameData().getValue(),
+                    GameOperationType.UPDATE_SCORE,
+                    null,
+                    GameOperationPayload.scores(finalRound1, scoresByPlayerId),
+                    new GameOperationRepository.Callback() {
+                        @Override
+                        public void onStored(
+                                com.example.rummypulse.data.GameData projected) {
+                            clearLocalRoundDraft();
+                            activeRoundScoreDraft = null;
+                            applyingProjectedGameState = true;
+                            viewModel.updateGameData(projected);
+                            dialog.dismiss();
+                            saveInProgress[0] = false;
+                            updateStandings(projected);
+                            updateCurrentRound(projected);
+                            updateScoreEntryButtonsVisibility(projected);
+                            announceGameCompletion(projected);
+                            ModernToast.info(
+                                    JoinGameActivity.this,
+                                    isNetworkAvailable()
+                                            ? getString(
+                                                    R.string.round_saved_syncing_background,
+                                                    finalRound1)
+                                            : getString(
+                                                    R.string.round_saved_offline_pending_sync));
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            saveInProgress[0] = false;
+                            layoutScore.setError(message);
+                        }
+                    });
         });
 
         dialog.show();
@@ -3355,24 +3502,20 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private boolean canManageViewRequests(GameAuth auth) {
-        if (isAppAdmin) {
+        if (isAppAdmin
+                || AppUserRoleSession.getInstance().peekRole()
+                == AppUserRoleSession.Role.ADMIN) {
             return true;
         }
-        if (AppUserRoleSession.getInstance().peekRole() == AppUserRoleSession.Role.ADMIN) {
-            return true;
+        boolean hasLocalEditAccess =
+                Boolean.TRUE.equals(viewModel.getEditAccessGranted().getValue());
+        if (!hasLocalEditAccess || auth == null) {
+            return false;
         }
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         String uid = user != null ? user.getUid() : null;
-        if (auth != null && uid != null) {
-            if (uid.equals(auth.getCreatorUserId())) {
-                return true;
-            }
-            String activeEditorId = auth.getActiveEditorUserId();
-            if (activeEditorId != null && activeEditorId.equals(uid)) {
-                return true;
-            }
-        }
-        return false;
+        String activeEditorId = auth.getActiveEditorUserId();
+        return uid != null && uid.equals(activeEditorId);
     }
 
     private void renderViewRequests(List<GameViewApproval> requests) {
@@ -3925,6 +4068,7 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Create new player
         com.example.rummypulse.data.Player newPlayer = new com.example.rummypulse.data.Player();
+        newPlayer.setPlayerId(java.util.UUID.randomUUID().toString());
         newPlayer.setName(playerName);
         
         // Set userId to null for manually added players (not linked to a user account)
@@ -3961,23 +4105,12 @@ public class JoinGameActivity extends AppCompatActivity {
             newPlayer.setRandomNumber(randomNumber);
         }
         
-        // Add player to game data
-        gameData.getPlayers().add(newPlayer);
-        gameData.setNumPlayers(gameData.getPlayers().size());
-        
-        // Save the updated game data to Firebase
-        viewModel.saveGameData(currentGameId, gameData);
-        
-        // Refresh player cards UI immediately
-        generatePlayerCards(gameData);
-        
-        // Update players info section
-        updatePlayersInfo(gameData);
-        
-        // Refresh standings and chart
-        displayGameData(gameData);
-        
-        ModernToast.success(this, "Player '" + playerName + "' added successfully!");
+        enqueueGameOperation(
+                GameOperationType.ADD_PLAYER,
+                newPlayer.getPlayerId(),
+                GameOperationPayload.player(newPlayer),
+                () -> ModernToast.success(
+                        this, "Player '" + playerName + "' added locally; syncing…"));
     }
     
     /**
@@ -4083,6 +4216,7 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Create new player for current user
         com.example.rummypulse.data.Player newPlayer = new com.example.rummypulse.data.Player();
+        newPlayer.setPlayerId(java.util.UUID.randomUUID().toString());
         newPlayer.setName(finalName);
         newPlayer.setUserId(currentUserId); // Set user ID for joined user
         newPlayer.setIsCreator(false); // Not the creator
@@ -4116,23 +4250,13 @@ public class JoinGameActivity extends AppCompatActivity {
             newPlayer.setRandomNumber(randomNumber);
         }
         
-        // Add player to game data
-        gameData.getPlayers().add(newPlayer);
-        gameData.setNumPlayers(gameData.getPlayers().size());
-        
-        // Save the updated game data to Firebase
-        viewModel.saveGameData(currentGameId, gameData);
-        
-        // Refresh player cards UI immediately
-        generatePlayerCards(gameData);
-        
-        // Update players info section
-        updatePlayersInfo(gameData);
-        
-        // Refresh standings and chart
-        displayGameData(gameData);
-        
-        ModernToast.success(this, "You have joined the game as '" + finalName + "'!");
+        String joinedName = finalName;
+        enqueueGameOperation(
+                GameOperationType.ADD_PLAYER,
+                newPlayer.getPlayerId(),
+                GameOperationPayload.player(newPlayer),
+                () -> ModernToast.success(
+                        this, "You joined locally as '" + joinedName + "'; syncing…"));
     }
     
     private void showDeletePlayerConfirmation(com.example.rummypulse.data.Player player, com.example.rummypulse.data.GameData gameData) {
@@ -4168,23 +4292,94 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     private void deletePlayer(com.example.rummypulse.data.Player player, com.example.rummypulse.data.GameData gameData) {
-        // Remove player from game data
-        gameData.getPlayers().remove(player);
-        gameData.setNumPlayers(gameData.getPlayers().size());
-        
-        // Save the updated game data to Firebase
-        viewModel.saveGameData(currentGameId, gameData);
-        
-        // Refresh player cards UI immediately
-        generatePlayerCards(gameData);
-        
-        // Update players info section
-        updatePlayersInfo(gameData);
-        
-        // Refresh standings and chart
-        displayGameData(gameData);
-        
-        ModernToast.success(this, "Player '" + player.getName() + "' deleted successfully!");
+        enqueueGameOperation(
+                GameOperationType.DELETE_PLAYER,
+                player.getPlayerId(),
+                new GameOperationPayload(),
+                () -> ModernToast.success(
+                        this, "Player '" + player.getName() + "' deleted locally; syncing…"));
+    }
+
+    private void enqueueGameOperation(
+            GameOperationType type,
+            String playerId,
+            GameOperationPayload payload,
+            Runnable onStored) {
+        com.example.rummypulse.data.GameData current = viewModel.getGameData().getValue();
+        if (operationRepository == null || currentGameId == null || current == null) {
+            ModernToast.error(this, "Game state is unavailable.");
+            return;
+        }
+        GameDataSchema.normalize(current);
+        markPayloadPending(playerId, payload);
+        operationRepository.enqueue(
+                currentGameId,
+                viewModel.getActiveEditGeneration(),
+                current,
+                type,
+                playerId,
+                payload,
+                new GameOperationRepository.Callback() {
+                    @Override
+                    public void onStored(com.example.rummypulse.data.GameData projected) {
+                        applyingProjectedGameState = true;
+                        viewModel.updateGameData(projected);
+                        refreshPendingOperationMarkers();
+                        if (onStored != null) {
+                            onStored.run();
+                        }
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        ModernToast.error(JoinGameActivity.this, message);
+                    }
+                });
+    }
+
+    private void markPayloadPending(String playerId, GameOperationPayload payload) {
+        if (playerId != null) {
+            pendingPlayerIds.add(playerId);
+        }
+        if (payload != null && payload.playerOrder != null) {
+            pendingPlayerIds.addAll(payload.playerOrder);
+        }
+        if (payload != null && payload.scoresByPlayerId != null) {
+            pendingPlayerIds.addAll(payload.scoresByPlayerId.keySet());
+        }
+        if (payload != null && payload.fromPlayerId != null) {
+            pendingPlayerIds.add(payload.fromPlayerId);
+        }
+    }
+
+    private void refreshPendingOperationMarkers() {
+        if (operationRepository == null || currentGameId == null) {
+            return;
+        }
+        operationRepository.loadPendingPlayerIds(currentGameId, ids -> {
+            pendingPlayerIds.clear();
+            pendingPlayerIds.addAll(ids);
+            com.example.rummypulse.data.GameData current =
+                    viewModel.getGameData().getValue();
+            if (current == null || current.getPlayers() == null) {
+                return;
+            }
+            int count = Math.min(
+                    current.getPlayers().size(),
+                    binding.playersContainer.getChildCount());
+            for (int index = 0; index < count; index++) {
+                View card = binding.playersContainer.getChildAt(index);
+                TextView badge =
+                        card.findViewById(R.id.text_player_pending_sync);
+                if (badge != null) {
+                    badge.setVisibility(
+                            pendingPlayerIds.contains(
+                                    current.getPlayers().get(index).getPlayerId())
+                                    ? View.VISIBLE
+                                    : View.GONE);
+                }
+            }
+        });
     }
 
     // Debouncing for Firebase saves
@@ -4199,30 +4394,6 @@ public class JoinGameActivity extends AppCompatActivity {
         }
     }
     
-    private void saveGameDataWithDebounce(com.example.rummypulse.data.GameData gameData) {
-        if (viewModel == null || !viewModel.canSaveGameData()) {
-            return;
-        }
-        // Optimistic dashboard sync — don't wait for debounced Firestore write
-        if (currentGameId != null && gameData != null) {
-            GameRepository.getDashboardInstance()
-                    .updateLocalDashboardFromGameData(currentGameId, gameData);
-        }
-        // Cancel any pending save
-        cancelPendingGameSave();
-        
-        // Schedule a new save
-        saveRunnable = new Runnable() {
-            @Override
-            public void run() {
-                saveRunnable = null;
-                viewModel.saveGameData(currentGameId, gameData);
-            }
-        };
-        
-        saveHandler.postDelayed(saveRunnable, SAVE_DELAY_MS);
-    }
-
     private void showQrCodeDialog(String gameId) {
         // Create dialog
         AlertDialog.Builder builder = new AlertDialog.Builder(this, R.style.DarkDialogTheme);
@@ -4351,71 +4522,8 @@ public class JoinGameActivity extends AppCompatActivity {
                             @SuppressWarnings("unchecked")
                             java.util.Map<String, Object> dataMap = (java.util.Map<String, Object>) dataField;
                             
-                            // Convert the nested data to GameData object
-                            com.example.rummypulse.data.GameData gameData = new com.example.rummypulse.data.GameData();
-                            
-                            // Manually map the fields
-                            if (dataMap.get("numPlayers") instanceof Number) {
-                                gameData.setNumPlayers(((Number) dataMap.get("numPlayers")).intValue());
-                            }
-                            if (dataMap.get("pointValue") instanceof Number) {
-                                gameData.setPointValue(((Number) dataMap.get("pointValue")).doubleValue());
-                            }
-                            if (dataMap.get("gstPercent") instanceof Number) {
-                                gameData.setGstPercent(((Number) dataMap.get("gstPercent")).doubleValue());
-                            }
-                            
-                            // Handle players array
-                            Object playersField = dataMap.get("players");
-                            if (playersField instanceof java.util.List) {
-                                @SuppressWarnings("unchecked")
-                                java.util.List<java.util.Map<String, Object>> playersMapList = (java.util.List<java.util.Map<String, Object>>) playersField;
-                                
-                                java.util.List<com.example.rummypulse.data.Player> players = new java.util.ArrayList<>();
-                                for (java.util.Map<String, Object> playerMap : playersMapList) {
-                                    com.example.rummypulse.data.Player player = new com.example.rummypulse.data.Player();
-                                    
-                                    if (playerMap.get("name") instanceof String) {
-                                        player.setName((String) playerMap.get("name"));
-                                    }
-                                    if (playerMap.get("randomNumber") instanceof Number) {
-                                        player.setRandomNumber(((Number) playerMap.get("randomNumber")).intValue());
-                                    }
-                                    
-                                    // Handle userId (nullable - may not exist in older games)
-                                    if (playerMap.get("userId") instanceof String) {
-                                        player.setUserId((String) playerMap.get("userId"));
-                                    } else {
-                                        player.setUserId(null); // Default to null for backward compatibility
-                                    }
-                                    
-                                    // Handle isCreator (nullable - may not exist in older games)
-                                    if (playerMap.get("isCreator") instanceof Boolean) {
-                                        player.setIsCreator((Boolean) playerMap.get("isCreator"));
-                                    } else {
-                                        player.setIsCreator(null); // Default to null for backward compatibility
-                                    }
-                                    
-                                    // Handle scores array
-                                    Object scoresField = playerMap.get("scores");
-                                    if (scoresField instanceof java.util.List) {
-                                        @SuppressWarnings("unchecked")
-                                        java.util.List<Object> scoresObjectList = (java.util.List<Object>) scoresField;
-                                        java.util.List<Integer> scores = new java.util.ArrayList<>();
-                                        for (Object scoreObj : scoresObjectList) {
-                                            if (scoreObj instanceof Number) {
-                                                scores.add(((Number) scoreObj).intValue());
-                                            } else {
-                                                scores.add(-1); // Default for null/invalid scores
-                                            }
-                                        }
-                                        player.setScores(scores);
-                                    }
-                                    
-                                    players.add(player);
-                                }
-                                gameData.setPlayers(players);
-                            }
+                            com.example.rummypulse.data.GameData gameData =
+                                    parseGameDataFromMap(dataMap);
                             
                             System.out.println("Players field: " + (gameData.getPlayers() != null ? gameData.getPlayers().size() + " players" : "null"));
                             
@@ -4435,7 +4543,13 @@ public class JoinGameActivity extends AppCompatActivity {
                                         
                                         if (playerListChanged) {
                                             System.out.println("Real-time update in EDIT MODE - player list changed, updating player cards");
-                                            viewModel.updateGameData(gameData);
+                                long revision = documentSnapshot.getLong("revision") == null
+                                        ? 0L
+                                        : documentSnapshot.getLong("revision");
+                                if (!viewModel.updateGameDataFromSnapshot(
+                                        gameData, revision)) {
+                                    return;
+                                }
                                             generatePlayerCards(gameData);
                                             updatePlayersInfo(gameData);
                                             updateStandings(gameData);
@@ -4752,6 +4866,78 @@ public class JoinGameActivity extends AppCompatActivity {
                 .commit();
     }
 
+    private void migrateLegacyPendingRoundsToOperationQueue(
+            com.example.rummypulse.data.GameData gameData) {
+        if (legacyPendingRoundsMigrationStarted
+                || operationRepository == null
+                || currentGameId == null
+                || gameData == null) {
+            return;
+        }
+        legacyPendingRoundsMigrationStarted = true;
+        GameDataSchema.normalize(gameData);
+        for (RoundScorePatch patch : loadPendingRounds()) {
+            if (patch.getEditGeneration() != viewModel.getActiveEditGeneration()) {
+                continue;
+            }
+            java.util.Map<String, Integer> scores = new java.util.LinkedHashMap<>();
+            boolean resolved = true;
+            for (RoundScorePatch.Entry entry : patch.getEntries()) {
+                String playerId = resolvePendingIdentity(gameData, entry.getIdentity());
+                if (playerId == null) {
+                    resolved = false;
+                    break;
+                }
+                scores.put(playerId, entry.getScore());
+            }
+            if (!resolved || scores.isEmpty()) {
+                continue;
+            }
+            operationRepository.enqueue(
+                    currentGameId,
+                    patch.getEditGeneration(),
+                    gameData,
+                    GameOperationType.UPDATE_SCORE,
+                    null,
+                    GameOperationPayload.scores(patch.getRound1Based(), scores),
+                    new GameOperationRepository.Callback() {
+                        @Override
+                        public void onStored(
+                                com.example.rummypulse.data.GameData projected) {
+                            removePendingRound(patch);
+                            applyingProjectedGameState = true;
+                            viewModel.updateGameData(projected);
+                        }
+
+                        @Override
+                        public void onError(String message) {
+                            ModernToast.warning(
+                                    JoinGameActivity.this,
+                                    "A saved round is still waiting for recovery: " + message);
+                        }
+                    });
+        }
+    }
+
+    private String resolvePendingIdentity(
+            com.example.rummypulse.data.GameData gameData, String identity) {
+        if (identity == null || gameData.getPlayers() == null) {
+            return null;
+        }
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            if (identity.equals("p:" + player.getPlayerId())
+                    || (player.getUserId() != null
+                    && identity.equals("u:" + player.getUserId()))
+                    || (player.getRandomNumber() != null
+                    && identity.equals("r:" + player.getRandomNumber()))
+                    || (player.getName() != null
+                    && identity.equals("n:" + player.getName()))) {
+                return player.getPlayerId();
+            }
+        }
+        return null;
+    }
+
     private void removePendingRound(RoundScorePatch patch) {
         if (currentGameId == null || patch == null) {
             return;
@@ -4821,6 +5007,12 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void retryPendingRoundSaves(Runnable afterSync) {
+        if (legacyPendingRoundsMigrationStarted) {
+            if (afterSync != null) {
+                afterSync.run();
+            }
+            return;
+        }
         if (pendingRoundSyncInProgress) {
             if (afterSync != null) {
                 pendingRoundAfterSync = afterSync;
@@ -4924,13 +5116,19 @@ public class JoinGameActivity extends AppCompatActivity {
         // Create sets of player identifiers for comparison
         java.util.Set<String> currentPlayerIds = new java.util.HashSet<>();
         for (com.example.rummypulse.data.Player player : currentPlayers) {
-            String identifier = (player.getUserId() != null ? player.getUserId() : "") + "|" + player.getName();
+            String identifier = !TextUtils.isEmpty(player.getPlayerId())
+                    ? player.getPlayerId()
+                    : (player.getUserId() != null ? player.getUserId() : "")
+                            + "|" + player.getName();
             currentPlayerIds.add(identifier);
         }
         
         java.util.Set<String> freshPlayerIds = new java.util.HashSet<>();
         for (com.example.rummypulse.data.Player player : freshPlayers) {
-            String identifier = (player.getUserId() != null ? player.getUserId() : "") + "|" + player.getName();
+            String identifier = !TextUtils.isEmpty(player.getPlayerId())
+                    ? player.getPlayerId()
+                    : (player.getUserId() != null ? player.getUserId() : "")
+                            + "|" + player.getName();
             freshPlayerIds.add(identifier);
         }
         
@@ -4972,7 +5170,12 @@ public class JoinGameActivity extends AppCompatActivity {
                             runOnUiThread(() -> {
                                 if (gameData != null && gameData.getPlayers() != null && !gameData.getPlayers().isEmpty()) {
                                     System.out.println("Updating UI with fresh server data");
-                                    viewModel.updateGameData(gameData);
+                                    long revision =
+                                            documentSnapshot.getLong("revision") == null
+                                                    ? 0L
+                                                    : documentSnapshot.getLong("revision");
+                                    viewModel.updateGameDataFromSnapshot(
+                                            gameData, revision);
                                     updateStandings(gameData);
                                     updateStandingsInfo(gameData);
                                     updatePlayersInfo(gameData);
@@ -5010,64 +5213,80 @@ public class JoinGameActivity extends AppCompatActivity {
             if (dataMap.get("gstPercent") instanceof Number) {
                 gameData.setGstPercent(((Number) dataMap.get("gstPercent")).doubleValue());
             }
-            
-            // Handle players array
-            Object playersField = dataMap.get("players");
-            if (playersField instanceof java.util.List) {
+            if (dataMap.get("schemaVersion") instanceof Number) {
+                gameData.setSchemaVersion(
+                        ((Number) dataMap.get("schemaVersion")).intValue());
+            }
+
+            java.util.List<com.example.rummypulse.data.Player> players =
+                    new java.util.ArrayList<>();
+            Object playersByIdField = dataMap.get("playersById");
+            Object orderField = dataMap.get("playerOrder");
+            if (playersByIdField instanceof java.util.Map
+                    && orderField instanceof java.util.List) {
                 @SuppressWarnings("unchecked")
-                java.util.List<java.util.Map<String, Object>> playersMapList = (java.util.List<java.util.Map<String, Object>>) playersField;
-                
-                java.util.List<com.example.rummypulse.data.Player> players = new java.util.ArrayList<>();
-                for (java.util.Map<String, Object> playerMap : playersMapList) {
-                    com.example.rummypulse.data.Player player = new com.example.rummypulse.data.Player();
-                    
-                    if (playerMap.get("name") instanceof String) {
-                        player.setName((String) playerMap.get("name"));
+                java.util.Map<String, Object> playersById =
+                        (java.util.Map<String, Object>) playersByIdField;
+                for (Object orderedId : (java.util.List<?>) orderField) {
+                    if (!(orderedId instanceof String)
+                            || !(playersById.get(orderedId) instanceof java.util.Map)) {
+                        continue;
                     }
-                    if (playerMap.get("randomNumber") instanceof Number) {
-                        player.setRandomNumber(((Number) playerMap.get("randomNumber")).intValue());
+                    @SuppressWarnings("unchecked")
+                    java.util.Map<String, Object> playerMap =
+                            (java.util.Map<String, Object>) playersById.get(orderedId);
+                    com.example.rummypulse.data.Player player =
+                            parsePlayerFromMap(playerMap);
+                    if (TextUtils.isEmpty(player.getPlayerId())) {
+                        player.setPlayerId((String) orderedId);
                     }
-                    
-                    // Handle userId (nullable - may not exist in older games)
-                    if (playerMap.get("userId") instanceof String) {
-                        player.setUserId((String) playerMap.get("userId"));
-                    } else {
-                        player.setUserId(null); // Default to null for backward compatibility
-                    }
-                    
-                    // Handle isCreator (nullable - may not exist in older games)
-                    if (playerMap.get("isCreator") instanceof Boolean) {
-                        player.setIsCreator((Boolean) playerMap.get("isCreator"));
-                    } else {
-                        player.setIsCreator(null); // Default to null for backward compatibility
-                    }
-                    
-                    // Handle scores array
-                    Object scoresField = playerMap.get("scores");
-                    if (scoresField instanceof java.util.List) {
-                        @SuppressWarnings("unchecked")
-                        java.util.List<Object> scoresObjectList = (java.util.List<Object>) scoresField;
-                        java.util.List<Integer> scores = new java.util.ArrayList<>();
-                        for (Object scoreObj : scoresObjectList) {
-                            if (scoreObj instanceof Number) {
-                                scores.add(((Number) scoreObj).intValue());
-                            } else {
-                                scores.add(-1);
-                            }
-                        }
-                        player.setScores(scores);
-                    }
-                    
                     players.add(player);
                 }
-                gameData.setPlayers(players);
+            } else if (dataMap.get("players") instanceof java.util.List) {
+                Object playersField = dataMap.get("players");
+                @SuppressWarnings("unchecked")
+                java.util.List<java.util.Map<String, Object>> playersMapList = (java.util.List<java.util.Map<String, Object>>) playersField;
+                for (java.util.Map<String, Object> playerMap : playersMapList) {
+                    players.add(parsePlayerFromMap(playerMap));
+                }
             }
-            
+            gameData.setPlayers(players);
+            GameDataSchema.normalize(gameData);
             return gameData;
         } catch (Exception e) {
             System.err.println("Error in parseGameDataFromMap: " + e.getMessage());
             return null;
         }
+    }
+
+    private com.example.rummypulse.data.Player parsePlayerFromMap(
+            java.util.Map<String, Object> playerMap) {
+        com.example.rummypulse.data.Player player =
+                new com.example.rummypulse.data.Player();
+        if (playerMap.get("playerId") instanceof String) {
+            player.setPlayerId((String) playerMap.get("playerId"));
+        }
+        if (playerMap.get("name") instanceof String) {
+            player.setName((String) playerMap.get("name"));
+        }
+        if (playerMap.get("randomNumber") instanceof Number) {
+            player.setRandomNumber(
+                    ((Number) playerMap.get("randomNumber")).intValue());
+        }
+        player.setUserId(playerMap.get("userId") instanceof String
+                ? (String) playerMap.get("userId")
+                : null);
+        player.setIsCreator(playerMap.get("isCreator") instanceof Boolean
+                ? (Boolean) playerMap.get("isCreator")
+                : null);
+        java.util.List<Integer> scores = new java.util.ArrayList<>();
+        if (playerMap.get("scores") instanceof java.util.List) {
+            for (Object score : (java.util.List<?>) playerMap.get("scores")) {
+                scores.add(score instanceof Number ? ((Number) score).intValue() : -1);
+            }
+        }
+        player.setScores(scores);
+        return player;
     }
 
     // Helper class for standings

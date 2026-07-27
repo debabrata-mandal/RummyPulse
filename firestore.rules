@@ -78,9 +78,24 @@ service cloud.firestore {
     }
 
     function canUpdateGameData(gameId) {
-      return (isActiveEditor(gameId) && validEditGeneration(gameId))
+      return (isActiveEditor(gameId)
+              && validEditGeneration(gameId)
+              && preservesStableGameSchema())
           || isAdminGameEconomicsUpdate()
           || isAtomicEditGenerationTransfer(gameId);
+    }
+
+    function preservesStableGameSchema() {
+      let oldData = resource.data.data;
+      let newData = request.resource.data.data;
+      let oldIsV2 = oldData.keys().hasAll(['schemaVersion'])
+          && oldData.schemaVersion == 2;
+      return !oldIsV2 || (
+        newData.keys().hasAll(['schemaVersion', 'playersById', 'playerOrder'])
+        && newData.schemaVersion == 2
+        && newData.playersById is map
+        && newData.playerOrder is list
+      );
     }
 
     match /games_v2/{gameId} {

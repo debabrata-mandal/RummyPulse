@@ -15,7 +15,7 @@ import java.util.Set;
  * identities and the intended scores, never a complete stale game snapshot.
  */
 public final class RoundScorePatch {
-    private static final String FORMAT_VERSION = "1";
+    private static final String FORMAT_VERSION = "2";
 
     private final int round1Based;
     private final boolean correction;
@@ -143,6 +143,10 @@ public final class RoundScorePatch {
         return editGeneration;
     }
 
+    public List<Entry> getEntries() {
+        return new ArrayList<>(entries);
+    }
+
     public String serialize() {
         StringBuilder value = new StringBuilder(FORMAT_VERSION)
                 .append('|').append(round1Based)
@@ -162,7 +166,7 @@ public final class RoundScorePatch {
             throw new IllegalArgumentException("Pending round is missing.");
         }
         String[] parts = value.split("\\|", -1);
-        if (parts.length < 5 || !FORMAT_VERSION.equals(parts[0])) {
+        if (parts.length < 5 || (!FORMAT_VERSION.equals(parts[0]) && !"1".equals(parts[0]))) {
             throw new IllegalArgumentException("Unsupported pending-round format.");
         }
         try {
@@ -197,6 +201,10 @@ public final class RoundScorePatch {
     }
 
     private static String identityOf(Player player) {
+        if (player != null && player.getPlayerId() != null
+                && !player.getPlayerId().trim().isEmpty()) {
+            return "p:" + player.getPlayerId();
+        }
         if (player != null && player.getUserId() != null
                 && !player.getUserId().trim().isEmpty()) {
             return "u:" + player.getUserId();

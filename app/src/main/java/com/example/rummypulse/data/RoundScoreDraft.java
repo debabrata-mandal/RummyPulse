@@ -10,6 +10,7 @@ import java.util.List;
 public final class RoundScoreDraft {
     private final int round1Based;
     private final boolean correctionMode;
+    private final String[] playerIds;
     private final int[] scores;
     private final boolean[] reviewed;
 
@@ -22,6 +23,7 @@ public final class RoundScoreDraft {
         }
         this.round1Based = round1Based;
         this.correctionMode = correctionMode;
+        this.playerIds = new String[playerCount];
         this.scores = new int[playerCount];
         this.reviewed = new boolean[playerCount];
         java.util.Arrays.fill(scores, -1);
@@ -37,6 +39,7 @@ public final class RoundScoreDraft {
                 gameData.getPlayers().size(), correctionMode);
         for (int i = 0; i < gameData.getPlayers().size(); i++) {
             Player player = gameData.getPlayers().get(i);
+            draft.playerIds[i] = player.getPlayerId();
             Integer existing = existingScore(player, round1Based);
             if (existing != null && existing >= 0) {
                 draft.scores[i] = existing;
@@ -97,9 +100,18 @@ public final class RoundScoreDraft {
     }
 
     public String serialize() {
-        StringBuilder encoded = new StringBuilder("1|")
+        StringBuilder encoded = new StringBuilder("2|")
                 .append(round1Based).append('|')
                 .append(correctionMode ? '1' : '0').append('|');
+        for (int i = 0; i < playerIds.length; i++) {
+            if (i > 0) {
+                encoded.append(',');
+            }
+            encoded.append(java.net.URLEncoder.encode(
+                    playerIds[i] == null ? "" : playerIds[i],
+                    java.nio.charset.StandardCharsets.UTF_8));
+        }
+        encoded.append('|');
         for (int i = 0; i < scores.length; i++) {
             if (i > 0) {
                 encoded.append(',');
@@ -121,6 +133,36 @@ public final class RoundScoreDraft {
             throw new IllegalArgumentException("Draft is missing.");
         }
         String[] parts = encoded.split("\\|", -1);
+        if (parts.length != 6 || !"2".equals(parts[0])) {
+            return deserializeLegacy(encoded);
+        }
+        try {
+            int round = Integer.parseInt(parts[1]);
+            boolean correction = "1".equals(parts[2]);
+            String[] savedIds = parts[3].split(",", -1);
+            String[] savedScores = parts[4].split(",", -1);
+            String[] savedReviewed = parts[5].split(",", -1);
+            if (savedScores.length == 0 || savedScores.length != savedReviewed.length
+                    || savedScores.length != savedIds.length) {
+                throw new IllegalArgumentException("Draft player data is invalid.");
+            }
+            RoundScoreDraft draft =
+                    new RoundScoreDraft(round, savedScores.length, correction);
+            for (int i = 0; i < savedScores.length; i++) {
+                draft.playerIds[i] = java.net.URLDecoder.decode(
+                        savedIds[i], java.nio.charset.StandardCharsets.UTF_8);
+                draft.scores[i] = Integer.parseInt(savedScores[i]);
+                draft.reviewed[i] = "1".equals(savedReviewed[i]);
+                validateSavedEntry(draft, i);
+            }
+            return draft;
+        } catch (NumberFormatException error) {
+            throw new IllegalArgumentException("Draft contains invalid numbers.", error);
+        }
+    }
+
+    private static RoundScoreDraft deserializeLegacy(String encoded) {
+        String[] parts = encoded.split("\\|", -1);
         if (parts.length != 5 || !"1".equals(parts[0])) {
             throw new IllegalArgumentException("Unsupported draft format.");
         }
@@ -137,14 +179,18 @@ public final class RoundScoreDraft {
             for (int i = 0; i < savedScores.length; i++) {
                 draft.scores[i] = Integer.parseInt(savedScores[i]);
                 draft.reviewed[i] = "1".equals(savedReviewed[i]);
-                if (draft.scores[i] < -1
-                        || (draft.reviewed[i] && draft.scores[i] < 0)) {
-                    throw new IllegalArgumentException("Draft score is invalid.");
-                }
+                validateSavedEntry(draft, i);
             }
             return draft;
         } catch (NumberFormatException error) {
             throw new IllegalArgumentException("Draft contains invalid numbers.", error);
+        }
+    }
+
+    private static void validateSavedEntry(RoundScoreDraft draft, int index) {
+        if (draft.scores[index] < -1
+                || (draft.reviewed[index] && draft.scores[index] < 0)) {
+            throw new IllegalArgumentException("Draft score is invalid.");
         }
     }
 
@@ -169,8 +215,12 @@ public final class RoundScoreDraft {
         }
 
         List<Player> copiedPlayers = new ArrayList<>(scores.length);
-        for (int i = 0; i < scores.length; i++) {
-            Player original = source.getPlayers().get(i);
+        for (Player sourcePlayer : source.getPlayers()) {
+            int i = draftIndexFor(sourcePlayer, source.getPlayers().indexOf(sourcePlayer));
+            if (i < 0) {
+                throw new IllegalArgumentException("Player identity changed while entering scores.");
+            }
+            Player original = sourcePlayer;
             Player copy = copyPlayer(original);
             List<Integer> copiedScores = copy.getScores();
             while (copiedScores.size() < 10) {
@@ -205,6 +255,7 @@ public final class RoundScoreDraft {
 
     private static Player copyPlayer(Player original) {
         Player copy = new Player();
+        copy.setPlayerId(original.getPlayerId());
         copy.setName(original.getName());
         copy.setScores(original.getScores() == null
                 ? new ArrayList<>()
@@ -219,5 +270,20 @@ public final class RoundScoreDraft {
         if (playerIndex < 0 || playerIndex >= scores.length) {
             throw new IndexOutOfBoundsException("Invalid player index.");
         }
+    }
+
+    private int draftIndexFor(Player player, int legacyIndex) {
+        if (player != null && player.getPlayerId() != null) {
+            for (int index = 0; index < playerIds.length; index++) {
+                if (player.getPlayerId().equals(playerIds[index])) {
+                    return index;
+                }
+            }
+        }
+        boolean hasIds = false;
+        for (String playerId : playerIds) {
+            hasIds |= playerId != null && !playerId.isEmpty();
+        }
+        return hasIds ? -1 : legacyIndex;
     }
 }

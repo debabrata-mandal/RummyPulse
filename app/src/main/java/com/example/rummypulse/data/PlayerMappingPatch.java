@@ -8,6 +8,10 @@ public final class PlayerMappingPatch {
     private PlayerMappingPatch() {
     }
 
+    public static int findPlayerIndex(GameData latestGameData, String playerId) {
+        return GameDataSchema.findPlayerIndex(latestGameData, playerId);
+    }
+
     public static int findPlayerIndex(
             GameData latestGameData,
             int previousIndex,

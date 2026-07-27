@@ -94,3 +94,9 @@
 
 # Keep all public classes in your package
 -keep public class com.example.rummypulse.** { *; }
+# Durable operation payloads and snapshots are persisted as JSON across app updates.
+-keep class com.example.rummypulse.data.GameData { *; }
+-keep class com.example.rummypulse.data.Player { *; }
+-keep class com.example.rummypulse.data.sync.GameOperationPayload { *; }
+-keepclassmembers enum com.example.rummypulse.data.sync.GameOperationType { *; }
+-keepclassmembers enum com.example.rummypulse.data.sync.GameOperationStatus { *; }

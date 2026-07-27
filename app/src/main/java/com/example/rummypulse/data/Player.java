@@ -3,6 +3,7 @@ package com.example.rummypulse.data;
 import java.util.List;
 
 public class Player {
+    private String playerId;
     private String name;
     private List<Integer> scores;
     private Integer randomNumber;
@@ -14,12 +15,21 @@ public class Player {
     }
 
     public Player(String name, List<Integer> scores, Integer randomNumber) {
+        this.playerId = java.util.UUID.randomUUID().toString();
         this.name = name;
         this.scores = scores;
         this.randomNumber = randomNumber;
     }
 
     // Getters and setters
+    public String getPlayerId() {
+        return playerId;
+    }
+
+    public void setPlayerId(String playerId) {
+        this.playerId = playerId;
+    }
+
     public String getName() {
         return name;
     }

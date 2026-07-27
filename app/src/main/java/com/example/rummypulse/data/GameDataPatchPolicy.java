@@ -69,6 +69,9 @@ public final class GameDataPatchPolicy {
         if (left == null || right == null) {
             return false;
         }
+        if (!isBlank(left.getPlayerId()) && left.getPlayerId().equals(right.getPlayerId())) {
+            return true;
+        }
         if (!isBlank(left.getUserId()) && left.getUserId().equals(right.getUserId())) {
             return true;
         }
@@ -78,7 +81,9 @@ public final class GameDataPatchPolicy {
 
     static boolean hasStableIdentity(Player player) {
         return player != null
-                && (!isBlank(player.getUserId()) || player.getRandomNumber() != null);
+                && (!isBlank(player.getPlayerId())
+                || !isBlank(player.getUserId())
+                || player.getRandomNumber() != null);
     }
 
     private static boolean sameName(Player left, Player right) {
@@ -89,6 +94,7 @@ public final class GameDataPatchPolicy {
 
     static Player copyPlayer(Player original) {
         Player copy = new Player();
+        copy.setPlayerId(original.getPlayerId());
         copy.setName(original.getName());
         copy.setScores(original.getScores() == null
                 ? new ArrayList<>()
@@ -101,6 +107,7 @@ public final class GameDataPatchPolicy {
 
     static GameData copyGameShell(GameData original) {
         GameData copy = new GameData();
+        copy.setSchemaVersion(original.getSchemaVersion());
         copy.setNumPlayers(original.getNumPlayers());
         copy.setPointValue(original.getPointValue());
         copy.setGstPercent(original.getGstPercent());
