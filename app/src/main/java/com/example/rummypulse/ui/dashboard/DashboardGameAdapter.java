@@ -368,6 +368,15 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         closeButton.setOnClickListener(v -> dialog.dismiss());
         
         dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(
+                    new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm = context.getResources().getDisplayMetrics();
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f),
+                    Math.round(420 * dm.density));
+            dialog.getWindow().setLayout(
+                    width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+        }
     }
     
     private void copyToClipboard(Context context, String text, String label) {

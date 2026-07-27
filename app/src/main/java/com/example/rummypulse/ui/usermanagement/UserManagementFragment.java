@@ -135,21 +135,54 @@ public class UserManagementFragment extends Fragment {
             UserRole.REGULAR_USER.getDisplayName() : 
             UserRole.ADMIN_USER.getDisplayName();
 
-        new AlertDialog.Builder(getContext())
-            .setTitle("Change User Role")
-            .setMessage("Change " + user.getDisplayName() + "'s role from " + 
-                       currentRole + " to " + newRole + "?")
-            .setPositiveButton("Yes", (dialog, which) -> {
-                UserRole targetRole = user.getRole() == UserRole.ADMIN_USER ? 
-                    UserRole.REGULAR_USER : UserRole.ADMIN_USER;
-                
-                Log.d(TAG, "Changing role for user: " + user.getDisplayName() + 
-                          " to " + targetRole.getDisplayName());
-                
-                userManagementViewModel.updateUserRole(user.getUserId(), targetRole);
-            })
-            .setNegativeButton("No", null)
-            .show();
+        View dialogView = LayoutInflater.from(requireContext()).inflate(
+                R.layout.dialog_action_confirmation, null, false);
+        android.widget.ImageView icon =
+                dialogView.findViewById(R.id.image_action_dialog_icon);
+        android.widget.TextView title =
+                dialogView.findViewById(R.id.text_action_dialog_title);
+        android.widget.TextView subtitle =
+                dialogView.findViewById(R.id.text_action_dialog_subtitle);
+        android.widget.TextView message =
+                dialogView.findViewById(R.id.text_action_dialog_message);
+        com.google.android.material.button.MaterialButton cancel =
+                dialogView.findViewById(R.id.btn_action_dialog_cancel);
+        com.google.android.material.button.MaterialButton confirm =
+                dialogView.findViewById(R.id.btn_action_dialog_confirm);
+        icon.setImageResource(R.drawable.ic_moderator);
+        title.setText("Change user role?");
+        subtitle.setText(user.getDisplayName());
+        message.setText("Change role from " + currentRole + " to " + newRole + "?");
+        cancel.setText("Keep current role");
+        confirm.setText("Change role");
+
+        androidx.appcompat.app.AlertDialog dialog =
+                new androidx.appcompat.app.AlertDialog.Builder(
+                        requireContext(), R.style.DarkDialogTheme)
+                        .setView(dialogView)
+                        .setCancelable(true)
+                        .create();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        confirm.setOnClickListener(v -> {
+            UserRole targetRole = user.getRole() == UserRole.ADMIN_USER
+                    ? UserRole.REGULAR_USER : UserRole.ADMIN_USER;
+            Log.d(TAG, "Changing role for user: " + user.getDisplayName()
+                    + " to " + targetRole.getDisplayName());
+            userManagementViewModel.updateUserRole(user.getUserId(), targetRole);
+            dialog.dismiss();
+        });
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(
+                    new android.graphics.drawable.ColorDrawable(
+                            android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm =
+                    getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            dialog.getWindow().setLayout(
+                    width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     private void showUsersView() {

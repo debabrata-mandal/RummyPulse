@@ -1,98 +1,147 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:background="@drawable/dialog_background"
-    android:padding="24dp">
+    android:orientation="vertical"
+    android:paddingStart="18dp"
+    android:paddingTop="18dp"
+    android:paddingEnd="18dp"
+    android:paddingBottom="16dp">
 
-    <!-- Header Section -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/professional_row_background"
-        android:padding="20dp"
-        android:layout_marginBottom="24dp">
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="🗑️ Delete Player"
-            android:textColor="@color/text_primary"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginBottom="8dp" />
+        <ImageView
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/view_access_icon_rejected_background"
+            android:contentDescription="@null"
+            android:padding="10dp"
+            android:src="@drawable/ic_delete"
+            android:tint="@color/error_red" />
 
-        <TextView
-            android:id="@+id/text_delete_message"
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Are you sure you want to delete this player?"
-            android:textColor="@color/text_secondary"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:lineSpacingExtra="2dp" />
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/delete_player_dialog_title"
+                android:textColor="@color/text_primary"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/text_delete_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/delete_player_dialog_message"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
-    <!-- Warning Section -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        app:cardBackgroundColor="@color/background_secondary"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/error_red"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_info"
+                android:tint="@color/error_red" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/delete_player_dialog_warning_title"
+                    android:textColor="@color/error_red"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:lineSpacingExtra="2dp"
+                    android:text="@string/delete_player_dialog_warning_message"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/example_background"
-        android:padding="16dp"
-        android:layout_marginBottom="24dp">
+        android:gravity="center"
+        android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="⚠️ Warning"
-            android:textColor="@android:color/holo_orange_light"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="This action cannot be undone. All scores and data for this player will be permanently removed from the game."
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            android:lineSpacingExtra="2dp" />
-
-    </LinearLayout>
-
-    <!-- Buttons -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="end">
-
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_cancel"
-            android:layout_width="wrap_content"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="CANCEL"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:text="@string/dialog_cancel"
+            android:textAllCaps="false"
             android:textColor="@color/text_primary"
-            android:backgroundTint="@color/card_background"
-            android:strokeColor="@color/text_secondary"
-            android:strokeWidth="2"
-            android:layout_marginEnd="16dp"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+            app:cornerRadius="10dp"
+            app:strokeColor="@color/divider_color"
+            app:strokeWidth="1dp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_delete"
-            android:layout_width="wrap_content"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="DELETE"
-            android:backgroundTint="@android:color/holo_red_dark"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:text="@string/delete_player_dialog_confirm"
+            android:textAllCaps="false"
             android:textColor="@android:color/white"
-            android:textStyle="bold"
-            style="@style/Widget.MaterialComponents.Button" />
+            app:backgroundTint="@color/error_red"
+            app:cornerRadius="10dp" />
 
     </LinearLayout>
 

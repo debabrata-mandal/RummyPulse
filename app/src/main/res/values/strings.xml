@@ -118,13 +118,13 @@
     <string name="update_progress_bytes_unknown">Downloaded: %1$s</string>
 
     <!-- Create game dialog -->
-    <string name="dialog_new_game_title">🎮 New Game</string>
+    <string name="dialog_new_game_title">Create game</string>
     <string name="dialog_cancel">Cancel</string>
     <string name="dialog_create_game_confirm">Create game</string>
     <string name="dialog_create_game_creating">Creating…</string>
     <string name="dialog_create_game_retry">Retry</string>
     <string name="dialog_create_game_offline">You’re offline. Connect to the internet to create this game.</string>
-    <string name="dialog_create_game_subtitle">Create a new game.</string>
+    <string name="dialog_create_game_subtitle">Set the game name, point value, and contribution.</string>
     <string name="dialog_point_value_section_title">Point value</string>
     <string name="dialog_game_name_section_title">✨ Game name</string>
     <string name="dialog_game_name_section_subtitle">Tap ✨ to refresh.</string>
@@ -217,6 +217,11 @@
     <string name="add_player_confirm_count">Current game · %1$d players</string>
     <string name="add_player_confirm_preserved">Existing players and their scores will remain unchanged.</string>
     <string name="add_player_confirm_add">Add player</string>
+    <string name="delete_player_dialog_title">Delete player?</string>
+    <string name="delete_player_dialog_message">Remove %1$s from this game?</string>
+    <string name="delete_player_dialog_warning_title">This cannot be undone</string>
+    <string name="delete_player_dialog_warning_message">All scores and player data will be permanently removed from this game.</string>
+    <string name="delete_player_dialog_confirm">Delete player</string>
 
     <!-- Navigation -->
     <string name="menu_game_defaults">Game defaults</string>
@@ -252,6 +257,7 @@
     <string name="player_consolidation_link_confirm">Link players</string>
     <string name="player_consolidation_reset">Reset mappings &amp; adjustments</string>
     <string name="player_consolidation_link_dialog_title">Link selected players</string>
+    <string name="player_consolidation_link_dialog_subtitle">Merge these entries into one settlement identity.</string>
     <string name="player_consolidation_link_dialog_hint">Display name</string>
     <string name="player_consolidation_alias_format">%1$s (%2$s)</string>
     <string name="player_consolidation_no_players">No players found in the selected games.</string>
@@ -366,9 +372,11 @@
     <string name="view_request_status_rejected">Rejected</string>
     <string name="view_request_requested_at">Requested %1$s</string>
     <string name="view_request_decided_at">Updated %1$s</string>
-    <string name="map_player_title">Link real player</string>
+    <string name="map_player_title">Map player to user</string>
     <string name="map_player_subtitle">Choose the app user who is playing as %1$s.</string>
     <string name="map_player_search_hint">Search by name or email</string>
+    <string name="map_player_users_section">App users</string>
+    <string name="map_player_users_hint">Tap a user to link them to this player.</string>
     <string name="map_player_no_users">No matching users found.</string>
     <string name="map_player_unlink">Remove link</string>
     <string name="map_player_icon_description">Link this player to an app user</string>
@@ -388,6 +396,14 @@
     <string name="map_player_current_mapping">Currently linked to %1$s</string>
     <string name="map_player_current_mapping_with_email">Currently linked to %1$s\n%2$s</string>
     <string name="map_player_linked_user_unavailable">This player is linked, but that user is not available in the current list.</string>
+    <string name="map_player_transfer_title">Transfer mapping?</string>
+    <string name="map_player_transfer_subtitle">Move this app user to the selected player.</string>
+    <string name="map_player_transfer_message">%1$s is currently mapped to %2$s. Move the mapping to this player?</string>
+    <string name="map_player_transfer_confirm">Transfer</string>
+    <string name="players_dialog_title">Players &amp; scores</string>
+    <string name="players_dialog_subtitle">Current standings and estimated net amounts.</string>
+    <string name="players_dialog_total_score">Combined score</string>
+    <string name="players_dialog_close">Close</string>
     <string name="unknown_user">Unknown user</string>
     <string name="player_change_pending_sync">⟳ Pending sync</string>
 </resources>

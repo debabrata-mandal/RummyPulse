@@ -1,117 +1,137 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@drawable/dialog_background"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:background="@drawable/dialog_background">
+    android:paddingStart="18dp"
+    android:paddingTop="18dp"
+    android:paddingEnd="18dp"
+    android:paddingBottom="16dp">
 
-    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="20dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Players"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary" />
+        android:orientation="horizontal">
 
         <ImageView
-            android:id="@+id/btn_close"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_close"
-            android:background="@drawable/icon_background"
-            android:padding="4dp"
-            android:clickable="true"
-            android:focusable="true" />
-
-    </LinearLayout>
-
-    <!-- Game Info -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/professional_row_background"
-        android:padding="16dp"
-        android:layout_marginBottom="16dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Game ID:"
-            android:textSize="14sp"
-            android:textColor="@color/text_secondary"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/text_dialog_game_id"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="GAME001"
-            android:textSize="16sp"
-            android:textColor="@color/text_primary"
-            android:textStyle="bold"
-            android:layout_marginTop="4dp" />
-
-    </LinearLayout>
-
-    <!-- Players List -->
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:maxHeight="400dp">
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/circle_background"
+            android:contentDescription="@null"
+            android:padding="10dp"
+            android:src="@drawable/ic_people"
+            android:tint="@color/accent_blue" />
 
         <LinearLayout
-            android:id="@+id/players_container"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
             android:orientation="vertical">
 
-            <!-- Player items will be added here dynamically -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/players_dialog_title"
+                android:textColor="@color/text_primary"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/players_dialog_subtitle"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
 
         </LinearLayout>
 
-    </ScrollView>
+    </LinearLayout>
 
-    <!-- Total Score Summary -->
+    <TextView
+        android:id="@+id/text_dialog_game_id"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/bg_dashboard_info_section_blue"
+        android:drawableStart="@drawable/ic_gamepad"
+        android:drawablePadding="8dp"
+        android:drawableTint="@color/accent_blue_light"
+        android:padding="12dp"
+        android:textColor="@color/text_primary"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        app:cardBackgroundColor="@color/background_secondary"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/divider_color"
+        app:strokeWidth="1dp">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxHeight="340dp"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:id="@+id/players_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+        </ScrollView>
+
+    </com.google.android.material.card.MaterialCardView>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_dashboard_info_section_blue"
+        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:background="@drawable/professional_row_background"
-        android:padding="16dp"
-        android:layout_marginTop="16dp">
+        android:padding="12dp">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Total Score:"
-            android:textSize="16sp"
+            android:text="@string/players_dialog_total_score"
             android:textColor="@color/text_secondary"
+            android:textSize="13sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/text_total_score"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0"
+            android:textColor="@color/accent_blue_light"
             android:textSize="18sp"
-            android:textColor="@color/accent_blue"
-            android:textStyle="bold"
-            android:singleLine="true"
-            android:maxLines="1"
-            android:ellipsize="end" />
+            android:textStyle="bold" />
 
     </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_close"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:minHeight="48dp"
+        android:text="@string/players_dialog_close"
+        android:textAllCaps="false"
+        android:textColor="@color/text_primary"
+        app:cornerRadius="10dp"
+        app:strokeColor="@color/divider_color"
+        app:strokeWidth="1dp" />
 
 </LinearLayout>

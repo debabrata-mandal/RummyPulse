@@ -148,21 +148,16 @@ public class ReportsFragment extends Fragment {
         }
 
         Calendar defaultMonth = Calendar.getInstance();
-
-        LinearLayout content = new LinearLayout(requireContext());
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(24), dp(8), dp(24), 0);
-
-        TextView message = new TextView(requireContext());
-        message.setText(R.string.reports_rebuild_month_dialog_message);
-        content.addView(message);
-
-        LinearLayout pickerRow = new LinearLayout(requireContext());
-        pickerRow.setOrientation(LinearLayout.HORIZONTAL);
-        pickerRow.setPadding(0, dp(12), 0, 0);
-        content.addView(pickerRow);
-
-        NumberPicker monthPicker = new NumberPicker(requireContext());
+        View dialogView = LayoutInflater.from(requireContext()).inflate(
+                R.layout.dialog_rebuild_report_month, null, false);
+        NumberPicker monthPicker =
+                dialogView.findViewById(R.id.picker_rebuild_month);
+        NumberPicker yearPicker =
+                dialogView.findViewById(R.id.picker_rebuild_year);
+        com.google.android.material.button.MaterialButton cancel =
+                dialogView.findViewById(R.id.btn_rebuild_month_cancel);
+        com.google.android.material.button.MaterialButton confirm =
+                dialogView.findViewById(R.id.btn_rebuild_month_confirm);
         String[] monthNames = Arrays.copyOf(
                 DateFormatSymbols.getInstance(Locale.getDefault()).getMonths(), 12);
         monthPicker.setMinValue(Calendar.JANUARY);
@@ -170,26 +165,35 @@ public class ReportsFragment extends Fragment {
         monthPicker.setDisplayedValues(monthNames);
         monthPicker.setValue(defaultMonth.get(Calendar.MONTH));
 
-        NumberPicker yearPicker = new NumberPicker(requireContext());
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
         yearPicker.setMinValue(2000);
         yearPicker.setMaxValue(currentYear + 1);
         yearPicker.setWrapSelectorWheel(false);
         yearPicker.setValue(defaultMonth.get(Calendar.YEAR));
 
-        pickerRow.addView(createPickerColumn(
-                getString(R.string.reports_rebuild_month_month_label), monthPicker));
-        pickerRow.addView(createPickerColumn(
-                getString(R.string.reports_rebuild_month_year_label), yearPicker));
-
-        new AlertDialog.Builder(requireContext())
-                .setTitle(R.string.reports_rebuild_month_dialog_title)
-                .setView(content)
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.reports_rebuild_month_confirm,
-                        (dialog, which) -> reportsViewModel.rebuildMonthReport(
-                                yearPicker.getValue(), monthPicker.getValue()))
-                .show();
+        AlertDialog dialog = new AlertDialog.Builder(
+                requireContext(), R.style.DarkDialogTheme)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        confirm.setOnClickListener(v -> {
+            reportsViewModel.rebuildMonthReport(
+                    yearPicker.getValue(), monthPicker.getValue());
+            dialog.dismiss();
+        });
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(
+                    new android.graphics.drawable.ColorDrawable(
+                            android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm =
+                    getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            dialog.getWindow().setLayout(
+                    width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     private LinearLayout createPickerColumn(String label, NumberPicker picker) {

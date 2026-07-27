@@ -407,6 +407,16 @@ public class ModernUpdateChecker {
             });
 
             dialog.show();
+            if (dialog.getWindow() != null) {
+                android.util.DisplayMetrics dm =
+                        activity.getResources().getDisplayMetrics();
+                int maxWidth = Math.round(420 * dm.density);
+                int width = Math.min(
+                        Math.round(dm.widthPixels * 0.92f), maxWidth);
+                dialog.getWindow().setLayout(
+                        width,
+                        android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+            }
         });
     }
     
@@ -1092,34 +1102,75 @@ public class ModernUpdateChecker {
 
         Activity activity = (Activity) context;
         activity.runOnUiThread(() -> {
-            AlertDialog.Builder builder = new AlertDialog.Builder(activity, R.style.DarkAlertDialog)
-                .setTitle("❌ Download Failed")
-                .setMessage("Update download failed:\n\n" + errorMessage + "\n\nWhat would you like to do?")
-                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss());
+            android.view.View dialogView = android.view.LayoutInflater.from(activity)
+                    .inflate(R.layout.dialog_action_confirmation, null, false);
+            android.widget.ImageView icon =
+                    dialogView.findViewById(R.id.image_action_dialog_icon);
+            android.widget.TextView title =
+                    dialogView.findViewById(R.id.text_action_dialog_title);
+            android.widget.TextView subtitle =
+                    dialogView.findViewById(R.id.text_action_dialog_subtitle);
+            android.widget.TextView message =
+                    dialogView.findViewById(R.id.text_action_dialog_message);
+            com.google.android.material.card.MaterialCardView messageCard =
+                    dialogView.findViewById(R.id.card_action_dialog_message);
+            com.google.android.material.button.MaterialButton cancel =
+                    dialogView.findViewById(R.id.btn_action_dialog_cancel);
+            com.google.android.material.button.MaterialButton manual =
+                    dialogView.findViewById(R.id.btn_action_dialog_neutral);
+            com.google.android.material.button.MaterialButton retry =
+                    dialogView.findViewById(R.id.btn_action_dialog_confirm);
+            int red = activity.getColor(R.color.error_red);
+            icon.setImageResource(R.drawable.ic_info);
+            icon.setBackgroundResource(
+                    R.drawable.view_access_icon_rejected_background);
+            icon.setImageTintList(android.content.res.ColorStateList.valueOf(red));
+            title.setText("Download failed");
+            subtitle.setText("The update could not be downloaded");
+            message.setText(errorMessage);
+            message.setCompoundDrawableTintList(
+                    android.content.res.ColorStateList.valueOf(red));
+            messageCard.setStrokeColor(red);
+            manual.setVisibility(android.view.View.VISIBLE);
+            manual.setText("Manual download");
+            retry.setText("Try again");
+            retry.setVisibility(showRetryOption
+                    ? android.view.View.VISIBLE : android.view.View.GONE);
 
-            if (showRetryOption) {
-                builder.setPositiveButton("Try Again", (dialog, which) -> {
-                    // Get the last download URL from shared preferences if available
-                    String lastUrl = appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+            AlertDialog dialog = new AlertDialog.Builder(
+                    activity, R.style.DarkDialogTheme)
+                    .setView(dialogView)
+                    .setCancelable(true)
+                    .create();
+            cancel.setOnClickListener(v -> dialog.dismiss());
+            manual.setOnClickListener(v -> {
+                dialog.dismiss();
+                openGitHubReleases();
+            });
+            retry.setOnClickListener(v -> {
+                dialog.dismiss();
+                String lastUrl = appContext.getSharedPreferences(
+                        "update_prefs", Context.MODE_PRIVATE)
                         .getString("last_download_url", null);
-                    if (lastUrl != null) {
-                        startApkDownload(lastUrl);
-                    } else {
-                        // Re-check for updates
-                        checkForUpdates();
-                    }
-                });
-            }
-
-            builder.setNeutralButton("Manual Download", (dialog, which) -> openGitHubReleases());
-
-            AlertDialog dialog = builder.create();
+                if (lastUrl != null) {
+                    startApkDownload(lastUrl);
+                } else {
+                    checkForUpdates();
+                }
+            });
             dialog.show();
-
-            // Style the buttons
-            if (dialog.getButton(AlertDialog.BUTTON_POSITIVE) != null) {
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(
-                    activity.getColor(R.color.accent_blue));
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(
+                        new android.graphics.drawable.ColorDrawable(
+                                android.graphics.Color.TRANSPARENT));
+                android.util.DisplayMetrics dm =
+                        activity.getResources().getDisplayMetrics();
+                int maxWidth = Math.round(420 * dm.density);
+                int width = Math.min(
+                        Math.round(dm.widthPixels * 0.92f), maxWidth);
+                dialog.getWindow().setLayout(
+                        width,
+                        android.view.WindowManager.LayoutParams.WRAP_CONTENT);
             }
         });
     }

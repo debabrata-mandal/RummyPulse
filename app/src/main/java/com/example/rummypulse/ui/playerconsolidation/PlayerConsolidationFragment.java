@@ -448,7 +448,7 @@ public class PlayerConsolidationFragment extends Fragment {
         }
         ArrayAdapter<String> dropdownAdapter = new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_adjustment_dropdown,
                 groupOptions);
         fromInput.setAdapter(dropdownAdapter);
         toInput.setAdapter(dropdownAdapter);

@@ -105,11 +105,71 @@ public class RoundScoreDraftTest {
         assertEquals(1, draft.findNextUnreviewed(0));
     }
 
+    @Test
+    public void reconcileDropsDeletedPlayerAndKeepsSurvivingScore() {
+        GameData original = gameWithIdentifiedPlayers(
+                new String[] {"a", "b"},
+                new int[] {-1, -1});
+        RoundScoreDraft draft = RoundScoreDraft.start(original, 1, false);
+        draft.recordScore(1, 22);
+
+        GameData latest = gameWithIdentifiedPlayers(
+                new String[] {"b", "c"},
+                new int[] {-1, -1});
+        RoundScoreDraft reconciled = draft.reconcile(latest);
+
+        assertEquals(22, reconciled.getScore(0));
+        assertEquals(1, reconciled.findNextUnreviewed(0));
+        reconciled.recordScore(1, 33);
+        assertEquals(
+                Arrays.asList(22, 33),
+                firstRound(reconciled.applyToCopy(latest)));
+    }
+
+    @Test
+    public void reconcileHandlesPlayerRemovalWithoutIdentityError() {
+        GameData original = gameWithIdentifiedPlayers(
+                new String[] {"a", "b", "c"},
+                new int[] {-1, -1, -1});
+        RoundScoreDraft draft = RoundScoreDraft.start(original, 1, false);
+        draft.recordScore(0, 11);
+        draft.recordScore(2, 33);
+
+        GameData latest = gameWithIdentifiedPlayers(
+                new String[] {"a", "c"},
+                new int[] {-1, -1});
+        RoundScoreDraft reconciled = draft.reconcile(latest);
+
+        assertTrue(reconciled.isComplete());
+        assertEquals(
+                Arrays.asList(11, 33),
+                firstRound(reconciled.applyToCopy(latest)));
+    }
+
     private static GameData gameWithScores(int... scores) {
         ArrayList<Player> players = new ArrayList<>();
         for (int i = 0; i < scores.length; i++) {
             Player player = new Player();
             player.setName("Player " + (i + 1));
+            ArrayList<Integer> rounds = new ArrayList<>();
+            rounds.add(scores[i]);
+            player.setScores(rounds);
+            players.add(player);
+        }
+        GameData gameData = new GameData();
+        gameData.setPlayers(players);
+        gameData.setNumPlayers(players.size());
+        gameData.setVersion("1.0");
+        return gameData;
+    }
+
+    private static GameData gameWithIdentifiedPlayers(
+            String[] playerIds, int[] scores) {
+        ArrayList<Player> players = new ArrayList<>();
+        for (int i = 0; i < scores.length; i++) {
+            Player player = new Player();
+            player.setPlayerId(playerIds[i]);
+            player.setName("Player " + playerIds[i]);
             ArrayList<Integer> rounds = new ArrayList<>();
             rounds.add(scores[i]);
             player.setScores(rounds);

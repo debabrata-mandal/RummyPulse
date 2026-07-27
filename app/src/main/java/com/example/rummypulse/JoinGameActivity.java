@@ -1004,22 +1004,43 @@ public class JoinGameActivity extends AppCompatActivity {
      */
     private void showInstallLanguageDialog(java.util.Locale locale) {
         String languageName = locale.getDisplayLanguage();
-        
-        new android.app.AlertDialog.Builder(this, R.style.DarkDialogTheme)
-            .setTitle("Language Data Missing")
-            .setMessage(languageName + " voice is not installed on your device. Would you like to install it from Google Play Store?")
-            .setPositiveButton("Install", (dialog, which) -> {
-                // Open TTS settings or Play Store
-                try {
-                    Intent intent = new Intent();
-                    intent.setAction(android.speech.tts.TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
-                    startActivity(intent);
-                } catch (Exception e) {
-                    ModernToast.error(this, "Could not open TTS settings");
-                }
-            })
-            .setNegativeButton("Cancel", null)
-            .show();
+        View dialogView = LayoutInflater.from(this).inflate(
+                R.layout.dialog_action_confirmation, null, false);
+        ImageView icon = dialogView.findViewById(R.id.image_action_dialog_icon);
+        TextView title = dialogView.findViewById(R.id.text_action_dialog_title);
+        TextView subtitle =
+                dialogView.findViewById(R.id.text_action_dialog_subtitle);
+        TextView message =
+                dialogView.findViewById(R.id.text_action_dialog_message);
+        MaterialButton cancel =
+                dialogView.findViewById(R.id.btn_action_dialog_cancel);
+        MaterialButton install =
+                dialogView.findViewById(R.id.btn_action_dialog_confirm);
+        icon.setImageResource(R.drawable.ic_language);
+        title.setText("Language data missing");
+        subtitle.setText(languageName + " voice is not installed");
+        message.setText("Install the voice data to use spoken score announcements in this language.");
+        install.setText("Install");
+
+        AlertDialog dialog = new AlertDialog.Builder(
+                this, R.style.DarkDialogTheme)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        install.setOnClickListener(v -> {
+            dialog.dismiss();
+            try {
+                Intent intent = new Intent();
+                intent.setAction(
+                        android.speech.tts.TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+                startActivity(intent);
+            } catch (Exception e) {
+                ModernToast.error(this, "Could not open TTS settings");
+            }
+        });
+        dialog.show();
+        applyActionDialogWidth(dialog);
     }
     
     /**
@@ -1938,7 +1959,7 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView mapButton,
             EditText playerNameView) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_map_player, null);
-        AlertDialog dialog = new AlertDialog.Builder(this)
+        AlertDialog dialog = new AlertDialog.Builder(this, R.style.DarkDialogTheme)
                 .setView(dialogView)
                 .create();
         TextView subtitle = dialogView.findViewById(R.id.text_map_player_subtitle);
@@ -1973,6 +1994,15 @@ public class JoinGameActivity extends AppCompatActivity {
         });
 
         dialog.show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                    android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            window.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
         progress.setVisibility(View.VISIBLE);
         list.setVisibility(View.GONE);
         empty.setVisibility(View.GONE);
@@ -2120,28 +2150,50 @@ public class JoinGameActivity extends AppCompatActivity {
             AppUser selected,
             AlertDialog mappingDialog) {
         String actualName = userPlayerFirstName(selected);
-        new AlertDialog.Builder(this)
-                .setTitle("Transfer mapping?")
-                .setMessage(userDisplayName(selected)
-                        + " is currently mapped to "
-                        + source.getName()
-                        + ". Move the mapping to this player?")
-                .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton("Transfer", (confirmation, which) -> {
-                    mappingDialog.dismiss();
-                    enqueueGameOperation(
-                            GameOperationType.TRANSFER_MAPPING,
-                            targetPlayerId,
-                            GameOperationPayload.transfer(
-                                    source.getPlayerId(),
-                                    selected.getUserId(),
-                                    userDisplayName(selected),
-                                    actualName),
-                            () -> ModernToast.success(
-                                    JoinGameActivity.this,
-                                    "Mapping transferred locally; syncing…"));
-                })
-                .show();
+        View dialogView = LayoutInflater.from(this).inflate(
+                R.layout.dialog_transfer_mapping, null, false);
+        TextView message =
+                dialogView.findViewById(R.id.text_transfer_mapping_message);
+        MaterialButton cancel =
+                dialogView.findViewById(R.id.btn_transfer_mapping_cancel);
+        MaterialButton transfer =
+                dialogView.findViewById(R.id.btn_transfer_mapping_confirm);
+        message.setText(getString(
+                R.string.map_player_transfer_message,
+                userDisplayName(selected),
+                source.getName()));
+
+        AlertDialog confirmation = new AlertDialog.Builder(
+                this, R.style.DarkDialogTheme)
+                .setView(dialogView)
+                .setCancelable(true)
+                .create();
+        cancel.setOnClickListener(v -> confirmation.dismiss());
+        transfer.setOnClickListener(v -> {
+            confirmation.dismiss();
+            mappingDialog.dismiss();
+            enqueueGameOperation(
+                    GameOperationType.TRANSFER_MAPPING,
+                    targetPlayerId,
+                    GameOperationPayload.transfer(
+                            source.getPlayerId(),
+                            selected.getUserId(),
+                            userDisplayName(selected),
+                            actualName),
+                    () -> ModernToast.success(
+                            JoinGameActivity.this,
+                            "Mapping transferred locally; syncing…"));
+        });
+        confirmation.show();
+        Window window = confirmation.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                    android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            window.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     private int findLinkedUserIndex(List<AppUser> users, String linkedUserId) {
@@ -2335,14 +2387,6 @@ public class JoinGameActivity extends AppCompatActivity {
         float density = getResources().getDisplayMetrics().density;
         int chipMargin = Math.round(5 * density);
         int chipHeight = Math.round(52 * density);
-        int availableWidth = Math.min(
-                Math.round(getResources().getDisplayMetrics().widthPixels * 0.82f),
-                Math.round(380 * density));
-        int chipWidth = columnCount <= 2
-                ? Math.round(84 * density)
-                : Math.max(
-                        Math.round(68 * density),
-                        (availableWidth - chipMargin * 2 * columnCount) / columnCount);
 
         for (int round = 1; round <= maxPastRound; round++) {
             MaterialButton chip = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
@@ -2352,8 +2396,8 @@ public class JoinGameActivity extends AppCompatActivity {
             chip.setCheckable(true);
             chip.setSingleLine(true);
             chip.setTextSize(15);
-            chip.setMinWidth(chipWidth);
-            chip.setMinimumWidth(chipWidth);
+            chip.setMinWidth(0);
+            chip.setMinimumWidth(0);
             chip.setMinHeight(chipHeight);
             chip.setMinimumHeight(chipHeight);
             chip.setInsetTop(0);
@@ -2365,9 +2409,10 @@ public class JoinGameActivity extends AppCompatActivity {
             chip.setStrokeWidth(Math.round(1 * density));
 
             GridLayout.LayoutParams params = new GridLayout.LayoutParams();
-            params.width = chipWidth;
+            params.width = 0;
             params.height = chipHeight;
-            params.columnSpec = GridLayout.spec((round - 1) % columnCount);
+            params.columnSpec = GridLayout.spec(
+                    (round - 1) % columnCount, 1f);
             params.rowSpec = GridLayout.spec((round - 1) / columnCount);
             params.setMargins(chipMargin, chipMargin, chipMargin, chipMargin);
             chip.setLayoutParams(params);
@@ -2875,9 +2920,11 @@ public class JoinGameActivity extends AppCompatActivity {
         restoreLocalRoundDraft(gameData);
         boolean canResumeDraft = activeRoundScoreDraft != null
                 && !activeRoundScoreDraft.isCorrectionMode()
-                && activeRoundScoreDraft.getRound1Based() == round1
-                && activeRoundScoreDraft.getPlayerCount() == gameData.getPlayers().size();
-        if (!canResumeDraft) {
+                && activeRoundScoreDraft.getRound1Based() == round1;
+        if (canResumeDraft) {
+            activeRoundScoreDraft = activeRoundScoreDraft.reconcile(gameData);
+            persistLocalRoundDraft(gameData);
+        } else {
             activeRoundScoreDraft = RoundScoreDraft.start(gameData, round1, false);
             persistLocalRoundDraft(gameData);
         }
@@ -2902,18 +2949,33 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void showSequentialScoreDialogForPlayer(com.example.rummypulse.data.GameData gameData, int round1Based, int playerIndex, boolean correctionMode) {
         com.example.rummypulse.data.GameData liveData = viewModel.getGameData().getValue();
-        if (liveData == null || liveData.getPlayers() == null || playerIndex >= liveData.getPlayers().size()) {
+        if (liveData == null || liveData.getPlayers() == null
+                || liveData.getPlayers().isEmpty()) {
             return;
         }
         gameData = liveData;
         if (activeRoundScoreDraft == null
                 || activeRoundScoreDraft.getRound1Based() != round1Based
-                || activeRoundScoreDraft.getPlayerCount() != gameData.getPlayers().size()) {
+                || activeRoundScoreDraft.isCorrectionMode() != correctionMode) {
             activeRoundScoreDraft =
                     RoundScoreDraft.start(gameData, round1Based, correctionMode);
             persistLocalRoundDraft(gameData);
+        } else {
+            activeRoundScoreDraft = activeRoundScoreDraft.reconcile(gameData);
+            persistLocalRoundDraft(gameData);
+        }
+        if (!correctionMode) {
+            int reconciledPlayer = activeRoundScoreDraft.findNextUnreviewed(0);
+            if (reconciledPlayer >= 0) {
+                playerIndex = reconciledPlayer;
+            } else {
+                playerIndex = activeRoundScoreDraft.getPlayerCount() - 1;
+            }
+        } else if (playerIndex < 0 || playerIndex >= gameData.getPlayers().size()) {
+            return;
         }
         com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
+        final String displayedPlayerId = player.getPlayerId();
 
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_enter_round_score, null, false);
         TextView titleView = dialogView.findViewById(R.id.text_dialog_round_title);
@@ -2976,7 +3038,6 @@ public class JoinGameActivity extends AppCompatActivity {
         });
 
         final int finalRound1 = round1Based;
-        final int finalPlayerIndex = playerIndex;
         final boolean finalCorrectionMode = correctionMode;
         btnConfirm.setOnClickListener(v -> {
             if (saveInProgress[0]) {
@@ -3001,20 +3062,45 @@ public class JoinGameActivity extends AppCompatActivity {
             layoutScore.setError(null);
 
             com.example.rummypulse.data.GameData gd = viewModel.getGameData().getValue();
-            if (gd == null || gd.getPlayers() == null || finalPlayerIndex >= gd.getPlayers().size()) {
+            if (gd == null || gd.getPlayers() == null || gd.getPlayers().isEmpty()) {
                 activeRoundScoreDraft = null;
                 clearLocalRoundDraft();
                 dialog.dismiss();
                 return;
             }
-            com.example.rummypulse.data.Player p = gd.getPlayers().get(finalPlayerIndex);
-            draftForDialog.recordScore(finalPlayerIndex, value);
+            RoundScoreDraft workingDraft = draftForDialog.reconcile(gd);
+            int currentPlayerIndex =
+                    GameDataSchema.findPlayerIndex(gd, displayedPlayerId);
+            if (currentPlayerIndex < 0) {
+                activeRoundScoreDraft = workingDraft;
+                persistLocalRoundDraft(gd);
+                dialog.dismiss();
+                int remainingPlayer = finalCorrectionMode
+                        ? -1
+                        : workingDraft.findNextUnreviewed(0);
+                if (remainingPlayer >= 0) {
+                    com.example.rummypulse.data.GameData latest = gd;
+                    new android.os.Handler(android.os.Looper.getMainLooper())
+                            .postDelayed(
+                                    () -> showSequentialScoreDialogForPlayer(
+                                            latest,
+                                            finalRound1,
+                                            remainingPlayer,
+                                            false),
+                                    120);
+                }
+                return;
+            }
+            activeRoundScoreDraft = workingDraft;
+            com.example.rummypulse.data.Player p =
+                    gd.getPlayers().get(currentPlayerIndex);
+            workingDraft.recordScore(currentPlayerIndex, value);
             persistLocalRoundDraft(gd);
             announceScoreWithDebounce(
-                    p.getName(), value, finalPlayerIndex, finalRound1);
+                    p.getName(), value, currentPlayerIndex, finalRound1);
             int next = finalCorrectionMode
                     ? -1
-                    : draftForDialog.findNextUnreviewed(finalPlayerIndex + 1);
+                    : workingDraft.findNextUnreviewed(currentPlayerIndex + 1);
             if (!finalCorrectionMode && next >= 0) {
                 dialog.dismiss();
                 com.example.rummypulse.data.GameData gdAfter =
@@ -3028,14 +3114,14 @@ public class JoinGameActivity extends AppCompatActivity {
             final RoundScorePatch pendingPatch;
             try {
                 if (finalCorrectionMode) {
-                    completedRound = draftForDialog.applyReviewedToCopy(gd);
+                    completedRound = workingDraft.applyReviewedToCopy(gd);
                     pendingPatch = RoundScorePatch.forPlayer(
                             completedRound,
                             finalRound1,
                             viewModel.getActiveEditGeneration(),
-                            finalPlayerIndex);
+                            currentPlayerIndex);
                 } else {
-                    completedRound = draftForDialog.applyToCopy(gd);
+                    completedRound = workingDraft.applyToCopy(gd);
                     pendingPatch = RoundScorePatch.fromGameData(
                             completedRound,
                             finalRound1,
@@ -4025,42 +4111,6 @@ public class JoinGameActivity extends AppCompatActivity {
         addNewPlayer(defaultName);
     }
     
-    private void showAddPlayerDialog() {
-        // Create dialog with dark theme to match the app
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this, R.style.DarkDialogTheme);
-        builder.setTitle("Add New Player");
-        
-        // Create input field
-        EditText input = new EditText(this);
-        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
-        input.setHint("Enter player name");
-        input.setTextColor(getResources().getColor(android.R.color.white)); // White text for dark theme
-        input.setHintTextColor(getResources().getColor(android.R.color.darker_gray));
-        input.setPadding(50, 20, 50, 20);
-        
-        builder.setView(input);
-        
-        builder.setPositiveButton("Add Player", (dialog, which) -> {
-            String playerName = input.getText().toString().trim();
-            if (!playerName.isEmpty()) {
-                addNewPlayer(playerName);
-            } else {
-                ModernToast.error(this, "Please enter a player name");
-            }
-        });
-        
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-        
-        android.app.AlertDialog dialog = builder.create();
-        dialog.show();
-        
-        // Show keyboard
-        input.requestFocus();
-        android.view.inputmethod.InputMethodManager imm = 
-            (android.view.inputmethod.InputMethodManager) getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
-        imm.showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
-    }
-    
     private void addNewPlayer(String playerName) {
         // Get current game data
         com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
@@ -4278,7 +4328,8 @@ public class JoinGameActivity extends AppCompatActivity {
         Button btnDelete = dialog.findViewById(R.id.btn_delete);
         
         // Set player-specific message
-        deleteMessage.setText("Are you sure you want to delete '" + player.getName() + "'?");
+        deleteMessage.setText(getString(
+                R.string.delete_player_dialog_message, player.getName()));
         
         // Set up buttons
         btnCancel.setOnClickListener(v -> dialog.dismiss());
@@ -4289,6 +4340,13 @@ public class JoinGameActivity extends AppCompatActivity {
         });
         
         dialog.show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            window.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
     }
     
     private void deletePlayer(com.example.rummypulse.data.Player player, com.example.rummypulse.data.GameData gameData) {
@@ -4434,6 +4492,7 @@ public class JoinGameActivity extends AppCompatActivity {
         closeButton.setOnClickListener(v -> dialog.dismiss());
         
         dialog.show();
+        applyActionDialogWidth(dialog);
     }
     
     private void copyToClipboard(String text, String label) {
