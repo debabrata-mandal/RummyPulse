@@ -107,9 +107,8 @@ public final class RoundScoreDraft {
             if (i > 0) {
                 encoded.append(',');
             }
-            encoded.append(java.net.URLEncoder.encode(
-                    playerIds[i] == null ? "" : playerIds[i],
-                    java.nio.charset.StandardCharsets.UTF_8));
+            encoded.append(Utf8UrlCodec.encode(
+                    playerIds[i] == null ? "" : playerIds[i]));
         }
         encoded.append('|');
         for (int i = 0; i < scores.length; i++) {
@@ -149,8 +148,7 @@ public final class RoundScoreDraft {
             RoundScoreDraft draft =
                     new RoundScoreDraft(round, savedScores.length, correction);
             for (int i = 0; i < savedScores.length; i++) {
-                draft.playerIds[i] = java.net.URLDecoder.decode(
-                        savedIds[i], java.nio.charset.StandardCharsets.UTF_8);
+                draft.playerIds[i] = Utf8UrlCodec.decode(savedIds[i]);
                 draft.scores[i] = Integer.parseInt(savedScores[i]);
                 draft.reviewed[i] = "1".equals(savedReviewed[i]);
                 validateSavedEntry(draft, i);

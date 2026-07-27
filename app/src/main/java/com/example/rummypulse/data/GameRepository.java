@@ -732,6 +732,49 @@ public class GameRepository {
     }
 
     /**
+     * Repairs summaries produced by older clients without exposing private game data to restricted
+     * dashboard viewers. Only a user already entitled to maintain the game performs the write.
+     */
+    private void repairDashboardSummaryIfStale(
+            @NonNull String gameId,
+            @Nullable GameAuth auth,
+            @NonNull GameData gameData) {
+        if (auth == null) {
+            return;
+        }
+        com.google.firebase.auth.FirebaseUser user =
+                com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            return;
+        }
+        String uid = user.getUid();
+        boolean canRepair =
+                AppUserRoleSession.getInstance().peekRole() == AppUserRoleSession.Role.ADMIN
+                        || uid.equals(auth.getCreatorUserId())
+                        || uid.equals(auth.getActiveEditorUserId());
+        if (!canRepair) {
+            return;
+        }
+
+        int playerCount = resolvePlayerCount(gameData);
+        String status = gameData.getGameStatus();
+        String normalizedStatus = status == null || status.trim().isEmpty()
+                ? "R1"
+                : status.trim();
+        boolean stale = auth.getDashboardNumPlayers() == null
+                || auth.getDashboardNumPlayers() != playerCount
+                || auth.getDashboardPointValue() == null
+                || Double.compare(auth.getDashboardPointValue(), gameData.getPointValue()) != 0
+                || auth.getDashboardGstPercent() == null
+                || Double.compare(auth.getDashboardGstPercent(), gameData.getGstPercent()) != 0
+                || auth.getDashboardGameStatus() == null
+                || !normalizedStatus.equals(auth.getDashboardGameStatus().trim());
+        if (stale) {
+            syncDashboardSummaryOnGameDoc(gameId, gameData);
+        }
+    }
+
+    /**
      * Load game data with one-time fetch (for Review screen)
      */
     private void loadGameDataForIds(List<String> gameIds) {
@@ -905,6 +948,8 @@ public class GameRepository {
                                             String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
                                             String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
                                             String gameDisplayName = gameDisplayNameFromAuth(gameAuth);
+                                            repairDashboardSummaryIfStale(
+                                                    gameId, gameAuth, gameData);
                                             
                                             // Use createdAt from games collection instead of lastUpdated from gameData collection
                                             com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();

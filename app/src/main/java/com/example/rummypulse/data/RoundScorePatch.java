@@ -1,8 +1,5 @@
 package com.example.rummypulse.data;
 
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -154,7 +151,7 @@ public final class RoundScorePatch {
                 .append('|').append(editGeneration);
         for (Entry entry : entries) {
             value.append('|')
-                    .append(URLEncoder.encode(entry.identity, StandardCharsets.UTF_8))
+                    .append(Utf8UrlCodec.encode(entry.identity))
                     .append(',')
                     .append(entry.score);
         }
@@ -179,8 +176,8 @@ public final class RoundScorePatch {
                 if (separator <= 0) {
                     throw new IllegalArgumentException("Pending player score is invalid.");
                 }
-                String identity = URLDecoder.decode(
-                        parts[i].substring(0, separator), StandardCharsets.UTF_8);
+                String identity =
+                        Utf8UrlCodec.decode(parts[i].substring(0, separator));
                 int score = Integer.parseInt(parts[i].substring(separator + 1));
                 entries.add(new Entry(identity, score));
             }

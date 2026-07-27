@@ -29,7 +29,7 @@ public class RoundScorePatchTest {
     @Test
     public void serializedPatchSurvivesRestartAndIsIdempotent() {
         GameData source = game(
-                player("A name", "user-a", 11, 10, 25),
+                player("A name", "user +/ café", 11, 10, 25),
                 player("B", "user-b", 12, 20, 35));
         RoundScorePatch original = RoundScorePatch.fromGameData(source, 2, false, 7);
         RoundScorePatch restored = RoundScorePatch.deserialize(original.serialize());
