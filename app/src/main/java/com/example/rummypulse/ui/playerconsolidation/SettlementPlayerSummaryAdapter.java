@@ -60,11 +60,6 @@ public final class SettlementPlayerSummaryAdapter
                         ? R.string.player_consolidation_game_count_one
                         : R.string.player_consolidation_game_count,
                 gameCount));
-        bindSigned(holder.gross, group.getTotalGrossAmount());
-        holder.contribution.setText(
-                ConsolidationAmountFormatter.formatAmount(group.getTotalContribution()));
-        bindSigned(holder.net, group.getTotalNetAmount());
-        bindSigned(holder.adjustment, group.getNetAdjustment());
         bindSigned(holder.finalBalance, group.getAdjustedNetAmount());
         holder.itemView.setOnClickListener(v -> {
             if (editMappingsListener != null) {
@@ -89,10 +84,6 @@ public final class SettlementPlayerSummaryAdapter
         private final TextView name;
         private final TextView games;
         private final TextView gamesSubtitle;
-        private final TextView gross;
-        private final TextView contribution;
-        private final TextView net;
-        private final TextView adjustment;
         private final TextView finalBalance;
 
         private ViewHolder(@NonNull View itemView) {
@@ -101,10 +92,6 @@ public final class SettlementPlayerSummaryAdapter
             name = itemView.findViewById(R.id.text_summary_name);
             games = itemView.findViewById(R.id.text_summary_games);
             gamesSubtitle = itemView.findViewById(R.id.text_summary_games_subtitle);
-            gross = itemView.findViewById(R.id.text_summary_gross);
-            contribution = itemView.findViewById(R.id.text_summary_contribution);
-            net = itemView.findViewById(R.id.text_summary_net);
-            adjustment = itemView.findViewById(R.id.text_summary_adjustment);
             finalBalance = itemView.findViewById(R.id.text_summary_final);
         }
     }

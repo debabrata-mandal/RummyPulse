@@ -17,6 +17,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.rummypulse.R;
@@ -103,7 +104,8 @@ public class PlayerConsolidationFragment extends Fragment {
         binding.recyclerSelectedGamesStatus.setAdapter(selectedGamesStatusAdapter);
         binding.recyclerSelectedGamesStatus.setNestedScrollingEnabled(false);
 
-        LinearLayoutManager consolidatedLayoutManager = new LinearLayoutManager(requireContext());
+        LinearLayoutManager consolidatedLayoutManager =
+                new LinearLayoutManager(requireContext());
         consolidatedLayoutManager.setAutoMeasureEnabled(true);
         binding.recyclerConsolidatedPlayers.setLayoutManager(consolidatedLayoutManager);
         binding.recyclerConsolidatedPlayers.setAdapter(consolidatedAdapter);
@@ -115,8 +117,8 @@ public class PlayerConsolidationFragment extends Fragment {
             binding.scrollMappingSettlement.post(
                     () -> binding.scrollMappingSettlement.scrollTo(0, 0));
         });
-        LinearLayoutManager playerSummaryLayoutManager =
-                new LinearLayoutManager(requireContext());
+        GridLayoutManager playerSummaryLayoutManager =
+                new GridLayoutManager(requireContext(), 2);
         playerSummaryLayoutManager.setAutoMeasureEnabled(true);
         binding.recyclerSettlementPlayerSummary.setLayoutManager(
                 playerSummaryLayoutManager);

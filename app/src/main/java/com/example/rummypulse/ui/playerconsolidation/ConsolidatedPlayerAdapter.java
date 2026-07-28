@@ -1,6 +1,5 @@
 package com.example.rummypulse.ui.playerconsolidation;
 
-import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,6 +14,7 @@ import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -59,15 +59,24 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
                 displayName == null || displayName.trim().isEmpty()
                         ? "?"
                         : displayName.trim().substring(0, 1).toUpperCase());
-        int gameCount = group.getMembers().size();
+        Set<String> gameIds = new LinkedHashSet<>();
+        Set<String> gameNames = new LinkedHashSet<>();
+        for (GamePlayerEntry member : group.getMembers()) {
+            gameIds.add(member.getGameId());
+            if (member.getGameName() != null && !member.getGameName().trim().isEmpty()) {
+                gameNames.add(member.getGameName().trim());
+            }
+        }
+        int gameCount = gameIds.size();
         holder.gameCountText.setText(holder.itemView.getContext().getString(
                 gameCount == 1
                         ? R.string.player_consolidation_game_count_one
                         : R.string.player_consolidation_game_count,
                 gameCount));
+        holder.gameNamesText.setText(String.join(" · ", gameNames));
+        holder.gameNamesText.setVisibility(gameNames.isEmpty() ? View.GONE : View.VISIBLE);
 
-        bindSubtitle(holder, group);
-        bindAmounts(holder, group);
+        bindFinalBalance(holder, group);
         bindSelection(holder, group);
 
         holder.itemView.setOnClickListener(v -> {
@@ -77,45 +86,12 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
         });
     }
 
-    private void bindSubtitle(ViewHolder holder, ConsolidatedPlayerGroup group) {
-        List<String> parts = new ArrayList<>();
-        if (group.getMembers().size() <= 1) {
-            parts.add(group.getMembers().get(0).getGameName());
-        } else {
-            for (GamePlayerEntry member : group.getMembers()) {
-                parts.add(holder.itemView.getContext().getString(
-                        R.string.player_consolidation_alias_format,
-                        member.getPlayerName(),
-                        member.getGameName()));
-            }
-        }
-        double adjustment = group.getNetAdjustment();
-        if (adjustment != 0) {
-            parts.add(holder.itemView.getContext().getString(
-                    R.string.player_consolidation_transfer_adj,
-                    ConsolidationAmountFormatter.formatSignedAmount(adjustment)));
-        }
-        holder.aliasesText.setText(TextUtils.join(" · ", parts));
-    }
-
-    private void bindAmounts(ViewHolder holder, ConsolidatedPlayerGroup group) {
-        bindSignedAmount(holder.grossAmountText, group.getTotalGrossAmount());
-        holder.contributionAmountText.setText(
-                ConsolidationAmountFormatter.formatAmount(group.getTotalContribution()));
-        bindSignedAmount(holder.baseNetAmountText, group.getTotalNetAmount());
-        bindSignedAmount(holder.adjustmentAmountText, group.getNetAdjustment());
-
+    private void bindFinalBalance(ViewHolder holder, ConsolidatedPlayerGroup group) {
         double net = group.getAdjustedNetAmount();
         holder.netAmountText.setText(
                 ConsolidationAmountFormatter.formatSignedAmount(net));
         holder.netAmountText.setTextColor(
                 ConsolidationAmountFormatter.getSignedAmountColor(holder.itemView.getContext(), net));
-    }
-
-    private void bindSignedAmount(TextView view, double amount) {
-        view.setText(ConsolidationAmountFormatter.formatSignedAmount(amount));
-        view.setTextColor(ConsolidationAmountFormatter.getSignedAmountColor(
-                view.getContext(), amount));
     }
 
     private void bindSelection(ViewHolder holder, ConsolidatedPlayerGroup group) {
@@ -150,12 +126,8 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
         final TextView displayNameText;
         final TextView avatarInitialText;
         final TextView gameCountText;
-        final TextView aliasesText;
+        final TextView gameNamesText;
         final TextView netAmountText;
-        final TextView grossAmountText;
-        final TextView contributionAmountText;
-        final TextView baseNetAmountText;
-        final TextView adjustmentAmountText;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -163,12 +135,8 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
             displayNameText = itemView.findViewById(R.id.text_display_name);
             avatarInitialText = itemView.findViewById(R.id.text_avatar_initial);
             gameCountText = itemView.findViewById(R.id.text_game_count);
-            aliasesText = itemView.findViewById(R.id.text_aliases);
+            gameNamesText = itemView.findViewById(R.id.text_game_names);
             netAmountText = itemView.findViewById(R.id.text_net_amount);
-            grossAmountText = itemView.findViewById(R.id.text_gross_amount);
-            contributionAmountText = itemView.findViewById(R.id.text_contribution_amount);
-            baseNetAmountText = itemView.findViewById(R.id.text_base_net_amount);
-            adjustmentAmountText = itemView.findViewById(R.id.text_adjustment_amount);
         }
     }
 }
