@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.checkbox.MaterialCheckBox;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -76,7 +77,6 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
         holder.gameNamesText.setText(String.join(" · ", gameNames));
         holder.gameNamesText.setVisibility(gameNames.isEmpty() ? View.GONE : View.VISIBLE);
 
-        bindFinalBalance(holder, group);
         bindSelection(holder, group);
 
         holder.itemView.setOnClickListener(v -> {
@@ -84,14 +84,6 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
                 listener.onToggle(group);
             }
         });
-    }
-
-    private void bindFinalBalance(ViewHolder holder, ConsolidatedPlayerGroup group) {
-        double net = group.getAdjustedNetAmount();
-        holder.netAmountText.setText(
-                ConsolidationAmountFormatter.formatSignedAmount(net));
-        holder.netAmountText.setTextColor(
-                ConsolidationAmountFormatter.getSignedAmountColor(holder.itemView.getContext(), net));
     }
 
     private void bindSelection(ViewHolder holder, ConsolidatedPlayerGroup group) {
@@ -102,6 +94,10 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
         holder.card.setStrokeWidth(isSelected
                 ? holder.itemView.getResources().getDimensionPixelSize(R.dimen.consolidation_card_stroke_selected)
                 : holder.itemView.getResources().getDimensionPixelSize(R.dimen.consolidation_card_stroke_default));
+        holder.selectionCheckBox.setChecked(isSelected);
+        holder.selectionCheckBox.setText(isSelected
+                ? R.string.player_consolidation_selected
+                : R.string.player_consolidation_select);
     }
 
     private boolean isGroupSelected(ConsolidatedPlayerGroup group) {
@@ -127,7 +123,7 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
         final TextView avatarInitialText;
         final TextView gameCountText;
         final TextView gameNamesText;
-        final TextView netAmountText;
+        final MaterialCheckBox selectionCheckBox;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -136,7 +132,7 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
             avatarInitialText = itemView.findViewById(R.id.text_avatar_initial);
             gameCountText = itemView.findViewById(R.id.text_game_count);
             gameNamesText = itemView.findViewById(R.id.text_game_names);
-            netAmountText = itemView.findViewById(R.id.text_net_amount);
+            selectionCheckBox = itemView.findViewById(R.id.checkbox_player_selected);
         }
     }
 }

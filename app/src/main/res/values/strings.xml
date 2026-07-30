@@ -236,7 +236,8 @@
     <string name="player_consolidation_mapping_step_subtitle">Select matching names and link them.</string>
     <string name="player_consolidation_mapping_confirmed_title">Player mapping confirmed</string>
     <string name="player_consolidation_mapping_confirmed_subtitle">Linked names now count as one player.</string>
-    <string name="player_consolidation_confirm_mappings">Confirm mapping &amp; show settlement</string>
+    <string name="player_consolidation_confirm_mappings">Show settlement</string>
+    <string name="player_consolidation_complete_games_first">Complete all selected games before continuing to settlement.</string>
     <string name="player_consolidation_edit_mappings">Edit player mapping</string>
     <string name="player_consolidation_tap_edit_mapping">Tap row to edit mapping</string>
     <string name="player_consolidation_table_player">PLAYER</string>
@@ -250,12 +251,14 @@
     <string name="player_consolidation_final_balance_info">Final balance = Net + Adjustment.</string>
     <string name="player_consolidation_consolidated_title">Player summary (consolidated)</string>
     <string name="player_consolidation_link_selected">Link as same person</string>
+    <string name="player_consolidation_select">Select</string>
+    <string name="player_consolidation_selected">Selected</string>
     <string name="player_consolidation_unlink_selected">Unlink players</string>
     <string name="player_consolidation_unlink_dialog_title">Unlink merged players?</string>
     <string name="player_consolidation_unlink_dialog_message">This will split the merged card back into separate players.</string>
     <string name="player_consolidation_unlink_confirm">Unlink</string>
     <string name="player_consolidation_link_confirm">Link players</string>
-    <string name="player_consolidation_reset">Reset mappings &amp; adjustments</string>
+    <string name="player_consolidation_reset">Reset mapping</string>
     <string name="player_consolidation_link_dialog_title">Link selected players</string>
     <string name="player_consolidation_link_dialog_subtitle">Merge these entries into one settlement identity.</string>
     <string name="player_consolidation_link_dialog_hint">Display name</string>
@@ -313,7 +316,7 @@
     <string name="player_consolidation_net_column">NET</string>
     <string name="player_consolidation_adjustment_column">ADJUSTMENT</string>
     <string name="player_consolidation_adjustment_short">ADJ</string>
-    <string name="player_consolidation_contribution_collected">Total contribution collected</string>
+    <string name="player_consolidation_contribution_collected">Contribution</string>
     <string name="player_consolidation_contribution_info">Paid to Contribution during settlement</string>
     <string name="player_consolidation_sitting_summary">Sitting summary</string>
     <string name="player_consolidation_total_gross">Gross winnings</string>

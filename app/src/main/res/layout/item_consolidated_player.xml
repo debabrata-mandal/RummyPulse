@@ -80,28 +80,19 @@
                     tools:text="Rummy Champions · Deck Masters · Card Rush" />
             </LinearLayout>
 
-            <LinearLayout
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/checkbox_player_selected"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="end"
-                android:orientation="vertical">
+                android:layout_marginStart="10dp"
+                android:clickable="false"
+                android:focusable="false"
+                android:gravity="center_vertical"
+                android:minHeight="40dp"
+                android:text="@string/player_consolidation_select"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/player_consolidation_final_balance"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="9sp" />
-
-                <TextView
-                    android:id="@+id/text_net_amount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    tools:text="+₹1,648" />
-            </LinearLayout>
         </LinearLayout>
 
     </LinearLayout>
