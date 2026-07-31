@@ -1,110 +1,224 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@drawable/dialog_background"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:paddingStart="18dp"
+    android:paddingTop="18dp"
+    android:paddingEnd="18dp"
+    android:paddingBottom="16dp">
 
-    <TextView
-        android:id="@+id/text_map_player_title"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/map_player_title"
-        android:textColor="@color/text_primary"
-        android:textSize="20sp"
-        android:textStyle="bold" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-    <TextView
-        android:id="@+id/text_map_player_subtitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="@string/map_player_subtitle"
-        android:textColor="@color/text_secondary"
-        android:textSize="14sp" />
+        <ImageView
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/circle_background"
+            android:contentDescription="@string/map_player_icon_description"
+            android:padding="10dp"
+            android:src="@drawable/ic_link_players"
+            android:tint="@color/accent_blue" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/text_map_player_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/map_player_title"
+                android:textColor="@color/text_primary"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/text_map_player_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:lineSpacingMultiplier="1.1"
+                android:text="@string/map_player_subtitle"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
     <TextView
         android:id="@+id/text_current_mapping"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="14dp"
         android:background="@drawable/user_mapping_selected_background"
         android:drawableStart="@drawable/ic_check_circle"
-        android:drawablePadding="8dp"
+        android:drawablePadding="10dp"
         android:gravity="center_vertical"
-        android:padding="12dp"
+        android:minHeight="52dp"
+        android:paddingStart="14dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="10dp"
         android:textColor="@color/text_primary"
-        android:textSize="14sp"
+        android:textSize="13sp"
         android:textStyle="bold"
         android:visibility="gone" />
 
-    <EditText
-        android:id="@+id/input_user_search"
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/score_input_background"
-        android:drawableStart="@drawable/ic_search"
-        android:drawablePadding="8dp"
-        android:drawableTint="@color/text_secondary"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
         android:hint="@string/map_player_search_hint"
-        android:inputType="text"
-        android:maxLines="1"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:textColor="@color/text_primary"
-        android:textColorHint="@color/text_secondary" />
+        app:boxBackgroundColor="@color/background_primary"
+        app:boxCornerRadiusBottomEnd="10dp"
+        app:boxCornerRadiusBottomStart="10dp"
+        app:boxCornerRadiusTopEnd="10dp"
+        app:boxCornerRadiusTopStart="10dp"
+        app:boxStrokeColor="@color/accent_blue"
+        app:hintTextColor="@color/accent_blue_light"
+        app:startIconDrawable="@drawable/ic_search"
+        app:startIconTint="@color/text_secondary">
 
-    <ProgressBar
-        android:id="@+id/progress_users"
-        style="?android:attr/progressBarStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_margin="24dp"
-        android:visibility="gone" />
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/input_user_search"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionDone"
+            android:inputType="text"
+            android:maxLines="1"
+            android:minHeight="54dp"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:textSize="15sp" />
 
-    <TextView
-        android:id="@+id/text_users_empty"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:padding="24dp"
-        android:text="@string/map_player_no_users"
-        android:textColor="@color/text_secondary"
-        android:visibility="gone" />
-
-    <ListView
-        android:id="@+id/list_users"
-        android:layout_width="match_parent"
-        android:layout_height="240dp"
-        android:layout_marginTop="8dp"
-        android:choiceMode="singleChoice"
-        android:divider="@android:color/transparent"
-        android:dividerHeight="4dp" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:gravity="end"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="7dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.06"
+            android:text="@string/map_player_users_section"
+            android:textAllCaps="true"
+            android:textColor="@color/accent_blue_light"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="@string/map_player_users_hint"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        app:cardBackgroundColor="@color/background_secondary"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/divider_color"
+        app:strokeWidth="1dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp">
+
+            <ListView
+                android:id="@+id/list_users"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:choiceMode="singleChoice"
+                android:clipToPadding="false"
+                android:divider="@android:color/transparent"
+                android:dividerHeight="4dp"
+                android:overScrollMode="ifContentScrolls"
+                android:scrollbars="vertical" />
+
+            <ProgressBar
+                android:id="@+id/progress_users"
+                style="?android:attr/progressBarStyle"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:indeterminateTint="@color/accent_blue"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/text_users_empty"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:padding="18dp"
+                android:text="@string/map_player_no_users"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+        </FrameLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
         android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btn_unlink_user"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/map_player_unlink"
-            android:visibility="gone" />
-
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_cancel_mapping"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="wrap_content"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="@android:string/cancel" />
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:text="@android:string/cancel"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            app:cornerRadius="10dp"
+            app:strokeColor="@color/divider_color"
+            app:strokeWidth="1dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_unlink_user"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:text="@string/map_player_unlink"
+            android:textAllCaps="false"
+            android:textColor="@color/error_red"
+            android:visibility="gone"
+            app:cornerRadius="10dp"
+            app:strokeColor="@color/error_red"
+            app:strokeWidth="1dp" />
+
     </LinearLayout>
 
 </LinearLayout>

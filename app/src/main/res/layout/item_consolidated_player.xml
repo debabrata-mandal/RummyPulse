@@ -5,8 +5,8 @@
     android:id="@+id/card_player"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="4dp"
-    android:layout_marginVertical="5dp"
+    android:layout_marginHorizontal="3dp"
+    android:layout_marginVertical="4dp"
     android:clickable="true"
     android:focusable="true"
     android:foreground="?android:attr/selectableItemBackground"
@@ -21,7 +21,7 @@
         android:layout_height="wrap_content"
         android:background="@drawable/bg_dashboard_game_card"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:padding="10dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -31,20 +31,20 @@
 
             <TextView
                 android:id="@+id/text_avatar_initial"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
                 android:background="@drawable/circle_background"
                 android:backgroundTint="@color/accent_blue"
                 android:gravity="center"
                 android:textColor="@android:color/white"
-                android:textSize="16sp"
+                android:textSize="15sp"
                 android:textStyle="bold"
                 tools:text="A" />
 
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
+                android:layout_marginStart="10dp"
                 android:layout_weight="1"
                 android:orientation="vertical">
 
@@ -52,8 +52,10 @@
                     android:id="@+id/text_display_name"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     tools:text="Amit" />
 
@@ -63,151 +65,36 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     tools:text="3 games" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="end"
-                android:orientation="vertical">
 
                 <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/player_consolidation_final_balance"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="10sp" />
-
-                <TextView
-                    android:id="@+id/text_net_amount"
-                    android:layout_width="wrap_content"
+                    android:id="@+id/text_game_names"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:textSize="17sp"
-                    android:textStyle="bold"
-                    tools:text="+₹1,648" />
+                    android:ellipsize="end"
+                    android:maxLines="2"
+                    android:textColor="@color/accent_blue_light"
+                    android:textSize="10sp"
+                    tools:text="Rummy Champions · Deck Masters · Card Rush" />
             </LinearLayout>
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/checkbox_player_selected"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:clickable="false"
+                android:focusable="false"
+                android:gravity="center_vertical"
+                android:minHeight="40dp"
+                android:text="@string/player_consolidation_select"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/text_aliases"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            tools:text="Amit (Card Blazer) · amit (Card Rush)" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:baselineAligned="false"
-            android:orientation="horizontal">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/player_consolidation_gross_label"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="10sp" />
-
-                <TextView
-                    android:id="@+id/text_gross_amount"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    tools:text="₹1,400" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:text="@string/player_consolidation_contribution_column"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="10sp" />
-
-                <TextView
-                    android:id="@+id/text_contribution_amount"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:gravity="center"
-                    android:textColor="@color/warning_orange"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    tools:text="₹252" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:text="@string/player_consolidation_net_column"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="10sp" />
-
-                <TextView
-                    android:id="@+id/text_base_net_amount"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:gravity="center"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    tools:text="₹1,148" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="end"
-                    android:text="@string/player_consolidation_adjustment_column"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="10sp" />
-
-                <TextView
-                    android:id="@+id/text_adjustment_amount"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    android:gravity="end"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    tools:text="+₹500" />
-            </LinearLayout>
-        </LinearLayout>
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

@@ -99,6 +99,32 @@ public final class RoundScoreDraft {
         return false;
     }
 
+    /**
+     * Rebuilds this draft against the latest player list while preserving
+     * entered scores for players that still exist. Deleted players are
+     * dropped and newly added players receive their current/default score.
+     */
+    public RoundScoreDraft reconcile(GameData latest) {
+        if (latest == null || latest.getPlayers() == null
+                || latest.getPlayers().isEmpty()) {
+            throw new IllegalArgumentException("Game data must contain players.");
+        }
+        RoundScoreDraft reconciled =
+                RoundScoreDraft.start(latest, round1Based, correctionMode);
+        for (int latestIndex = 0;
+                latestIndex < latest.getPlayers().size();
+                latestIndex++) {
+            Player latestPlayer = latest.getPlayers().get(latestIndex);
+            int previousIndex = draftIndexFor(latestPlayer, latestIndex);
+            if (previousIndex < 0) {
+                continue;
+            }
+            reconciled.scores[latestIndex] = scores[previousIndex];
+            reconciled.reviewed[latestIndex] = reviewed[previousIndex];
+        }
+        return reconciled;
+    }
+
     public String serialize() {
         StringBuilder encoded = new StringBuilder("2|")
                 .append(round1Based).append('|')

@@ -151,6 +151,10 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         TextInputEditText editPoint = dialogView.findViewById(R.id.edit_review_point_value);
         TextInputLayout layoutContribution = dialogView.findViewById(R.id.layout_edit_review_contribution);
         TextInputEditText editContribution = dialogView.findViewById(R.id.edit_review_contribution);
+        com.google.android.material.button.MaterialButton cancel =
+                dialogView.findViewById(R.id.btn_edit_economics_cancel);
+        com.google.android.material.button.MaterialButton save =
+                dialogView.findViewById(R.id.btn_edit_economics_save);
 
         String pv = game.getPointValue();
         if (pv == null || pv.isEmpty()) {
@@ -165,32 +169,38 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         editContribution.setText(gst.replace("%", "").trim());
 
         AlertDialog dialog = new AlertDialog.Builder(getContext(), R.style.DarkDialogTheme)
-                .setTitle(R.string.review_edit_economics_title)
                 .setView(dialogView)
-                .setPositiveButton(R.string.review_edit_economics_save, null)
-                .setNegativeButton(android.R.string.cancel, (d, which) -> {
-                })
+                .setCancelable(true)
                 .create();
 
-        dialog.setOnShowListener(d -> {
-            Button positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-            positive.setOnClickListener(v -> {
-                Double point = parseAndClampPointValue(layoutPoint, editPoint);
-                Integer contrib = parseContributionPercent(layoutContribution, editContribution);
-                if (point == null || contrib == null) {
-                    return;
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        save.setOnClickListener(v -> {
+            Double point = parseAndClampPointValue(layoutPoint, editPoint);
+            Integer contrib = parseContributionPercent(layoutContribution, editContribution);
+            if (point == null || contrib == null) {
+                return;
+            }
+            homeViewModel.updateGameEconomics(game.getGameId(), point, contrib, () -> {
+                if (isAdded() && getContext() != null) {
+                    com.example.rummypulse.utils.ModernToast.success(getContext(),
+                            getString(R.string.review_edit_economics_saved));
                 }
-                homeViewModel.updateGameEconomics(game.getGameId(), point, contrib, () -> {
-                    if (isAdded() && getContext() != null) {
-                        com.example.rummypulse.utils.ModernToast.success(getContext(),
-                                getString(R.string.review_edit_economics_saved));
-                    }
-                });
-                dialog.dismiss();
             });
+            dialog.dismiss();
         });
 
         dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(
+                    new android.graphics.drawable.ColorDrawable(
+                            android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm =
+                    getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            dialog.getWindow().setLayout(
+                    width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     private void setupLockedView() {
@@ -226,35 +236,35 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             return;
         }
 
-        new androidx.appcompat.app.AlertDialog.Builder(getContext(), com.example.rummypulse.R.style.DarkDialogTheme)
-                .setTitle("Approve Game")
-                .setMessage("Are you sure you want to approve this completed game? This will finalize the game and move it to the approved games list.")
-                .setPositiveButton("Approve", (dialog, which) -> {
-                    homeViewModel.approveGame(game, () -> {
-                        if (isAdded() && getContext() != null) {
-                            com.example.rummypulse.utils.ModernToast.success(
-                                    getContext(), "✅ Game approved successfully!");
-                        }
-                    });
-                })
-                .setNegativeButton("Cancel", (dialog, which) -> {
-                })
-                .show();
+        showReviewActionDialog(
+                R.drawable.ic_approve,
+                "Approve game?",
+                "Finalize this completed game",
+                "The game will move to the approved list and its results will be finalized.",
+                "Approve",
+                false,
+                () -> homeViewModel.approveGame(game, () -> {
+                    if (isAdded() && getContext() != null) {
+                        com.example.rummypulse.utils.ModernToast.success(
+                                getContext(), "✅ Game approved successfully!");
+                    }
+                }));
     }
 
 
     @Override
     public void onDeleteGame(GameItem game, int position) {
-        new androidx.appcompat.app.AlertDialog.Builder(getContext(), com.example.rummypulse.R.style.DarkDialogTheme)
-                .setTitle("Delete Game")
-                .setMessage("Are you sure you want to delete this game? This action cannot be undone.")
-                .setPositiveButton("Delete", (dialog, which) -> {
+        showReviewActionDialog(
+                R.drawable.ic_delete,
+                "Delete game?",
+                "Permanently remove this game",
+                "This action cannot be undone. The game and its recorded results will be removed.",
+                "Delete game",
+                true,
+                () -> {
                     homeViewModel.deleteGame(game.getGameId());
                     com.example.rummypulse.utils.ModernToast.success(getContext(), "🗑️ Game deleted successfully!");
-                })
-                .setNegativeButton("Cancel", (dialog, which) -> {
-                })
-                .show();
+                });
     }
 
     private void updateSelectionControls(int selectedCount, boolean allSelected) {
@@ -283,10 +293,16 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             return;
         }
 
-        new AlertDialog.Builder(getContext(), R.style.DarkDialogTheme)
-                .setTitle(R.string.review_delete_selected_title)
-                .setMessage(getString(R.string.review_delete_selected_message, selectedCount))
-                .setPositiveButton(R.string.review_delete_selected, (dialog, which) -> {
+        showReviewActionDialog(
+                R.drawable.ic_delete,
+                getString(R.string.review_delete_selected_title),
+                selectedCount == 1
+                        ? "Remove 1 selected game"
+                        : "Remove " + selectedCount + " selected games",
+                getString(R.string.review_delete_selected_message, selectedCount),
+                getString(R.string.review_delete_selected),
+                true,
+                () -> {
                     bulkDeleteInProgress = true;
                     updateSelectionControls(selectedCount, false);
                     com.example.rummypulse.utils.ModernToast.progress(
@@ -317,9 +333,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                                         tableAdapter.getSelectedGameIds().size(),
                                         false);
                             });
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                });
     }
 
     private void onApproveAllClicked() {
@@ -338,21 +352,89 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             return;
         }
         final int approvedCount = count;
-        new androidx.appcompat.app.AlertDialog.Builder(getContext(), com.example.rummypulse.R.style.DarkDialogTheme)
-                .setTitle("Approve all completed games")
-                .setMessage("Approve " + approvedCount + " completed game(s)? Each will be finalized and moved to the approved games list.")
-                .setPositiveButton("Approve all", (dialog, which) -> {
-                    homeViewModel.approveAllCompletedGames(items, () -> {
-                        if (!isAdded() || getContext() == null) {
-                            return;
-                        }
-                        com.example.rummypulse.utils.ModernToast.success(getContext(),
-                                approvedCount == 1 ? "1 game approved." : approvedCount + " games approved.");
-                    });
-                })
-                .setNegativeButton("Cancel", (dialog, which) -> {
-                })
-                .show();
+        showReviewActionDialog(
+                R.drawable.ic_approve,
+                "Approve all completed games?",
+                approvedCount == 1
+                        ? "Finalize 1 completed game"
+                        : "Finalize " + approvedCount + " completed games",
+                "Each game will move to the approved list and its results will be finalized.",
+                "Approve all",
+                false,
+                () -> homeViewModel.approveAllCompletedGames(items, () -> {
+                    if (!isAdded() || getContext() == null) {
+                        return;
+                    }
+                    com.example.rummypulse.utils.ModernToast.success(getContext(),
+                            approvedCount == 1 ? "1 game approved." : approvedCount + " games approved.");
+                }));
+    }
+
+    private void showReviewActionDialog(
+            int iconRes,
+            CharSequence title,
+            CharSequence subtitle,
+            CharSequence message,
+            CharSequence confirmText,
+            boolean destructive,
+            Runnable action) {
+        if (!isAdded() || getContext() == null) {
+            return;
+        }
+        View view = LayoutInflater.from(getContext()).inflate(
+                R.layout.dialog_action_confirmation, null, false);
+        android.widget.ImageView icon =
+                view.findViewById(R.id.image_action_dialog_icon);
+        TextView titleView = view.findViewById(R.id.text_action_dialog_title);
+        TextView subtitleView = view.findViewById(R.id.text_action_dialog_subtitle);
+        TextView messageView = view.findViewById(R.id.text_action_dialog_message);
+        com.google.android.material.card.MaterialCardView messageCard =
+                view.findViewById(R.id.card_action_dialog_message);
+        com.google.android.material.button.MaterialButton cancel =
+                view.findViewById(R.id.btn_action_dialog_cancel);
+        com.google.android.material.button.MaterialButton confirm =
+                view.findViewById(R.id.btn_action_dialog_confirm);
+
+        icon.setImageResource(iconRes);
+        titleView.setText(title);
+        subtitleView.setText(subtitle);
+        messageView.setText(message);
+        confirm.setText(confirmText);
+        if (destructive) {
+            int red = androidx.core.content.ContextCompat.getColor(
+                    requireContext(), R.color.error_red);
+            icon.setBackgroundResource(
+                    R.drawable.view_access_icon_rejected_background);
+            icon.setImageTintList(android.content.res.ColorStateList.valueOf(red));
+            messageView.setCompoundDrawableTintList(
+                    android.content.res.ColorStateList.valueOf(red));
+            messageCard.setStrokeColor(red);
+            confirm.setBackgroundTintList(
+                    android.content.res.ColorStateList.valueOf(red));
+        }
+
+        AlertDialog dialog = new AlertDialog.Builder(
+                requireContext(), R.style.DarkDialogTheme)
+                .setView(view)
+                .setCancelable(true)
+                .create();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        confirm.setOnClickListener(v -> {
+            dialog.dismiss();
+            action.run();
+        });
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(
+                    new android.graphics.drawable.ColorDrawable(
+                            android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm =
+                    getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            dialog.getWindow().setLayout(
+                    width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     private void refreshGames() {

@@ -102,33 +102,14 @@
                 android:orientation="vertical"
                 android:paddingBottom="24dp">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="20dp"
-                android:paddingTop="12dp"
-                android:paddingEnd="20dp"
-                android:paddingBottom="8dp"
-                android:text="@string/player_consolidation_map_subtitle"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
-                android:textColor="@color/text_secondary" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="20dp"
-                android:paddingEnd="20dp"
-                android:paddingBottom="8dp"
-                android:text="@string/player_consolidation_selected_games_label"
-                android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle1"
-                android:textColor="@color/text_primary" />
-
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recycler_selected_games_status"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:clipToPadding="false"
                 android:nestedScrollingEnabled="false"
                 android:paddingHorizontal="4dp"
+                android:paddingTop="8dp"
                 android:paddingBottom="8dp"
                 tools:itemCount="2"
                 tools:listitem="@layout/item_consolidation_selected_game_status" />
@@ -230,6 +211,7 @@
                 android:layout_marginTop="12dp"
                 android:minHeight="52dp"
                 android:text="@string/player_consolidation_confirm_mappings"
+                android:textAllCaps="false"
                 app:cornerRadius="12dp"
                 app:icon="@drawable/ic_confirm_mapping"
                 app:iconGravity="textStart"
@@ -767,6 +749,7 @@
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="8dp"
                 android:text="@string/player_consolidation_reset"
+                android:textAllCaps="false"
                 app:icon="@drawable/ic_reset_mapping"
                 app:iconGravity="textStart"
                 app:iconTint="@color/accent_blue"
@@ -780,6 +763,7 @@
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="8dp"
                 android:text="@string/player_consolidation_change_games"
+                android:textAllCaps="false"
                 app:icon="@drawable/ic_change_games"
                 app:iconGravity="textStart"
                 app:iconTint="@color/accent_blue"

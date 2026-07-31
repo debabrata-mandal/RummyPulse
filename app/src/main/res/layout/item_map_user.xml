@@ -4,16 +4,26 @@
     android:layout_height="wrap_content"
     android:background="@drawable/user_mapping_row_background"
     android:gravity="center_vertical"
-    android:minHeight="64dp"
+    android:minHeight="66dp"
     android:orientation="horizontal"
-    android:paddingStart="16dp"
+    android:paddingStart="12dp"
     android:paddingTop="10dp"
-    android:paddingEnd="16dp"
+    android:paddingEnd="12dp"
     android:paddingBottom="10dp">
+
+    <ImageView
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/icon_circle_background_blue"
+        android:contentDescription="@null"
+        android:padding="9dp"
+        android:src="@drawable/ic_person"
+        android:tint="@color/accent_blue_light" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
         android:layout_weight="1"
         android:orientation="vertical">
 

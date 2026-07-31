@@ -20,9 +20,9 @@
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:background="@drawable/circle_background"
-            android:contentDescription="@string/transfer_pin_icon_description"
+            android:contentDescription="@null"
             android:padding="10dp"
-            android:src="@drawable/ic_lock"
+            android:src="@drawable/ic_link_players"
             android:tint="@color/accent_blue" />
 
         <LinearLayout
@@ -35,7 +35,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/transfer_pin_title"
+                android:text="@string/map_player_transfer_title"
                 android:textColor="@color/text_primary"
                 android:textSize="19sp"
                 android:textStyle="bold" />
@@ -44,7 +44,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="@string/transfer_pin_message"
+                android:text="@string/map_player_transfer_subtitle"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
 
@@ -56,61 +56,61 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
         app:cardBackgroundColor="@color/background_secondary"
         app:cardCornerRadius="12dp"
         app:cardElevation="0dp"
-        app:strokeColor="@color/accent_blue"
+        app:strokeColor="@color/divider_color"
         app:strokeWidth="1dp">
 
-        <LinearLayout
+        <TextView
+            android:id="@+id/text_transfer_mapping_message"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:letterSpacing="0.1"
-                android:text="@string/transfer_pin_label"
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/text_transfer_pin"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:letterSpacing="0.18"
-                android:textColor="@color/accent_blue_light"
-                android:textSize="34sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:gravity="center"
-                android:text="@string/transfer_pin_security_hint"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-        </LinearLayout>
+            android:drawableStart="@drawable/ic_info"
+            android:drawablePadding="10dp"
+            android:drawableTint="@color/accent_blue_light"
+            android:gravity="center_vertical"
+            android:lineSpacingExtra="2dp"
+            android:padding="14dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
 
     </com.google.android.material.card.MaterialCardView>
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_transfer_pin_done"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:minHeight="48dp"
-        android:text="@string/transfer_pin_done"
-        android:textAllCaps="false"
-        android:textColor="@android:color/white"
-        app:backgroundTint="@color/accent_blue"
-        app:cornerRadius="10dp" />
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_transfer_mapping_cancel"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:text="@string/dialog_cancel"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            app:cornerRadius="10dp"
+            app:strokeColor="@color/divider_color"
+            app:strokeWidth="1dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_transfer_mapping_confirm"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:text="@string/map_player_transfer_confirm"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white"
+            app:backgroundTint="@color/accent_blue"
+            app:cornerRadius="10dp" />
+
+    </LinearLayout>
 
 </LinearLayout>

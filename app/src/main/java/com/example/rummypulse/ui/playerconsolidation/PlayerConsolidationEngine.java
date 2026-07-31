@@ -1,7 +1,5 @@
 package com.example.rummypulse.ui.playerconsolidation;
 
-import android.text.TextUtils;
-
 import com.example.rummypulse.data.Player;
 import com.example.rummypulse.ui.home.GameItem;
 
@@ -42,9 +40,19 @@ public final class PlayerConsolidationEngine {
 
     public static List<ConsolidatedPlayerGroup> buildInitialGroups(List<GameItem> games) {
         List<GamePlayerEntry> allEntries = flattenPlayers(games);
-        List<ConsolidatedPlayerGroup> groups = new ArrayList<>();
+        Map<String, List<GamePlayerEntry>> entriesByIdentity = new LinkedHashMap<>();
         for (GamePlayerEntry entry : allEntries) {
-            groups.add(createGroup(List.of(entry)));
+            String identityKey = isEmpty(entry.getUserId())
+                    ? "entry:" + entry.getEntryId()
+                    : "user:" + entry.getUserId();
+            entriesByIdentity
+                    .computeIfAbsent(identityKey, key -> new ArrayList<>())
+                    .add(entry);
+        }
+
+        List<ConsolidatedPlayerGroup> groups = new ArrayList<>();
+        for (List<GamePlayerEntry> members : entriesByIdentity.values()) {
+            groups.add(createGroup(members));
         }
         return groups;
     }
@@ -131,7 +139,7 @@ public final class PlayerConsolidationEngine {
             return copyGroups(groups);
         }
 
-        String resolvedName = TextUtils.isEmpty(displayName)
+        String resolvedName = isEmpty(displayName)
                 ? mergedMembers.get(0).getPlayerName()
                 : displayName.trim();
         ConsolidatedPlayerGroup mergedGroup =
@@ -170,7 +178,7 @@ public final class PlayerConsolidationEngine {
     public static List<ConsolidatedPlayerGroup> splitGroup(
             List<ConsolidatedPlayerGroup> groups,
             String groupId) {
-        if (groups == null || TextUtils.isEmpty(groupId)) {
+        if (groups == null || isEmpty(groupId)) {
             return copyGroups(groups);
         }
 
@@ -210,11 +218,11 @@ public final class PlayerConsolidationEngine {
     }
 
     static String buildEntryId(String gameId, Player player, int index) {
-        if (!TextUtils.isEmpty(player.getUserId())) {
+        if (!isEmpty(player.getUserId())) {
             return gameId + "::uid:" + player.getUserId();
         }
         String playerName = player.getName();
-        if (TextUtils.isEmpty(playerName)) {
+        if (isEmpty(playerName)) {
             playerName = UNKNOWN_PLAYER;
         }
         return gameId + "::idx:" + index + "::" + normalizeName(playerName);
@@ -230,7 +238,7 @@ public final class PlayerConsolidationEngine {
         }
 
         String userId = existing.getUserId();
-        if (!TextUtils.isEmpty(userId)) {
+        if (!isEmpty(userId)) {
             for (GamePlayerEntry fresh : freshById.values()) {
                 if (existing.getGameId().equals(fresh.getGameId()) && userId.equals(fresh.getUserId())) {
                     return fresh;
@@ -257,7 +265,7 @@ public final class PlayerConsolidationEngine {
     }
 
     private static Integer parseLegacyIndexEntryId(String entryId, String gameId) {
-        if (TextUtils.isEmpty(entryId) || TextUtils.isEmpty(gameId)) {
+        if (isEmpty(entryId) || isEmpty(gameId)) {
             return null;
         }
         if (!entryId.startsWith(gameId + "::")) {
@@ -275,7 +283,7 @@ public final class PlayerConsolidationEngine {
     }
 
     private static String normalizeName(String name) {
-        if (TextUtils.isEmpty(name)) {
+        if (isEmpty(name)) {
             return UNKNOWN_PLAYER.toLowerCase(Locale.US);
         }
         return name.trim().toLowerCase(Locale.US);
@@ -296,7 +304,7 @@ public final class PlayerConsolidationEngine {
             for (int i = 0; i < players.size(); i++) {
                 Player player = players.get(i);
                 String playerName = player.getName();
-                if (TextUtils.isEmpty(playerName)) {
+                if (isEmpty(playerName)) {
                     playerName = UNKNOWN_PLAYER;
                 }
                 String entryId = buildEntryId(gameId, player, i);
@@ -329,6 +337,10 @@ public final class PlayerConsolidationEngine {
             }
         }
         return !group.getMembers().isEmpty();
+    }
+
+    private static boolean isEmpty(String value) {
+        return value == null || value.isEmpty();
     }
 
     private static ConsolidatedPlayerGroup copyGroup(ConsolidatedPlayerGroup group) {

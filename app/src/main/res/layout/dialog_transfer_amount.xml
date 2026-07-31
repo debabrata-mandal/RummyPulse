@@ -19,14 +19,13 @@
             android:orientation="horizontal">
 
             <ImageView
-                android:layout_width="34dp"
-                android:layout_height="34dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:background="@drawable/circle_background"
-                android:backgroundTint="@color/background_tertiary"
                 android:contentDescription="@null"
-                android:padding="7dp"
+                android:padding="10dp"
                 android:src="@drawable/ic_balance_adjustment"
-                app:tint="@color/accent_blue_light" />
+                app:tint="@color/accent_blue" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -40,7 +39,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/player_consolidation_transfer_dialog_title"
                     android:textColor="@color/text_primary"
-                    android:textSize="18sp"
+                    android:textSize="19sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -49,7 +48,7 @@
                     android:layout_marginTop="2dp"
                     android:text="@string/player_consolidation_transfer_dialog_subtitle"
                     android:textColor="@color/text_secondary"
-                    android:textSize="11sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
         </LinearLayout>
 
@@ -57,43 +56,59 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
-            android:baselineAligned="false"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="5dp"
-                android:layout_weight="1"
-                android:hint="@string/player_consolidation_adjustment_from">
+                android:hint="@string/player_consolidation_adjustment_from"
+                app:boxBackgroundColor="@color/background_primary"
+                app:boxCornerRadiusBottomEnd="10dp"
+                app:boxCornerRadiusBottomStart="10dp"
+                app:boxCornerRadiusTopEnd="10dp"
+                app:boxCornerRadiusTopStart="10dp"
+                app:boxStrokeColor="@color/dialog_input_stroke"
+                app:hintTextColor="@color/dialog_hint_text">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/input_adjustment_from"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:dropDownHeight="240dp"
+                    android:dropDownVerticalOffset="4dp"
                     android:ellipsize="end"
                     android:inputType="none"
                     android:maxLines="1"
+                    android:popupBackground="@drawable/dialog_dropdown_background"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="5dp"
-                android:layout_weight="1"
-                android:hint="@string/player_consolidation_adjustment_to">
+                android:layout_marginTop="11dp"
+                android:hint="@string/player_consolidation_adjustment_to"
+                app:boxBackgroundColor="@color/background_primary"
+                app:boxCornerRadiusBottomEnd="10dp"
+                app:boxCornerRadiusBottomStart="10dp"
+                app:boxCornerRadiusTopEnd="10dp"
+                app:boxCornerRadiusTopStart="10dp"
+                app:boxStrokeColor="@color/dialog_input_stroke"
+                app:hintTextColor="@color/dialog_hint_text">
 
                 <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/input_adjustment_to"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:dropDownHeight="240dp"
+                    android:dropDownVerticalOffset="4dp"
                     android:ellipsize="end"
                     android:inputType="none"
                     android:maxLines="1"
+                    android:popupBackground="@drawable/dialog_dropdown_background"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -105,6 +120,13 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
             android:hint="@string/player_consolidation_transfer_amount_hint"
+            app:boxBackgroundColor="@color/background_primary"
+            app:boxCornerRadiusBottomEnd="10dp"
+            app:boxCornerRadiusBottomStart="10dp"
+            app:boxCornerRadiusTopEnd="10dp"
+            app:boxCornerRadiusTopStart="10dp"
+            app:boxStrokeColor="@color/dialog_input_stroke"
+            app:hintTextColor="@color/dialog_hint_text"
             app:prefixText="₹">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -123,8 +145,15 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="11dp"
             android:hint="@string/player_consolidation_adjustment_reason_hint"
+            app:boxBackgroundColor="@color/background_primary"
+            app:boxCornerRadiusBottomEnd="10dp"
+            app:boxCornerRadiusBottomStart="10dp"
+            app:boxCornerRadiusTopEnd="10dp"
+            app:boxCornerRadiusTopStart="10dp"
+            app:boxStrokeColor="@color/dialog_input_stroke"
             app:counterEnabled="true"
-            app:counterMaxLength="100">
+            app:counterMaxLength="100"
+            app:hintTextColor="@color/dialog_hint_text">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/input_adjustment_reason"
@@ -152,8 +181,12 @@
                 android:layout_weight="1"
                 android:maxLines="1"
                 android:text="@string/dialog_cancel"
+                android:textAllCaps="false"
+                android:textColor="@color/text_primary"
                 android:textSize="13sp"
-                app:cornerRadius="10dp" />
+                app:cornerRadius="10dp"
+                app:strokeColor="@color/divider_color"
+                app:strokeWidth="1dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_apply_transfer"
@@ -163,7 +196,10 @@
                 android:layout_weight="1.25"
                 android:maxLines="1"
                 android:text="@string/player_consolidation_save_adjustment"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
                 android:textSize="12sp"
+                app:backgroundTint="@color/accent_blue"
                 app:cornerRadius="10dp" />
         </LinearLayout>
 

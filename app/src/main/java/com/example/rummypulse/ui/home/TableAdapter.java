@@ -425,15 +425,27 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         totalScoreText.setText(String.valueOf(totalScore));
         
         // Create and show dialog
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        AlertDialog.Builder builder = new AlertDialog.Builder(
+                context, R.style.DarkDialogTheme);
         builder.setView(dialogView);
         AlertDialog dialog = builder.create();
         
         // Set close button listener
-        ImageView closeButton = dialogView.findViewById(R.id.btn_close);
+        View closeButton = dialogView.findViewById(R.id.btn_close);
         closeButton.setOnClickListener(v -> dialog.dismiss());
         
         dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(
+                    new android.graphics.drawable.ColorDrawable(
+                            android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm =
+                    context.getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            dialog.getWindow().setLayout(
+                    width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+        }
     }
     
     private void showQrCodeDialog(Context context, GameItem gameItem) {
@@ -476,6 +488,15 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         closeButton.setOnClickListener(v -> dialog.dismiss());
         
         dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(
+                    new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm = context.getResources().getDisplayMetrics();
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f),
+                    Math.round(420 * dm.density));
+            dialog.getWindow().setLayout(
+                    width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+        }
     }
 
         public static class TableViewHolder extends RecyclerView.ViewHolder {

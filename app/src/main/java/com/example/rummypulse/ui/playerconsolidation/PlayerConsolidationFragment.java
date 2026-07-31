@@ -17,6 +17,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.rummypulse.R;
@@ -69,6 +70,7 @@ public class PlayerConsolidationFragment extends Fragment {
             if (viewModel.hasActiveConsolidation() && binding.stepMapPlayers.getVisibility() == View.VISIBLE) {
                 updateSelectedGamesStatus();
                 handleRefreshOutcome(viewModel.refreshConsolidationFromLatestGames(currentGames, false));
+                updateStageVisibility();
             }
         });
 
@@ -103,7 +105,8 @@ public class PlayerConsolidationFragment extends Fragment {
         binding.recyclerSelectedGamesStatus.setAdapter(selectedGamesStatusAdapter);
         binding.recyclerSelectedGamesStatus.setNestedScrollingEnabled(false);
 
-        LinearLayoutManager consolidatedLayoutManager = new LinearLayoutManager(requireContext());
+        LinearLayoutManager consolidatedLayoutManager =
+                new LinearLayoutManager(requireContext());
         consolidatedLayoutManager.setAutoMeasureEnabled(true);
         binding.recyclerConsolidatedPlayers.setLayoutManager(consolidatedLayoutManager);
         binding.recyclerConsolidatedPlayers.setAdapter(consolidatedAdapter);
@@ -115,8 +118,8 @@ public class PlayerConsolidationFragment extends Fragment {
             binding.scrollMappingSettlement.post(
                     () -> binding.scrollMappingSettlement.scrollTo(0, 0));
         });
-        LinearLayoutManager playerSummaryLayoutManager =
-                new LinearLayoutManager(requireContext());
+        GridLayoutManager playerSummaryLayoutManager =
+                new GridLayoutManager(requireContext(), 2);
         playerSummaryLayoutManager.setAutoMeasureEnabled(true);
         binding.recyclerSettlementPlayerSummary.setLayoutManager(
                 playerSummaryLayoutManager);
@@ -167,6 +170,11 @@ public class PlayerConsolidationFragment extends Fragment {
         binding.btnLinkSelected.setOnClickListener(v -> showLinkDialog());
         binding.btnUnlinkSelected.setOnClickListener(v -> showUnlinkDialog());
         binding.btnConfirmMappings.setOnClickListener(v -> {
+            if (!allSelectedGamesCompleted()) {
+                ModernToast.warning(requireContext(),
+                        getString(R.string.player_consolidation_complete_games_first));
+                return;
+            }
             viewModel.confirmMappings();
             binding.scrollMappingSettlement.post(
                     () -> binding.scrollMappingSettlement.scrollTo(0, 0));
@@ -195,8 +203,11 @@ public class PlayerConsolidationFragment extends Fragment {
     private void updateGameSelectionUi(Set<String> selectedIds) {
         gameAdapter.setSelectedIds(selectedIds);
         int count = viewModel.getSelectedGames(currentGames).size();
-        binding.btnContinue.setEnabled(count >= 2);
+        boolean canContinue = count >= 2;
+        binding.btnContinue.setEnabled(canContinue);
+        binding.btnContinue.setVisibility(canContinue ? View.VISIBLE : View.GONE);
         binding.btnContinue.setText(getString(R.string.player_consolidation_continue, count));
+        updateStageVisibility();
     }
 
     private void updateEntrySelectionUi(Set<String> selectedIds) {
@@ -214,7 +225,8 @@ public class PlayerConsolidationFragment extends Fragment {
             return;
         }
         boolean showMappingControls = hasPlayerGroups && !mappingsConfirmed;
-        boolean showSettlement = hasPlayerGroups && mappingsConfirmed;
+        boolean allGamesCompleted = allSelectedGamesCompleted();
+        boolean showSettlement = hasPlayerGroups && mappingsConfirmed && allGamesCompleted;
 
         binding.textMapInstructions.setVisibility(
                 showMappingControls ? View.VISIBLE : View.GONE);
@@ -231,7 +243,7 @@ public class PlayerConsolidationFragment extends Fragment {
         binding.textNoConsolidatedPlayers.setVisibility(
                 !mappingsConfirmed && !hasPlayerGroups ? View.VISIBLE : View.GONE);
         binding.btnConfirmMappings.setVisibility(
-                showMappingControls ? View.VISIBLE : View.GONE);
+                showMappingControls && allGamesCompleted ? View.VISIBLE : View.GONE);
         binding.btnEditMappings.setVisibility(View.GONE);
         binding.cardPlayerSummaryTable.setVisibility(
                 showSettlement ? View.VISIBLE : View.GONE);
@@ -345,6 +357,11 @@ public class PlayerConsolidationFragment extends Fragment {
 
     private void showMapPlayersStep(boolean initializeIfNeeded) {
         List<GameItem> selected = viewModel.getSelectedGames(currentGames);
+        if (initializeIfNeeded && selected.size() < 2) {
+            ModernToast.warning(requireContext(),
+                    getString(R.string.player_consolidation_subtitle));
+            return;
+        }
         if (initializeIfNeeded || !viewModel.hasActiveConsolidation()) {
             viewModel.initializeConsolidation(selected);
         }
@@ -352,6 +369,19 @@ public class PlayerConsolidationFragment extends Fragment {
         binding.stepMapPlayers.setVisibility(View.VISIBLE);
         binding.fabRefreshGameData.setVisibility(View.VISIBLE);
         updateSelectedGamesStatus();
+    }
+
+    private boolean allSelectedGamesCompleted() {
+        List<GameItem> selected = viewModel.getSelectedGames(currentGames);
+        if (selected.isEmpty()) {
+            return false;
+        }
+        for (GameItem game : selected) {
+            if (game == null || !game.isCompleted()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void showSelectGamesStep() {
@@ -448,7 +478,7 @@ public class PlayerConsolidationFragment extends Fragment {
         }
         ArrayAdapter<String> dropdownAdapter = new ArrayAdapter<>(
                 requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
+                R.layout.item_adjustment_dropdown,
                 groupOptions);
         fromInput.setAdapter(dropdownAdapter);
         toInput.setAdapter(dropdownAdapter);

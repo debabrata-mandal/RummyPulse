@@ -653,6 +653,7 @@ public class MainActivity extends AppCompatActivity {
         });
         
         dialog.show();
+        applySettingsDialogWidth(dialog);
     }
 
     /**
@@ -725,6 +726,7 @@ public class MainActivity extends AppCompatActivity {
             });
             
             dialog.show();
+            applySettingsDialogWidth(dialog);
                 
         } catch (PackageManager.NameNotFoundException e) {
             android.util.Log.e("MainActivity", "Error getting package info", e);
@@ -732,5 +734,16 @@ public class MainActivity extends AppCompatActivity {
             // Fallback to simple dialog
             com.example.rummypulse.utils.ModernToast.error(this, "Unable to retrieve app information");
         }
+    }
+
+    private void applySettingsDialogWidth(android.app.Dialog dialog) {
+        if (dialog.getWindow() == null) {
+            return;
+        }
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        int maxWidth = Math.round(420 * dm.density);
+        int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+        dialog.getWindow().setLayout(
+                width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
     }
 }
