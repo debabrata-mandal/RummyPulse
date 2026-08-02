@@ -7,9 +7,5 @@
         android:title="Edit Access"
         app:showAsAction="never" />
     
-    <item
-        android:id="@+id/action_join"
-        android:title="Join"
-        app:showAsAction="never" />
-        
+
 </menu>
