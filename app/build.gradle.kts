@@ -89,6 +89,11 @@ android {
         viewBinding = true
         buildConfig = true
     }
+    testOptions {
+        unitTests.all {
+            it.jvmArgs("-Dnet.bytebuddy.experimental=true")
+        }
+    }
 }
 
 dependencies {
@@ -107,6 +112,8 @@ dependencies {
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     testImplementation(libs.junit)
     testImplementation(libs.room.testing)
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("org.mockito:mockito-core:5.14.2")
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.room.testing)
     androidTestImplementation("androidx.test:core:1.7.0")

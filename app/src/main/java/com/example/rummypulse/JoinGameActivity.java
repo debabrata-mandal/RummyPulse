@@ -939,17 +939,9 @@ public class JoinGameActivity extends AppCompatActivity {
 
     @Override
     public boolean onPrepareOptionsMenu(android.view.Menu menu) {
-        // Hide menu if user already has edit access
         Boolean editAccess = viewModel.getEditAccessGranted().getValue();
         if (editAccess != null && editAccess) {
-            menu.clear(); // Remove all menu items when in edit mode
-        } else {
-            // Disable Join menu item (temporarily disabled due to issues)
-            // Keep it visible but disabled so users can see it
-            android.view.MenuItem joinItem = menu.findItem(R.id.action_join);
-            if (joinItem != null) {
-                joinItem.setEnabled(false);
-            }
+            menu.clear();
         }
         return super.onPrepareOptionsMenu(menu);
     }
@@ -958,10 +950,6 @@ public class JoinGameActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         if (item.getItemId() == R.id.action_edit_access) {
             requestEditAccess();
-            return true;
-        }
-        if (item.getItemId() == R.id.action_join) {
-            joinCurrentUserToGame();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -4161,152 +4149,6 @@ public class JoinGameActivity extends AppCompatActivity {
                 GameOperationPayload.player(newPlayer),
                 () -> ModernToast.success(
                         this, "Player '" + playerName + "' added locally; syncing…"));
-    }
-    
-    /**
-     * Joins the current user to the game as a player
-     */
-    private void joinCurrentUserToGame() {
-        // Get current user
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null) {
-            ModernToast.error(this, "You must be logged in to join a game");
-            return;
-        }
-        
-        if (currentGameId == null) {
-            ModernToast.error(this, "Game ID not available");
-            return;
-        }
-        
-        String currentUserId = currentUser.getUid();
-        
-        // Fetch fresh game data from Firestore to ensure we have the latest data
-        // This is important because a player might have been deleted but local cache hasn't updated
-        ModernToast.info(this, "Checking game status...");
-        
-        com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
-        db.collection(FirestoreCollections.GAME_DATA)
-            .document(currentGameId)
-            .get(com.google.firebase.firestore.Source.SERVER) // Force server fetch, not cache
-            .addOnSuccessListener(documentSnapshot -> {
-                if (documentSnapshot != null && documentSnapshot.exists()) {
-                    try {
-                        Object dataField = documentSnapshot.get("data");
-                        if (dataField instanceof java.util.Map) {
-                            @SuppressWarnings("unchecked")
-                            java.util.Map<String, Object> dataMap = (java.util.Map<String, Object>) dataField;
-                            
-                            // Parse fresh game data
-                            com.example.rummypulse.data.GameData gameData = parseGameDataFromMap(dataMap);
-                            
-                            if (gameData == null || gameData.getPlayers() == null) {
-                                ModernToast.error(this, "Failed to load game data");
-                                return;
-                            }
-                            
-                            // Check if user is already in the game (using fresh data)
-                            for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
-                                if (currentUserId.equals(player.getUserId())) {
-                                    ModernToast.info(this, "You are already in this game");
-                                    return;
-                                }
-                            }
-                            
-                            // User is not in the game, proceed with joining
-                            proceedWithJoin(currentUser, gameData);
-                        } else {
-                            ModernToast.error(this, "Invalid game data format");
-                        }
-                    } catch (Exception e) {
-                        ModernToast.error(this, "Failed to parse game data: " + e.getMessage());
-                    }
-                } else {
-                    ModernToast.error(this, "Game not found");
-                }
-            })
-            .addOnFailureListener(e -> {
-                ModernToast.error(this, "Failed to fetch game data: " + e.getMessage());
-            });
-    }
-    
-    /**
-     * Proceeds with adding the user to the game after verifying they're not already in it
-     */
-    private void proceedWithJoin(FirebaseUser currentUser, com.example.rummypulse.data.GameData gameData) {
-        String currentUserId = currentUser.getUid();
-        
-        // Check maximum player limit
-        if (gameData.getPlayers().size() >= 15) {
-            ModernToast.warning(this, "Cannot join. Maximum 15 players allowed.");
-            return;
-        }
-        
-        // Get user's display name or email
-        String userName = currentUser.getDisplayName();
-        if (userName == null || userName.isEmpty()) {
-            userName = currentUser.getEmail();
-        }
-        if (userName == null || userName.isEmpty()) {
-            userName = "Player " + (gameData.getPlayers().size() + 1);
-        }
-        
-        // Check if name already exists and make it unique
-        java.util.Set<String> existingNames = new java.util.HashSet<>();
-        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
-            existingNames.add(player.getName().toLowerCase());
-        }
-        
-        String finalName = userName;
-        int counter = 1;
-        while (existingNames.contains(finalName.toLowerCase())) {
-            counter++;
-            finalName = userName + " " + counter;
-        }
-        
-        // Create new player for current user
-        com.example.rummypulse.data.Player newPlayer = new com.example.rummypulse.data.Player();
-        newPlayer.setPlayerId(java.util.UUID.randomUUID().toString());
-        newPlayer.setName(finalName);
-        newPlayer.setUserId(currentUserId); // Set user ID for joined user
-        newPlayer.setIsCreator(false); // Not the creator
-
-        java.util.List<Integer> scores;
-        if (hasAnyEnteredScoreInGame(gameData)) {
-            scores = buildScoresForNewMidGamePlayer(gameData);
-        } else {
-            scores = new java.util.ArrayList<>();
-            for (int i = 0; i < 10; i++) {
-                scores.add(-1);
-            }
-        }
-        newPlayer.setScores(scores);
-        
-        // Generate random number for player ID (if more than 2 players)
-        if (gameData.getPlayers().size() >= 2) {
-            // Generate a unique random number
-            java.util.Set<Integer> existingNumbers = new java.util.HashSet<>();
-            for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
-                if (player.getRandomNumber() != null) {
-                    existingNumbers.add(player.getRandomNumber());
-                }
-            }
-            
-            int randomNumber;
-            do {
-                randomNumber = 10 + new java.util.Random().nextInt(90); // 10-99
-            } while (existingNumbers.contains(randomNumber));
-            
-            newPlayer.setRandomNumber(randomNumber);
-        }
-        
-        String joinedName = finalName;
-        enqueueGameOperation(
-                GameOperationType.ADD_PLAYER,
-                newPlayer.getPlayerId(),
-                GameOperationPayload.player(newPlayer),
-                () -> ModernToast.success(
-                        this, "You joined locally as '" + joinedName + "'; syncing…"));
     }
     
     private void showDeletePlayerConfirmation(com.example.rummypulse.data.Player player, com.example.rummypulse.data.GameData gameData) {

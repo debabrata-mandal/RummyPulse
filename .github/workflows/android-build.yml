@@ -14,19 +14,69 @@ concurrency:
 permissions:
   contents: write
   packages: write
+  checks: write
+  pull-requests: write
 
 jobs:
-  build:
+  test:
+    name: Unit Tests
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up JDK 17
+    - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Setup google-services.json for CI
+      run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
+
+    - name: Run unit tests
+      run: ./gradlew testDebugUnitTest
+
+    - name: Publish test results (Checks tab)
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Unit Tests
+        path: app/build/test-results/testDebugUnitTest/*.xml
+        reporter: java-junit
+        fail-on-error: true
+
+    - name: Publish test results (PR comment)
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: app/build/test-results/testDebugUnitTest/*.xml
+        comment_title: Unit Test Results
+
+    - name: Upload test HTML report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-report-html
+        path: app/build/reports/tests/testDebugUnitTest/
+
+  build:
+    name: Build Release APK
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
         distribution: 'temurin'
 
     - name: Grant execute permission for gradlew
@@ -46,17 +96,17 @@ jobs:
         git fetch --tags
         latest_tag=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || echo "v0.0.0")
         echo "Latest tag: $latest_tag"
-        
+
         # Extract version numbers
         version=$(echo $latest_tag | sed 's/v//')
         major=$(echo $version | cut -d. -f1)
         minor=$(echo $version | cut -d. -f2)
         patch=$(echo $version | cut -d. -f3)
-        
+
         # Get commit message (first line only to avoid multiline issues)
         commit_msg=$(echo "${{ github.event.head_commit.message }}" | head -n1 | tr -d '\n\r')
         echo "Commit message: $commit_msg"
-        
+
         # Determine version bump based on commit message
         if [[ $commit_msg =~ ^(feat|feature)(\(.+\))?: ]]; then
           echo "Minor version bump (feature)"
@@ -77,12 +127,12 @@ jobs:
           echo "Default patch version bump"
           patch=$((patch + 1))
         fi
-        
+
         new_version="$major.$minor.$patch"
         new_tag="v$new_version"
         echo "New version: $new_version"
         echo "New tag: $new_tag"
-        
+
         # Check if tag already exists
         if git tag -l | grep -q "^$new_tag$"; then
           echo "⚠️  Tag $new_tag already exists! Force incrementing patch version."
@@ -92,7 +142,7 @@ jobs:
           echo "Updated version: $new_version"
           echo "Updated tag: $new_tag"
         fi
-        
+
         # Set outputs
         echo "version=$new_version" >> $GITHUB_OUTPUT
         echo "tag=$new_tag" >> $GITHUB_OUTPUT
@@ -101,19 +151,19 @@ jobs:
       run: |
         # Update versionName in build.gradle.kts
         sed -i "s/versionName = \".*\"/versionName = \"${{ steps.build_version.outputs.version }}\"/" app/build.gradle.kts
-        
+
         # Update versionCode (increment by build number)
         new_code=${{ github.run_number }}
         sed -i "s/versionCode = .*/versionCode = $new_code/" app/build.gradle.kts
-        
+
         echo "Updated versionName to ${{ steps.build_version.outputs.version }}"
         echo "Updated versionCode to $new_code"
-        
+
         # Verify the changes
         grep -E "(versionName|versionCode)" app/build.gradle.kts
 
     # Groq: optional secrets GROQ_API_KEY / GROQ_MODEL_ID passed as env (same names as local Gradle builds).
-    - name: Build with Gradle
+    - name: Build release APK
       env:
         GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         GROQ_MODEL_ID: ${{ secrets.GROQ_MODEL_ID }}
@@ -121,7 +171,7 @@ jobs:
         if [ -z "$GROQ_API_KEY" ]; then
           echo "GROQ_API_KEY secret not set — create-game name generation will be skipped in this APK."
         fi
-        ./gradlew testDebugUnitTest assembleRelease
+        ./gradlew assembleRelease
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
@@ -130,6 +180,7 @@ jobs:
         path: app/build/outputs/apk/release/app-release.apk
 
   release:
+    name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -153,17 +204,17 @@ jobs:
         git fetch --tags
         latest_tag=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || echo "v0.0.0")
         echo "Latest tag: $latest_tag"
-        
+
         # Extract version numbers
         version=$(echo $latest_tag | sed 's/v//')
         major=$(echo $version | cut -d. -f1)
         minor=$(echo $version | cut -d. -f2)
         patch=$(echo $version | cut -d. -f3)
-        
+
         # Get commit message (first line only to avoid multiline issues)
         commit_msg=$(echo "${{ github.event.head_commit.message }}" | head -n1 | tr -d '\n\r')
         echo "Commit message: $commit_msg"
-        
+
         # Determine version bump based on commit message
         if [[ $commit_msg =~ ^(feat|feature)(\(.+\))?: ]]; then
           echo "Minor version bump (feature)"
@@ -184,12 +235,12 @@ jobs:
           echo "Default patch version bump"
           patch=$((patch + 1))
         fi
-        
+
         new_version="$major.$minor.$patch"
         new_tag="v$new_version"
         echo "New version: $new_version"
         echo "New tag: $new_tag"
-        
+
         # Check if tag already exists
         if git tag -l | grep -q "^$new_tag$"; then
           echo "⚠️  Tag $new_tag already exists! Force incrementing patch version."
@@ -199,7 +250,7 @@ jobs:
           echo "Updated version: $new_version"
           echo "Updated tag: $new_tag"
         fi
-        
+
         # Set outputs
         echo "version=$new_version" >> $GITHUB_OUTPUT
         echo "tag=$new_tag" >> $GITHUB_OUTPUT
@@ -211,17 +262,17 @@ jobs:
         name: RummyPulse ${{ steps.version.outputs.tag }}
         body: |
           ## RummyPulse Android App
-          
+
           **Version:** ${{ steps.version.outputs.tag }}
           **Build Number:** ${{ github.run_number }}
           **Commit:** ${{ github.sha }}
           **Date:** ${{ github.event.head_commit.timestamp }}
-          
+
           ### Installation Instructions
           1. Download the APK file below
           2. Enable "Install from unknown sources" in your Android device settings
           3. Install the APK on your device
-          
+
           ### Changes
           ${{ github.event.head_commit.message }}
         files: ./apk/app-release.apk
