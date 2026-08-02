@@ -14,6 +14,7 @@ concurrency:
 permissions:
   contents: write
   packages: write
+  checks: write
 
 jobs:
   build:
@@ -112,8 +113,27 @@ jobs:
         # Verify the changes
         grep -E "(versionName|versionCode)" app/build.gradle.kts
 
+    - name: Run unit tests
+      run: ./gradlew testDebugUnitTest
+
+    - name: Publish test results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: Unit Tests
+        path: app/build/test-results/testDebugUnitTest/*.xml
+        reporter: java-junit
+        fail-on-error: true
+
+    - name: Upload test HTML report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-report-html
+        path: app/build/reports/tests/testDebugUnitTest/
+
     # Groq: optional secrets GROQ_API_KEY / GROQ_MODEL_ID passed as env (same names as local Gradle builds).
-    - name: Build with Gradle
+    - name: Build release APK
       env:
         GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         GROQ_MODEL_ID: ${{ secrets.GROQ_MODEL_ID }}
@@ -121,7 +141,7 @@ jobs:
         if [ -z "$GROQ_API_KEY" ]; then
           echo "GROQ_API_KEY secret not set — create-game name generation will be skipped in this APK."
         fi
-        ./gradlew testDebugUnitTest assembleRelease
+        ./gradlew assembleRelease
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
