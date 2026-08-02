@@ -51,6 +51,10 @@ public class PlayerConsolidationViewModel extends ViewModel {
         gameRepository.loadAllGamesWithRealtimeListener();
     }
 
+    PlayerConsolidationViewModel(GameRepository gameRepository) {
+        this.gameRepository = gameRepository;
+    }
+
     public LiveData<List<GameItem>> getGameItems() {
         return gameRepository.getGameItems();
     }
