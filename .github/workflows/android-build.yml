@@ -15,6 +15,7 @@ permissions:
   contents: write
   packages: write
   checks: write
+  pull-requests: write
 
 jobs:
   build:
@@ -116,7 +117,7 @@ jobs:
     - name: Run unit tests
       run: ./gradlew testDebugUnitTest
 
-    - name: Publish test results
+    - name: Publish test results (Checks tab)
       uses: dorny/test-reporter@v1
       if: always()
       with:
@@ -124,6 +125,13 @@ jobs:
         path: app/build/test-results/testDebugUnitTest/*.xml
         reporter: java-junit
         fail-on-error: true
+
+    - name: Publish test results (PR comment)
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      if: always()
+      with:
+        files: app/build/test-results/testDebugUnitTest/*.xml
+        comment_title: Unit Test Results
 
     - name: Upload test HTML report
       uses: actions/upload-artifact@v4
