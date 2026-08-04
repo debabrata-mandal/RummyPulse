@@ -48,6 +48,8 @@ import com.example.rummypulse.data.sync.GameOperationProjector;
 import com.example.rummypulse.data.sync.GameOperationRepository;
 import com.example.rummypulse.data.sync.GameOperationType;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
+import com.example.rummypulse.ui.join.PlayerRoundStatistics;
+import com.example.rummypulse.ui.join.PlayerRoundStatisticsCalculator;
 import com.example.rummypulse.utils.ModernToast;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -1684,9 +1686,19 @@ public class JoinGameActivity extends AppCompatActivity {
 
         PlayerStanding currentStanding = null;
         int currentPosition = -1;
+        if (selectedViewRoundPlayerKey != null) {
+            for (int i = 0; i < standings.size(); i++) {
+                Player candidate = standings.get(i).player;
+                if (selectedViewRoundPlayerKey.equals(viewPlayerSelectionKey(candidate))) {
+                    currentStanding = standings.get(i);
+                    currentPosition = i + 1;
+                    break;
+                }
+            }
+        }
         for (int i = 0; i < standings.size(); i++) {
             Player candidate = standings.get(i).player;
-            if (!TextUtils.isEmpty(currentUserId)
+            if (currentStanding == null && !TextUtils.isEmpty(currentUserId)
                     && currentUserId.equals(candidate.getUserId())) {
                 currentStanding = standings.get(i);
                 currentPosition = i + 1;
@@ -1700,6 +1712,9 @@ public class JoinGameActivity extends AppCompatActivity {
             currentStanding = standings.get(0);
             currentPosition = 1;
         }
+
+        renderViewModePlayerStatistics(gameData,
+                currentStanding == null ? null : currentStanding.player);
 
         if (currentStanding == null) {
             title.setText("PLAYER PERFORMANCE");
@@ -1729,6 +1744,19 @@ public class JoinGameActivity extends AppCompatActivity {
             balanceView.setText("₹0");
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
         }
+    }
+
+    private void renderViewModePlayerStatistics(
+            com.example.rummypulse.data.GameData gameData, Player player) {
+        PlayerRoundStatistics statistics =
+                PlayerRoundStatisticsCalculator.calculate(player, gameData);
+        View viewRoot = binding.viewModeContent.getRoot();
+        ((TextView) viewRoot.findViewById(R.id.view_mode_made_game_count))
+                .setText(String.valueOf(statistics.getMadeGameCount()));
+        ((TextView) viewRoot.findViewById(R.id.view_mode_packed_count))
+                .setText(String.valueOf(statistics.getPackedCount()));
+        ((TextView) viewRoot.findViewById(R.id.view_mode_full_hand_count))
+                .setText(String.valueOf(statistics.getFullHandCount()));
     }
 
     private void renderViewModeSettlementRows(com.example.rummypulse.data.GameData gameData) {
@@ -1763,15 +1791,14 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         int positiveCount = 0;
         int negativeCount = 0;
-        int hiddenCount = 0;
         for (int i = 0; i < standings.size(); i++) {
             PlayerStanding standing = standings.get(i);
             boolean amountVisible = shouldShowStandingAmountForPlayer(gameData, standing.player);
             LinearLayout targetRows;
-            if (!amountVisible) {
-                targetRows = hiddenRows;
-                hiddenCount++;
-            } else if (standing.netAmount < 0) {
+            // The settlement direction is safe to expose because scores are already
+            // visible. Keep restricted amounts hidden, but still place each player in
+            // the correct receives/pays column using the internally calculated net.
+            if (standing.netAmount < 0) {
                 targetRows = negativeRows;
                 negativeCount++;
             } else {
@@ -1798,8 +1825,14 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView amount = row.findViewById(R.id.view_settlement_amount);
             if (!amountVisible) {
                 applyStandingNetAmountPlaceholder(amount);
-                direction.setText("SETTLEMENT");
                 amount.setBackgroundResource(R.drawable.bg_view_amount_neutral);
+                if (standing.netAmount > 0) {
+                    direction.setText("RECEIVES");
+                } else if (standing.netAmount < 0) {
+                    direction.setText("PAYS");
+                } else {
+                    direction.setText("EVEN");
+                }
             } else if (standing.netAmount > 0) {
                 amount.setText("+₹" + String.format(Locale.getDefault(), "%.0f", standing.netAmount));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
@@ -1821,6 +1854,12 @@ public class JoinGameActivity extends AppCompatActivity {
             row.setOnClickListener(v -> {
                 selectedViewRoundPlayerKey = selectionKey;
                 renderViewModeSettlementRows(gameData);
+                View selectedRoot = binding.viewModeContent.getRoot();
+                renderCurrentPlayerPerformance(gameData,
+                        selectedRoot.findViewById(R.id.view_mode_settlement_status),
+                        selectedRoot.findViewById(R.id.view_mode_player_position),
+                        selectedRoot.findViewById(R.id.view_mode_balance_label),
+                        selectedRoot.findViewById(R.id.view_mode_player_balance));
                 renderViewModeRoundRows(gameData);
             });
             targetRows.addView(row);
@@ -1829,7 +1868,7 @@ public class JoinGameActivity extends AppCompatActivity {
         paysCount.setText(String.valueOf(negativeCount));
         positiveEmpty.setVisibility(positiveCount == 0 ? View.VISIBLE : View.GONE);
         negativeEmpty.setVisibility(negativeCount == 0 ? View.VISIBLE : View.GONE);
-        hiddenSection.setVisibility(hiddenCount > 0 ? View.VISIBLE : View.GONE);
+        hiddenSection.setVisibility(View.GONE);
     }
 
     private String viewPlayerSelectionKey(Player player) {

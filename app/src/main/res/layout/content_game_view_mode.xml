@@ -169,34 +169,14 @@
                                 android:gravity="center"
                                 android:orientation="vertical"
                                 android:padding="8dp">
-                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="CONTRIBUTION" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
-                                <TextView android:id="@+id/view_mode_contribution_summary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" android:text="10% · ₹94" android:textColor="@color/view_gold" android:textSize="15sp" android:textStyle="bold" />
+                                <TextView android:id="@+id/view_mode_balance_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="BALANCE" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                                <TextView android:id="@+id/view_mode_player_balance" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" android:text="+₹379" android:textColor="@color/view_mint" android:textSize="15sp" android:textStyle="bold" />
                             </LinearLayout>
 
                             <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="5dp"
-                                android:layout_weight="1"
-                                android:background="@drawable/bg_view_metric"
-                                android:gravity="center"
-                                android:orientation="vertical"
-                                android:padding="8dp">
-                                <TextView android:id="@+id/view_mode_balance_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="BALANCE" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
-                                <TextView android:id="@+id/view_mode_player_balance" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" android:text="+₹379" android:textColor="@color/view_mint" android:textSize="15sp" android:textStyle="bold" />
-                            </LinearLayout>
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="7dp"
-                            android:orientation="horizontal">
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginEnd="5dp"
                                 android:layout_weight="1"
                                 android:background="@drawable/bg_view_metric"
                                 android:gravity="center"
@@ -205,18 +185,53 @@
                                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="POSITION" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
                                 <TextView android:id="@+id/view_mode_player_position" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" android:text="#3 of 8" android:textColor="@color/view_violet_light" android:textSize="15sp" android:textStyle="bold" />
                             </LinearLayout>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="7dp"
+                            android:baselineAligned="false"
+                            android:orientation="horizontal">
 
                             <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="5dp"
+                                android:layout_marginEnd="4dp"
                                 android:layout_weight="1"
                                 android:background="@drawable/bg_view_metric"
                                 android:gravity="center"
                                 android:orientation="vertical"
-                                android:padding="8dp">
-                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="TOTAL PLAYERS" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
-                                <TextView android:id="@+id/view_mode_total_players" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" android:text="5" android:textColor="@color/view_text_primary" android:textSize="15sp" android:textStyle="bold" />
+                                android:padding="7dp">
+                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:maxLines="1" android:text="MADE GAME" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                                <TextView android:id="@+id/view_mode_made_game_count" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:text="0" android:textColor="@color/view_mint" android:textSize="15sp" android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="3dp"
+                                android:layout_marginEnd="3dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_view_metric"
+                                android:gravity="center"
+                                android:orientation="vertical"
+                                android:padding="7dp">
+                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:maxLines="1" android:text="PACKED" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                                <TextView android:id="@+id/view_mode_packed_count" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:text="0" android:textColor="@color/view_gold" android:textSize="15sp" android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="4dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_view_metric"
+                                android:gravity="center"
+                                android:orientation="vertical"
+                                android:padding="7dp">
+                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:maxLines="1" android:text="FULL HAND" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                                <TextView android:id="@+id/view_mode_full_hand_count" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:text="0" android:textColor="@color/view_coral" android:textSize="15sp" android:textStyle="bold" />
                             </LinearLayout>
                         </LinearLayout>
                     </LinearLayout>
@@ -239,6 +254,39 @@
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Live projected amounts" android:textColor="@color/view_text_muted" android:textSize="11sp" />
                     </LinearLayout>
 
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_view_metric"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="8dp">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="CONTRIBUTION" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                        <TextView android:id="@+id/view_mode_contribution_summary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" android:text="10% · ₹94" android:textColor="@color/view_gold" android:textSize="15sp" android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_view_metric"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="8dp">
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="TOTAL PLAYERS" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                        <TextView android:id="@+id/view_mode_total_players" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" android:text="5" android:textColor="@color/view_text_primary" android:textSize="15sp" android:textStyle="bold" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <LinearLayout
