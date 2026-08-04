@@ -45,6 +45,7 @@ public final class GameDataCopies {
         copy.setRandomNumber(source.getRandomNumber());
         copy.setUserId(source.getUserId());
         copy.setIsCreator(source.getIsCreator());
+        copy.setMidGameJoinActiveRound(source.getMidGameJoinActiveRound());
         return copy;
     }
 }

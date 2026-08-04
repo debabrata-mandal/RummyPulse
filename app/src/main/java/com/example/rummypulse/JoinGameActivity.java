@@ -3912,116 +3912,21 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     /**
-     * Score for a player in a given round (1-based) from model data.
-     * Returns -1 if that round is not entered.
-     */
-    private int effectiveScoreForPlayerRound(com.example.rummypulse.data.GameData gameData, int playerIndex, int round1Based) {
-        if (gameData.getPlayers() == null || playerIndex < 0 || playerIndex >= gameData.getPlayers().size()) {
-            return -1;
-        }
-        com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
-        if (player.getScores() != null && player.getScores().size() >= round1Based) {
-            Integer s = player.getScores().get(round1Based - 1);
-            if (s != null && s >= 0) {
-                return s;
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Sum of round scores {@code > 0} for one existing player (same rule as {@link com.example.rummypulse.data.Player#getTotalScore()}),
-     * using card fields when present via {@link #effectiveScoreForPlayerRound}.
-     */
-    private int totalPositiveRoundsScoreForPlayer(com.example.rummypulse.data.GameData gameData, int playerIndex) {
-        int sum = 0;
-        for (int r = 1; r <= 10; r++) {
-            int v = effectiveScoreForPlayerRound(gameData, playerIndex, r);
-            if (v > 0) {
-                sum += v;
-            }
-        }
-        return sum;
-    }
-
-    /**
-     * Largest cumulative total among existing players (sum of positive round scores). 0 if none.
-     */
-    private int maxTotalPositiveScoreAmongExistingPlayers(com.example.rummypulse.data.GameData gameData) {
-        if (gameData.getPlayers() == null) {
-            return 0;
-        }
-        int max = 0;
-        for (int pi = 0; pi < gameData.getPlayers().size(); pi++) {
-            int t = totalPositiveRoundsScoreForPlayer(gameData, pi);
-            if (t > max) {
-                max = t;
-            }
-        }
-        return max;
-    }
-
-    /**
-     * Count of completed rounds before the backfill round that receive placeholder score {@code 1}.
-     */
-    private int priorMidGamePlaceholderRoundCount(int activeRound) {
-        if (activeRound == 0) {
-            return 9;
-        }
-        if (activeRound <= 1) {
-            return 0;
-        }
-        return activeRound - 2;
-    }
-
-    /**
      * Scores for a player added mid-game: 1 for fully completed rounds before the last completed one,
-     * {@code (highest total score among existing players) + increment - prior placeholder count} on the
+     * a value on the last completed round that makes the new player's cumulative total equal to
+     * {@code (highest cumulative total among existing players) + increment}. It is placed on the
      * <strong>last completed</strong> round ({@code activeRound - 1}), not on the next open round
-     * ({@code activeRound}). Prior placeholders are subtracted so cumulative total stays
-     * {@code max + increment}. When the game is already complete, round 10 gets that value. Rounds after
-     * the backfilled cell stay {@code -1} until played. Multiple adds during the same open round reuse
-     * the cached backfill score on {@link com.example.rummypulse.data.GameData}.
+     * ({@code activeRound}); earlier completed rounds retain placeholder scores of 1. When the game is
+     * already complete, round 10 gets the balancing value. Rounds after the backfilled cell stay
+     * {@code -1} until played. Multiple adds during the same open round reuse the cached backfill score
+     * on {@link com.example.rummypulse.data.GameData}.
      */
     private java.util.List<Integer> buildScoresForNewMidGamePlayer(com.example.rummypulse.data.GameData gameData) {
-        java.util.List<Integer> scores = new java.util.ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            scores.add(-1);
-        }
         int increment = (int) com.example.rummypulse.data.GameDefaultsRepository.getInstance(getApplicationContext())
                 .getMidGameIncrementOrFallback();
         int activeRound = getActiveIncompleteRound1BasedOrZero(gameData);
-        int priorPlaceholderCount = priorMidGamePlaceholderRoundCount(activeRound);
-        Integer storedRound = gameData.getMidGameJoinActiveRound();
-        Integer storedScore = gameData.getMidGameJoinBackfillScore();
-        int backfillScore;
-        if (storedRound != null && storedScore != null && storedRound == activeRound) {
-            backfillScore = storedScore;
-        } else {
-            backfillScore = maxTotalPositiveScoreAmongExistingPlayers(gameData) + increment - priorPlaceholderCount;
-            backfillScore = Math.max(1, backfillScore);
-            gameData.setMidGameJoinActiveRound(activeRound);
-            gameData.setMidGameJoinBackfillScore(backfillScore);
-        }
-        if (activeRound == 0) {
-            // All rounds complete: earlier rounds 1–9 → 1, round 10 → highest cumulative total + increment
-            for (int i = 0; i < 9; i++) {
-                scores.set(i, 1);
-            }
-            scores.set(9, backfillScore);
-            return scores;
-        }
-        if (activeRound == 1) {
-            // No round is fully complete for everyone yet; only round 1 is open
-            scores.set(0, backfillScore);
-            return scores;
-        }
-        // Last fully completed round is (activeRound - 1). Placeholder 1 on strictly earlier completed rounds.
-        for (int r = 1; r <= activeRound - 2; r++) {
-            scores.set(r - 1, 1);
-        }
-        scores.set(activeRound - 2, backfillScore);
-        return scores;
+        return com.example.rummypulse.data.MidGameJoinScoreCalculator.buildScores(
+                gameData, activeRound, increment);
     }
 
     private void onAddPlayerFabClicked() {
@@ -4117,6 +4022,8 @@ public class JoinGameActivity extends AppCompatActivity {
         java.util.List<Integer> scores;
         if (hasAnyEnteredScoreInGame(gameData)) {
             scores = buildScoresForNewMidGamePlayer(gameData);
+            newPlayer.setMidGameJoinActiveRound(
+                    getActiveIncompleteRound1BasedOrZero(gameData));
         } else {
             scores = new java.util.ArrayList<>();
             for (int i = 0; i < 10; i++) {
@@ -5180,6 +5087,10 @@ public class JoinGameActivity extends AppCompatActivity {
         player.setIsCreator(playerMap.get("isCreator") instanceof Boolean
                 ? (Boolean) playerMap.get("isCreator")
                 : null);
+        player.setMidGameJoinActiveRound(
+                playerMap.get("midGameJoinActiveRound") instanceof Number
+                        ? ((Number) playerMap.get("midGameJoinActiveRound")).intValue()
+                        : null);
         java.util.List<Integer> scores = new java.util.ArrayList<>();
         if (playerMap.get("scores") instanceof java.util.List) {
             for (Object score : (java.util.List<?>) playerMap.get("scores")) {
