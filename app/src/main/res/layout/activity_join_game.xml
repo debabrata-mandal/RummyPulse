@@ -8,6 +8,7 @@
     android:fitsSystemWindows="true">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/header_background"
@@ -369,6 +370,7 @@
 
     <!-- Main Content Area -->
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/game_edit_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
@@ -1056,6 +1058,14 @@
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
+
+    <!-- Dedicated read-only surface. The existing edit content above remains unchanged. -->
+    <include
+        android:id="@+id/view_mode_content"
+        layout="@layout/content_game_view_mode"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
 
     <!-- Enter round scores (edit mode, game in progress) — bottom start so it does not overlap Add player FAB -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton

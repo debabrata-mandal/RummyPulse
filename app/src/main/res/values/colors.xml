@@ -102,4 +102,18 @@
     <color name="role_badge_background">@color/surface_variant</color>
     <color name="promote_button_color">@color/success_green</color>
     <color name="demote_button_color">@color/warning_orange</color>
+
+    <!-- Dedicated game view palette -->
+    <color name="view_background">#FF090B14</color>
+    <color name="view_surface">#FF121623</color>
+    <color name="view_surface_soft">#FF171C2C</color>
+    <color name="view_stroke">#FF252B3D</color>
+    <color name="view_text_primary">#FFF7F8FC</color>
+    <color name="view_text_secondary">#FFB7BED0</color>
+    <color name="view_text_muted">#FF7F889D</color>
+    <color name="view_violet">#FF7357F6</color>
+    <color name="view_violet_light">#FFA895FF</color>
+    <color name="view_mint">#FF62E6B7</color>
+    <color name="view_gold">#FFFFCB66</color>
+    <color name="view_coral">#FFFF7B86</color>
 </resources>
