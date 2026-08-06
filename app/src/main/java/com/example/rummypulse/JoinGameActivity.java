@@ -1167,6 +1167,20 @@ public class JoinGameActivity extends AppCompatActivity {
                 showQrCodeDialog(currentGameId);
             }
         });
+        binding.viewModeContent.getRoot().findViewById(R.id.view_mode_overflow).setOnClickListener(v -> {
+            android.view.ContextThemeWrapper popupContext = new android.view.ContextThemeWrapper(
+                    this, R.style.ThemeOverlay_RummyPulse_ViewPopup);
+            android.widget.PopupMenu popupMenu = new android.widget.PopupMenu(popupContext, v);
+            popupMenu.getMenuInflater().inflate(R.menu.menu_join_game, popupMenu.getMenu());
+            popupMenu.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() == R.id.action_edit_access) {
+                    requestEditAccess();
+                    return true;
+                }
+                return false;
+            });
+            popupMenu.show();
+        });
         binding.btnEnterRoundScores.setOnClickListener(v -> startSequentialRoundScoreEntryFlow());
 
         binding.btnCorrectPastRound.setOnClickListener(v -> startPastRoundCorrectionFlow());
@@ -1657,12 +1671,15 @@ public class JoinGameActivity extends AppCompatActivity {
         int currentRound = calculateCurrentRound(gameData);
         boolean completed = isGameCompleted(gameData);
         int completedRounds = completed ? 10 : Math.max(0, currentRound - 1);
-        roundStatus.setText(completed ? "10 ROUNDS COMPLETE" : "ROUND " + currentRound + " OF 10");
+        roundStatus.setText("Round " + (completed ? 10 : currentRound) + " of 10");
         progress.setMax(10);
         progress.setProgress(completedRounds);
         liveBadge.setText(completed ? "●  COMPLETE" : "●  LIVE");
         liveBadge.setTextColor(ContextCompat.getColor(this,
                 completed ? R.color.accent_blue_light : R.color.success_green));
+        liveBadge.setBackgroundResource(completed
+                ? R.drawable.bg_view_complete_badge
+                : R.drawable.bg_view_live_badge);
         totalPlayers.setText(String.valueOf(
                 gameData.getPlayers() == null ? 0 : gameData.getPlayers().size()));
         contributionSummary.setText(String.format(Locale.getDefault(), "%.0f%% · ₹%d",
@@ -1717,17 +1734,23 @@ public class JoinGameActivity extends AppCompatActivity {
                 currentStanding == null ? null : currentStanding.player);
 
         if (currentStanding == null) {
-            title.setText("PLAYER PERFORMANCE");
-            balanceLabel.setText("BALANCE");
+            title.setText("Player");
+            balanceLabel.setText("Balance");
             positionView.setText("—");
             balanceView.setText("—");
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
             return;
         }
 
-        String possessiveName = currentStanding.player.getName() + "'s";
-        title.setText(possessiveName.toUpperCase(Locale.getDefault()) + " PERFORMANCE");
-        balanceLabel.setText("BALANCE");
+        boolean isCurrentPlayer = !TextUtils.isEmpty(currentUserId)
+                && currentUserId.equals(currentStanding.player.getUserId());
+        if (isCurrentPlayer) {
+            title.setText("My Performance");
+        } else {
+            String playerName = currentStanding.player.getName();
+            title.setText((TextUtils.isEmpty(playerName) ? "Player" : playerName) + " Performance");
+        }
+        balanceLabel.setText("Balance");
         positionView.setText("#" + currentPosition + " of " + standings.size());
         if (!shouldShowStandingAmountForPlayer(gameData, currentStanding.player)) {
             balanceView.setText(getString(R.string.game_view_amount_hidden));
@@ -1827,27 +1850,27 @@ public class JoinGameActivity extends AppCompatActivity {
                 applyStandingNetAmountPlaceholder(amount);
                 amount.setBackgroundResource(R.drawable.bg_view_amount_neutral);
                 if (standing.netAmount > 0) {
-                    direction.setText("RECEIVES");
+                    direction.setText("Receives");
                 } else if (standing.netAmount < 0) {
-                    direction.setText("PAYS");
+                    direction.setText("Pays");
                 } else {
-                    direction.setText("EVEN");
+                    direction.setText("Even");
                 }
             } else if (standing.netAmount > 0) {
                 amount.setText("+₹" + String.format(Locale.getDefault(), "%.0f", standing.netAmount));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_receive);
-                direction.setText("RECEIVES");
+                direction.setText("Receives");
             } else if (standing.netAmount < 0) {
                 amount.setText("-₹" + String.format(Locale.getDefault(), "%.0f", Math.abs(standing.netAmount)));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_pay);
-                direction.setText("PAYS");
+                direction.setText("Pays");
             } else {
                 amount.setText("₹0");
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_neutral);
-                direction.setText("EVEN");
+                direction.setText("Even");
             }
             row.setClickable(true);
             row.setFocusable(true);
@@ -1914,15 +1937,18 @@ public class JoinGameActivity extends AppCompatActivity {
         if (currentPlayer == null) {
             container.setVisibility(View.GONE);
             empty.setVisibility(View.VISIBLE);
-            title.setText("ROUND SCORES");
+            title.setText("Round Scores");
             subtitle.setText("Select a player from the settlement board");
             empty.setText("Select a player above to view round scores");
             return;
         }
         container.setVisibility(View.VISIBLE);
         empty.setVisibility(View.GONE);
-        title.setText((currentPlayer.getName() + "'s ROUND SCORES")
-                .toUpperCase(Locale.getDefault()));
+        boolean isCurrentPlayer = !TextUtils.isEmpty(currentUserId)
+                && currentUserId.equals(currentPlayer.getUserId());
+        title.setText(isCurrentPlayer
+                ? "My Round Scores"
+                : currentPlayer.getName() + "'s Round Scores");
         subtitle.setText("Performance across all ten rounds");
         int currentRound = calculateCurrentRound(gameData);
         LinearLayout row = null;
