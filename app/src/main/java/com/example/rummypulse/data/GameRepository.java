@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class GameRepository {
@@ -1290,22 +1292,19 @@ public class GameRepository {
     }
 
     public void deleteGame(String gameId) {
-        viewApprovalRepository.deleteAllForGame(gameId);
-        // Delete from both collections
-        db.collection(FirestoreCollections.GAMES).document(gameId).delete()
-                .addOnSuccessListener(aVoid -> {
-                    db.collection(FirestoreCollections.GAME_DATA).document(gameId).delete()
-                            .addOnSuccessListener(aVoid1 -> {
-                                // Reload the list after deletion
-                                loadAllGames();
-                            })
-                            .addOnFailureListener(e -> {
-                                errorLiveData.setValue("Failed to delete game data: " + e.getMessage());
-                            });
-                })
-                .addOnFailureListener(e -> {
-                    errorLiveData.setValue("Failed to delete game: " + e.getMessage());
-                });
+        deleteScoreHistoryForGames(java.util.Collections.singletonList(gameId), () -> {
+            viewApprovalRepository.deleteAllForGame(gameId);
+            // Keep games_v2 until history is gone so the admin-only cleanup runs first.
+            db.collection(FirestoreCollections.GAME_DATA).document(gameId).delete()
+                    .addOnSuccessListener(unused ->
+                            db.collection(FirestoreCollections.GAMES).document(gameId).delete()
+                                    .addOnSuccessListener(ignored -> loadAllGames())
+                                    .addOnFailureListener(error -> errorLiveData.setValue(
+                                            "Failed to delete game: "
+                                                    + safeErrorMessage(error))))
+                    .addOnFailureListener(error -> errorLiveData.setValue(
+                            "Failed to delete game data: " + safeErrorMessage(error)));
+        }, message -> errorLiveData.setValue(message));
     }
 
     /**
@@ -1345,28 +1344,30 @@ public class GameRepository {
                             return;
                         }
 
-                        WriteBatch batch = db.batch();
-                        for (String gameId : gameIds) {
-                            batch.delete(db.collection(FirestoreCollections.GAMES)
-                                    .document(gameId));
-                            batch.delete(db.collection(FirestoreCollections.GAME_DATA)
-                                    .document(gameId));
-                        }
-                        for (DocumentReference reference : approvalReferences) {
-                            batch.delete(reference);
-                        }
-                        batch.commit()
-                                .addOnSuccessListener(unused -> {
-                                    loadAllGames();
-                                    viewApprovalRepository.cleanupAfterGamesRemoved(gameIds);
-                                    if (onSuccess != null) {
-                                        onSuccess.run();
-                                    }
-                                })
-                                .addOnFailureListener(error -> reportDeleteFailure(
-                                        "Delete failed; no games were changed. "
-                                                + safeErrorMessage(error),
-                                        onFailure));
+                        deleteScoreHistoryForGames(gameIds, () -> {
+                            WriteBatch batch = db.batch();
+                            for (String gameId : gameIds) {
+                                batch.delete(db.collection(FirestoreCollections.GAME_DATA)
+                                        .document(gameId));
+                                batch.delete(db.collection(FirestoreCollections.GAMES)
+                                        .document(gameId));
+                            }
+                            for (DocumentReference reference : approvalReferences) {
+                                batch.delete(reference);
+                            }
+                            batch.commit()
+                                    .addOnSuccessListener(unused -> {
+                                        loadAllGames();
+                                        viewApprovalRepository.cleanupAfterGamesRemoved(gameIds);
+                                        if (onSuccess != null) {
+                                            onSuccess.run();
+                                        }
+                                    })
+                                    .addOnFailureListener(error -> reportDeleteFailure(
+                                            "Game history was removed, but deleting the game records failed. Retry deletion. "
+                                                    + safeErrorMessage(error),
+                                            onFailure));
+                        }, message -> reportDeleteFailure(message, onFailure));
                     }
 
                     @Override
@@ -1374,6 +1375,88 @@ public class GameRepository {
                         reportDeleteFailure(message, onFailure);
                     }
                 });
+    }
+
+    /**
+     * Firestore does not cascade parent-document deletes into subcollections. Remove every
+     * immutable event before removing the game's canonical records.
+     */
+    private void deleteScoreHistoryForGames(
+            List<String> gameIds, Runnable onSuccess, Consumer<String> onFailure) {
+        deleteScoreHistoryForGameAt(gameIds, 0, onSuccess, onFailure);
+    }
+
+    private void deleteScoreHistoryForGameAt(
+            List<String> gameIds, int index, Runnable onSuccess, Consumer<String> onFailure) {
+        if (index >= gameIds.size()) {
+            onSuccess.run();
+            return;
+        }
+        String gameId = gameIds.get(index);
+        loadScoreHistoryReferences(gameId, references ->
+                deleteReferencesInChunks(references, 0,
+                        () -> deleteScoreHistoryForGameAt(
+                                gameIds, index + 1, onSuccess, onFailure),
+                        error -> onFailure.accept(
+                                "Could not delete score history for " + gameId + ": "
+                                        + safeErrorMessage(error))),
+                error -> onFailure.accept(
+                        "Could not read score history for " + gameId + ": "
+                                + safeErrorMessage(error)));
+    }
+
+    private void loadScoreHistoryReferences(
+            String gameId,
+            Consumer<List<DocumentReference>> onSuccess,
+            Consumer<Exception> onFailure) {
+        List<DocumentReference> references =
+                java.util.Collections.synchronizedList(new ArrayList<>());
+        AtomicInteger remaining = new AtomicInteger(10);
+        AtomicBoolean failed = new AtomicBoolean(false);
+        for (int round = 1; round <= 10; round++) {
+            db.collection(FirestoreCollections.GAME_SCORE_HISTORY)
+                    .document(gameId)
+                    .collection("rounds")
+                    .document(String.valueOf(round))
+                    .collection("events")
+                    .get()
+                    .addOnSuccessListener(snapshot -> {
+                        if (failed.get()) {
+                            return;
+                        }
+                        for (DocumentSnapshot event : snapshot.getDocuments()) {
+                            references.add(event.getReference());
+                        }
+                        if (remaining.decrementAndGet() == 0) {
+                            onSuccess.accept(new ArrayList<>(references));
+                        }
+                    })
+                    .addOnFailureListener(error -> {
+                        if (failed.compareAndSet(false, true)) {
+                            onFailure.accept(error);
+                        }
+                    });
+        }
+    }
+
+    private void deleteReferencesInChunks(
+            List<DocumentReference> references,
+            int start,
+            Runnable onSuccess,
+            Consumer<Exception> onFailure) {
+        if (start >= references.size()) {
+            onSuccess.run();
+            return;
+        }
+        int end = Math.min(start + 400, references.size());
+        WriteBatch batch = db.batch();
+        for (int i = start; i < end; i++) {
+            batch.delete(references.get(i));
+        }
+        batch.commit()
+                .addOnSuccessListener(unused -> deleteReferencesInChunks(
+                        references, end, onSuccess, onFailure))
+                .addOnFailureListener(onFailure::accept);
     }
 
     private void reportDeleteFailure(String message, Consumer<String> onFailure) {

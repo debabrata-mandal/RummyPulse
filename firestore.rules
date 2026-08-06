@@ -145,7 +145,8 @@ service cloud.firestore {
               == request.resource.data.committedRevision
           && getAfter(/databases/$(database)/documents/gameData_v2/$(gameId))
               .data.revision == request.resource.data.committedRevision;
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if isAdmin();
     }
 
     match /gameViewApprovals_v2/{approvalId} {
