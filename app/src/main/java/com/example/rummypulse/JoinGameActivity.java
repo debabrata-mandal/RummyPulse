@@ -1217,10 +1217,7 @@ public class JoinGameActivity extends AppCompatActivity {
         viewModel.getPendingViewRequestsError().observe(this, error -> {
             if (!TextUtils.isEmpty(error)) {
                 ModernToast.error(this, error);
-                if (binding.textViewRequestsEmpty != null) {
-                    binding.textViewRequestsEmpty.setVisibility(View.VISIBLE);
-                    binding.textViewRequestsEmpty.setText(error);
-                }
+                renderViewRequests(viewModel.getPendingViewRequests().getValue());
             }
         });
 
@@ -1670,7 +1667,6 @@ public class JoinGameActivity extends AppCompatActivity {
         View root = binding.viewModeContent.getRoot();
         TextView title = root.findViewById(R.id.view_mode_game_title);
         TextView gameId = root.findViewById(R.id.view_mode_game_id);
-        TextView liveBadge = root.findViewById(R.id.view_mode_live_badge);
         TextView roundStatus = root.findViewById(R.id.view_mode_round_status);
         ProgressBar progress = root.findViewById(R.id.view_mode_round_progress);
         TextView settlementStatus = root.findViewById(R.id.view_mode_settlement_status);
@@ -1687,15 +1683,10 @@ public class JoinGameActivity extends AppCompatActivity {
         int currentRound = calculateCurrentRound(gameData);
         boolean completed = isGameCompleted(gameData);
         int completedRounds = completed ? 10 : Math.max(0, currentRound - 1);
-        roundStatus.setText("Round " + (completed ? 10 : currentRound) + " of 10");
+        roundStatus.setText((completed ? "Complete" : "Live")
+                + " · Round " + (completed ? 10 : currentRound) + " of 10");
         progress.setMax(10);
         progress.setProgress(completedRounds);
-        liveBadge.setText(completed ? "●  COMPLETE" : "●  LIVE");
-        liveBadge.setTextColor(ContextCompat.getColor(this,
-                completed ? R.color.accent_blue_light : R.color.success_green));
-        liveBadge.setBackgroundResource(completed
-                ? R.drawable.bg_view_complete_badge
-                : R.drawable.bg_view_live_badge);
         totalPlayers.setText(String.valueOf(
                 gameData.getPlayers() == null ? 0 : gameData.getPlayers().size()));
         contributionSummary.setText(String.format(Locale.getDefault(), "%.0f%% · ₹%d",
@@ -4057,6 +4048,13 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.viewRequestsHeader.setOnClickListener(v -> {
             toggleSection(binding.viewRequestsContent, binding.viewRequestsCollapseIcon);
         });
+        View viewRoot = binding.viewModeContent.getRoot();
+        View viewRequestsHeader = viewRoot.findViewById(R.id.view_mode_requests_header);
+        View viewRequestsContent = viewRoot.findViewById(R.id.view_mode_requests_content);
+        ImageView viewRequestsIcon =
+                viewRoot.findViewById(R.id.view_mode_requests_collapse_icon);
+        viewRequestsHeader.setOnClickListener(v ->
+                toggleSection(viewRequestsContent, viewRequestsIcon));
     }
 
     private void updateViewRequestsSectionVisibility(GameAuth auth) {
@@ -4065,6 +4063,9 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         boolean canManage = canManageViewRequests(auth);
         binding.viewRequestsCard.setVisibility(canManage ? View.VISIBLE : View.GONE);
+        View viewModeCard = binding.viewModeContent.getRoot()
+                .findViewById(R.id.view_mode_requests_card);
+        viewModeCard.setVisibility(canManage ? View.VISIBLE : View.GONE);
         if (canManage && currentGameId != null) {
             viewModel.startPendingViewRequestsListener(currentGameId);
         } else {
@@ -4093,7 +4094,22 @@ public class JoinGameActivity extends AppCompatActivity {
         if (binding == null || binding.viewRequestsContainer == null) {
             return;
         }
-        binding.viewRequestsContainer.removeAllViews();
+        renderViewRequestsInto(
+                binding.viewRequestsContainer,
+                binding.textViewRequestsEmpty,
+                binding.textViewRequestsBadge,
+                requests);
+        View viewRoot = binding.viewModeContent.getRoot();
+        renderViewRequestsInto(
+                viewRoot.findViewById(R.id.view_mode_requests_container),
+                viewRoot.findViewById(R.id.view_mode_requests_empty),
+                viewRoot.findViewById(R.id.view_mode_requests_badge),
+                requests);
+    }
+
+    private void renderViewRequestsInto(LinearLayout container, TextView emptyView,
+            TextView badgeView, List<GameViewApproval> requests) {
+        container.removeAllViews();
 
         int count = requests != null ? requests.size() : 0;
         int pendingCount = 0;
@@ -4105,25 +4121,25 @@ public class JoinGameActivity extends AppCompatActivity {
             }
         }
         if (count > 0) {
-            binding.textViewRequestsBadge.setVisibility(View.VISIBLE);
+            badgeView.setVisibility(View.VISIBLE);
             if (pendingCount > 0 && pendingCount < count) {
-                binding.textViewRequestsBadge.setText(
+                badgeView.setText(
                         getString(R.string.view_request_badge_summary, count, pendingCount));
             } else if (pendingCount > 0) {
-                binding.textViewRequestsBadge.setText(
+                badgeView.setText(
                         getString(R.string.view_request_pending_badge, pendingCount));
             } else {
-                binding.textViewRequestsBadge.setText(getString(R.string.view_request_total_badge, count));
+                badgeView.setText(getString(R.string.view_request_total_badge, count));
             }
-            binding.textViewRequestsEmpty.setVisibility(View.GONE);
+            emptyView.setVisibility(View.GONE);
         } else {
-            binding.textViewRequestsBadge.setVisibility(View.GONE);
-            binding.textViewRequestsEmpty.setVisibility(View.VISIBLE);
+            badgeView.setVisibility(View.GONE);
+            emptyView.setVisibility(View.VISIBLE);
             String loadError = viewModel.getPendingViewRequestsError().getValue();
             if (!TextUtils.isEmpty(loadError)) {
-                binding.textViewRequestsEmpty.setText(loadError);
+                emptyView.setText(loadError);
             } else {
-                binding.textViewRequestsEmpty.setText(R.string.view_request_empty);
+                emptyView.setText(R.string.view_request_empty);
             }
         }
 
@@ -4137,7 +4153,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 continue;
             }
             View row = LayoutInflater.from(this).inflate(R.layout.item_view_request_card,
-                    binding.viewRequestsContainer, false);
+                    container, false);
 
             TextView userView = row.findViewById(R.id.text_view_request_user);
             TextView timeView = row.findViewById(R.id.text_view_request_time);
@@ -4175,7 +4191,7 @@ public class JoinGameActivity extends AppCompatActivity {
             approveBtn.setOnClickListener(v -> viewModel.approveViewRequest(currentGameId, userId));
             rejectBtn.setOnClickListener(v -> viewModel.rejectViewRequest(currentGameId, userId));
 
-            binding.viewRequestsContainer.addView(row);
+            container.addView(row);
         }
     }
 
