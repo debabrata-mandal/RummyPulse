@@ -9,6 +9,8 @@ import com.example.rummypulse.data.GameDataSchema;
 import com.example.rummypulse.data.GameDataWrapper;
 import com.example.rummypulse.data.GameViewApprovalRepository;
 import com.example.rummypulse.data.Player;
+import com.example.rummypulse.data.ScoreHistoryEvent;
+import com.example.rummypulse.data.ScoreRegressionGuard;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -19,7 +21,9 @@ import com.google.firebase.firestore.Transaction;
 import com.google.gson.Gson;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 final class GameOperationRemoteApplier {
     static final class Result {
@@ -74,6 +78,7 @@ final class GameOperationRemoteApplier {
             GameData patched = GameOperationProjector.apply(
                     latest, operation.operationType(), operation.playerId, payload);
             long nextRevision = previousRevision + 1L;
+            validateScoreMutation(latest, patched, operation.operationType(), payload);
             transaction.set(
                     dataRef,
                     buildGameDataDocument(
@@ -81,6 +86,9 @@ final class GameOperationRemoteApplier {
                             operation.editGeneration,
                             nextRevision,
                             operation.operationId));
+
+            writeScoreHistory(transaction, db, operation, payload, latest, patched,
+                    editorUserId, previousRevision, nextRevision);
 
             applyApprovalSideEffects(
                     transaction,
@@ -95,6 +103,66 @@ final class GameOperationRemoteApplier {
             }
             return new Result(patched, nextRevision);
         });
+    }
+
+    private static void validateScoreMutation(GameData latest, GameData patched,
+            GameOperationType type, GameOperationPayload payload) {
+        if (type == GameOperationType.UPDATE_SCORE) {
+            if (payload == null || payload.round1Based == null
+                    || payload.scoresByPlayerId == null
+                    || payload.scoresByPlayerId.isEmpty()) {
+                throw new IllegalStateException("A round score operation is incomplete.");
+            }
+            ScoreRegressionGuard.requireOnlyRoundChanged(latest, patched,
+                    payload.round1Based, new HashSet<>(payload.scoresByPlayerId.keySet()));
+        } else if (type != GameOperationType.ADD_PLAYER
+                && type != GameOperationType.DELETE_PLAYER) {
+            ScoreRegressionGuard.requireMetadataPreservesScores(latest, patched);
+        }
+    }
+
+    private static void writeScoreHistory(Transaction transaction, FirebaseFirestore db,
+            PendingGameOperation operation, GameOperationPayload payload, GameData latest,
+            GameData patched, String editorUserId, long previousRevision,
+            long committedRevision) {
+        Set<Integer> rounds = new HashSet<>();
+        GameData snapshotSource = patched;
+        if (operation.operationType() == GameOperationType.UPDATE_SCORE
+                && payload != null && payload.round1Based != null) {
+            rounds.add(payload.round1Based);
+        } else if (operation.operationType() == GameOperationType.ADD_PLAYER
+                && payload != null && payload.player != null) {
+            for (int round = 1; round <= 10; round++) {
+                if (com.example.rummypulse.data.GameIntegrityValidator.hasValidScore(
+                        payload.player, round)) {
+                    rounds.add(round);
+                }
+            }
+        } else if (operation.operationType() == GameOperationType.DELETE_PLAYER) {
+            // Preserve the removed player's final score matrix before deleting the
+            // player from the canonical document.
+            snapshotSource = latest;
+            for (int round = 1; round <= 10; round++) rounds.add(round);
+        }
+        for (Integer round : rounds) {
+            Map<String, Object> event = ScoreHistoryEvent.create(
+                    operation.gameId, round, snapshotSource, operation.operationId,
+                    operation.operationType() == GameOperationType.ADD_PLAYER
+                            ? "MID_GAME_BACKFILL"
+                            : operation.operationType() == GameOperationType.DELETE_PLAYER
+                                    ? "PLAYER_REMOVAL_SNAPSHOT"
+                            : Boolean.TRUE.equals(payload.correction)
+                                    ? "ROUND_CORRECTION" : "ROUND_SAVE",
+                    editorUserId, operation.editGeneration, previousRevision,
+                    committedRevision);
+            DocumentReference eventRef = db.collection(FirestoreCollections.GAME_SCORE_HISTORY)
+                    .document(operation.gameId)
+                    .collection("rounds")
+                    .document(String.valueOf(round))
+                    .collection("events")
+                    .document(operation.operationId);
+            transaction.set(eventRef, event);
+        }
     }
 
     private static void applyApprovalSideEffects(

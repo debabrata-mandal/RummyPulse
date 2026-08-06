@@ -184,6 +184,21 @@
         <item name="android:textColorSecondary">@color/text_secondary</item>
     </style>
 
+    <style name="ThemeOverlay.RummyPulse.ViewPopup" parent="ThemeOverlay.MaterialComponents.Dark">
+        <item name="android:colorBackground">@color/view_surface_soft</item>
+        <item name="colorSurface">@color/view_surface_soft</item>
+        <item name="colorOnSurface">@color/view_text_primary</item>
+        <item name="android:textColorPrimary">@color/view_text_primary</item>
+        <item name="android:textColorSecondary">@color/view_text_secondary</item>
+        <item name="popupMenuStyle">@style/ViewModePopupMenuStyle</item>
+    </style>
+
+    <style name="ViewModePopupMenuStyle" parent="Widget.MaterialComponents.PopupMenu">
+        <item name="android:popupBackground">@drawable/bg_view_popup_menu</item>
+        <item name="android:textColor">@color/view_text_primary</item>
+        <item name="android:textColorPrimary">@color/view_text_primary</item>
+    </style>
+
     <!-- Dark Alert Dialog Theme -->
     <style name="DarkAlertDialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
         <item name="android:colorBackground">@color/card_background</item>

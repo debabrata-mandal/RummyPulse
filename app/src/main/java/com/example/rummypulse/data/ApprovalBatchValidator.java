@@ -36,11 +36,11 @@ public final class ApprovalBatchValidator {
                     "Validation failed for game " + gameId + ": game data is missing.");
         }
         GameData gameData = wrapper.getData();
-        String status = gameData.getGameStatus();
-        if (!"Completed".equals(status)) {
+        GameIntegrityResult integrity = GameIntegrityValidator.validate(gameData);
+        if (!integrity.isComplete()) {
             throw new IllegalStateException(
                     "Validation failed for game " + gameId
-                            + ": expected Completed but found " + status + ".");
+                            + ": " + integrity.describe());
         }
         return gameData;
     }

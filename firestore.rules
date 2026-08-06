@@ -61,14 +61,20 @@ service cloud.firestore {
           && request.resource.data.editGeneration == gameAfter.pinGeneration;
     }
 
-    function isAdminGameEconomicsUpdate() {
+    function isAdminGameMetadataUpdate() {
       return isAdmin()
           && resource.data.keys().hasAll(['data'])
           && request.resource.data.keys().hasAll(['data'])
           && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['data', 'lastUpdated', 'editGeneration', 'version'])
+              .hasOnly(['data', 'lastUpdated', 'editGeneration', 'version', 'revision'])
           && request.resource.data.data.diff(resource.data.data).affectedKeys()
-              .hasOnly(['pointValue', 'gstPercent']);
+              .hasOnly(['pointValue', 'gstPercent', 'gameStatus'])
+          && (
+            (!resource.data.keys().hasAll(['revision'])
+                && request.resource.data.revision == 1)
+            || (resource.data.keys().hasAll(['revision'])
+                && request.resource.data.revision == resource.data.revision + 1)
+          );
     }
 
     function canCreateGameData(gameId) {
@@ -80,8 +86,14 @@ service cloud.firestore {
     function canUpdateGameData(gameId) {
       return (isActiveEditor(gameId)
               && validEditGeneration(gameId)
-              && preservesStableGameSchema())
-          || isAdminGameEconomicsUpdate()
+              && preservesStableGameSchema()
+              && (
+                (!resource.data.keys().hasAll(['revision'])
+                    && request.resource.data.revision == 1)
+                || (resource.data.keys().hasAll(['revision'])
+                    && request.resource.data.revision == resource.data.revision + 1)
+              ))
+          || isAdminGameMetadataUpdate()
           || isAtomicEditGenerationTransfer(gameId);
     }
 
@@ -116,6 +128,24 @@ service cloud.firestore {
       allow create: if canCreateGameData(gameId);
       allow update: if isAuthenticated() && canUpdateGameData(gameId);
       allow delete: if isGameCreator(gameId) || isAdmin();
+    }
+
+    match /gameScoreHistory_v2/{gameId}/rounds/{roundId}/events/{eventId} {
+      allow read: if isAuthenticated() && (
+        isAdmin() || isGameCreator(gameId) || isActiveEditor(gameId)
+      );
+      allow create: if isActiveEditor(gameId)
+          && eventId == request.resource.data.operationId
+          && request.resource.data.gameId == gameId
+          && request.resource.data.schemaVersion == 1
+          && request.resource.data.editorUserId == request.auth.uid
+          && request.resource.data.editGeneration == gamePinGeneration(gameId)
+          && request.resource.data.scoresByPlayerId is map
+          && request.resource.data.previousRevision + 1
+              == request.resource.data.committedRevision
+          && getAfter(/databases/$(database)/documents/gameData_v2/$(gameId))
+              .data.revision == request.resource.data.committedRevision;
+      allow update, delete: if false;
     }
 
     match /gameViewApprovals_v2/{approvalId} {

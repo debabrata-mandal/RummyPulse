@@ -6,30 +6,40 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 /**
  * Durable, idempotent intent to update one round. It contains only player
  * identities and the intended scores, never a complete stale game snapshot.
  */
 public final class RoundScorePatch {
-    private static final String FORMAT_VERSION = "2";
+    private static final String FORMAT_VERSION = "3";
 
     private final int round1Based;
     private final boolean correction;
     private final long editGeneration;
+    private final String operationId;
     private final List<Entry> entries;
 
     public RoundScorePatch(int round1Based, boolean correction, long editGeneration,
             List<Entry> entries) {
+        this(round1Based, correction, editGeneration, UUID.randomUUID().toString(), entries);
+    }
+
+    private RoundScorePatch(int round1Based, boolean correction, long editGeneration,
+            String operationId, List<Entry> entries) {
         if (round1Based < 1 || round1Based > 10) {
             throw new IllegalArgumentException("Round must be between 1 and 10.");
         }
-        if (editGeneration <= 0 || entries == null || entries.isEmpty()) {
+        if (editGeneration <= 0 || operationId == null || operationId.trim().isEmpty()
+                || entries == null || entries.isEmpty()) {
             throw new IllegalArgumentException("Generation and player scores are required.");
         }
         this.round1Based = round1Based;
         this.correction = correction;
         this.editGeneration = editGeneration;
+        this.operationId = operationId;
         this.entries = new ArrayList<>(entries);
     }
 
@@ -91,6 +101,7 @@ public final class RoundScorePatch {
                 round1Based,
                 correction || newer.correction,
                 editGeneration,
+                operationId,
                 new ArrayList<>(combined.values()));
     }
 
@@ -140,6 +151,10 @@ public final class RoundScorePatch {
         return editGeneration;
     }
 
+    public String getOperationId() {
+        return operationId;
+    }
+
     public List<Entry> getEntries() {
         return new ArrayList<>(entries);
     }
@@ -148,7 +163,8 @@ public final class RoundScorePatch {
         StringBuilder value = new StringBuilder(FORMAT_VERSION)
                 .append('|').append(round1Based)
                 .append('|').append(correction ? '1' : '0')
-                .append('|').append(editGeneration);
+                .append('|').append(editGeneration)
+                .append('|').append(Utf8UrlCodec.encode(operationId));
         for (Entry entry : entries) {
             value.append('|')
                     .append(Utf8UrlCodec.encode(entry.identity))
@@ -163,15 +179,22 @@ public final class RoundScorePatch {
             throw new IllegalArgumentException("Pending round is missing.");
         }
         String[] parts = value.split("\\|", -1);
-        if (parts.length < 5 || (!FORMAT_VERSION.equals(parts[0]) && !"1".equals(parts[0]))) {
+        boolean current = FORMAT_VERSION.equals(parts[0]);
+        boolean legacy = "1".equals(parts[0]) || "2".equals(parts[0]);
+        if ((!current && !legacy) || parts.length < (current ? 6 : 5)) {
             throw new IllegalArgumentException("Unsupported pending-round format.");
         }
         try {
             int round = Integer.parseInt(parts[1]);
             boolean correction = "1".equals(parts[2]);
             long generation = Long.parseLong(parts[3]);
-            List<Entry> entries = new ArrayList<>(parts.length - 4);
-            for (int i = 4; i < parts.length; i++) {
+            String operationId = current
+                    ? Utf8UrlCodec.decode(parts[4])
+                    : UUID.nameUUIDFromBytes(("legacy-round-patch:" + value)
+                            .getBytes(StandardCharsets.UTF_8)).toString();
+            int firstEntry = current ? 5 : 4;
+            List<Entry> entries = new ArrayList<>(parts.length - firstEntry);
+            for (int i = firstEntry; i < parts.length; i++) {
                 int separator = parts[i].lastIndexOf(',');
                 if (separator <= 0) {
                     throw new IllegalArgumentException("Pending player score is invalid.");
@@ -181,7 +204,7 @@ public final class RoundScorePatch {
                 int score = Integer.parseInt(parts[i].substring(separator + 1));
                 entries.add(new Entry(identity, score));
             }
-            return new RoundScorePatch(round, correction, generation, entries);
+            return new RoundScorePatch(round, correction, generation, operationId, entries);
         } catch (NumberFormatException error) {
             throw new IllegalArgumentException("Pending round contains invalid numbers.", error);
         }

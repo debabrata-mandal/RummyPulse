@@ -11,6 +11,7 @@ public final class GameOperationPayload {
     public String userDisplayName;
     public String fromPlayerId;
     public Integer round1Based;
+    public Boolean correction;
     public Map<String, Integer> scoresByPlayerId;
     public List<String> playerOrder;
     public Player player;
@@ -46,9 +47,15 @@ public final class GameOperationPayload {
 
     public static GameOperationPayload scores(
             int round1Based, Map<String, Integer> scoresByPlayerId) {
+        return scores(round1Based, scoresByPlayerId, false);
+    }
+
+    public static GameOperationPayload scores(
+            int round1Based, Map<String, Integer> scoresByPlayerId, boolean correction) {
         GameOperationPayload payload = new GameOperationPayload();
         payload.round1Based = round1Based;
         payload.scoresByPlayerId = scoresByPlayerId;
+        payload.correction = correction;
         return payload;
     }
 

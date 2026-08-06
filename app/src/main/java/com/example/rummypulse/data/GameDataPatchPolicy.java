@@ -102,6 +102,7 @@ public final class GameDataPatchPolicy {
         copy.setRandomNumber(original.getRandomNumber());
         copy.setUserId(original.getUserId());
         copy.setIsCreator(original.getIsCreator());
+        copy.setMidGameJoinActiveRound(original.getMidGameJoinActiveRound());
         return copy;
     }
 

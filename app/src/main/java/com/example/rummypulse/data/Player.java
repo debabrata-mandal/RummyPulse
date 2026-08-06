@@ -9,6 +9,8 @@ public class Player {
     private Integer randomNumber;
     private String userId; // User ID of the player (null for manually added players)
     private Boolean isCreator; // True if this player is the game creator
+    /** Active round when this player was added after scoring had started. */
+    private Integer midGameJoinActiveRound;
 
     public Player() {
         // Default constructor required for Firestore
@@ -68,6 +70,14 @@ public class Player {
 
     public void setIsCreator(Boolean isCreator) {
         this.isCreator = isCreator;
+    }
+
+    public Integer getMidGameJoinActiveRound() {
+        return midGameJoinActiveRound;
+    }
+
+    public void setMidGameJoinActiveRound(Integer midGameJoinActiveRound) {
+        this.midGameJoinActiveRound = midGameJoinActiveRound;
     }
 
     // Helper method to calculate total score
