@@ -39,6 +39,7 @@ public class RoundScorePatchTest {
 
         assertEquals(7, restored.getEditGeneration());
         assertEquals(2, restored.getRound1Based());
+        assertEquals(original.getOperationId(), restored.getOperationId());
         assertEquals(once.getPlayers().get(0).getScores(),
                 twice.getPlayers().get(0).getScores());
         assertEquals(once.getPlayers().get(1).getScores(),

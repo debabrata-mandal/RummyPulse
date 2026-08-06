@@ -151,6 +151,11 @@ public class GameData {
         this.gameStatus = gameStatus;
     }
 
+    /** Raw administrative status, distinct from the score-derived progress status. */
+    public String getStoredGameStatus() {
+        return gameStatus;
+    }
+
     public Integer getMidGameJoinActiveRound() {
         return midGameJoinActiveRound;
     }

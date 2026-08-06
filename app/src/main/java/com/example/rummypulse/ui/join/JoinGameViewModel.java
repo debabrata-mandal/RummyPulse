@@ -18,6 +18,10 @@ import com.example.rummypulse.data.GameViewApproval;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.GameViewApprovalRepository;
 import com.example.rummypulse.data.RoundScorePatch;
+import com.example.rummypulse.data.ScoreHistoryEvent;
+import com.example.rummypulse.data.ScoreRegressionGuard;
+import com.example.rummypulse.data.ScoreRecoveryPatch;
+import com.example.rummypulse.data.sync.GameOperationRepository;
 import com.example.rummypulse.utils.PinUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -26,12 +30,16 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.Source;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.UUID;
 
 public class JoinGameViewModel extends AndroidViewModel {
 
@@ -63,6 +71,33 @@ public class JoinGameViewModel extends AndroidViewModel {
         void onError(String message);
     }
 
+    public interface RecoveryPreviewCallback {
+        void onAvailable(RecoveryPreview preview);
+        void onUnavailable(String message);
+    }
+
+    public static final class RecoveryPreview {
+        private final int round1Based;
+        private final String eventId;
+        private final long expectedRevision;
+        private final Map<String, Integer> scoresByPlayerId;
+
+        RecoveryPreview(int round1Based, String eventId, long expectedRevision,
+                Map<String, Integer> scoresByPlayerId) {
+            this.round1Based = round1Based;
+            this.eventId = eventId;
+            this.expectedRevision = expectedRevision;
+            this.scoresByPlayerId = new LinkedHashMap<>(scoresByPlayerId);
+        }
+
+        public int getRound1Based() { return round1Based; }
+        public String getEventId() { return eventId; }
+        public long getExpectedRevision() { return expectedRevision; }
+        public Map<String, Integer> getScoresByPlayerId() {
+            return new LinkedHashMap<>(scoresByPlayerId);
+        }
+    }
+
     public interface PlayerLinkCallback {
         void onSuccess();
 
@@ -72,6 +107,7 @@ public class JoinGameViewModel extends AndroidViewModel {
     private final FirebaseFirestore db;
     private final GameViewApprovalRepository viewApprovalRepository;
     private final GameRepository gameRepository;
+    private final GameOperationRepository operationRepository;
     private final MutableLiveData<GameData> gameData = new MutableLiveData<>();
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private final MutableLiveData<String> successMessage = new MutableLiveData<>();
@@ -98,6 +134,7 @@ public class JoinGameViewModel extends AndroidViewModel {
         db = FirebaseFirestore.getInstance();
         viewApprovalRepository = new GameViewApprovalRepository();
         gameRepository = GameRepository.getDashboardInstance();
+        operationRepository = GameOperationRepository.getInstance(application);
     }
 
     public LiveData<GameData> getGameData() {
@@ -179,14 +216,24 @@ public class JoinGameViewModel extends AndroidViewModel {
     }
 
     public void joinGame(String gameId, boolean requestEditAccess) {
-        joinGame(gameId, requestEditAccess, null, false);
+        joinGameInternal(gameId, requestEditAccess, null, false, 0L);
     }
 
     public void joinGame(String gameId, boolean requestEditAccess, String enteredPin) {
-        joinGame(gameId, requestEditAccess, enteredPin, false);
+        joinGameInternal(gameId, requestEditAccess, enteredPin, false, 0L);
     }
 
     public void joinGame(String gameId, boolean requestEditAccess, String enteredPin, boolean skipViewGate) {
+        joinGameInternal(gameId, requestEditAccess, enteredPin, skipViewGate, 0L);
+    }
+
+    public void joinGameWithCachedEditSession(
+            String gameId, String enteredPin, long cachedGeneration) {
+        joinGameInternal(gameId, true, enteredPin, false, cachedGeneration);
+    }
+
+    private void joinGameInternal(String gameId, boolean requestEditAccess,
+            String enteredPin, boolean skipViewGate, long cachedGeneration) {
         if (TextUtils.isEmpty(gameId)) {
             errorMessage.setValue("Please enter a Game ID");
             return;
@@ -218,13 +265,20 @@ public class JoinGameViewModel extends AndroidViewModel {
                             applyGameAuthMetadata(documentSnapshot);
 
                             proceedJoinAfterAuthLoaded(gameId, auth, requestEditAccess, enteredPin,
-                                    skipViewGate);
+                                    skipViewGate, cachedGeneration);
                         })
                         .addOnFailureListener(e -> {
-                            isLoading.setValue(false);
-                            gameDisplayName.setValue(null);
-                            gameAuth.setValue(null);
-                            errorMessage.setValue("Failed to connect to server. Please try again.");
+                            if (requestEditAccess && cachedGeneration > 0
+                                    && isConnectivityFailure(e)) {
+                                restoreCachedEditorSessionAndLoad(
+                                        gameId, enteredPin, cachedGeneration);
+                            } else {
+                                isLoading.setValue(false);
+                                gameDisplayName.setValue(null);
+                                gameAuth.setValue(null);
+                                errorMessage.setValue(
+                                        "Failed to connect to server. Please try again.");
+                            }
                         }), 500);
     }
 
@@ -232,15 +286,18 @@ public class JoinGameViewModel extends AndroidViewModel {
                                             GameAuth auth,
                                             boolean requestEditAccess,
                                             String enteredPin,
-                                            boolean skipViewGate) {
+                                            boolean skipViewGate,
+                                            long cachedGeneration) {
         if (skipViewGate || GameViewApprovalRepository.canBypassViewGate(auth)) {
-            continueJoinAfterViewAccess(gameId, requestEditAccess, enteredPin);
+            continueJoinAfterViewAccess(
+                    gameId, requestEditAccess, enteredPin, cachedGeneration);
             return;
         }
 
         AppUserManager.getInstance().isCurrentUserAdmin(isAdmin -> {
             if (isAdmin) {
-                continueJoinAfterViewAccess(gameId, requestEditAccess, enteredPin);
+                continueJoinAfterViewAccess(
+                        gameId, requestEditAccess, enteredPin, cachedGeneration);
                 return;
             }
             viewApprovalRepository.resolveViewAccess(gameId,
@@ -248,7 +305,9 @@ public class JoinGameViewModel extends AndroidViewModel {
                         @Override
                         public void onResult(GameViewApprovalRepository.ViewAccessOutcome outcome) {
                             if (outcome == GameViewApprovalRepository.ViewAccessOutcome.GRANTED) {
-                                continueJoinAfterViewAccess(gameId, requestEditAccess, enteredPin);
+                                continueJoinAfterViewAccess(
+                                        gameId, requestEditAccess, enteredPin,
+                                        cachedGeneration);
                             } else if (outcome
                                     == GameViewApprovalRepository.ViewAccessOutcome.REJECTED) {
                                 isLoading.setValue(false);
@@ -271,8 +330,16 @@ public class JoinGameViewModel extends AndroidViewModel {
 
     private void continueJoinAfterViewAccess(String gameId,
                                              boolean requestEditAccess,
-                                             String enteredPin) {
+                                             String enteredPin,
+                                             long cachedGeneration) {
         if (requestEditAccess && enteredPin != null) {
+            GameAuth cachedAuth = gameAuth.getValue();
+            if (cachedAuth != null
+                    && enteredPin.equals(cachedAuth.getPin())
+                    && tryRestoreActiveEditorSession(cachedAuth)) {
+                fetchGameData(gameId);
+                return;
+            }
             claimEditAccess(gameId, enteredPin, new ClaimCallback() {
                 @Override
                 public void onSuccess(String pin, long pinGeneration) {
@@ -281,9 +348,14 @@ public class JoinGameViewModel extends AndroidViewModel {
 
                 @Override
                 public void onError(String message) {
-                    errorMessage.setValue(message);
-                    editAccessGranted.setValue(false);
-                    fetchGameData(gameId);
+                    if (cachedGeneration > 0 && isConnectivityFailure(message)) {
+                        restoreCachedEditorSessionAndLoad(
+                                gameId, enteredPin, cachedGeneration);
+                    } else {
+                        errorMessage.setValue(message);
+                        editAccessGranted.setValue(false);
+                        fetchGameData(gameId);
+                    }
                 }
             });
             return;
@@ -296,6 +368,61 @@ public class JoinGameViewModel extends AndroidViewModel {
         }
 
         fetchGameData(gameId);
+    }
+
+    private void restoreCachedEditorSessionAndLoad(
+            String gameId, String pin, long cachedGeneration) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || cachedGeneration <= 0 || TextUtils.isEmpty(pin)) {
+            isLoading.setValue(false);
+            errorMessage.setValue("The saved offline edit session is unavailable.");
+            return;
+        }
+        GameAuth cachedAuth = gameAuth.getValue();
+        if (cachedAuth == null) cachedAuth = new GameAuth();
+        cachedAuth.setPin(pin);
+        cachedAuth.setPinGeneration(cachedGeneration);
+        cachedAuth.setActiveEditorUserId(user.getUid());
+        cachedAuth.setActiveEditorName(resolveEditorDisplayName(user));
+        gameAuth.setValue(cachedAuth);
+        activeEditGeneration = cachedGeneration;
+        gamePin.setValue(pin);
+        editAccessGranted.setValue(true);
+        operationRepository.loadOfflineProjectedSnapshot(
+                gameId, cachedGeneration, new GameOperationRepository.Callback() {
+                    @Override
+                    public void onStored(GameData projected) {
+                        isLoading.setValue(false);
+                        GameDataSchema.normalize(projected);
+                        gameData.setValue(projected);
+                    }
+
+                    @Override
+                    public void onError(String message) {
+                        // Firestore's local cache is still a useful fallback when
+                        // the Room snapshot predates this feature.
+                        fetchGameData(gameId);
+                    }
+                });
+    }
+
+    private static boolean isConnectivityFailure(Exception error) {
+        if (error instanceof FirebaseFirestoreException
+                && ((FirebaseFirestoreException) error).getCode()
+                == FirebaseFirestoreException.Code.UNAVAILABLE) {
+            return true;
+        }
+        return isConnectivityFailure(error == null ? null : error.getMessage());
+    }
+
+    private static boolean isConnectivityFailure(String message) {
+        if (message == null) return false;
+        String normalized = message.toLowerCase(java.util.Locale.US);
+        return normalized.contains("unknown host")
+                || normalized.contains("unable to resolve host")
+                || normalized.contains("unavailable")
+                || normalized.contains("network is unreachable")
+                || normalized.contains("failed to connect");
     }
 
     /**
@@ -871,9 +998,26 @@ public class JoinGameViewModel extends AndroidViewModel {
             GameDataSchema.normalize(latest);
             GameData patched = patch.applyToLatest(latest);
             GameDataSchema.normalize(patched);
-            long nextRevision = revisionOf(dataSnapshot) + 1L;
-            transaction.set(gameDataRef,
-                    buildGameDataDocument(patched, expectedGeneration, nextRevision));
+            long previousRevision = revisionOf(dataSnapshot);
+            long nextRevision = previousRevision + 1L;
+            HashSet<String> changedPlayers = new HashSet<>(latest.getPlayerOrder());
+            ScoreRegressionGuard.requireOnlyRoundChanged(latest, patched,
+                    patch.getRound1Based(), changedPlayers);
+            Map<String, Object> gameDocument =
+                    buildGameDataDocument(patched, expectedGeneration, nextRevision);
+            gameDocument.put("lastOperationId", patch.getOperationId());
+            transaction.set(gameDataRef, gameDocument);
+            DocumentReference historyRef = db
+                    .collection(FirestoreCollections.GAME_SCORE_HISTORY)
+                    .document(gameId)
+                    .collection("rounds")
+                    .document(String.valueOf(patch.getRound1Based()))
+                    .collection("events")
+                    .document(patch.getOperationId());
+            transaction.set(historyRef, ScoreHistoryEvent.create(
+                    gameId, patch.getRound1Based(), patched, patch.getOperationId(),
+                    patch.isCorrection() ? "ROUND_CORRECTION" : "ROUND_SAVE",
+                    expectedEditorUserId, expectedGeneration, previousRevision, nextRevision));
             transaction.update(gameRef, buildDashboardSummary(patched));
             return new SavedGameData(patched, nextRevision);
         }).addOnSuccessListener(saved -> {
@@ -895,6 +1039,126 @@ public class JoinGameViewModel extends AndroidViewModel {
                     ? "Could not save this round. Check your connection and retry."
                     : message);
         });
+    }
+
+    public void loadRecoveryPreview(String gameId, int round1Based,
+            RecoveryPreviewCallback callback) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || !canSaveGameData()) {
+            callback.onUnavailable("Only the active editor can restore score history.");
+            return;
+        }
+        db.collection(FirestoreCollections.GAME_SCORE_HISTORY)
+                .document(gameId)
+                .collection("rounds")
+                .document(String.valueOf(round1Based))
+                .collection("events")
+                .orderBy("committedRevision", Query.Direction.DESCENDING)
+                .limit(25)
+                .get(Source.SERVER)
+                .addOnSuccessListener(result -> {
+                    if (result.isEmpty()) {
+                        callback.onUnavailable("No immutable history exists for Round "
+                                + round1Based + ". Enter the missing scores manually.");
+                        return;
+                    }
+                    DocumentSnapshot event = null;
+                    Map<String, Integer> scores = null;
+                    for (DocumentSnapshot candidate : result.getDocuments()) {
+                        Object rawScores = candidate.get("scoresByPlayerId");
+                        if (rawScores instanceof Map) {
+                            Map<String, Integer> candidateScores =
+                                    parseHistoryScores((Map<?, ?>) rawScores);
+                            if (ScoreHistoryEvent.isRecoveryComplete(candidateScores)) {
+                                event = candidate;
+                                scores = candidateScores;
+                                break;
+                            }
+                        }
+                    }
+                    if (event == null || scores == null) {
+                        callback.onUnavailable("No complete recovery record exists for Round "
+                                + round1Based + ". Enter the missing scores manually.");
+                        return;
+                    }
+                    callback.onAvailable(new RecoveryPreview(round1Based, event.getId(),
+                            latestGameRevision, scores));
+                })
+                .addOnFailureListener(error -> callback.onUnavailable(
+                        "Could not load score history: " + error.getMessage()));
+    }
+
+    public void restoreMissingRound(String gameId, RecoveryPreview preview,
+            RoundSaveCallback callback) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null || !canSaveGameData() || preview == null) {
+            callback.onError("Only the active editor can restore score history.");
+            return;
+        }
+        final String editorUserId = user.getUid();
+        final long generation = getActiveEditGeneration();
+        final String recoveryOperationId = UUID.randomUUID().toString();
+        DocumentReference gameRef = db.collection(FirestoreCollections.GAMES).document(gameId);
+        DocumentReference dataRef = db.collection(FirestoreCollections.GAME_DATA).document(gameId);
+        DocumentReference sourceEventRef = db.collection(FirestoreCollections.GAME_SCORE_HISTORY)
+                .document(gameId).collection("rounds")
+                .document(String.valueOf(preview.round1Based)).collection("events")
+                .document(preview.eventId);
+        DocumentReference recoveryEventRef = db.collection(FirestoreCollections.GAME_SCORE_HISTORY)
+                .document(gameId).collection("rounds")
+                .document(String.valueOf(preview.round1Based)).collection("events")
+                .document(recoveryOperationId);
+        db.runTransaction(transaction -> {
+            DocumentSnapshot authSnapshot = transaction.get(gameRef);
+            DocumentSnapshot dataSnapshot = transaction.get(dataRef);
+            DocumentSnapshot historySnapshot = transaction.get(sourceEventRef);
+            validateEditorSnapshot(authSnapshot, dataSnapshot, editorUserId, generation);
+            long currentRevision = revisionOf(dataSnapshot);
+            if (currentRevision != preview.expectedRevision) {
+                throw new IllegalStateException(
+                        "Game data changed. Review the recovery again before restoring.");
+            }
+            if (!historySnapshot.exists()) {
+                throw new IllegalStateException("The selected history record is unavailable.");
+            }
+            Object rawHistoryScores = historySnapshot.get("scoresByPlayerId");
+            if (!(rawHistoryScores instanceof Map)) {
+                throw new IllegalStateException("The selected history record is invalid.");
+            }
+            Map<String, Integer> historyScores = parseHistoryScores(
+                    (Map<?, ?>) rawHistoryScores);
+            GameDataWrapper wrapper = dataSnapshot.toObject(GameDataWrapper.class);
+            GameData latest = wrapper == null ? null : wrapper.getData();
+            GameData restored = ScoreRecoveryPatch.restoreMissing(
+                    latest, preview.round1Based, historyScores);
+            long nextRevision = currentRevision + 1L;
+            Map<String, Object> document =
+                    buildGameDataDocument(restored, generation, nextRevision);
+            document.put("lastOperationId", recoveryOperationId);
+            transaction.set(dataRef, document);
+            transaction.set(recoveryEventRef, ScoreHistoryEvent.create(
+                    gameId, preview.round1Based, restored, recoveryOperationId,
+                    "RECOVERY", editorUserId, generation, currentRevision, nextRevision));
+            transaction.update(gameRef, buildDashboardSummary(restored));
+            return new SavedGameData(restored, nextRevision);
+        }).addOnSuccessListener(saved -> {
+            latestGameRevision = saved.revision;
+            gameData.setValue(saved.gameData);
+            gameRepository.updateLocalDashboardFromGameData(gameId, saved.gameData);
+            callback.onSuccess();
+        }).addOnFailureListener(error -> callback.onError(error.getMessage() == null
+                ? "Recovery failed without changing the game." : error.getMessage()));
+    }
+
+    private static Map<String, Integer> parseHistoryScores(Map<?, ?> raw) {
+        Map<String, Integer> parsed = new LinkedHashMap<>();
+        if (raw == null) return parsed;
+        for (Map.Entry<?, ?> entry : raw.entrySet()) {
+            if (entry.getKey() instanceof String && entry.getValue() instanceof Number) {
+                parsed.put((String) entry.getKey(), ((Number) entry.getValue()).intValue());
+            }
+        }
+        return parsed;
     }
 
     public void applyPendingRoundLocally(RoundScorePatch patch) {

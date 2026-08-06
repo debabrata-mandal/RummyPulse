@@ -186,6 +186,40 @@ public final class GameOperationRepository {
         });
     }
 
+    /**
+     * Loads the last acknowledged game plus every durable local operation. Used
+     * when Firestore cannot be reached while reopening an editor session.
+     */
+    public void loadOfflineProjectedSnapshot(
+            String gameId, long editGeneration, Callback callback) {
+        executor.execute(() -> {
+            try {
+                GameSnapshotEntity snapshot = database.operations().getSnapshot(gameId);
+                if (snapshot == null) {
+                    throw new IllegalStateException(
+                            "No offline game snapshot is available on this device.");
+                }
+                if (snapshot.editGeneration != editGeneration) {
+                    throw new IllegalStateException(
+                            "The offline game belongs to a different edit session.");
+                }
+                GameData projected = GSON.fromJson(snapshot.snapshotJson, GameData.class);
+                GameDataSchema.normalize(projected);
+                for (PendingGameOperation operation
+                        : database.operations().getActiveOperations(gameId)) {
+                    if (operation.editGeneration != editGeneration) {
+                        throw new IllegalStateException(
+                                "Pending edits belong to a different edit session.");
+                    }
+                    projected = GameOperationProjector.apply(projected, operation);
+                }
+                postStored(callback, projected);
+            } catch (RuntimeException error) {
+                postError(callback, message(error));
+            }
+        });
+    }
+
     public void enqueue(
             String gameId,
             long editGeneration,

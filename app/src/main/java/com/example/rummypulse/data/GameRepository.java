@@ -1390,39 +1390,29 @@ public class GameRepository {
     }
 
     public void updateGameStatus(String gameId, String newStatus) {
-        // Update the game status in the original gameData collection
-        db.collection(FirestoreCollections.GAME_DATA)
-                .document(gameId)
-                .get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
-                        if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
-                            GameData gameData = gameDataWrapper.getData();
-                            gameData.setGameStatus(newStatus);
-                            
-                            // Update the wrapper with new timestamp
-                            gameDataWrapper.setLastUpdated(com.google.firebase.Timestamp.now());
-                            gameDataWrapper.setData(gameData);
-                            preserveEditGeneration(documentSnapshot, gameDataWrapper);
-                            
-                            // Save back to Firestore
-                            db.collection(FirestoreCollections.GAME_DATA)
-                                    .document(gameId)
-                                    .set(gameDataWrapper)
-                                    .addOnSuccessListener(aVoid -> {
-                                        // Reload the games list to reflect the change
-                                        loadAllGames();
-                                    })
-                                    .addOnFailureListener(e -> {
-                                        errorLiveData.setValue("Failed to update game status: " + e.getMessage());
-                                    });
-                        }
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    errorLiveData.setValue("Failed to update game status: " + e.getMessage());
-                });
+        if (gameId == null || gameId.trim().isEmpty()) return;
+        DocumentReference dataRef = db.collection(FirestoreCollections.GAME_DATA).document(gameId);
+        DocumentReference gameRef = db.collection(FirestoreCollections.GAMES).document(gameId);
+        db.runTransaction(transaction -> {
+            DocumentSnapshot snapshot = transaction.get(dataRef);
+            if (!snapshot.exists()) throw new IllegalStateException("Game data not found.");
+            GameDataWrapper wrapper = snapshot.toObject(GameDataWrapper.class);
+            GameData before = wrapper == null ? null : wrapper.getData();
+            if (before == null) throw new IllegalStateException("Game data is unavailable.");
+            GameData after = GameDataPatchPolicy.copyGameShell(before);
+            after.setPlayers(new ArrayList<>(before.getPlayers()));
+            after.setGameStatus(newStatus);
+            ScoreRegressionGuard.requireMetadataPreservesScores(before, after);
+            Long revision = snapshot.getLong("revision");
+            transaction.update(dataRef,
+                    "data.gameStatus", newStatus,
+                    "lastUpdated", com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                    "revision", (revision == null ? 0L : revision) + 1L);
+            transaction.update(gameRef, "dashboardGameStatus", newStatus);
+            return null;
+        }).addOnSuccessListener(ignored -> loadAllGames())
+                .addOnFailureListener(e -> errorLiveData.setValue(
+                        "Failed to update game status: " + e.getMessage()));
     }
 
     /**
@@ -1436,41 +1426,35 @@ public class GameRepository {
             errorLiveData.setValue("Cannot update game: missing game id");
             return;
         }
-        db.collection(FirestoreCollections.GAME_DATA)
-                .document(gameId)
-                .get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (!documentSnapshot.exists()) {
-                        errorLiveData.setValue("Game data not found");
-                        return;
-                    }
-                    GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
-                    if (gameDataWrapper == null || gameDataWrapper.getData() == null) {
-                        errorLiveData.setValue("Failed to load game data for update");
-                        return;
-                    }
-                    GameData gameData = gameDataWrapper.getData();
-                    gameData.setPointValue(pointValue);
-                    gameData.setGstPercent(gstPercent);
-                    gameDataWrapper.setLastUpdated(com.google.firebase.Timestamp.now());
-                    gameDataWrapper.setData(gameData);
-                    preserveEditGeneration(documentSnapshot, gameDataWrapper);
-
-                    db.collection(FirestoreCollections.GAME_DATA)
-                            .document(gameId)
-                            .set(gameDataWrapper)
-                            .addOnSuccessListener(aVoid -> {
-                                syncDashboardSummaryOnGameDoc(gameId, gameData);
-                                loadAllGames();
-                                if (onSuccess != null) {
-                                    onSuccess.run();
-                                }
-                            })
-                            .addOnFailureListener(e ->
-                                    errorLiveData.setValue("Failed to update game: " + e.getMessage()));
-                })
-                .addOnFailureListener(e ->
-                        errorLiveData.setValue("Failed to load game data: " + e.getMessage()));
+        DocumentReference dataRef = db.collection(FirestoreCollections.GAME_DATA).document(gameId);
+        DocumentReference gameRef = db.collection(FirestoreCollections.GAMES).document(gameId);
+        db.runTransaction(transaction -> {
+            DocumentSnapshot snapshot = transaction.get(dataRef);
+            if (!snapshot.exists()) throw new IllegalStateException("Game data not found.");
+            GameDataWrapper wrapper = snapshot.toObject(GameDataWrapper.class);
+            GameData before = wrapper == null ? null : wrapper.getData();
+            if (before == null) throw new IllegalStateException("Game data is unavailable.");
+            GameData after = GameDataPatchPolicy.copyGameShell(before);
+            after.setPlayers(new ArrayList<>(before.getPlayers()));
+            after.setPointValue(pointValue);
+            after.setGstPercent(gstPercent);
+            ScoreRegressionGuard.requireMetadataPreservesScores(before, after);
+            Long revision = snapshot.getLong("revision");
+            transaction.update(dataRef,
+                    "data.pointValue", pointValue,
+                    "data.gstPercent", gstPercent,
+                    "lastUpdated", com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                    "revision", (revision == null ? 0L : revision) + 1L);
+            Map<String, Object> dashboard = new HashMap<>();
+            dashboard.put("dashboardPointValue", pointValue);
+            dashboard.put("dashboardGstPercent", gstPercent);
+            transaction.update(gameRef, dashboard);
+            return null;
+        }).addOnSuccessListener(ignored -> {
+            loadAllGames();
+            if (onSuccess != null) onSuccess.run();
+        }).addOnFailureListener(e -> errorLiveData.setValue(
+                "Failed to update game: " + e.getMessage()));
     }
 
     public void approveGame(GameItem gameItem) {
@@ -1654,39 +1638,7 @@ public class GameRepository {
     }
 
     private void updateGameStatusInOriginal(String gameId, String newStatus) {
-        // Update the game status in the original gameData collection
-        db.collection(FirestoreCollections.GAME_DATA)
-                .document(gameId)
-                .get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        GameDataWrapper gameDataWrapper = documentSnapshot.toObject(GameDataWrapper.class);
-                        if (gameDataWrapper != null && gameDataWrapper.getData() != null) {
-                            GameData gameData = gameDataWrapper.getData();
-                            gameData.setGameStatus(newStatus);
-                            
-                            // Update the wrapper with new timestamp
-                            gameDataWrapper.setLastUpdated(com.google.firebase.Timestamp.now());
-                            gameDataWrapper.setData(gameData);
-                            preserveEditGeneration(documentSnapshot, gameDataWrapper);
-                            
-                            // Save back to Firestore
-                            db.collection(FirestoreCollections.GAME_DATA)
-                                    .document(gameId)
-                                    .set(gameDataWrapper)
-                                    .addOnSuccessListener(aVoid -> {
-                                        // Reload the games list to reflect the change
-                                        loadAllGames();
-                                    })
-                                    .addOnFailureListener(e -> {
-                                        errorLiveData.setValue("Failed to update game status: " + e.getMessage());
-                                    });
-                        }
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    errorLiveData.setValue("Failed to update game status: " + e.getMessage());
-                });
+        updateGameStatus(gameId, newStatus);
     }
 
     private static void preserveEditGeneration(DocumentSnapshot snapshot, GameDataWrapper wrapper) {

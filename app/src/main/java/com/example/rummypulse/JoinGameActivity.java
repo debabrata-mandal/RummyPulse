@@ -43,6 +43,8 @@ import com.example.rummypulse.data.RoundScorePatch;
 import com.example.rummypulse.databinding.ActivityJoinGameBinding;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.GameDataSchema;
+import com.example.rummypulse.data.GameIntegrityResult;
+import com.example.rummypulse.data.GameIntegrityValidator;
 import com.example.rummypulse.data.sync.GameOperationPayload;
 import com.example.rummypulse.data.sync.GameOperationProjector;
 import com.example.rummypulse.data.sync.GameOperationRepository;
@@ -136,6 +138,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private Runnable pendingRoundAfterSync;
     /** Player selected from the read-only settlement board for round-score details. */
     private String selectedViewRoundPlayerKey;
+    private String lastIntegrityWarningKey;
 
     /** Global admins may manage view requests without holding game edit access. */
     private boolean isAppAdmin;
@@ -1277,6 +1280,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 refreshViewRequestsSection();
                 displayGameData(gameData);
                 refreshPendingOperationMarkers();
+                handleIntegrityState(gameData, Boolean.TRUE.equals(editAccess));
                 
                 // Set up real-time listener if in view mode (no edit access)
                 if (editAccess == null || !editAccess) {
@@ -1450,7 +1454,8 @@ public class JoinGameActivity extends AppCompatActivity {
         if (savedPin != null) {
             // User had edit access before, try to restore it
             System.out.println("Restoring edit access for game: " + gameId);
-            viewModel.joinGame(gameId, true, savedPin);
+            viewModel.joinGameWithCachedEditSession(
+                    gameId, savedPin, getSavedPinGeneration(gameId));
         } else {
             // Join game in view mode (no PIN required)
             viewModel.joinGame(gameId, false, null);
@@ -1497,6 +1502,7 @@ public class JoinGameActivity extends AppCompatActivity {
             prefs.edit()
                     .putString("pin_" + gameId, pin)
                     .putLong("pinGen_" + gameId, pinGeneration)
+                    .putString("editorUid_" + gameId, currentUserId())
                     .apply();
         }
     }
@@ -1504,6 +1510,10 @@ public class JoinGameActivity extends AppCompatActivity {
     private String getSavedPin(String gameId) {
         if (gameId != null) {
             android.content.SharedPreferences prefs = getSharedPreferences("RummyPulse_EditAccess", MODE_PRIVATE);
+            String savedEditor = prefs.getString("editorUid_" + gameId, null);
+            if (savedEditor != null && !savedEditor.equals(currentUserId())) {
+                return null;
+            }
             return prefs.getString("pin_" + gameId, null);
         }
         return null;
@@ -1523,8 +1533,14 @@ public class JoinGameActivity extends AppCompatActivity {
             prefs.edit()
                     .remove("pin_" + gameId)
                     .remove("pinGen_" + gameId)
+                    .remove("editorUid_" + gameId)
                     .apply();
         }
+    }
+
+    private String currentUserId() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        return user == null ? "" : user.getUid();
     }
 
     private void requestEditAccess() {
@@ -3304,6 +3320,11 @@ public class JoinGameActivity extends AppCompatActivity {
             ModernToast.info(this, getString(R.string.enter_round_scores_game_over));
             return;
         }
+        GameIntegrityResult integrity = GameIntegrityValidator.validate(gameData);
+        if (integrity.hasLaterRoundConflict()) {
+            showIntegrityWarning(integrity);
+            return;
+        }
         int round1 = getActiveIncompleteRound1BasedOrZero(gameData);
         if (round1 == 0) {
             ModernToast.info(this, getString(R.string.enter_round_scores_all_done));
@@ -3554,7 +3575,8 @@ public class JoinGameActivity extends AppCompatActivity {
                     viewModel.getGameData().getValue(),
                     GameOperationType.UPDATE_SCORE,
                     null,
-                    GameOperationPayload.scores(finalRound1, scoresByPlayerId),
+                    GameOperationPayload.scores(
+                            finalRound1, scoresByPlayerId, finalCorrectionMode),
                     new GameOperationRepository.Callback() {
                         @Override
                         public void onStored(
@@ -3687,22 +3709,93 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private boolean isGameCompleted(com.example.rummypulse.data.GameData gameData) {
-        // Always check game data directly for round 10 completion
-        // This works reliably in both edit and view modes
-        if (gameData == null || gameData.getPlayers() == null
-                || gameData.getPlayers().isEmpty()) {
-            return false;
+        return GameIntegrityValidator.validate(gameData).isComplete();
+    }
+
+    private void showIntegrityWarning(GameIntegrityResult integrity) {
+        String rounds = integrity.getMissingRounds().toString();
+        new AlertDialog.Builder(this)
+                .setTitle("Score data needs repair")
+                .setMessage("Score editing is paused because earlier round data is missing. "
+                        + integrity.describe() + " Missing rounds: " + rounds
+                        + "\n\nOpen that round in correction mode to repair it. "
+                        + "If cloud history is available, the app can restore only the missing values.")
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void handleIntegrityState(com.example.rummypulse.data.GameData gameData,
+            boolean hasEditAccess) {
+        GameIntegrityResult integrity = GameIntegrityValidator.validate(gameData);
+        if (!integrity.hasLaterRoundConflict()) {
+            lastIntegrityWarningKey = null;
+            return;
         }
-        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
-            if (player.getScores() == null || player.getScores().size() < 10) {
-                return false; // Player doesn't have 10 rounds
-            }
-            Integer round10Score = player.getScores().get(9); // Round 10 is index 9
-            if (round10Score == null || round10Score < 0) {
-                return false; // Round 10 not completed
-            }
+        String key = currentGameId + ":" + viewModel.getLatestGameRevision()
+                + ":" + integrity.getFirstMissingRound()
+                + ":" + integrity.getAffectedPlayerIds();
+        if (key.equals(lastIntegrityWarningKey)) return;
+        lastIntegrityWarningKey = key;
+        if (!hasEditAccess) {
+            showIntegrityWarning(integrity);
+            return;
         }
-        return true; // All players have completed round 10
+        viewModel.loadRecoveryPreview(currentGameId, integrity.getFirstMissingRound(),
+                new JoinGameViewModel.RecoveryPreviewCallback() {
+                    @Override
+                    public void onAvailable(JoinGameViewModel.RecoveryPreview preview) {
+                        if (!isFinishing() && !isDestroyed()) {
+                            showRecoveryConfirmation(gameData, integrity, preview);
+                        }
+                    }
+
+                    @Override
+                    public void onUnavailable(String message) {
+                        if (!isFinishing() && !isDestroyed()) {
+                            new AlertDialog.Builder(JoinGameActivity.this)
+                                    .setTitle("Score data needs manual repair")
+                                    .setMessage(integrity.describe() + "\n\n" + message
+                                            + " Further score entry and completion are blocked.")
+                                    .setPositiveButton(android.R.string.ok, null)
+                                    .show();
+                        }
+                    }
+                });
+    }
+
+    private void showRecoveryConfirmation(com.example.rummypulse.data.GameData gameData,
+            GameIntegrityResult integrity, JoinGameViewModel.RecoveryPreview preview) {
+        StringBuilder values = new StringBuilder();
+        Map<String, Integer> recovered = preview.getScoresByPlayerId();
+        for (String playerId : integrity.getAffectedPlayerIds()) {
+            Player player = GameDataSchema.findPlayer(gameData, playerId);
+            Integer score = recovered.get(playerId);
+            values.append("\n• ")
+                    .append(player != null ? player.getName() : playerId)
+                    .append(": ")
+                    .append(score == null ? "unavailable" : score);
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Restore Round " + preview.getRound1Based() + "?")
+                .setMessage("Immutable cloud history contains these missing scores:"
+                        + values + "\n\nOnly missing values will be restored. Existing scores will not change.")
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Restore", (dialog, which) ->
+                        viewModel.restoreMissingRound(currentGameId, preview,
+                                new JoinGameViewModel.RoundSaveCallback() {
+                                    @Override
+                                    public void onSuccess() {
+                                        ModernToast.success(JoinGameActivity.this,
+                                                "Round restored from immutable history.");
+                                    }
+
+                                    @Override
+                                    public void onError(String message) {
+                                        lastIntegrityWarningKey = null;
+                                        ModernToast.error(JoinGameActivity.this, message);
+                                    }
+                                }))
+                .show();
     }
 
     private void generateStandingsTable(com.example.rummypulse.data.GameData gameData) {
@@ -5111,7 +5204,8 @@ public class JoinGameActivity extends AppCompatActivity {
                     gameData,
                     GameOperationType.UPDATE_SCORE,
                     null,
-                    GameOperationPayload.scores(patch.getRound1Based(), scores),
+                    GameOperationPayload.scores(
+                            patch.getRound1Based(), scores, patch.isCorrection()),
                     new GameOperationRepository.Callback() {
                         @Override
                         public void onStored(

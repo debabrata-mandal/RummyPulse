@@ -114,6 +114,10 @@ public final class GameDataSchema {
         clean.put("playersById", data.getPlayersById());
         clean.put("playerOrder", data.getPlayerOrder());
         clean.put("version", data.getVersion());
+        if (data.getStoredGameStatus() != null
+                && !data.getStoredGameStatus().trim().isEmpty()) {
+            clean.put("gameStatus", data.getStoredGameStatus().trim());
+        }
         if (data.getMidGameJoinActiveRound() != null) {
             clean.put("midGameJoinActiveRound", data.getMidGameJoinActiveRound());
         }
