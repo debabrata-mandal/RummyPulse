@@ -382,6 +382,8 @@ public class DashboardViewModel extends ViewModel {
         authData.put("pinGeneration", 1L);
         authData.put("activeEditorUserId", request.creatorUserId);
         authData.put("activeEditorName", request.creatorName);
+        authData.put("lastEditorUserId", request.creatorUserId);
+        authData.put("lastEditorName", request.creatorName);
         authData.put("dashboardPointValue", request.pointValue);
         authData.put("dashboardNumPlayers", 2);
         authData.put("dashboardGstPercent", request.gstPercentage);

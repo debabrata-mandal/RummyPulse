@@ -141,7 +141,7 @@
                             </LinearLayout>
 
                             <LinearLayout
-                                android:layout_width="150dp"
+                                android:layout_width="164dp"
                                 android:layout_height="wrap_content"
                                 android:orientation="vertical">
 
@@ -150,9 +150,11 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:gravity="end"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
                                     android:text="Live · Round 4 of 10"
-                                    android:textColor="@color/view_text_muted"
-                                    android:textSize="9sp"
+                                    android:textColor="@color/view_text_secondary"
+                                    android:textSize="11sp"
                                     android:textStyle="bold" />
 
                                 <ProgressBar
@@ -266,6 +268,21 @@
                                 android:layout_weight="1"
                                 android:gravity="center"
                                 android:orientation="vertical">
+                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="Point Value" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                                <TextView android:id="@+id/view_mode_point_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:text="₹0.5" android:textColor="@color/view_violet_light" android:textSize="14sp" android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="1dp"
+                                android:layout_height="30dp"
+                                android:background="@color/view_stroke" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:gravity="center"
+                                android:orientation="vertical">
                                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="Contribution" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
                                 <TextView android:id="@+id/view_mode_contribution_summary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:text="10% · ₹94" android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
                             </LinearLayout>
@@ -326,8 +343,74 @@
                         android:orientation="vertical"
                         android:padding="18dp">
 
-                        <TextView android:id="@+id/view_mode_round_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Player's Round Scores" android:textColor="@color/view_text_primary" android:textSize="17sp" android:textStyle="bold" />
-                        <TextView android:id="@+id/view_mode_round_subtitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Performance across all ten rounds" android:textColor="@color/view_text_muted" android:textSize="11sp" />
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="12dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/view_mode_round_title"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="Player's Round Scores"
+                                    android:textColor="@color/view_text_primary"
+                                    android:textSize="17sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/view_mode_round_subtitle"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="3dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="Performance across all ten rounds"
+                                    android:textColor="@color/view_text_muted"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/view_mode_round_total_container"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_view_metric"
+                                android:gravity="center"
+                                android:minWidth="82dp"
+                                android:orientation="vertical"
+                                android:paddingStart="12dp"
+                                android:paddingTop="7dp"
+                                android:paddingEnd="12dp"
+                                android:paddingBottom="7dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Total Score"
+                                    android:textColor="@color/view_text_muted"
+                                    android:textSize="9sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/view_mode_round_total_score"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="1dp"
+                                    android:text="0"
+                                    android:textColor="@color/view_gold"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
 
                         <TextView
                             android:id="@+id/view_mode_round_empty"
@@ -475,7 +558,7 @@
                                 android:layout_height="24dp"
                                 android:layout_marginStart="8dp"
                                 android:contentDescription="@string/view_requests_section_title"
-                                android:src="@drawable/ic_expand_less"
+                                android:src="@drawable/ic_expand_more"
                                 android:tint="@color/view_text_muted" />
                         </LinearLayout>
 
@@ -484,7 +567,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:orientation="vertical">
+                            android:orientation="vertical"
+                            android:visibility="gone">
 
                             <TextView
                                 android:id="@+id/view_mode_requests_empty"

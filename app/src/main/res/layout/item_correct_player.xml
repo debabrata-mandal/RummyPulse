@@ -7,10 +7,10 @@
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"
-    app:cardBackgroundColor="@color/background_secondary"
-    app:cardCornerRadius="12dp"
+    app:cardBackgroundColor="@color/view_surface"
+    app:cardCornerRadius="14dp"
     app:cardElevation="0dp"
-    app:strokeColor="@color/divider_color"
+    app:strokeColor="@color/view_stroke"
     app:strokeWidth="1dp">
 
     <LinearLayout
@@ -28,9 +28,9 @@
             android:id="@+id/text_correct_player_avatar"
             android:layout_width="42dp"
             android:layout_height="42dp"
-            android:background="@drawable/avatar_background"
+            android:background="@drawable/bg_view_avatar"
             android:gravity="center"
-            android:textColor="@android:color/white"
+            android:textColor="@color/view_violet_light"
             android:textSize="16sp"
             android:textStyle="bold" />
 
@@ -47,7 +47,7 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/view_text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
@@ -56,7 +56,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="3dp"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/view_text_secondary"
                 android:textSize="12sp" />
 
         </LinearLayout>
@@ -65,11 +65,11 @@
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:layout_marginStart="8dp"
-            android:background="@drawable/circle_background"
+            android:background="@drawable/bg_view_pin_icon"
             android:contentDescription="@string/dialog_correct_player_edit_action"
             android:padding="8dp"
             android:src="@drawable/ic_edit"
-            android:tint="@color/accent_blue" />
+            android:tint="@color/view_violet_light" />
 
     </LinearLayout>
 

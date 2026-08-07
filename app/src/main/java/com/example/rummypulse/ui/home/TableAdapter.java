@@ -278,9 +278,17 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         if (when.isEmpty()) {
             when = "unknown date";
         }
-        String first = DisplayNameUtils.firstName(item.getCreatorName());
-        if (!first.isEmpty()) {
-            return title + " created by " + first + " on " + when;
+        String creator = DisplayNameUtils.firstName(item.getCreatorName());
+        String editor = DisplayNameUtils.firstName(item.getEditorName());
+        if (!creator.isEmpty() && !editor.isEmpty()) {
+            return title + " created by " + creator + " · edited by " + editor
+                    + " · started " + when;
+        }
+        if (!creator.isEmpty()) {
+            return title + " created by " + creator + " · started " + when;
+        }
+        if (!editor.isEmpty()) {
+            return title + " edited by " + editor + " · started " + when;
         }
         return title + " on " + when;
     }

@@ -410,7 +410,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             if (active || slow || error) {
                 layoutCreationStatus.setVisibility(View.VISIBLE);
                 textCreationStatus.setTextColor(
-                        ContextCompat.getColor(requireContext(), R.color.text_secondary));
+                        ContextCompat.getColor(requireContext(), R.color.view_text_secondary));
                 textCreationStatus.setText(state != null && state.message != null
                         ? state.message
                         : "Creating game…");
@@ -419,12 +419,12 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 layoutCreationStatus.setVisibility(View.VISIBLE);
                 progressCreation.setVisibility(View.GONE);
                 textCreationStatus.setTextColor(
-                        ContextCompat.getColor(requireContext(), R.color.error_red));
+                        ContextCompat.getColor(requireContext(), R.color.view_coral));
                 textCreationStatus.setText(R.string.dialog_create_game_offline);
             } else {
                 layoutCreationStatus.setVisibility(View.GONE);
                 textCreationStatus.setTextColor(
-                        ContextCompat.getColor(requireContext(), R.color.text_secondary));
+                        ContextCompat.getColor(requireContext(), R.color.view_text_secondary));
             }
 
             btnCreate.setText(retryMode[0]
@@ -616,6 +616,8 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
         Window window = dialog.getWindow();
         if (window != null) {
+            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                    android.graphics.Color.TRANSPARENT));
             android.util.DisplayMetrics dm = requireContext().getResources().getDisplayMetrics();
             int maxPx = getResources().getDimensionPixelSize(R.dimen.dialog_create_game_max_width);
             int widthPx = Math.min((int) (dm.widthPixels * 0.92f), maxPx);

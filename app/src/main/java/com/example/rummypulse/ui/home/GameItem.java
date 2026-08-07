@@ -17,6 +17,8 @@ public class GameItem {
     private String creatorName;
     private String creatorPhotoUrl;
     private String creatorUserId;
+    private String editorName;
+    private String editorUserId;
     /** From {@code games_v2.displayName}; may be empty. */
     private String gameDisplayName;
     /** Current user's view approval for this game: requested, approved, rejected, or null. */
@@ -104,6 +106,19 @@ public class GameItem {
     public String getCreatorName() { return creatorName; }
     public String getCreatorPhotoUrl() { return creatorPhotoUrl; }
     public String getCreatorUserId() { return creatorUserId; }
+    public String getEditorName() {
+        return editorName != null && !editorName.trim().isEmpty()
+                ? editorName : creatorName;
+    }
+    public String getEditorUserId() {
+        return editorUserId != null && !editorUserId.trim().isEmpty()
+                ? editorUserId : creatorUserId;
+    }
+    public String getEditorPhotoUrl() {
+        String displayEditorId = getEditorUserId();
+        return displayEditorId != null && displayEditorId.equals(creatorUserId)
+                ? creatorPhotoUrl : null;
+    }
     public String getGameDisplayName() { return gameDisplayName; }
     public String getMyViewAccessStatus() { return myViewAccessStatus; }
     public int getPendingViewRequestCount() { return pendingViewRequestCount; }
@@ -144,6 +159,8 @@ public class GameItem {
     public void setCreatorName(String creatorName) { this.creatorName = creatorName; }
     public void setCreatorPhotoUrl(String creatorPhotoUrl) { this.creatorPhotoUrl = creatorPhotoUrl; }
     public void setCreatorUserId(String creatorUserId) { this.creatorUserId = creatorUserId; }
+    public void setEditorName(String editorName) { this.editorName = editorName; }
+    public void setEditorUserId(String editorUserId) { this.editorUserId = editorUserId; }
     public void setGameDisplayName(String gameDisplayName) { this.gameDisplayName = gameDisplayName; }
     public void setMyViewAccessStatus(String myViewAccessStatus) { this.myViewAccessStatus = myViewAccessStatus; }
     public void setPendingViewRequestCount(int pendingViewRequestCount) { this.pendingViewRequestCount = Math.max(0, pendingViewRequestCount); }

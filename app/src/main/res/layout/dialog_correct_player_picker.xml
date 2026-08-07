@@ -4,7 +4,7 @@
     android:id="@+id/correct_player_dialog_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/dialog_background"
+    android:background="@drawable/bg_view_hero"
     android:orientation="vertical"
     android:paddingStart="18dp"
     android:paddingTop="18dp"
@@ -20,11 +20,11 @@
         <ImageView
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:background="@drawable/circle_background"
+            android:background="@drawable/bg_view_pin_icon"
             android:contentDescription="@null"
             android:padding="11dp"
             android:src="@drawable/ic_edit"
-            android:tint="@color/accent_blue" />
+            android:tint="@color/view_violet_light" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -37,7 +37,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/dialog_correct_player_title"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/view_text_primary"
                 android:textSize="19sp"
                 android:textStyle="bold" />
 
@@ -46,7 +46,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="@string/dialog_correct_player_subtitle"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/view_text_secondary"
                 android:textSize="12sp" />
 
         </LinearLayout>
@@ -56,12 +56,12 @@
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:layout_marginStart="10dp"
-            android:background="@drawable/bg_report_games_chip"
+            android:background="@drawable/bg_view_round_active"
             android:gravity="center"
             android:minWidth="52dp"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
-            android:textColor="@color/accent_blue_light"
+            android:textColor="@color/view_violet_light"
             android:textSize="14sp"
             android:textStyle="bold" />
 
@@ -71,7 +71,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:background="@drawable/bg_dashboard_info_section_blue"
+        android:background="@drawable/bg_create_game_inner"
         android:drawableStart="@drawable/ic_info"
         android:drawablePadding="8dp"
         android:gravity="center_vertical"
@@ -80,9 +80,9 @@
         android:paddingEnd="12dp"
         android:paddingBottom="10dp"
         android:text="@string/dialog_correct_player_hint"
-        android:textColor="@color/text_secondary"
+        android:textColor="@color/view_text_secondary"
         android:textSize="12sp"
-        android:drawableTint="@color/accent_blue_light" />
+        android:drawableTint="@color/view_violet_light" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -112,9 +112,10 @@
         android:minHeight="48dp"
         android:text="@android:string/cancel"
         android:textAllCaps="false"
-        android:textColor="@color/text_primary"
+        android:textColor="@color/view_text_primary"
+        app:backgroundTint="#24111424"
         app:cornerRadius="10dp"
-        app:strokeColor="@color/divider_color"
+        app:strokeColor="@color/view_violet_light"
         app:strokeWidth="1dp" />
 
 </LinearLayout>
