@@ -1,256 +1,169 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="8dp"
-    android:layout_marginVertical="4dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="3dp"
-    app:cardBackgroundColor="@color/card_background">
+    android:layout_marginBottom="10dp"
+    app:cardBackgroundColor="@color/view_surface"
+    app:cardCornerRadius="18dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/view_stroke"
+    app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="12dp">
+        android:gravity="center_vertical"
+        android:minHeight="82dp"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="12dp">
 
-        <!-- Top Row: Player Info + Net Amount -->
+        <TextView
+            android:id="@+id/text_rank"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:layout_marginEnd="10dp"
+            android:background="@drawable/bg_view_avatar"
+            android:gravity="center"
+            android:textColor="@color/view_violet_light"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="1" />
+
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="8dp">
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-            <!-- Rank Badge -->
-            <LinearLayout
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:background="@drawable/rank_badge_background"
-                android:gravity="center"
-                android:layout_marginEnd="6dp">
-
-                <TextView
-                    android:id="@+id/text_rank"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🥇"
-                    android:textSize="11sp" />
-
-            </LinearLayout>
-
-            <!-- Player Name (Left) -->
-            <LinearLayout
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/text_player_name"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="horizontal"
-                android:gravity="start|center_vertical">
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/view_text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="Debabrata" />
 
-                <TextView
-                    android:id="@+id/text_player_name"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Ajay"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end"
-                    android:layout_marginEnd="8dp" />
+            <TextView
+                android:id="@+id/text_player_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/view_text_secondary"
+                android:textSize="11sp"
+                android:visibility="gone"
+                tools:text="#75" />
 
-                <TextView
-                    android:id="@+id/text_player_id"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="(#75)"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    android:visibility="gone"
-                    android:layout_marginEnd="8dp" />
+        </LinearLayout>
 
-            </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:minWidth="62dp"
+            android:orientation="vertical">
 
-            <!-- Score (Center) -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/standing_total_score"
+                android:textColor="@color/view_text_muted"
+                android:textSize="9sp" />
+
             <TextView
                 android:id="@+id/text_score"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="158"
-                android:textColor="#FFC107"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:singleLine="true"
+                android:layout_marginTop="3dp"
+                android:ellipsize="end"
                 android:maxLines="1"
-                android:ellipsize="end" />
-
-            <!-- Net Amount (Right) -->
-            <TextView
-                android:id="@+id/text_net_amount"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="₹515"
-                android:textSize="16sp"
+                android:textColor="@color/view_gold"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                android:gravity="end"
-                android:singleLine="true"
-                android:maxLines="1"
-                android:ellipsize="end" />
+                tools:text="195" />
 
         </LinearLayout>
 
-        <!-- Bottom Row: 10 Round Score Boxes -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="5dp"
+            android:background="@color/view_stroke" />
+
         <LinearLayout
-            android:id="@+id/round_scores_container"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
+            android:gravity="center"
+            android:minWidth="62dp"
+            android:orientation="vertical">
 
-            <!-- Round 1 -->
             <TextView
-                android:id="@+id/round_1_score"
-                android:layout_width="0dp"
-                android:layout_height="20dp"
-                android:layout_weight="1"
-                android:text="15"
-                android:textSize="11sp"
-                android:textColor="@color/text_primary"
-                android:background="@drawable/round_score_box"
-                android:gravity="center"
-                android:layout_marginEnd="1dp"
-                android:maxLines="1" />
+                android:id="@+id/text_last_round_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/standing_last_round"
+                android:textColor="@color/view_text_muted"
+                android:textSize="9sp" />
 
-            <!-- Round 2 -->
             <TextView
-                android:id="@+id/round_2_score"
-                android:layout_width="0dp"
-                android:layout_height="20dp"
-                android:layout_weight="1"
-                android:text="23"
-                android:textSize="11sp"
-                android:textColor="@color/text_primary"
-                android:background="@drawable/round_score_box"
-                android:gravity="center"
-                android:layout_marginEnd="1dp"
-                android:maxLines="1" />
+                android:id="@+id/text_last_round_score"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:maxLines="1"
+                android:textColor="@color/view_mint"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                tools:text="40" />
 
-            <!-- Round 3 -->
-            <TextView
-                android:id="@+id/round_3_score"
-                android:layout_width="0dp"
-                android:layout_height="20dp"
-                android:layout_weight="1"
-                android:text="8"
-                android:textSize="11sp"
-                android:textColor="@color/text_primary"
-                android:background="@drawable/round_score_box"
-                android:gravity="center"
-                android:layout_marginEnd="1dp"
-                android:maxLines="1" />
+        </LinearLayout>
 
-            <!-- Round 4 -->
-            <TextView
-                android:id="@+id/round_4_score"
-                android:layout_width="0dp"
-                android:layout_height="20dp"
-                android:layout_weight="1"
-                android:text="12"
-                android:textSize="11sp"
-                android:textColor="@color/text_primary"
-                android:background="@drawable/round_score_box"
-                android:gravity="center"
-                android:layout_marginEnd="1dp"
-                android:maxLines="1" />
+        <View
+            android:layout_width="1dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="5dp"
+            android:background="@color/view_stroke" />
 
-            <!-- Round 5 -->
-            <TextView
-                android:id="@+id/round_5_score"
-                android:layout_width="0dp"
-                android:layout_height="20dp"
-                android:layout_weight="1"
-                android:text="31"
-                android:textSize="11sp"
-                android:textColor="@color/text_primary"
-                android:background="@drawable/round_score_box"
-                android:gravity="center"
-                android:layout_marginEnd="1dp"
-                android:maxLines="1" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:minWidth="65dp"
+            android:orientation="vertical">
 
-            <!-- Round 6 -->
             <TextView
-                android:id="@+id/round_6_score"
-                android:layout_width="0dp"
-                android:layout_height="20dp"
-                android:layout_weight="1"
-                android:text="19"
-                android:textSize="11sp"
-                android:textColor="@color/text_primary"
-                android:background="@drawable/round_score_box"
-                android:gravity="center"
-                android:layout_marginEnd="1dp"
-                android:maxLines="1" />
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:text="@string/standing_balance"
+                android:textColor="@color/view_text_muted"
+                android:textSize="9sp" />
 
-            <!-- Round 7 -->
             <TextView
-                android:id="@+id/round_7_score"
-                android:layout_width="0dp"
-                android:layout_height="20dp"
-                android:layout_weight="1"
-                android:text="27"
-                android:textSize="11sp"
-                android:textColor="@color/text_primary"
-                android:background="@drawable/round_score_box"
-                android:gravity="center"
-                android:layout_marginEnd="1dp"
-                android:maxLines="1" />
-
-            <!-- Round 8 -->
-            <TextView
-                android:id="@+id/round_8_score"
-                android:layout_width="0dp"
-                android:layout_height="20dp"
-                android:layout_weight="1"
-                android:text="14"
-                android:textSize="11sp"
-                android:textColor="@color/text_primary"
-                android:background="@drawable/round_score_box"
-                android:gravity="center"
-                android:layout_marginEnd="1dp"
-                android:maxLines="1" />
-
-            <!-- Round 9 -->
-            <TextView
-                android:id="@+id/round_9_score"
-                android:layout_width="0dp"
-                android:layout_height="20dp"
-                android:layout_weight="1"
-                android:text="6"
-                android:textSize="11sp"
-                android:textColor="@color/text_primary"
-                android:background="@drawable/round_score_box"
-                android:gravity="center"
-                android:layout_marginEnd="1dp"
-                android:maxLines="1" />
-
-            <!-- Round 10 -->
-            <TextView
-                android:id="@+id/round_10_score"
-                android:layout_width="0dp"
-                android:layout_height="20dp"
-                android:layout_weight="1"
-                android:text="3"
-                android:textSize="11sp"
-                android:textColor="@color/text_primary"
-                android:background="@drawable/round_score_box"
-                android:gravity="center"
-                android:maxLines="1" />
+                android:id="@+id/text_net_amount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:ellipsize="end"
+                android:gravity="end"
+                android:maxLines="1"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                tools:text="+₹135" />
 
         </LinearLayout>
 
     </LinearLayout>
 
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

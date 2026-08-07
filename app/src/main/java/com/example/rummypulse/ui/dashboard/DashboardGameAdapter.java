@@ -204,14 +204,12 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         // Set created time
         holder.createdTimeText.setText("Started " + formatDateTime(item.getCreationDateTime()));
         
-        // Set creator section - always visible
+        // Creator ownership and current/last editor are separate identities.
         holder.creatorSection.setVisibility(View.VISIBLE);
         
-        // Set creator name or default to Unknown
         if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
             holder.creatorNameText.setText(item.getCreatorName());
             
-            // Load creator profile image with Glide
             if (item.getCreatorPhotoUrl() != null && !item.getCreatorPhotoUrl().isEmpty()) {
                 Glide.with(holder.itemView.getContext())
                     .load(item.getCreatorPhotoUrl())
@@ -223,18 +221,19 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
                         .timeout(10000))
                     .into(holder.creatorProfileImage);
             } else {
-                // No photo URL, show default icon with proper styling
                 holder.creatorProfileImage.setImageResource(R.drawable.ic_person);
                 holder.creatorProfileImage.setScaleType(android.widget.ImageView.ScaleType.CENTER);
                 holder.creatorProfileImage.setPadding(8, 8, 8, 8);
             }
         } else {
-            // No creator info - show unknown user
             holder.creatorNameText.setText("Unknown");
             holder.creatorProfileImage.setImageResource(R.drawable.ic_person);
             holder.creatorProfileImage.setScaleType(android.widget.ImageView.ScaleType.CENTER);
             holder.creatorProfileImage.setPadding(8, 8, 8, 8);
         }
+        holder.editorNameText.setText(item.getEditorName() != null
+                && !item.getEditorName().trim().isEmpty()
+                ? item.getEditorName() : "Unknown");
         
         // Set card click behavior based on game status
         final String finalStatus = status;
@@ -386,7 +385,8 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
     }
 
     static class GameViewHolder extends RecyclerView.ViewHolder {
-        TextView gameIdText, gameStatusText, playersText, pointValueText, gstText, createdTimeText, creatorNameText;
+        TextView gameIdText, gameStatusText, playersText, pointValueText, gstText,
+                createdTimeText, creatorNameText, editorNameText;
         TextView viewAccessStatusText, pendingViewCountText, approvedViewCountText, rejectedViewCountText;
         ImageView qrCodeIcon, creatorProfileImage;
         LinearLayout creatorSection, viewRequestCountsSection;
@@ -405,6 +405,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             gstText = itemView.findViewById(R.id.text_gst);
             createdTimeText = itemView.findViewById(R.id.text_created_time);
             creatorNameText = itemView.findViewById(R.id.text_creator_name);
+            editorNameText = itemView.findViewById(R.id.text_editor_name);
             creatorProfileImage = itemView.findViewById(R.id.image_creator_profile);
             creatorSection = itemView.findViewById(R.id.creator_section);
             qrCodeIcon = itemView.findViewById(R.id.icon_qr_code_dashboard);

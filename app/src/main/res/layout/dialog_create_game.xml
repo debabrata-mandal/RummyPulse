@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/dialog_background"
+    android:background="@drawable/bg_view_hero"
     android:orientation="vertical"
     android:paddingStart="18dp"
     android:paddingTop="18dp"
@@ -21,11 +21,11 @@
         <ImageView
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:background="@drawable/circle_background"
+            android:background="@drawable/bg_view_pin_icon"
             android:contentDescription="@null"
             android:padding="10dp"
             android:src="@drawable/ic_gamepad"
-            android:tint="@color/accent_blue" />
+            android:tint="@color/view_violet_light" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -38,7 +38,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/dialog_new_game_title"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/view_text_primary"
                 android:textSize="19sp"
                 android:textStyle="bold" />
 
@@ -48,7 +48,7 @@
                 android:layout_marginTop="2dp"
                 android:lineSpacingMultiplier="1.1"
                 android:text="@string/dialog_create_game_subtitle"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/view_text_secondary"
                 android:textSize="12sp" />
 
         </LinearLayout>
@@ -76,10 +76,10 @@
                 android:layout_marginStart="4dp"
                 android:layout_marginEnd="4dp"
                 android:layout_marginBottom="10dp"
-                app:cardBackgroundColor="@color/background_secondary"
+                app:cardBackgroundColor="#38111424"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/divider_color"
+                app:strokeColor="@color/view_stroke"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -103,7 +103,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
                             android:text="@string/dialog_game_name_section_title"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -115,7 +115,7 @@
                             android:ellipsize="end"
                             android:maxLines="1"
                             android:text="@string/dialog_game_name_section_subtitle"
-                            android:textColor="@color/text_secondary"
+                            android:textColor="@color/view_text_secondary"
                             android:textSize="10sp" />
                     </LinearLayout>
 
@@ -133,12 +133,13 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:hint="@string/dialog_game_name_hint"
+                            app:boxBackgroundColor="@color/view_surface"
                             app:boxCornerRadiusBottomEnd="10dp"
                             app:boxCornerRadiusBottomStart="10dp"
                             app:boxCornerRadiusTopEnd="10dp"
                             app:boxCornerRadiusTopStart="10dp"
-                            app:boxStrokeColor="@color/accent_blue"
-                            app:hintTextColor="@color/text_secondary">
+                            app:boxStrokeColor="@color/view_violet_light"
+                            app:hintTextColor="@color/view_violet_light">
 
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/edit_game_display_name"
@@ -149,7 +150,7 @@
                                 android:focusableInTouchMode="false"
                                 android:inputType="none"
                                 android:longClickable="false"
-                                android:textColor="@color/text_primary"
+                                android:textColor="@color/view_text_primary"
                                 android:textSize="14sp" />
                         </com.google.android.material.textfield.TextInputLayout>
 
@@ -162,7 +163,7 @@
                             android:contentDescription="@string/cd_generate_game_name"
                             android:padding="10dp"
                             android:src="@drawable/ic_ai_generate"
-                            android:tint="@color/accent_blue" />
+                            android:tint="@color/view_violet_light" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -173,10 +174,10 @@
                 android:layout_marginStart="4dp"
                 android:layout_marginEnd="4dp"
                 android:layout_marginBottom="10dp"
-                app:cardBackgroundColor="@color/background_secondary"
+                app:cardBackgroundColor="#38111424"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/divider_color"
+                app:strokeColor="@color/view_stroke"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -200,7 +201,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
                             android:text="@string/dialog_point_value_section_title"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
 
@@ -212,7 +213,7 @@
                             android:ellipsize="end"
                             android:maxLines="1"
                             android:text="@string/dialog_point_value_subtitle"
-                            android:textColor="@color/text_secondary"
+                            android:textColor="@color/view_text_secondary"
                             android:textSize="10sp" />
                     </LinearLayout>
 
@@ -220,7 +221,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:background="@drawable/dialog_counter_background"
+                        android:background="@drawable/bg_create_game_inner"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                         android:paddingStart="2dp"
@@ -236,7 +237,7 @@
                             android:contentDescription="@string/cd_decrease_point_value"
                             android:padding="10dp"
                             android:src="@drawable/ic_counter_minus"
-                            android:tint="@color/success_green" />
+                            android:tint="@color/view_violet_light" />
 
                         <com.google.android.material.textfield.TextInputLayout
                             android:id="@+id/layout_point_value"
@@ -247,12 +248,13 @@
                             android:layout_marginEnd="4dp"
                             android:layout_weight="1"
                             android:hint="@string/dialog_point_value_field_hint"
+                            app:boxBackgroundColor="@color/view_surface"
                             app:boxCornerRadiusBottomEnd="10dp"
                             app:boxCornerRadiusBottomStart="10dp"
                             app:boxCornerRadiusTopEnd="10dp"
                             app:boxCornerRadiusTopStart="10dp"
-                            app:boxStrokeColor="@color/accent_blue"
-                            app:hintTextColor="@color/text_secondary">
+                            app:boxStrokeColor="@color/view_violet_light"
+                            app:hintTextColor="@color/view_violet_light">
 
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/edit_point_value"
@@ -263,7 +265,7 @@
                                 android:inputType="numberDecimal"
                                 android:maxLength="8"
                                 android:text="0.15"
-                                android:textColor="@color/success_green"
+                                android:textColor="@color/view_mint"
                                 android:textSize="16sp"
                                 android:textStyle="bold" />
                         </com.google.android.material.textfield.TextInputLayout>
@@ -276,7 +278,7 @@
                             android:contentDescription="@string/cd_increase_point_value"
                             android:padding="10dp"
                             android:src="@drawable/ic_add"
-                            android:tint="@color/success_green" />
+                            android:tint="@color/view_violet_light" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -287,10 +289,10 @@
                 android:layout_marginStart="4dp"
                 android:layout_marginEnd="4dp"
                 android:layout_marginBottom="4dp"
-                app:cardBackgroundColor="@color/background_secondary"
+                app:cardBackgroundColor="#38111424"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/divider_color"
+                app:strokeColor="@color/view_stroke"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
@@ -314,7 +316,7 @@
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
                             android:text="@string/dialog_contribution_section_title"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
 
@@ -326,7 +328,7 @@
                             android:ellipsize="end"
                             android:maxLines="1"
                             android:text="@string/dialog_contribution_subtitle"
-                            android:textColor="@color/text_secondary"
+                            android:textColor="@color/view_text_secondary"
                             android:textSize="10sp" />
                     </LinearLayout>
 
@@ -335,10 +337,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:background="@drawable/dialog_counter_background"
+                        android:background="@drawable/bg_create_game_inner"
                         android:gravity="center"
                         android:padding="10dp"
-                        android:textColor="@color/accent_blue"
+                        android:textColor="@color/view_gold"
                         android:textSize="17sp"
                         android:textStyle="bold"
                         tools:text="25%" />
@@ -369,7 +371,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="@color/text_secondary"
+            android:textColor="@color/view_text_secondary"
             android:textSize="13sp"
             tools:text="Creating game securely…" />
     </LinearLayout>
@@ -391,9 +393,10 @@
             android:minHeight="48dp"
             android:text="@string/dialog_cancel"
             android:textAllCaps="false"
-            android:textColor="@color/text_primary"
+            android:textColor="@color/view_text_primary"
+            app:backgroundTint="#24111424"
             app:cornerRadius="10dp"
-            app:strokeColor="@color/divider_color"
+            app:strokeColor="@color/view_violet_light"
             app:strokeWidth="1dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -406,7 +409,7 @@
             android:text="@string/dialog_create_game_confirm"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
-            app:backgroundTint="@color/accent_blue"
+            app:backgroundTint="@color/view_violet"
             app:cornerRadius="10dp" />
     </LinearLayout>
 

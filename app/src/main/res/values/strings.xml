@@ -189,6 +189,7 @@
     <string name="dialog_enter_round_score_player_progress">Player %1$d of %2$d</string>
     <string name="dialog_enter_round_score_field_label">Points this round</string>
     <string name="dialog_enter_round_score_invalid">Enter a valid whole number (0 or higher).</string>
+    <string name="dialog_enter_round_score_back">Back</string>
     <string name="dialog_enter_round_score_next">Next</string>
     <string name="dialog_enter_round_score_done">Done</string>
     <string name="dialog_enter_round_score_saving">Saving…</string>
@@ -209,6 +210,10 @@
     <string name="dialog_pick_round_chip">R%1$d</string>
     <string name="dialog_pick_past_round_continue">Continue</string>
     <string name="dialog_correct_round_score_title">Correct Round %1$d</string>
+    <string name="standing_total_score">Total Score</string>
+    <string name="standing_last_round">Last Round</string>
+    <string name="standing_round_score">R%1$d Score</string>
+    <string name="standing_balance">Balance</string>
     <string name="correct_past_round_none">No past rounds to correct yet.</string>
 
     <!-- Add player confirmation when scores already exist -->
@@ -323,6 +328,7 @@
     <string name="player_consolidation_total_contribution">Contribution</string>
     <string name="player_consolidation_net_player_balance">Net player balance</string>
     <string name="player_consolidation_created_by">Created by </string>
+    <string name="player_consolidation_edited_by">Edited by </string>
     <string name="player_consolidation_started">Started %1$s</string>
     <string name="player_consolidation_creator_photo">Game creator photo</string>
 
@@ -406,6 +412,9 @@
     <string name="map_player_transfer_confirm">Transfer</string>
     <string name="players_dialog_title">Players &amp; scores</string>
     <string name="players_dialog_subtitle">Current standings and estimated net amounts.</string>
+    <string name="edit_players_standings_title">Players &amp; Standings</string>
+    <string name="edit_player_round_sheet_title">%1$s\'s Round Scores</string>
+    <string name="edit_player_round_sheet_total">Total Score · %1$d</string>
     <string name="players_dialog_total_score">Combined score</string>
     <string name="players_dialog_close">Close</string>
     <string name="unknown_user">Unknown user</string>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Retained for compatibility with legacy score-row helper code. -->
+    <item name="round_1_score" type="id" />
+    <item name="round_2_score" type="id" />
+    <item name="round_3_score" type="id" />
+    <item name="round_4_score" type="id" />
+    <item name="round_5_score" type="id" />
+    <item name="round_6_score" type="id" />
+    <item name="round_7_score" type="id" />
+    <item name="round_8_score" type="id" />
+    <item name="round_9_score" type="id" />
+    <item name="round_10_score" type="id" />
+</resources>

@@ -138,6 +138,8 @@ public class JoinGameActivity extends AppCompatActivity {
     private Runnable pendingRoundAfterSync;
     /** Player selected from the read-only settlement board for round-score details. */
     private String selectedViewRoundPlayerKey;
+    /** Player whose round details are currently expanded from an edit-mode card. */
+    private String selectedEditRoundPlayerId;
     private String lastIntegrityWarningKey;
 
     /** Global admins may manage view requests without holding game edit access. */
@@ -1055,8 +1057,7 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     private void showLoadingState() {
-        // Show standings card with placeholder data
-        binding.standingsCard.setVisibility(View.VISIBLE);
+        binding.standingsCard.setVisibility(View.GONE);
         
         // Clear any existing standings
         binding.standingsTableContainer.removeAllViews();
@@ -1085,8 +1086,7 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
             applyStandingNetAmountPlaceholder(netAmountText);
 
-            // Set all round scores to dash for loading state
-            populateLoadingRoundScores(standingsRowView);
+            populateLoadingLastCompletedRound(standingsRowView);
 
             binding.standingsTableContainer.addView(standingsRowView);
         }
@@ -1187,6 +1187,9 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.btnEnterRoundScores.setOnClickListener(v -> startSequentialRoundScoreEntryFlow());
 
         binding.btnCorrectPastRound.setOnClickListener(v -> startPastRoundCorrectionFlow());
+
+        binding.getRoot().findViewById(R.id.edit_player_round_sheet_close)
+                .setOnClickListener(v -> hideEditPlayerRoundSheet());
         
         // Setup collapsible sections
         setupCollapsibleSections();
@@ -1612,7 +1615,7 @@ public class JoinGameActivity extends AppCompatActivity {
         if (editAccess == null || !editAccess) {
             binding.playersSection.setVisibility(View.GONE); // Hidden in view mode only
         }
-        binding.standingsCard.setVisibility(View.VISIBLE);
+        binding.standingsCard.setVisibility(View.GONE);
 
         // Header: name from games_v2.displayName when set, else game ID
         applyGameHeaderText();
@@ -1654,6 +1657,9 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.appBar.setVisibility(editMode ? View.VISIBLE : View.GONE);
         binding.gameEditContent.setVisibility(editMode ? View.VISIBLE : View.GONE);
         binding.gameInfoHeader.setVisibility(editMode ? View.VISIBLE : View.GONE);
+        if (!editMode) {
+            hideEditPlayerRoundSheet();
+        }
         binding.btnAddPlayer.setVisibility(editMode ? View.VISIBLE : View.GONE);
         binding.btnEnterRoundScores.setVisibility(editMode
                 ? binding.btnEnterRoundScores.getVisibility() : View.GONE);
@@ -1675,6 +1681,7 @@ public class JoinGameActivity extends AppCompatActivity {
         TextView balanceLabel = root.findViewById(R.id.view_mode_balance_label);
         TextView contributionSummary = root.findViewById(R.id.view_mode_contribution_summary);
         TextView totalPlayers = root.findViewById(R.id.view_mode_total_players);
+        TextView pointValue = root.findViewById(R.id.view_mode_point_value);
 
         String displayName = viewModel.getGameDisplayName().getValue();
         title.setText(TextUtils.isEmpty(displayName) ? "Rummy Game" : displayName);
@@ -1689,6 +1696,7 @@ public class JoinGameActivity extends AppCompatActivity {
         progress.setProgress(completedRounds);
         totalPlayers.setText(String.valueOf(
                 gameData.getPlayers() == null ? 0 : gameData.getPlayers().size()));
+        pointValue.setText("₹" + formatPointValue(gameData.getPointValue()));
         contributionSummary.setText(String.format(Locale.getDefault(), "%.0f%% · ₹%d",
                 gameData.getGstPercent(), Math.round(calculateTotalContribution(gameData))));
         renderCurrentPlayerPerformance(gameData, settlementStatus,
@@ -1755,7 +1763,8 @@ public class JoinGameActivity extends AppCompatActivity {
             title.setText("My Performance");
         } else {
             String playerName = currentStanding.player.getName();
-            title.setText((TextUtils.isEmpty(playerName) ? "Player" : playerName) + " Performance");
+            title.setText((TextUtils.isEmpty(playerName) ? "Player" : playerName)
+                    + "'s Performance");
         }
         balanceLabel.setText("Balance");
         positionView.setText("#" + currentPosition + " of " + standings.size());
@@ -1919,6 +1928,10 @@ public class JoinGameActivity extends AppCompatActivity {
         TextView empty = binding.viewModeContent.getRoot().findViewById(R.id.view_mode_round_empty);
         TextView title = binding.viewModeContent.getRoot().findViewById(R.id.view_mode_round_title);
         TextView subtitle = binding.viewModeContent.getRoot().findViewById(R.id.view_mode_round_subtitle);
+        View totalContainer = binding.viewModeContent.getRoot().findViewById(
+                R.id.view_mode_round_total_container);
+        TextView totalScore = binding.viewModeContent.getRoot().findViewById(
+                R.id.view_mode_round_total_score);
         container.removeAllViews();
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         String currentUserId = currentUser == null ? null : currentUser.getUid();
@@ -1947,10 +1960,13 @@ public class JoinGameActivity extends AppCompatActivity {
             title.setText("Round Scores");
             subtitle.setText("Select a player from the settlement board");
             empty.setText("Select a player above to view round scores");
+            totalContainer.setVisibility(View.GONE);
             return;
         }
         container.setVisibility(View.VISIBLE);
         empty.setVisibility(View.GONE);
+        totalContainer.setVisibility(View.VISIBLE);
+        totalScore.setText(String.valueOf(currentPlayer.getTotalScore()));
         boolean isCurrentPlayer = !TextUtils.isEmpty(currentUserId)
                 && currentUserId.equals(currentPlayer.getUserId());
         title.setText(isCurrentPlayer
@@ -2023,25 +2039,96 @@ public class JoinGameActivity extends AppCompatActivity {
         int numberOfPlayers = gameData.getPlayers() != null ? gameData.getPlayers().size() : 0;
         binding.textHeaderPlayers.setText(String.valueOf(numberOfPlayers));
         
-        // Update Current Round (or "Game Over" if completed)
+        // Match the read-only performance header's round presentation.
         int currentRound = calculateCurrentRound(gameData);
-        if (currentRound == 10 && isGameCompleted(gameData)) {
-            binding.textHeaderCurrentRound.setText("Game Over");
-        } else {
-            binding.textHeaderCurrentRound.setText(String.valueOf(currentRound));
-        }
+        boolean completed = isGameCompleted(gameData);
+        int completedRounds = completed ? 10 : Math.max(0, currentRound - 1);
+        binding.textHeaderCurrentRound.setText((completed ? "Complete" : "Live")
+                + " · Round " + (completed ? 10 : currentRound) + " of 10");
+        binding.editHeaderRoundProgress.setMax(10);
+        binding.editHeaderRoundProgress.setProgress(completedRounds);
         
         // Update Contribution %
-        binding.textHeaderContribution.setText(String.format("%.0f", gameData.getGstPercent()));
+        binding.textHeaderContribution.setText(String.format(
+                Locale.getDefault(), "%.0f%% · ", gameData.getGstPercent()));
         
         // Update Total Contribution Amount (rounded, no decimals)
         double totalContribution = calculateTotalContribution(gameData);
         binding.textHeaderTotalContribution.setText("₹" + Math.round(totalContribution));
+
+        renderEditHeaderPerformance(gameData);
         
         // Game PIN is not shown in the compact header (same layout in edit and view mode)
         updateHeaderPinVisibility();
 
         updateScoreEntryButtonsVisibility(gameData);
+    }
+
+    private void renderEditHeaderPerformance(
+            com.example.rummypulse.data.GameData gameData) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        String userId = currentUser == null ? null : currentUser.getUid();
+        List<PlayerStanding> standings = calculateStandings(gameData);
+        standings.sort((left, right) -> Integer.compare(left.totalScore, right.totalScore));
+
+        PlayerStanding mappedStanding = null;
+        int position = -1;
+        if (!TextUtils.isEmpty(userId)) {
+            for (int index = 0; index < standings.size(); index++) {
+                if (userId.equals(standings.get(index).player.getUserId())) {
+                    mappedStanding = standings.get(index);
+                    position = index + 1;
+                    break;
+                }
+            }
+        }
+
+        if (mappedStanding == null) {
+            binding.editHeaderPerformanceTitle.setText("Game Overview");
+            binding.editHeaderPlayerPosition.setText("—");
+            binding.editHeaderPlayerBalance.setText("—");
+            binding.editHeaderPlayerBalance.setTextColor(
+                    ContextCompat.getColor(this, R.color.view_text_muted));
+            bindEditHeaderStatistics(null, gameData);
+            return;
+        }
+
+        binding.editHeaderPerformanceTitle.setText("My Performance");
+        binding.editHeaderPlayerPosition.setText(
+                "#" + position + " of " + standings.size());
+        if (!shouldShowStandingAmountForPlayer(gameData, mappedStanding.player)) {
+            binding.editHeaderPlayerBalance.setText(
+                    getString(R.string.game_view_amount_hidden));
+            binding.editHeaderPlayerBalance.setTextColor(
+                    ContextCompat.getColor(this, R.color.view_text_muted));
+        } else if (mappedStanding.netAmount > 0) {
+            binding.editHeaderPlayerBalance.setText("+₹" + String.format(
+                    Locale.getDefault(), "%.0f", mappedStanding.netAmount));
+            binding.editHeaderPlayerBalance.setTextColor(
+                    ContextCompat.getColor(this, R.color.view_mint));
+        } else if (mappedStanding.netAmount < 0) {
+            binding.editHeaderPlayerBalance.setText("-₹" + String.format(
+                    Locale.getDefault(), "%.0f", Math.abs(mappedStanding.netAmount)));
+            binding.editHeaderPlayerBalance.setTextColor(
+                    ContextCompat.getColor(this, R.color.view_coral));
+        } else {
+            binding.editHeaderPlayerBalance.setText("₹0");
+            binding.editHeaderPlayerBalance.setTextColor(
+                    ContextCompat.getColor(this, R.color.view_text_secondary));
+        }
+        bindEditHeaderStatistics(mappedStanding.player, gameData);
+    }
+
+    private void bindEditHeaderStatistics(
+            Player player, com.example.rummypulse.data.GameData gameData) {
+        PlayerRoundStatistics statistics =
+                PlayerRoundStatisticsCalculator.calculate(player, gameData);
+        binding.editHeaderMadeGameCount.setText(
+                String.valueOf(statistics.getMadeGameCount()));
+        binding.editHeaderPackedCount.setText(
+                String.valueOf(statistics.getPackedCount()));
+        binding.editHeaderFullHandCount.setText(
+                String.valueOf(statistics.getFullHandCount()));
     }
 
     /**
@@ -2128,6 +2215,8 @@ public class JoinGameActivity extends AppCompatActivity {
         GameDataSchema.normalize(gameData);
         // Clear existing player cards
         binding.playersContainer.removeAllViews();
+        java.util.Map<String, PlayerStanding> standingsByPlayerId =
+                buildStandingsByPlayerId(gameData);
 
         // Add player cards
         for (int i = 0; i < gameData.getPlayers().size(); i++) {
@@ -2249,8 +2338,11 @@ public class JoinGameActivity extends AppCompatActivity {
                 dragHandle.setVisibility(View.GONE);
             }
 
-            TextView totalScoreView = playerCardView.findViewById(R.id.text_player_total_score);
-            bindPlayerTotalScore(totalScoreView, player);
+            bindMergedPlayerMetrics(
+                    playerCardView, player, gameData, standingsByPlayerId);
+
+            playerCardView.setOnClickListener(v ->
+                    toggleEditPlayerRoundSheet(stablePlayerId));
 
             playerCardView.setTag(REAL_PLAYER_CARD_TAG);
             playerCardView.setTag(R.id.text_player_id, stablePlayerId);
@@ -2267,6 +2359,8 @@ public class JoinGameActivity extends AppCompatActivity {
             generatePlayerCards(gameData);
             return;
         }
+        java.util.Map<String, PlayerStanding> standingsByPlayerId =
+                buildStandingsByPlayerId(gameData);
         for (int index = 0; index < gameData.getPlayers().size(); index++) {
             com.example.rummypulse.data.Player player =
                     gameData.getPlayers().get(index);
@@ -2285,8 +2379,7 @@ public class JoinGameActivity extends AppCompatActivity {
             }
             applyMappedPlayerNameLock(name, player);
             bindMapPlayerButton(card.findViewById(R.id.btn_map_player), player);
-            bindPlayerTotalScore(
-                    card.findViewById(R.id.text_player_total_score), player);
+            bindMergedPlayerMetrics(card, player, gameData, standingsByPlayerId);
             TextView pending = card.findViewById(R.id.text_player_pending_sync);
             pending.setVisibility(
                     pendingPlayerIds.contains(player.getPlayerId())
@@ -2325,12 +2418,12 @@ public class JoinGameActivity extends AppCompatActivity {
         boolean linked = !TextUtils.isEmpty(player.getUserId());
         button.setText(playerAvatarInitials(player));
         button.setBackgroundResource(linked
-                ? R.drawable.linked_player_double_ring
-                : R.drawable.circle_background);
+                ? R.drawable.bg_edit_avatar_linked
+                : R.drawable.bg_view_avatar);
         button.setTextColor(ContextCompat.getColor(
                 this,
-                linked ? android.R.color.holo_green_dark : android.R.color.holo_blue_dark));
-        button.setAlpha(linked ? 1f : 0.78f);
+                R.color.view_violet_light));
+        button.setAlpha(1f);
         button.setContentDescription(linked
                 ? getString(R.string.map_player_linked_icon_description, player.getName())
                 : getString(R.string.map_player_icon_description));
@@ -2721,15 +2814,70 @@ public class JoinGameActivity extends AppCompatActivity {
         styleTotalScoreTextView(totalScoreView, player.getTotalScore());
     }
 
+    private java.util.Map<String, PlayerStanding> buildStandingsByPlayerId(
+            com.example.rummypulse.data.GameData gameData) {
+        java.util.Map<String, PlayerStanding> byPlayerId =
+                new java.util.LinkedHashMap<>();
+        if (gameData == null || gameData.getPlayers() == null) {
+            return byPlayerId;
+        }
+        java.util.List<PlayerStanding> ranked = calculateStandings(gameData);
+        ranked.sort((left, right) -> Integer.compare(left.totalScore, right.totalScore));
+        for (int index = 0; index < ranked.size(); index++) {
+            PlayerStanding standing = ranked.get(index);
+            standing.rank = index + 1;
+            if (standing.player != null && !TextUtils.isEmpty(standing.player.getPlayerId())) {
+                byPlayerId.put(standing.player.getPlayerId(), standing);
+            }
+        }
+        return byPlayerId;
+    }
+
+    private void bindMergedPlayerMetrics(
+            View playerCard,
+            com.example.rummypulse.data.Player player,
+            com.example.rummypulse.data.GameData gameData,
+            java.util.Map<String, PlayerStanding> standingsByPlayerId) {
+        if (playerCard == null || player == null || gameData == null) {
+            return;
+        }
+        PlayerStanding standing = standingsByPlayerId.get(player.getPlayerId());
+        TextView position = playerCard.findViewById(R.id.text_player_position);
+        TextView total = playerCard.findViewById(R.id.text_player_total_score);
+        TextView amount = playerCard.findViewById(R.id.text_net_amount);
+        if (standing == null) {
+            position.setText("—");
+            total.setText("—");
+            applyStandingNetAmountPlaceholder(amount);
+            populateLastCompletedRound(playerCard, player, gameData);
+            return;
+        }
+
+        position.setText(String.valueOf(standing.rank));
+        styleTotalScoreTextView(total, standing.totalScore);
+        populateLastCompletedRound(playerCard, player, gameData);
+        applyStandingNetAmountDisplay(amount, standing, gameData);
+
+        String playerKey = player.getPlayerId();
+        Integer previousRank = previousRanks.put(playerKey, standing.rank);
+        if (previousRank != null && previousRank != standing.rank) {
+            int animation = standing.rank < previousRank
+                    ? R.anim.rank_up_animation
+                    : R.anim.rank_down_animation;
+            playerCard.startAnimation(
+                    android.view.animation.AnimationUtils.loadAnimation(this, animation));
+        }
+    }
+
     private void styleTotalScoreTextView(TextView totalScoreView, int total) {
         totalScoreView.setText(String.valueOf(total));
         totalScoreView.setTypeface(null, android.graphics.Typeface.BOLD);
         if (total < 40) {
-            totalScoreView.setTextColor(ContextCompat.getColor(this, android.R.color.holo_green_light));
+            totalScoreView.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
         } else if (total <= 120) {
-            totalScoreView.setTextColor(0xFFFFC107);
+            totalScoreView.setTextColor(ContextCompat.getColor(this, R.color.view_gold));
         } else {
-            totalScoreView.setTextColor(ContextCompat.getColor(this, android.R.color.holo_orange_light));
+            totalScoreView.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
         }
     }
 
@@ -2742,17 +2890,27 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         View playerCard = binding.playersContainer.getChildAt(playerIndex);
-        TextView totalScoreView = playerCard.findViewById(R.id.text_player_total_score);
-        bindPlayerTotalScore(totalScoreView, gameData.getPlayers().get(playerIndex));
+        com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
+        bindMergedPlayerMetrics(
+                playerCard, player, gameData, buildStandingsByPlayerId(gameData));
     }
 
     private void refreshAllPlayerTotalScores(com.example.rummypulse.data.GameData gameData) {
         if (gameData == null || gameData.getPlayers() == null) {
             return;
         }
+        java.util.Map<String, PlayerStanding> standingsByPlayerId =
+                buildStandingsByPlayerId(gameData);
         int count = Math.min(binding.playersContainer.getChildCount(), gameData.getPlayers().size());
         for (int i = 0; i < count; i++) {
-            refreshPlayerTotalScoreOnCard(i, gameData);
+            View card = binding.playersContainer.getChildAt(i);
+            com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
+            Object renderedId = card.getTag(R.id.text_player_id);
+            if (renderedId != null && !player.getPlayerId().equals(renderedId)) {
+                generatePlayerCards(gameData);
+                return;
+            }
+            bindMergedPlayerMetrics(card, player, gameData, standingsByPlayerId);
         }
     }
 
@@ -2803,9 +2961,26 @@ public class JoinGameActivity extends AppCompatActivity {
             chip.setInsetBottom(0);
             chip.setPadding(0, 0, 0, 0);
             chip.setGravity(android.view.Gravity.CENTER);
+            int[][] chipStates = new int[][]{
+                    new int[]{android.R.attr.state_checked},
+                    new int[]{}
+            };
+            chip.setBackgroundTintList(new android.content.res.ColorStateList(
+                    chipStates,
+                    new int[]{
+                            ContextCompat.getColor(this, R.color.view_violet),
+                            ContextCompat.getColor(this, R.color.view_surface)
+                    }));
+            chip.setTextColor(new android.content.res.ColorStateList(
+                    chipStates,
+                    new int[]{
+                            ContextCompat.getColor(this, R.color.view_text_primary),
+                            ContextCompat.getColor(this, R.color.view_violet_light)
+                    }));
             chip.setStrokeColor(android.content.res.ColorStateList.valueOf(
-                    ContextCompat.getColor(this, R.color.accent_blue)));
+                    ContextCompat.getColor(this, R.color.view_violet_light)));
             chip.setStrokeWidth(Math.round(1 * density));
+            chip.setCornerRadius(Math.round(12 * density));
 
             GridLayout.LayoutParams params = new GridLayout.LayoutParams();
             params.width = 0;
@@ -3368,14 +3543,14 @@ public class JoinGameActivity extends AppCompatActivity {
             activeRoundScoreDraft = activeRoundScoreDraft.reconcile(gameData);
             persistLocalRoundDraft(gameData);
         }
-        if (!correctionMode) {
+        if (!correctionMode
+                && (playerIndex < 0 || playerIndex >= gameData.getPlayers().size())) {
             int reconciledPlayer = activeRoundScoreDraft.findNextUnreviewed(0);
-            if (reconciledPlayer >= 0) {
-                playerIndex = reconciledPlayer;
-            } else {
-                playerIndex = activeRoundScoreDraft.getPlayerCount() - 1;
-            }
-        } else if (playerIndex < 0 || playerIndex >= gameData.getPlayers().size()) {
+            playerIndex = reconciledPlayer >= 0
+                    ? reconciledPlayer
+                    : activeRoundScoreDraft.getPlayerCount() - 1;
+        } else if (correctionMode
+                && (playerIndex < 0 || playerIndex >= gameData.getPlayers().size())) {
             return;
         }
         com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
@@ -3391,6 +3566,7 @@ public class JoinGameActivity extends AppCompatActivity {
         TextInputLayout layoutScore = dialogView.findViewById(R.id.layout_dialog_score);
         EditText scoreEdit = dialogView.findViewById(R.id.edit_dialog_score);
         MaterialButton btnCancel = dialogView.findViewById(R.id.btn_dialog_cancel);
+        MaterialButton btnBack = dialogView.findViewById(R.id.btn_dialog_back);
         MaterialButton btnConfirm = dialogView.findViewById(R.id.btn_dialog_confirm);
 
         titleView.setText(getString(correctionMode
@@ -3405,8 +3581,9 @@ public class JoinGameActivity extends AppCompatActivity {
         progressView.setText(getString(R.string.dialog_enter_round_score_player_progress, playerIndex + 1, numPlayers));
         progressBar.setMax(numPlayers);
         progressBar.setProgress(playerIndex + 1);
-        boolean hasMore = !correctionMode
-                && activeRoundScoreDraft.findNextUnreviewed(playerIndex + 1) >= 0;
+        boolean hasMore = !correctionMode && playerIndex + 1 < numPlayers;
+        btnBack.setVisibility(!correctionMode && playerIndex > 0
+                ? View.VISIBLE : View.GONE);
         btnConfirm.setText(getString(correctionMode
                 ? R.string.dialog_correct_round_score_save
                 : (hasMore
@@ -3433,6 +3610,46 @@ public class JoinGameActivity extends AppCompatActivity {
         btnCancel.setOnClickListener(v -> {
             dialog.dismiss();
             activeSequentialScoreDialog = null;
+        });
+
+        btnBack.setOnClickListener(v -> {
+            if (saveInProgress[0]) {
+                return;
+            }
+            com.example.rummypulse.data.GameData gd = viewModel.getGameData().getValue();
+            if (gd == null || gd.getPlayers() == null || gd.getPlayers().isEmpty()) {
+                return;
+            }
+            RoundScoreDraft workingDraft = draftForDialog.reconcile(gd);
+            int currentPlayerIndex = GameDataSchema.findPlayerIndex(gd, displayedPlayerId);
+            if (currentPlayerIndex <= 0) {
+                return;
+            }
+
+            String text = scoreEdit.getText().toString().trim();
+            if (!text.isEmpty()) {
+                int value;
+                try {
+                    value = Integer.parseInt(text);
+                } catch (NumberFormatException ex) {
+                    layoutScore.setError(getString(R.string.dialog_enter_round_score_invalid));
+                    return;
+                }
+                if (value < 0) {
+                    layoutScore.setError(getString(R.string.dialog_enter_round_score_invalid));
+                    return;
+                }
+                workingDraft.recordScore(currentPlayerIndex, value);
+            }
+
+            activeRoundScoreDraft = workingDraft;
+            persistLocalRoundDraft(gd);
+            dialog.dismiss();
+            int previousPlayerIndex = currentPlayerIndex - 1;
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(
+                    () -> showSequentialScoreDialogForPlayer(
+                            gd, round1Based, previousPlayerIndex, false),
+                    120);
         });
 
         dialog.setOnDismissListener(d -> {
@@ -3504,7 +3721,8 @@ public class JoinGameActivity extends AppCompatActivity {
                     p.getName(), value, currentPlayerIndex, finalRound1);
             int next = finalCorrectionMode
                     ? -1
-                    : workingDraft.findNextUnreviewed(currentPlayerIndex + 1);
+                    : (currentPlayerIndex + 1 < gd.getPlayers().size()
+                            ? currentPlayerIndex + 1 : -1);
             if (!finalCorrectionMode && next >= 0) {
                 dialog.dismiss();
                 com.example.rummypulse.data.GameData gdAfter =
@@ -3677,7 +3895,7 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         netAmountText.setText(getString(R.string.game_view_amount_hidden));
-        netAmountText.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
+        netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
         netAmountText.setBackground(null);
     }
 
@@ -3690,11 +3908,15 @@ public class JoinGameActivity extends AppCompatActivity {
             applyStandingNetAmountPlaceholder(netAmountText);
             return;
         }
-        netAmountText.setText("₹" + String.format("%.0f", standing.netAmount));
+        String amount = String.format("%.0f", Math.abs(standing.netAmount));
+        netAmountText.setText(standing.netAmount > 0
+                ? "+₹" + amount
+                : standing.netAmount < 0 ? "-₹" + amount : "₹0");
         if (standing.netAmount > 0) {
-            netAmountText.setTextColor(getResources().getColor(R.color.success_green, getTheme()));
+            netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
         } else {
-            netAmountText.setTextColor(getResources().getColor(R.color.error_red, getTheme()));
+            netAmountText.setTextColor(ContextCompat.getColor(this,
+                    standing.netAmount < 0 ? R.color.view_coral : R.color.view_text_secondary));
         }
         netAmountText.setBackground(null);
     }
@@ -3798,6 +4020,147 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void updateStandings(com.example.rummypulse.data.GameData gameData) {
+        binding.standingsCard.setVisibility(View.GONE);
+        binding.standingsTableContainer.removeAllViews();
+        refreshAllPlayerTotalScores(gameData);
+        refreshVisibleEditPlayerRoundSheet(gameData);
+    }
+
+    private void toggleEditPlayerRoundSheet(String playerId) {
+        View sheet = binding.getRoot().findViewById(R.id.edit_player_round_sheet);
+        if (sheet.getVisibility() == View.VISIBLE
+                && TextUtils.equals(selectedEditRoundPlayerId, playerId)) {
+            hideEditPlayerRoundSheet();
+            return;
+        }
+        com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+        Player player = GameDataSchema.findPlayer(gameData, playerId);
+        if (player == null) {
+            return;
+        }
+        selectedEditRoundPlayerId = playerId;
+        renderEditPlayerRoundSheet(player, gameData);
+        sheet.animate().cancel();
+        sheet.setVisibility(View.VISIBLE);
+        sheet.post(() -> {
+            sheet.setTranslationY(sheet.getHeight());
+            sheet.animate()
+                    .translationY(0f)
+                    .setDuration(180L)
+                    .start();
+        });
+    }
+
+    private void hideEditPlayerRoundSheet() {
+        if (binding == null) {
+            return;
+        }
+        View sheet = binding.getRoot().findViewById(R.id.edit_player_round_sheet);
+        selectedEditRoundPlayerId = null;
+        if (sheet.getVisibility() != View.VISIBLE) {
+            return;
+        }
+        sheet.animate().cancel();
+        sheet.animate()
+                .translationY(sheet.getHeight())
+                .setDuration(160L)
+                .withEndAction(() -> {
+                    sheet.setVisibility(View.GONE);
+                    sheet.setTranslationY(0f);
+                })
+                .start();
+    }
+
+    private void refreshVisibleEditPlayerRoundSheet(
+            com.example.rummypulse.data.GameData gameData) {
+        if (TextUtils.isEmpty(selectedEditRoundPlayerId)) {
+            return;
+        }
+        Player player = GameDataSchema.findPlayer(gameData, selectedEditRoundPlayerId);
+        if (player == null) {
+            hideEditPlayerRoundSheet();
+            return;
+        }
+        renderEditPlayerRoundSheet(player, gameData);
+    }
+
+    private void renderEditPlayerRoundSheet(
+            Player player, com.example.rummypulse.data.GameData gameData) {
+        TextView title = binding.getRoot().findViewById(
+                R.id.edit_player_round_sheet_title);
+        TextView total = binding.getRoot().findViewById(
+                R.id.edit_player_round_sheet_total);
+        LinearLayout rows = binding.getRoot().findViewById(
+                R.id.edit_player_round_sheet_rows);
+        String playerName = TextUtils.isEmpty(player.getName())
+                ? "Player" : player.getName().trim();
+        title.setText(getString(R.string.edit_player_round_sheet_title, playerName));
+        total.setText(getString(
+                R.string.edit_player_round_sheet_total, player.getTotalScore()));
+        rows.removeAllViews();
+
+        int currentRound = calculateCurrentRound(gameData);
+        boolean completed = isGameCompleted(gameData);
+        int margin = Math.round(3 * getResources().getDisplayMetrics().density);
+        for (int rowIndex = 0; rowIndex < 2; rowIndex++) {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            if (rowIndex > 0) {
+                rowParams.topMargin = margin * 2;
+            }
+            row.setLayoutParams(rowParams);
+            rows.addView(row);
+
+            for (int column = 0; column < 5; column++) {
+                int roundIndex = rowIndex * 5 + column;
+                View tile = LayoutInflater.from(this).inflate(
+                        R.layout.item_view_round_score, row, false);
+                LinearLayout.LayoutParams tileParams = new LinearLayout.LayoutParams(
+                        0, Math.round(68 * getResources().getDisplayMetrics().density), 1f);
+                tileParams.setMargins(margin, 0, margin, 0);
+                tile.setLayoutParams(tileParams);
+                ((TextView) tile.findViewById(R.id.view_round_number))
+                        .setText("R" + (roundIndex + 1));
+                TextView scoreView = tile.findViewById(R.id.view_round_score);
+                Integer score = player.getScores() != null
+                        && roundIndex < player.getScores().size()
+                        ? player.getScores().get(roundIndex) : null;
+                if (score != null && score >= 0) {
+                    scoreView.setText(String.valueOf(score));
+                    if (score < 40) {
+                        tile.setBackgroundResource(R.drawable.bg_view_round_good);
+                        scoreView.setTextColor(ContextCompat.getColor(
+                                this, R.color.view_mint));
+                    } else if (score <= 65) {
+                        tile.setBackgroundResource(R.drawable.bg_view_round_medium);
+                        scoreView.setTextColor(ContextCompat.getColor(
+                                this, R.color.view_gold));
+                    } else {
+                        tile.setBackgroundResource(R.drawable.bg_view_round_high);
+                        scoreView.setTextColor(ContextCompat.getColor(
+                                this, R.color.view_coral));
+                    }
+                } else if (!completed && roundIndex + 1 == currentRound) {
+                    scoreView.setText("…");
+                    tile.setBackgroundResource(R.drawable.bg_view_round_active);
+                    scoreView.setTextColor(ContextCompat.getColor(
+                            this, R.color.view_violet_light));
+                } else {
+                    scoreView.setText("–");
+                    tile.setBackgroundResource(R.drawable.bg_view_round_cell);
+                    scoreView.setTextColor(ContextCompat.getColor(
+                            this, R.color.view_text_muted));
+                }
+                row.addView(tile);
+            }
+        }
+    }
+
+    @SuppressWarnings("unused")
+    private void updateLegacyStandings(com.example.rummypulse.data.GameData gameData) {
         // Validate input data
         if (gameData == null || gameData.getPlayers() == null || gameData.getPlayers().isEmpty()) {
             System.err.println("Cannot update standings: gameData or players is null/empty");
@@ -3892,11 +4255,68 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
             applyStandingNetAmountDisplay(netAmountText, standing, gameData);
 
-            // Populate round scores
-            populateRoundScores(standingsRowView, standing.player, gameData);
+            populateLastCompletedRound(standingsRowView, standing.player, gameData);
 
             binding.standingsTableContainer.addView(standingsRowView);
         }
+    }
+
+    private void populateLoadingLastCompletedRound(View standingsRowView) {
+        TextView label = standingsRowView.findViewById(R.id.text_last_round_label);
+        TextView score = standingsRowView.findViewById(R.id.text_last_round_score);
+        label.setText(R.string.standing_last_round);
+        score.setText("—");
+        score.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
+    }
+
+    private void populateLastCompletedRound(
+            View standingsRowView,
+            com.example.rummypulse.data.Player player,
+            com.example.rummypulse.data.GameData gameData) {
+        TextView label = standingsRowView.findViewById(R.id.text_last_round_label);
+        TextView scoreView = standingsRowView.findViewById(R.id.text_last_round_score);
+        int lastCompletedRound = findLastCompletedRound(gameData);
+        if (lastCompletedRound < 1
+                || player == null
+                || player.getScores() == null
+                || player.getScores().size() < lastCompletedRound) {
+            label.setText(R.string.standing_last_round);
+            scoreView.setText("—");
+            scoreView.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
+            return;
+        }
+
+        Integer lastScore = player.getScores().get(lastCompletedRound - 1);
+        label.setText(getString(R.string.standing_round_score, lastCompletedRound));
+        if (lastScore == null || lastScore < 0) {
+            scoreView.setText("—");
+            scoreView.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
+            return;
+        }
+
+        scoreView.setText(String.valueOf(lastScore));
+        int scoreColor = lastScore > 80
+                ? R.color.view_coral
+                : lastScore >= 40
+                ? R.color.view_gold
+                : R.color.view_mint;
+        scoreView.setTextColor(ContextCompat.getColor(this, scoreColor));
+    }
+
+    private int findLastCompletedRound(
+            com.example.rummypulse.data.GameData gameData) {
+        if (gameData == null || gameData.getPlayers() == null
+                || gameData.getPlayers().isEmpty()) {
+            return 0;
+        }
+        int lastCompletedRound = 0;
+        for (int round = 1; round <= 10; round++) {
+            if (!isRoundComplete(round, gameData)) {
+                break;
+            }
+            lastCompletedRound = round;
+        }
+        return lastCompletedRound;
     }
 
     /**
@@ -4030,6 +4450,10 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void setupCollapsibleSections() {
+        placeViewRequestsAfterStandings();
+        binding.viewRequestsContent.setVisibility(View.GONE);
+        binding.viewRequestsCollapseIcon.setImageResource(R.drawable.ic_expand_more);
+
         // Setup Players section collapsible
         binding.playersHeader.setOnClickListener(v -> {
             toggleSection(binding.playersContent, binding.playersCollapseIcon);
@@ -4055,6 +4479,20 @@ public class JoinGameActivity extends AppCompatActivity {
                 viewRoot.findViewById(R.id.view_mode_requests_collapse_icon);
         viewRequestsHeader.setOnClickListener(v ->
                 toggleSection(viewRequestsContent, viewRequestsIcon));
+    }
+
+    private void placeViewRequestsAfterStandings() {
+        android.view.ViewParent requestParent = binding.viewRequestsCard.getParent();
+        if (!(requestParent instanceof android.view.ViewGroup)
+                || requestParent != binding.standingsCard.getParent()) {
+            return;
+        }
+        android.view.ViewGroup parent = (android.view.ViewGroup) requestParent;
+        android.view.ViewGroup.LayoutParams layoutParams =
+                binding.viewRequestsCard.getLayoutParams();
+        parent.removeView(binding.viewRequestsCard);
+        int standingsIndex = parent.indexOfChild(binding.standingsCard);
+        parent.addView(binding.viewRequestsCard, standingsIndex + 1, layoutParams);
     }
 
     private void updateViewRequestsSectionVisibility(GameAuth auth) {
@@ -4754,6 +5192,10 @@ public class JoinGameActivity extends AppCompatActivity {
         closeButton.setOnClickListener(v -> dialog.dismiss());
         
         dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(
+                    new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
         applyActionDialogWidth(dialog);
     }
     
@@ -5030,30 +5472,11 @@ public class JoinGameActivity extends AppCompatActivity {
      * @param connected Current network connection status
      */
     private void updateOnlineOfflineIndicators(boolean connected) {
-        if (binding == null || binding.editOnlineIndicator == null || binding.editOfflineIndicator == null) {
-            System.out.println("updateOnlineOfflineIndicators: Binding or indicators are null, skipping update");
+        if (binding == null) {
             return;
         }
-        
-        // Check if we're in edit mode
-        Boolean editAccess = viewModel != null ? viewModel.getEditAccessGranted().getValue() : null;
-        if (editAccess == null || !editAccess) {
-            // Not in edit mode - hide both indicators
-            System.out.println("updateOnlineOfflineIndicators: Not in edit mode, hiding indicators");
-            binding.editOnlineIndicator.setVisibility(View.GONE);
-            binding.editOfflineIndicator.setVisibility(View.GONE);
-            return;
-        }
-        
-        System.out.println("updateOnlineOfflineIndicators: Edit mode active, network connected: " + connected);
-        
-        if (connected) {
-            binding.editOnlineIndicator.setVisibility(View.VISIBLE);
-            binding.editOfflineIndicator.setVisibility(View.GONE);
-        } else {
-            binding.editOnlineIndicator.setVisibility(View.GONE);
-            binding.editOfflineIndicator.setVisibility(View.VISIBLE);
-        }
+        binding.editOnlineIndicator.setVisibility(View.GONE);
+        binding.editOfflineIndicator.setVisibility(View.GONE);
     }
     
     /**
@@ -5076,16 +5499,15 @@ public class JoinGameActivity extends AppCompatActivity {
         LinearLayout statusIndicator = binding.networkStatusIndicator;
         
         if (connected) {
-            // Show "Live" status
-            statusText.setText("Live");
-            statusText.setTextColor(0xFF4CAF50); // Green
+            statusText.setText("Online");
+            statusText.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
             if (statusDot != null) {
                 statusDot.setBackgroundResource(R.drawable.status_dot);
                 android.graphics.drawable.GradientDrawable drawable = 
                     (android.graphics.drawable.GradientDrawable) statusDot.getBackground();
-                drawable.setColor(0xFF4CAF50);
+                drawable.setColor(ContextCompat.getColor(this, R.color.view_mint));
             }
-            statusIndicator.setBackgroundResource(R.drawable.status_badge_background);
+            statusIndicator.setBackgroundResource(R.drawable.bg_view_live_badge);
             
             // Update online/offline indicators for edit mode
             runOnUiThread(() -> {
@@ -5097,21 +5519,14 @@ public class JoinGameActivity extends AppCompatActivity {
         } else {
             // Show "Offline" status
             statusText.setText("Offline");
-            statusText.setTextColor(0xFFF44336); // Red
+            statusText.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
             if (statusDot != null) {
                 statusDot.setBackgroundResource(R.drawable.status_dot);
                 android.graphics.drawable.GradientDrawable drawable = 
                     (android.graphics.drawable.GradientDrawable) statusDot.getBackground();
-                drawable.setColor(0xFFF44336);
+                drawable.setColor(ContextCompat.getColor(this, R.color.view_coral));
             }
-            // Change badge background to red theme
-            android.graphics.drawable.GradientDrawable badgeDrawable = 
-                new android.graphics.drawable.GradientDrawable();
-            badgeDrawable.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-            badgeDrawable.setColor(0x1AF44336); // Semi-transparent red
-            badgeDrawable.setStroke(2, 0xFFF44336); // Red border
-            badgeDrawable.setCornerRadius(12 * getResources().getDisplayMetrics().density);
-            statusIndicator.setBackground(badgeDrawable);
+            statusIndicator.setBackgroundResource(R.drawable.bg_edit_offline_badge);
             
             // Update online/offline indicators for edit mode
             runOnUiThread(() -> {
@@ -5747,6 +6162,7 @@ public class JoinGameActivity extends AppCompatActivity {
     
     private static class PlayerStanding {
         com.example.rummypulse.data.Player player;
+        int rank;
         int totalScore;
         double grossAmount;
         double gstPaid;

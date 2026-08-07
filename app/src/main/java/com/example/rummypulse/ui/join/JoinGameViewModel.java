@@ -577,6 +577,8 @@ public class JoinGameViewModel extends AndroidViewModel {
             Map<String, Object> updates = new HashMap<>();
             updates.put("activeEditorUserId", myUid);
             updates.put("activeEditorName", editorName);
+            updates.put("lastEditorUserId", myUid);
+            updates.put("lastEditorName", editorName);
             transaction.update(gameRef, updates);
 
             return new ClaimResult(auth.getPin(), auth.getPinGenerationOrDefault());
@@ -588,6 +590,8 @@ public class JoinGameViewModel extends AndroidViewModel {
             if (currentAuth != null) {
                 currentAuth.setActiveEditorUserId(user.getUid());
                 currentAuth.setActiveEditorName(editorName);
+                currentAuth.setLastEditorUserId(user.getUid());
+                currentAuth.setLastEditorName(editorName);
                 gameAuth.setValue(currentAuth);
             }
             if (callback != null) {
@@ -632,6 +636,10 @@ public class JoinGameViewModel extends AndroidViewModel {
             Map<String, Object> updates = new HashMap<>();
             updates.put("pin", newPin);
             updates.put("pinGeneration", newGen);
+            if (auth != null && !TextUtils.isEmpty(auth.getActiveEditorUserId())) {
+                updates.put("lastEditorUserId", auth.getActiveEditorUserId());
+                updates.put("lastEditorName", auth.getActiveEditorName());
+            }
             updates.put("activeEditorUserId", com.google.firebase.firestore.FieldValue.delete());
             updates.put("activeEditorName", com.google.firebase.firestore.FieldValue.delete());
             transaction.update(gameRef, updates);
@@ -646,6 +654,10 @@ public class JoinGameViewModel extends AndroidViewModel {
             if (currentAuth != null) {
                 currentAuth.setPin(result.newPin);
                 currentAuth.setPinGeneration(result.newPinGeneration);
+                if (!TextUtils.isEmpty(currentAuth.getActiveEditorUserId())) {
+                    currentAuth.setLastEditorUserId(currentAuth.getActiveEditorUserId());
+                    currentAuth.setLastEditorName(currentAuth.getActiveEditorName());
+                }
                 currentAuth.setActiveEditorUserId(null);
                 currentAuth.setActiveEditorName(null);
                 gameAuth.setValue(currentAuth);

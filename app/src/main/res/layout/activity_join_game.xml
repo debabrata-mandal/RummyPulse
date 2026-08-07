@@ -4,22 +4,22 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_dark"
+    android:background="@drawable/bg_view_mode_screen"
     android:fitsSystemWindows="true">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/header_background"
+        android:background="@color/view_background"
         android:theme="@style/Theme.RummyPulse.AppBarOverlay">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/header_background"
-            android:titleTextColor="@color/text_primary"
+            android:background="@color/view_background"
+            android:titleTextColor="@color/view_text_primary"
             app:popupTheme="@style/Theme.RummyPulse.PopupOverlay"
             app:navigationIcon="@drawable/ic_arrow_back"
             app:title="Game View">
@@ -38,7 +38,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="FNKV66TSI"
-                    android:textColor="@color/text_primary"
+                    android:textColor="@color/view_text_secondary"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginEnd="8dp" />
@@ -48,7 +48,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_qr_code"
-                    android:background="@drawable/icon_background"
+                    android:background="@drawable/bg_view_action"
                     android:padding="3dp"
                     android:clickable="true"
                     android:focusable="true"
@@ -60,310 +60,252 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Compact Info Header (Dashboard Style) - Two Rows -->
+    <!-- Edit-mode performance and game-control header -->
     <LinearLayout
         android:id="@+id/game_info_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/info_section_background"
-        android:padding="12dp"
+        android:background="@drawable/bg_view_hero"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginTop="72dp"
         android:layout_marginBottom="8dp"
-        android:elevation="8dp"
+        android:elevation="0dp"
         android:visibility="gone">
 
-        <!-- First Row: Round | Players -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:orientation="vertical"
+            android:paddingStart="14dp"
+            android:paddingTop="14dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="12dp">
 
-            <!-- Current Round -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
+                android:baselineAligned="false"
+                android:orientation="horizontal">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="ROUND"
-                    android:textSize="9sp"
-                    android:textColor="@color/text_secondary"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1" />
+                    android:layout_marginEnd="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/text_header_current_round"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginTop="2dp" />
+                    <TextView
+                        android:id="@+id/edit_header_performance_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:singleLine="true"
+                        android:text="My Performance"
+                        android:textColor="@color/view_text_primary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        app:autoSizeMaxTextSize="18sp"
+                        app:autoSizeMinTextSize="11sp"
+                        app:autoSizeStepGranularity="1sp"
+                        app:autoSizeTextType="uniform" />
 
-            </LinearLayout>
+                    <TextView
+                        android:id="@+id/text_header_current_round"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="Live · Round 1 of 10"
+                        android:textColor="@color/view_text_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
 
-            <!-- Divider -->
-            <View
-                android:layout_width="1dp"
-                android:layout_height="match_parent"
-                android:background="@color/divider_color"
-                android:layout_marginHorizontal="8dp"
-                android:layout_marginVertical="4dp" />
-
-            <!-- Number of Players -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="PLAYERS"
-                    android:textSize="9sp"
-                    android:textColor="@color/text_secondary"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1" />
-
-                <TextView
-                    android:id="@+id/text_header_players"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="4"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/text_primary"
-                    android:layout_marginTop="2dp" />
-
-            </LinearLayout>
-
-            <!-- Divider (hidden; no PIN column in header) -->
-            <View
-                android:id="@+id/header_pin_divider"
-                android:layout_width="1dp"
-                android:layout_height="match_parent"
-                android:background="@color/divider_color"
-                android:layout_marginHorizontal="8dp"
-                android:layout_marginVertical="4dp"
-                android:visibility="gone" />
-
-            <!-- Game PIN block (always hidden) -->
-            <LinearLayout
-                android:id="@+id/header_pin_section"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:visibility="gone">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="GAME PIN"
-                    android:textSize="9sp"
-                    android:textColor="@color/text_secondary"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1" />
+                    <ProgressBar
+                        android:id="@+id/edit_header_round_progress"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="4dp"
+                        android:max="10"
+                        android:progress="0"
+                        android:progressBackgroundTint="#33475A78"
+                        android:progressTint="@color/view_violet_light" />
+                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:layout_marginTop="2dp">
+                    android:orientation="horizontal">
 
-                    <TextView
-                        android:id="@+id/text_header_game_pin"
+                    <LinearLayout
+                        android:id="@+id/network_status_indicator"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text=""
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/accent_blue"
-                        android:layout_marginEnd="6dp" />
+                        android:background="@drawable/bg_view_live_badge"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="8dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="4dp">
 
-                    <ImageView
-                        android:id="@+id/icon_toggle_pin"
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:src="@drawable/ic_visibility"
-                        android:background="@drawable/icon_background"
-                        android:padding="3dp"
+                        <View
+                            android:id="@+id/status_dot"
+                            android:layout_width="6dp"
+                            android:layout_height="6dp"
+                            android:layout_marginEnd="5dp"
+                            android:background="@drawable/status_dot" />
+
+                        <TextView
+                            android:id="@+id/status_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Online"
+                            android:textColor="@color/view_mint"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/btn_share_header"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_view_action"
                         android:clickable="true"
-                        android:focusable="true" />
+                        android:focusable="true"
+                        android:gravity="center">
 
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:contentDescription="Share"
+                            android:src="@android:drawable/ic_menu_share"
+                            android:tint="@color/view_violet_light" />
+                    </LinearLayout>
                 </LinearLayout>
 
             </LinearLayout>
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_view_metric"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="8dp">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="Balance" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/edit_header_player_balance" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" android:text="—" android:textColor="@color/view_text_muted" android:textSize="15sp" android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_view_metric"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="8dp">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="Position" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/edit_header_player_position" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" android:text="—" android:textColor="@color/view_violet_light" android:textSize="15sp" android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:baselineAligned="false"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_view_metric"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="7dp">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:maxLines="1" android:text="Made Game" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/edit_header_made_game_count" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:text="0" android:textColor="@color/view_mint" android:textSize="15sp" android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="3dp"
+                    android:layout_marginEnd="3dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_view_metric"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="7dp">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:maxLines="1" android:text="Packed" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/edit_header_packed_count" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:text="0" android:textColor="@color/view_gold" android:textSize="15sp" android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_view_metric"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="7dp">
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:maxLines="1" android:text="Full Hand" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/edit_header_full_hand_count" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:text="0" android:textColor="@color/view_coral" android:textSize="15sp" android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
 
-        <!-- Horizontal Divider between rows -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/divider_color"
-            android:layout_marginVertical="12dp" />
-
-        <!-- Second Row: Point Value | Contribution (merged) | Share Button -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_view_hero_footer"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:paddingTop="9dp"
+            android:paddingBottom="10dp">
 
-            <!-- Point Value Section -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="POINT VALUE"
-                    android:textSize="9sp"
-                    android:textColor="@color/text_secondary"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1" />
-
-                <TextView
-                    android:id="@+id/text_header_point_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="₹10.00"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/accent_blue"
-                    android:layout_marginTop="2dp" />
-
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="Point Value" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                <TextView android:id="@+id/text_header_point_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:text="₹0.5" android:textColor="@color/view_violet_light" android:textSize="14sp" android:textStyle="bold" />
             </LinearLayout>
-
-            <!-- Divider -->
-            <View
-                android:layout_width="1dp"
-                android:layout_height="match_parent"
-                android:background="@color/divider_color"
-                android:layout_marginHorizontal="8dp"
-                android:layout_marginVertical="4dp" />
-
-            <!-- Contribution (Merged) -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="CONTRIBUTION"
-                    android:textSize="9sp"
-                    android:textColor="@color/text_secondary"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1" />
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center"
-                    android:layout_marginTop="2dp">
-
-                    <ImageView
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:src="@drawable/ic_percent"
-                        android:tint="@color/success_green"
-                        android:layout_marginEnd="4dp"
-                        android:contentDescription="Percent" />
-
-                    <TextView
-                        android:id="@+id/text_header_contribution"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="10"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text=" • "
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_secondary"
-                        android:layout_marginHorizontal="4dp" />
-
-                    <TextView
-                        android:id="@+id/text_header_total_contribution"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="₹0"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="#F44336" />
-
+            <View android:layout_width="1dp" android:layout_height="30dp" android:background="@color/view_stroke" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="Contribution" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:orientation="horizontal">
+                    <TextView android:id="@+id/text_header_contribution" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="10% · " android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/text_header_total_contribution" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="₹0" android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
                 </LinearLayout>
-
             </LinearLayout>
-
-            <!-- Divider -->
-            <View
-                android:layout_width="1dp"
-                android:layout_height="match_parent"
-                android:background="@color/divider_color"
-                android:layout_marginHorizontal="8dp"
-                android:layout_marginVertical="4dp" />
-
-            <!-- Share Button -->
-            <LinearLayout
-                android:id="@+id/btn_share_header"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?android:attr/selectableItemBackground"
-                android:padding="8dp">
-
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@android:drawable/ic_menu_share"
-                    android:tint="@color/accent_blue"
-                    android:contentDescription="Share" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="SHARE"
-                    android:textSize="9sp"
-                    android:textColor="@color/text_secondary"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1"
-                    android:layout_marginTop="4dp" />
-
+            <View android:layout_width="1dp" android:layout_height="30dp" android:background="@color/view_stroke" />
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="Total Players" android:textColor="@color/view_text_muted" android:textSize="8sp" android:textStyle="bold" />
+                <TextView android:id="@+id/text_header_players" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:text="4" android:textColor="@color/view_text_primary" android:textSize="14sp" android:textStyle="bold" />
             </LinearLayout>
+        </LinearLayout>
 
+        <View android:id="@+id/header_pin_divider" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+        <LinearLayout android:id="@+id/header_pin_section" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone">
+            <TextView android:id="@+id/text_header_game_pin" android:layout_width="0dp" android:layout_height="0dp" />
+            <ImageView android:id="@+id/icon_toggle_pin" android:layout_width="0dp" android:layout_height="0dp" />
         </LinearLayout>
 
     </LinearLayout>
@@ -375,7 +317,7 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         android:fillViewport="true"
-        android:paddingTop="160dp">
+        android:paddingTop="268dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -388,8 +330,10 @@
                 android:id="@+id/players_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/bg_view_hero"
                 android:orientation="vertical"
                 android:layout_marginBottom="16dp"
+                android:padding="12dp"
                 android:visibility="gone">
 
                 <!-- Collapsible Section Header -->
@@ -421,15 +365,15 @@
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
                                 android:src="@drawable/ic_gamepad"
-                                android:tint="#2196F3"
+                                android:tint="@color/view_violet_light"
                                 android:layout_marginEnd="8dp"
                                 android:contentDescription="@null" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Players &amp; Scores"
-                                android:textColor="@color/text_primary"
+                                android:text="@string/edit_players_standings_title"
+                                android:textColor="@color/view_text_primary"
                                 android:textSize="18sp"
                                 android:textStyle="bold" />
 
@@ -445,7 +389,7 @@
                                 android:paddingTop="3dp"
                                 android:paddingBottom="3dp"
                                 android:layout_marginStart="8dp"
-                                android:background="@drawable/edit_online_badge_background"
+                                android:background="@drawable/bg_view_live_badge"
                                 android:visibility="gone">
 
                                 <View
@@ -458,7 +402,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Online"
-                                    android:textColor="#4CAF50"
+                                    android:textColor="@color/view_mint"
                                     android:textSize="10sp"
                                     android:textStyle="bold" />
 
@@ -476,7 +420,7 @@
                                 android:paddingTop="3dp"
                                 android:paddingBottom="3dp"
                                 android:layout_marginStart="8dp"
-                                android:background="@drawable/edit_offline_badge_background"
+                                android:background="@drawable/bg_edit_offline_badge"
                                 android:visibility="gone">
 
                                 <View
@@ -489,7 +433,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Offline"
-                                    android:textColor="#FF5722"
+                                    android:textColor="@color/view_coral"
                                     android:textSize="10sp"
                                     android:textStyle="bold" />
 
@@ -511,7 +455,7 @@
                         android:padding="6dp"
                         android:scaleType="centerInside"
                         android:src="@drawable/ic_edit"
-                        android:tint="@color/accent_blue"
+                        android:tint="@color/view_violet_light"
                         android:visibility="gone" />
 
                     <!-- Collapse/Expand Icon -->
@@ -520,7 +464,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_expand_less"
-                        android:tint="@color/text_secondary" />
+                        android:tint="@color/view_text_secondary" />
 
                 </LinearLayout>
 
@@ -548,15 +492,17 @@
             </LinearLayout>
 
             <!-- View Requests Card (editor / admin) -->
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/view_requests_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 android:visibility="gone"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="@color/card_background">
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/view_surface_soft"
+                app:strokeColor="@color/view_stroke"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -580,7 +526,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_visibility"
-                            android:tint="#FF9800"
+                            android:tint="@color/view_gold"
                             android:layout_marginEnd="8dp"
                             android:contentDescription="@string/view_requests_section_title" />
 
@@ -589,7 +535,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/view_requests_section_title"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="18sp"
                             android:textStyle="bold" />
 
@@ -603,7 +549,7 @@
                             android:paddingEnd="8dp"
                             android:paddingTop="2dp"
                             android:paddingBottom="2dp"
-                            android:textColor="#FF9800"
+                            android:textColor="@color/view_gold"
                             android:textSize="12sp"
                             android:textStyle="bold"
                             android:visibility="gone" />
@@ -612,8 +558,8 @@
                             android:id="@+id/view_requests_collapse_icon"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/ic_expand_less"
-                            android:tint="@color/text_secondary"
+                            android:src="@drawable/ic_expand_more"
+                            android:tint="@color/view_text_secondary"
                             android:contentDescription="@string/view_requests_section_title" />
 
                     </LinearLayout>
@@ -622,7 +568,8 @@
                         android:id="@+id/view_requests_content"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:visibility="gone">
 
                         <TextView
                             android:id="@+id/text_view_requests_empty"
@@ -631,7 +578,7 @@
                             android:gravity="center"
                             android:padding="12dp"
                             android:text="@string/view_request_empty"
-                            android:textColor="@color/text_secondary"
+                            android:textColor="@color/view_text_secondary"
                             android:textSize="14sp"
                             android:visibility="gone" />
 
@@ -645,18 +592,20 @@
 
                 </LinearLayout>
 
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Standings Card -->
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/standings_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 android:visibility="gone"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="@color/card_background">
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/view_surface_soft"
+                app:strokeColor="@color/view_stroke"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -693,48 +642,16 @@
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
                                     android:src="@drawable/ic_bar_chart"
-                                    android:tint="#2196F3"
+                                    android:tint="@color/view_violet_light"
                                     android:layout_marginEnd="8dp" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="Standings"
-                                    android:textColor="@color/text_primary"
+                                    android:textColor="@color/view_text_primary"
                                     android:textSize="18sp"
                                     android:textStyle="bold" />
-
-                                <!-- Network Status Indicator -->
-                                <LinearLayout
-                                    android:id="@+id/network_status_indicator"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:orientation="horizontal"
-                                    android:gravity="center_vertical"
-                                    android:layout_marginStart="12dp"
-                                    android:background="@drawable/status_badge_background"
-                                    android:paddingStart="8dp"
-                                    android:paddingEnd="8dp"
-                                    android:paddingTop="4dp"
-                                    android:paddingBottom="4dp">
-
-                                    <View
-                                        android:id="@+id/status_dot"
-                                        android:layout_width="8dp"
-                                        android:layout_height="8dp"
-                                        android:background="@drawable/status_dot"
-                                        android:layout_marginEnd="4dp" />
-
-                                    <TextView
-                                        android:id="@+id/status_text"
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:text="Live"
-                                        android:textColor="#4CAF50"
-                                        android:textSize="10sp"
-                                        android:textStyle="bold" />
-
-                                </LinearLayout>
 
                             </LinearLayout>
 
@@ -747,7 +664,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_expand_less"
-                            android:tint="@color/text_secondary" />
+                            android:tint="@color/view_text_secondary" />
 
                     </LinearLayout>
 
@@ -775,18 +692,20 @@
 
                 </LinearLayout>
 
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Admin Mode Indicator -->
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/admin_mode_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 android:visibility="gone"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="@color/card_background_elevated">
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/view_surface_soft"
+                app:strokeColor="@color/view_stroke"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -799,7 +718,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_shield"
-                        android:tint="#4CAF50"
+                        android:tint="@color/view_mint"
                         android:layout_marginEnd="8dp" />
 
                     <TextView
@@ -808,7 +727,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Admin Mode"
-                        android:textColor="#4CAF50"
+                        android:textColor="@color/view_mint"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
@@ -817,22 +736,25 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_close"
-                        android:tint="#FF5722"
+                        android:tint="@color/view_coral"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:padding="4dp" />
 
                 </LinearLayout>
 
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Settlement Rules Content (Collapsible) -->
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="@color/card_background_elevated">
+                android:visibility="gone"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/view_surface_soft"
+                app:strokeColor="@color/view_stroke"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -856,7 +778,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="💡 How Settlement Works"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="16sp"
                             android:textStyle="bold" />
 
@@ -865,7 +787,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_expand_more"
-                            android:tint="@color/text_secondary" />
+                            android:tint="@color/view_text_secondary" />
 
                     </LinearLayout>
 
@@ -877,7 +799,7 @@
                         android:layout_marginStart="8dp"
                         android:layout_marginEnd="8dp"
                         android:layout_marginBottom="10dp"
-                        android:background="@drawable/bg_dashboard_info_section_blue"
+                        android:background="@drawable/bg_create_game_inner"
                         android:orientation="vertical"
                         android:padding="16dp"
                         android:paddingTop="12dp"
@@ -894,7 +816,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="• "
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -903,7 +825,7 @@
                             android:layout_weight="1"
                             android:id="@+id/text_settlement_winners_rule"
                             android:text="Winners (Green): Receive money but pay 55% on winnings"
-                            android:textColor="#4CAF50"
+                            android:textColor="@color/view_mint"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -920,7 +842,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="• "
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -928,7 +850,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Losers (Red): Pay money, no contribution required"
-                            android:textColor="#F44336"
+                            android:textColor="@color/view_coral"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -945,7 +867,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="• "
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -954,7 +876,7 @@
                             android:layout_weight="1"
                             android:id="@+id/text_settlement_formula"
                             android:text="Formula: (Total All Scores - Your Score × 4) × ₹99"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -971,7 +893,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="• "
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -980,7 +902,7 @@
                             android:layout_weight="1"
                             android:id="@+id/text_settlement_gst_rule"
                             android:text="Contribution: Only winners pay 55% on positive amounts"
-                            android:textColor="#FF9800"
+                            android:textColor="@color/view_gold"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -997,7 +919,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="• "
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="14sp" />
 
                         <TextView
@@ -1005,7 +927,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Net Amount: Gross Amount - Contribution (for winners) or just Gross Amount (for losers)"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -1016,7 +938,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
-                        android:background="@drawable/bg_app_surface_blue"
+                        android:background="@drawable/bg_view_metric"
                         android:orientation="vertical"
                         android:padding="14dp">
 
@@ -1024,7 +946,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="💡 Example:"
-                            android:textColor="@color/accent_blue"
+                            android:textColor="@color/view_violet_light"
                             android:textSize="14sp"
                             android:textStyle="bold"
                             android:layout_marginBottom="4dp" />
@@ -1034,7 +956,7 @@
                             android:layout_height="wrap_content"
                             android:id="@+id/text_settlement_example_description"
                             android:text="If you score 25 points in a 4-player game with ₹99/point:"
-                            android:textColor="@color/text_primary"
+                            android:textColor="@color/view_text_secondary"
                             android:textSize="13sp"
                             android:layout_marginBottom="4dp" />
 
@@ -1043,7 +965,7 @@
                             android:layout_height="wrap_content"
                             android:id="@+id/text_settlement_example_formula"
                             android:text="Your settlement = (Total of all 4 scores - 25 × 4) × ₹99"
-                            android:textColor="@color/accent_blue"
+                            android:textColor="@color/view_violet_light"
                             android:textSize="13sp"
                             android:textStyle="bold" />
 
@@ -1053,7 +975,7 @@
 
                 </LinearLayout>
 
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
 
@@ -1077,7 +999,7 @@
         android:contentDescription="@string/cd_enter_round_scores"
         android:visibility="gone"
         android:src="@drawable/ic_enter_round_scores"
-        app:backgroundTint="@color/accent_blue"
+        app:backgroundTint="@color/view_violet"
         app:tint="@android:color/white" />
 
     <!-- Floating Add Player Button (Edit Mode Only) -->
@@ -1089,7 +1011,7 @@
         android:layout_margin="16dp"
         android:src="@drawable/ic_add_person"
         android:contentDescription="Add Player"
-        app:backgroundTint="#2196F3"
+        app:backgroundTint="@color/view_violet"
         app:tint="@android:color/white" />
 
     <!-- Floating Refresh Button (View Mode Only) -->
@@ -1107,6 +1029,85 @@
         android:tint="@android:color/white"
         android:visibility="gone"
         app:tint="@android:color/white" />
+
+    <LinearLayout
+        android:id="@+id/edit_player_round_sheet"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_view_hero"
+        android:clickable="true"
+        android:elevation="24dp"
+        android:focusable="true"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="18dp"
+        android:visibility="gone">
+
+        <View
+            android:layout_width="42dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:background="@drawable/bg_view_round_label" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/edit_player_round_sheet_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="Player's Round Scores"
+                    android:textColor="@color/view_text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/edit_player_round_sheet_total"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="Total Score · 0"
+                    android:textColor="@color/view_violet_light"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/edit_player_round_sheet_close"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@drawable/bg_view_action"
+                android:clickable="true"
+                android:contentDescription="Close round scores"
+                android:focusable="true"
+                android:padding="9dp"
+                android:src="@drawable/ic_close"
+                android:tint="@color/view_text_secondary" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/edit_player_round_sheet_rows"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical" />
+
+    </LinearLayout>
 
     <!-- Loading Spinner Overlay - Must be last to appear on top -->
     <FrameLayout
@@ -1139,7 +1140,7 @@
                 android:id="@+id/progress_bar"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:indeterminateTint="@color/accent_blue"
+                android:indeterminateTint="@color/view_violet_light"
                 android:layout_marginBottom="16dp" />
 
             <TextView
@@ -1147,7 +1148,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Loading game data..."
-                android:textColor="@color/text_primary"
+                android:textColor="@color/view_text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 

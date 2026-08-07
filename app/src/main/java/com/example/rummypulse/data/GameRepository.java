@@ -393,6 +393,7 @@ public class GameRepository {
         );
         gameItem.setCreatorPhotoUrl(creatorPhotoUrl);
         gameItem.setCreatorUserId(creatorUserId);
+        applyEditorIdentity(gameItem, auth);
         gameItem.setGameDisplayName(gameDisplayName != null ? gameDisplayName : "");
         return gameItem;
     }
@@ -473,8 +474,10 @@ public class GameRepository {
                         if (!isDashboardUpdateCurrent(gameId, updateToken)) {
                             return;
                         }
-                        GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt,
-                                creatorName, null, creatorUserId, gameDisplayName);
+                        GameItem gameItem = applyEditorIdentity(
+                                convertToGameItem(gameId, pin, gameData, createdAt,
+                                        creatorName, null, creatorUserId, gameDisplayName),
+                                gameAuth);
                         if (gameItem != null) {
                             applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                             gameItemsMap.put(gameId, gameItem);
@@ -492,8 +495,11 @@ public class GameRepository {
                                     }
                                     String creatorPhotoUrl = userSnapshot.exists()
                                             ? userSnapshot.getString("photoUrl") : null;
-                                    GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt,
-                                            creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
+                                    GameItem gameItem = applyEditorIdentity(
+                                            convertToGameItem(gameId, pin, gameData, createdAt,
+                                                    creatorName, creatorPhotoUrl, creatorUserId,
+                                                    gameDisplayName),
+                                            gameAuth);
                                     if (gameItem != null) {
                                         applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                                         gameItemsMap.put(gameId, gameItem);
@@ -588,6 +594,8 @@ public class GameRepository {
             );
             updated.setCreatorPhotoUrl(item.getCreatorPhotoUrl());
             updated.setCreatorUserId(item.getCreatorUserId());
+            updated.setEditorName(item.getEditorName());
+            updated.setEditorUserId(item.getEditorUserId());
             updated.setGameDisplayName(item.getGameDisplayName());
             updated.setMyViewAccessStatus(item.getMyViewAccessStatus());
             copyViewApprovalCounts(item, updated);
@@ -879,18 +887,27 @@ public class GameRepository {
                         if (userSnapshot.exists()) {
                             creatorPhotoUrl = userSnapshot.getString("photoUrl");
                         }
-                        GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
+                        GameItem gameItem = applyEditorIdentity(
+                                convertToGameItem(gameId, pin, gameData, createdAt,
+                                        creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName),
+                                gameAuth);
                         putGameItemIfStillInLoad(gameId, gameItem);
                     })
                     .addOnFailureListener(e -> {
                         if (!gameIdsOrder.contains(gameId)) {
                             return;
                         }
-                        GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId, gameDisplayName);
+                        GameItem gameItem = applyEditorIdentity(
+                                convertToGameItem(gameId, pin, gameData, createdAt,
+                                        creatorName, null, creatorUserId, gameDisplayName),
+                                gameAuth);
                         putGameItemIfStillInLoad(gameId, gameItem);
                     });
         } else {
-            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null, gameDisplayName);
+            GameItem gameItem = applyEditorIdentity(
+                    convertToGameItem(gameId, pin, gameData, createdAt,
+                            creatorName, null, null, gameDisplayName),
+                    gameAuth);
             putGameItemIfStillInLoad(gameId, gameItem);
         }
     }
@@ -969,7 +986,11 @@ public class GameRepository {
                                                             if (userSnapshot.exists()) {
                                                                 creatorPhotoUrl = userSnapshot.getString("photoUrl");
                                                             }
-                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName);
+                                                            GameItem gameItem = applyEditorIdentity(
+                                                                    convertToGameItem(gameId, pin, gameData, createdAt,
+                                                                            creatorName, creatorPhotoUrl,
+                                                                            creatorUserId, gameDisplayName),
+                                                                    gameAuth);
                                                             
                                                             if (gameItem != null && isDashboardUpdateCurrent(gameId, updateToken)) {
                                                                 applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
@@ -980,7 +1001,11 @@ public class GameRepository {
                                                         })
                                                         .addOnFailureListener(e -> {
                                                             // If fetching photo fails, create game item without photo
-                                                            GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, creatorUserId, gameDisplayName);
+                                                            GameItem gameItem = applyEditorIdentity(
+                                                                    convertToGameItem(gameId, pin, gameData, createdAt,
+                                                                            creatorName, null, creatorUserId,
+                                                                            gameDisplayName),
+                                                                    gameAuth);
                                                             if (gameItem != null && isDashboardUpdateCurrent(gameId, updateToken)) {
                                                                 applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                                                                 gameItemsMap.put(gameId, gameItem);
@@ -990,7 +1015,10 @@ public class GameRepository {
                                                         });
                                             } else {
                                                 // No creator user ID, create game item without photo
-                                                GameItem gameItem = convertToGameItem(gameId, pin, gameData, createdAt, creatorName, null, null, gameDisplayName);
+                                                GameItem gameItem = applyEditorIdentity(
+                                                        convertToGameItem(gameId, pin, gameData, createdAt,
+                                                                creatorName, null, null, gameDisplayName),
+                                                        gameAuth);
                                                 if (gameItem != null && isDashboardUpdateCurrent(gameId, updateToken)) {
                                                     applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
                                                     gameItemsMap.put(gameId, gameItem);
@@ -1197,6 +1225,14 @@ public class GameRepository {
             return "";
         }
         return auth.getDisplayName();
+    }
+
+    private static GameItem applyEditorIdentity(GameItem item, GameAuth auth) {
+        if (item != null && auth != null) {
+            item.setEditorName(auth.getDisplayEditorName());
+            item.setEditorUserId(auth.getDisplayEditorUserId());
+        }
+        return item;
     }
 
     private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt, String creatorName, String creatorPhotoUrl, String creatorUserId, String gameDisplayName) {

@@ -17,6 +17,9 @@ public class GameAuth {
     private String activeEditorUserId;
     /** Display name of the active editor. */
     private String activeEditorName;
+    /** Most recent editor, retained while edit access is waiting to be claimed. */
+    private String lastEditorUserId;
+    private String lastEditorName;
     /** Denormalized dashboard fields (readable from {@code games_v2} without {@code gameData_v2}). */
     private Double dashboardPointValue;
     private Integer dashboardNumPlayers;
@@ -121,6 +124,42 @@ public class GameAuth {
 
     public void setActiveEditorName(String activeEditorName) {
         this.activeEditorName = activeEditorName;
+    }
+
+    public String getLastEditorUserId() {
+        return lastEditorUserId;
+    }
+
+    public void setLastEditorUserId(String lastEditorUserId) {
+        this.lastEditorUserId = lastEditorUserId;
+    }
+
+    public String getLastEditorName() {
+        return lastEditorName;
+    }
+
+    public void setLastEditorName(String lastEditorName) {
+        this.lastEditorName = lastEditorName;
+    }
+
+    public String getDisplayEditorUserId() {
+        if (activeEditorUserId != null && !activeEditorUserId.trim().isEmpty()) {
+            return activeEditorUserId;
+        }
+        if (lastEditorUserId != null && !lastEditorUserId.trim().isEmpty()) {
+            return lastEditorUserId;
+        }
+        return creatorUserId;
+    }
+
+    public String getDisplayEditorName() {
+        if (activeEditorName != null && !activeEditorName.trim().isEmpty()) {
+            return activeEditorName;
+        }
+        if (lastEditorName != null && !lastEditorName.trim().isEmpty()) {
+            return lastEditorName;
+        }
+        return creatorName;
     }
 
     public Double getDashboardPointValue() {

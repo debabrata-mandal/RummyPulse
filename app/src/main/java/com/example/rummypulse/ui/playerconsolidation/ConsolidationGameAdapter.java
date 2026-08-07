@@ -85,6 +85,9 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
             holder.creatorNameText.setText("Unknown");
             bindDefaultCreatorAvatar(holder.creatorProfileImage);
         }
+        holder.editorNameText.setText(item.getEditorName() != null
+                && !item.getEditorName().trim().isEmpty()
+                ? item.getEditorName() : "Unknown");
 
         holder.createdTimeText.setText(holder.itemView.getContext().getString(
                 R.string.player_consolidation_started,
@@ -169,6 +172,7 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
         final TextView statusText;
         final TextView subtitleText;
         final TextView creatorNameText;
+        final TextView editorNameText;
         final TextView createdTimeText;
         final ImageView creatorProfileImage;
 
@@ -180,6 +184,7 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
             statusText = itemView.findViewById(R.id.text_game_status);
             subtitleText = itemView.findViewById(R.id.text_game_subtitle);
             creatorNameText = itemView.findViewById(R.id.text_creator_name);
+            editorNameText = itemView.findViewById(R.id.text_editor_name);
             createdTimeText = itemView.findViewById(R.id.text_created_time);
             creatorProfileImage = itemView.findViewById(R.id.image_creator_profile);
         }
