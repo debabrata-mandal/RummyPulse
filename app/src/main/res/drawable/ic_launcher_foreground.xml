@@ -4,164 +4,54 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- Safe area for adaptive icon (72dp center area) -->
-    <!-- Main design centered within 18-90 range -->
-    
-    <!-- Pulse effect rings (outer to inner) -->
+
+    <!-- Card background — 52×72dp, proper playing card ratio, centered in safe zone -->
+    <path
+        android:fillColor="#FF18182A"
+        android:pathData="M36,18 L72,18 A8,8 0 0 1 80,26 L80,82 A8,8 0 0 1 72,90 L36,90 A8,8 0 0 1 28,82 L28,26 A8,8 0 0 1 36,18 Z" />
+
+    <!-- Card border — electric violet -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M54,54m-32,0a32,32 0,1 1,64 0a32,32 0,1 1,-64 0"
-        android:strokeWidth="1.5"
-        android:strokeColor="#402196F3" />
-    
+        android:pathData="M36,18 L72,18 A8,8 0 0 1 80,26 L80,82 A8,8 0 0 1 72,90 L36,90 A8,8 0 0 1 28,82 L28,26 A8,8 0 0 1 36,18 Z"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FF8C52FF" />
+
+    <!-- R lettermark — geometric bold sans-serif -->
+
+    <!-- Left vertical stem -->
     <path
-        android:fillColor="#00000000"
-        android:pathData="M54,54m-26,0a26,26 0,1 1,52 0a26,26 0,1 1,-52 0"
-        android:strokeWidth="1"
-        android:strokeColor="#602196F3" />
-    
+        android:fillColor="#FF8C52FF"
+        android:pathData="M34,30 L34,78 L41,78 L41,30 Z" />
+
+    <!-- Top horizontal cap -->
     <path
-        android:fillColor="#00000000"
-        android:pathData="M54,54m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0"
-        android:strokeWidth="0.8"
-        android:strokeColor="#802196F3" />
-    
-    <!-- Central rummy card stack - modern design -->
-    <group android:scaleX="0.9" android:scaleY="0.9" android:pivotX="54" android:pivotY="54">
-        
-        <!-- Card shadow for depth -->
-        <path
-            android:fillColor="#40000000"
-            android:pathData="M42,46L68,46A4,4 0,0 1,72,50L72,68A4,4 0,0 1,68,72L42,72A4,4 0,0 1,38,68L38,50A4,4 0,0 1,42,46Z" />
-        
-        <!-- Card 1 (back card) - slightly rotated -->
-        <group android:rotation="-8" android:pivotX="54" android:pivotY="54">
-            <path
-                android:fillColor="#FFFFFF"
-                android:pathData="M40,44L66,44A4,4 0,0 1,70,48L70,66A4,4 0,0 1,66,70L40,70A4,4 0,0 1,36,66L36,48A4,4 0,0 1,40,44Z"
-                android:strokeWidth="1"
-                android:strokeColor="#E0E0E0" />
-            
-            <!-- Card back pattern -->
-            <path
-                android:fillColor="#2196F3"
-                android:pathData="M42,50L64,50L64,64L42,64Z" />
-            <path
-                android:fillColor="#FFFFFF"
-                android:pathData="M44,52L62,52L62,62L44,62Z" />
-            <path
-                android:fillColor="#2196F3"
-                android:pathData="M46,54L60,54L60,60L46,60Z" />
-        </group>
-        
-        <!-- Card 2 (middle card) - slightly rotated -->
-        <group android:rotation="4" android:pivotX="54" android:pivotY="54">
-            <path
-                android:fillColor="#FFFFFF"
-                android:pathData="M41,43L67,43A4,4 0,0 1,71,47L71,65A4,4 0,0 1,67,69L41,69A4,4 0,0 1,37,65L37,47A4,4 0,0 1,41,43Z"
-                android:strokeWidth="1"
-                android:strokeColor="#E0E0E0" />
-            
-            <!-- Card value - "A" for Ace -->
-            <path
-                android:fillColor="#2196F3"
-                android:pathData="M43,49L45,49L45,51L43,51Z" />
-            <path
-                android:fillColor="#2196F3"
-                android:pathData="M63,61L65,61L65,63L63,63Z" />
-        </group>
-        
-        <!-- Card 3 (front card) - main focus -->
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M42,42L68,42A4,4 0,0 1,72,46L72,64A4,4 0,0 1,68,68L42,68A4,4 0,0 1,38,64L38,46A4,4 0,0 1,42,42Z"
-            android:strokeWidth="1.5"
-            android:strokeColor="#2196F3" />
-        
-        <!-- Modern card suits in blue theme -->
-        <!-- Spade (top left) -->
-        <path
-            android:fillColor="#2196F3"
-            android:pathData="M46,48C46,48 44,46 44,46C44,46 44,48 46,50C48,48 48,46 48,46C48,46 46,48 46,48Z" />
-        
-        <!-- Heart (top right) -->
-        <path
-            android:fillColor="#F44336"
-            android:pathData="M62,48C62,48 60,46 58,46C56,46 56,48 58,50C60,48 62,46 64,46C66,46 66,48 64,48C64,48 62,48 62,48Z" />
-        
-        <!-- Diamond (bottom left) -->
-        <path
-            android:fillColor="#F44336"
-            android:pathData="M46,60L48,58L46,56L44,58Z" />
-        
-        <!-- Club (bottom right) -->
-        <path
-            android:fillColor="#2196F3"
-            android:pathData="M62,60C62,60 60,58 60,58C60,58 62,56 64,58C64,58 62,60 62,60Z" />
-        
-        <!-- Central "R" for Rummy -->
-        <path
-            android:fillColor="#2196F3"
-            android:pathData="M52,50L52,58L54,58L54,54L56,54L58,56L58,58L60,58L60,56L58,54L60,54L60,52L56,52L56,50L52,50Z" />
-    </group>
-    
-    <!-- Data visualization elements for "Pulse" concept -->
-    <group android:scaleX="0.7" android:scaleY="0.7" android:pivotX="54" android:pivotY="54">
-        
-        <!-- Pulse bars around the card (like heartbeat monitor) -->
-        <path
-            android:fillColor="#2196F3"
-            android:pathData="M25,76L27,76L27,80L25,80Z" />
-        <path
-            android:fillColor="#2196F3"
-            android:pathData="M29,74L31,74L31,82L29,82Z" />
-        <path
-            android:fillColor="#64B5F6"
-            android:pathData="M33,70L35,70L35,86L33,86Z" />
-        <path
-            android:fillColor="#2196F3"
-            android:pathData="M37,72L39,72L39,84L37,84Z" />
-        <path
-            android:fillColor="#2196F3"
-            android:pathData="M41,74L43,74L43,82L41,82Z" />
-        
-        <!-- Right side pulse bars -->
-        <path
-            android:fillColor="#2196F3"
-            android:pathData="M65,74L67,74L67,82L65,82Z" />
-        <path
-            android:fillColor="#64B5F6"
-            android:pathData="M69,70L71,70L71,86L69,86Z" />
-        <path
-            android:fillColor="#2196F3"
-            android:pathData="M73,72L75,72L75,84L73,84Z" />
-        <path
-            android:fillColor="#2196F3"
-            android:pathData="M77,74L79,74L79,82L77,82Z" />
-        <path
-            android:fillColor="#2196F3"
-            android:pathData="M81,76L83,76L83,80L81,80Z" />
-        
-        <!-- Connecting pulse line -->
-        <path
-            android:fillColor="#00000000"
-            android:pathData="M25,78L83,78"
-            android:strokeWidth="1"
-            android:strokeColor="#402196F3" />
-    </group>
-    
-    <!-- Modern accent elements -->
+        android:fillColor="#FF8C52FF"
+        android:pathData="M41,30 L70,30 L70,37 L41,37 Z" />
+
+    <!-- Right bowl bar — top half only -->
     <path
-        android:fillColor="#2196F3"
-        android:pathData="M24,24L30,24L30,26L24,26Z" />
+        android:fillColor="#FF8C52FF"
+        android:pathData="M63,30 L70,30 L70,54 L63,54 Z" />
+
+    <!-- Middle horizontal bar -->
     <path
-        android:fillColor="#2196F3"
-        android:pathData="M78,24L84,24L84,26L78,26Z" />
+        android:fillColor="#FF8C52FF"
+        android:pathData="M41,54 L64,54 L64,61 L41,61 Z" />
+
+    <!-- Diagonal leg — bottom right -->
     <path
-        android:fillColor="#2196F3"
-        android:pathData="M24,82L30,82L30,84L24,84Z" />
+        android:fillColor="#FF8C52FF"
+        android:pathData="M63,54 L70,54 L74,78 L67,78 Z" />
+
+    <!-- Corner pip — top left -->
     <path
-        android:fillColor="#2196F3"
-        android:pathData="M78,82L84,82L84,84L78,84Z" />
+        android:fillColor="#FFB47EFF"
+        android:pathData="M33,19 L36,23 L33,27 L30,23 Z" />
+
+    <!-- Corner pip — bottom right (rotated 180°) -->
+    <path
+        android:fillColor="#FFB47EFF"
+        android:pathData="M75,81 L78,85 L75,89 L72,85 Z" />
+
 </vector>
