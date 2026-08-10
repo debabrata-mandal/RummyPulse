@@ -307,20 +307,20 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         }
 
         if (!isNetworkAvailable) {
-            binding.textLiveStatus.setText("OFFLINE");
+            binding.textLiveStatus.setText(R.string.dashboard_status_offline);
             binding.textLiveStatus.setBackgroundResource(R.drawable.bg_dashboard_status_offline);
             binding.textLiveStatus.setAlpha(1.0f);
             return;
         }
 
         if (!hasRealtimeData) {
-            binding.textLiveStatus.setText("SYNCING");
+            binding.textLiveStatus.setText(R.string.dashboard_status_syncing);
             binding.textLiveStatus.setBackgroundResource(R.drawable.bg_dashboard_status_syncing);
             binding.textLiveStatus.setAlpha(1.0f);
             return;
         }
 
-        binding.textLiveStatus.setText("LIVE");
+        binding.textLiveStatus.setText(R.string.dashboard_status_live);
         binding.textLiveStatus.setBackgroundResource(R.drawable.bg_dashboard_status_live);
         binding.textLiveStatus.setAlpha(1.0f);
     }

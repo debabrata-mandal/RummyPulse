@@ -23,7 +23,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
 import com.example.rummypulse.data.Player;
-import com.example.rummypulse.utils.DisplayNameUtils;
+import com.example.rummypulse.utils.GameAttributionFormatter;
 import com.google.android.material.checkbox.MaterialCheckBox;
 
 import java.util.ArrayList;
@@ -272,25 +272,12 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     }
 
     private static String buildGameCreatedSummary(GameItem item) {
-        String title = titleForGameRow(item);
         String rawWhen = item.getCreationDateTime();
         String when = (rawWhen != null) ? formatDateTime(rawWhen) : "";
         if (when.isEmpty()) {
             when = "unknown date";
         }
-        String creator = DisplayNameUtils.firstName(item.getCreatorName());
-        String editor = DisplayNameUtils.firstName(item.getEditorName());
-        if (!creator.isEmpty() && !editor.isEmpty()) {
-            return title + " created by " + creator + " · edited by " + editor
-                    + " · started " + when;
-        }
-        if (!creator.isEmpty()) {
-            return title + " created by " + creator + " · started " + when;
-        }
-        if (!editor.isEmpty()) {
-            return title + " edited by " + editor + " · started " + when;
-        }
-        return title + " on " + when;
+        return GameAttributionFormatter.formatCreatorEditorPlainText(item) + " · started " + when;
     }
 
     private static String formatDateTime(String dateTime) {

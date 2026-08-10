@@ -46,8 +46,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/view_request_approve"
-        android:textColor="#4CAF50"
-        app:rippleColor="#334CAF50" />
+        android:textColor="#FF00E676"
+        app:rippleColor="#3300E676" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_view_request_reject"
@@ -55,7 +55,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/view_request_reject"
-        android:textColor="#F44336"
-        app:rippleColor="#33F44336" />
+        android:textColor="#FFFF1744"
+        app:rippleColor="#33FF1744" />
 
 </LinearLayout>

@@ -27,6 +27,19 @@
     <string name="app_info_update_status_debug">Manual checks only in debug</string>
     <string name="app_info_update_status_release">Automatic checks enabled</string>
     <string name="app_info_check_updates">Check for updates</string>
+    <string name="app_info_details_section_title">App details</string>
+    <string name="voice_announcements_language_section_title">Announcement language</string>
+    <string name="voice_announcements_language_section_subtitle">Choose the voice language for score callouts.</string>
+    <string name="voice_announcements_language_bengali">বাংলা (Bengali)</string>
+    <string name="voice_announcements_language_english">English</string>
+    <string name="voice_announcements_language_bengali_selected">✓ বাংলা (Bengali)</string>
+    <string name="voice_announcements_language_english_selected">✓ English</string>
+    <string name="voice_announcements_status_format">Currently: %1$s | %2$s</string>
+    <string name="voice_announcements_status_muted">Muted</string>
+    <string name="voice_announcements_status_enabled">Enabled</string>
+    <string name="voice_announcements_unmute">Unmute voice</string>
+    <string name="voice_announcements_mute">Mute voice</string>
+    <string name="dialog_close">Close</string>
     <string name="menu_dashboard">Dashboard</string>
     <string name="menu_reports">Reports</string>
     <string name="reports_screen_subtitle">Monthly summaries of approved games.</string>
@@ -419,4 +432,20 @@
     <string name="players_dialog_close">Close</string>
     <string name="unknown_user">Unknown user</string>
     <string name="player_change_pending_sync">⟳ Pending sync</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_status_live">LIVE</string>
+    <string name="dashboard_status_syncing">SYNCING</string>
+    <string name="dashboard_status_offline">OFFLINE</string>
+    <string name="dashboard_title">RummyPulse Dashboard</string>
+    <string name="dashboard_subtitle">Track active games, completed games, and live updates</string>
+    <string name="dashboard_metric_label_active">Active</string>
+    <string name="dashboard_metric_label_completed">Completed</string>
+    <string name="dashboard_metric_label_total">Total</string>
+    <string name="dashboard_section_active_games">Active Games</string>
+    <string name="dashboard_section_completed_games">Completed Games</string>
+    <string name="dashboard_empty_active">No active games</string>
+    <string name="dashboard_empty_completed">No completed games yet</string>
+    <string name="dashboard_empty_state_title">No active games</string>
+    <string name="dashboard_empty_state_message">All games are either completed or not started yet</string>
 </resources>

@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.rummypulse.R;
 import com.example.rummypulse.data.GameDefaultsRepository;
 import com.example.rummypulse.ui.home.GameItem;
+import com.example.rummypulse.utils.GameAttributionFormatter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -208,8 +209,6 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         holder.creatorSection.setVisibility(View.VISIBLE);
         
         if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
-            holder.creatorNameText.setText(item.getCreatorName());
-            
             if (item.getCreatorPhotoUrl() != null && !item.getCreatorPhotoUrl().isEmpty()) {
                 Glide.with(holder.itemView.getContext())
                     .load(item.getCreatorPhotoUrl())
@@ -226,14 +225,12 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
                 holder.creatorProfileImage.setPadding(8, 8, 8, 8);
             }
         } else {
-            holder.creatorNameText.setText("Unknown");
             holder.creatorProfileImage.setImageResource(R.drawable.ic_person);
             holder.creatorProfileImage.setScaleType(android.widget.ImageView.ScaleType.CENTER);
             holder.creatorProfileImage.setPadding(8, 8, 8, 8);
         }
-        holder.editorNameText.setText(item.getEditorName() != null
-                && !item.getEditorName().trim().isEmpty()
-                ? item.getEditorName() : "Unknown");
+        holder.creatorEditorLineText.setText(
+                GameAttributionFormatter.formatCreatorEditorLine(context, item));
         
         // Set card click behavior based on game status
         final String finalStatus = status;
@@ -386,7 +383,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
 
     static class GameViewHolder extends RecyclerView.ViewHolder {
         TextView gameIdText, gameStatusText, playersText, pointValueText, gstText,
-                createdTimeText, creatorNameText, editorNameText;
+                createdTimeText, creatorEditorLineText;
         TextView viewAccessStatusText, pendingViewCountText, approvedViewCountText, rejectedViewCountText;
         ImageView qrCodeIcon, creatorProfileImage;
         LinearLayout creatorSection, viewRequestCountsSection;
@@ -404,8 +401,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             pointValueText = itemView.findViewById(R.id.text_point_value);
             gstText = itemView.findViewById(R.id.text_gst);
             createdTimeText = itemView.findViewById(R.id.text_created_time);
-            creatorNameText = itemView.findViewById(R.id.text_creator_name);
-            editorNameText = itemView.findViewById(R.id.text_editor_name);
+            creatorEditorLineText = itemView.findViewById(R.id.text_creator_editor_line);
             creatorProfileImage = itemView.findViewById(R.id.image_creator_profile);
             creatorSection = itemView.findViewById(R.id.creator_section);
             qrCodeIcon = itemView.findViewById(R.id.icon_qr_code_dashboard);

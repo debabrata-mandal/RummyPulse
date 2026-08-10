@@ -15,6 +15,7 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.RequestOptions;
 import com.example.rummypulse.R;
 import com.example.rummypulse.ui.home.GameItem;
+import com.example.rummypulse.utils.GameAttributionFormatter;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.checkbox.MaterialCheckBox;
 
@@ -67,7 +68,6 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
         holder.subtitleText.setText(ConsolidationGameStatusUi.formatGameSubtitle(holder.itemView.getContext(), item));
 
         if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
-            holder.creatorNameText.setText(item.getCreatorName());
             if (item.getCreatorPhotoUrl() != null && !item.getCreatorPhotoUrl().isEmpty()) {
                 Glide.with(holder.itemView.getContext())
                         .load(item.getCreatorPhotoUrl())
@@ -82,12 +82,10 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
                 bindDefaultCreatorAvatar(holder.creatorProfileImage);
             }
         } else {
-            holder.creatorNameText.setText("Unknown");
             bindDefaultCreatorAvatar(holder.creatorProfileImage);
         }
-        holder.editorNameText.setText(item.getEditorName() != null
-                && !item.getEditorName().trim().isEmpty()
-                ? item.getEditorName() : "Unknown");
+        holder.creatorEditorLineText.setText(
+                GameAttributionFormatter.formatCreatorEditorLine(holder.itemView.getContext(), item));
 
         holder.createdTimeText.setText(holder.itemView.getContext().getString(
                 R.string.player_consolidation_started,
@@ -171,8 +169,7 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
         final TextView titleText;
         final TextView statusText;
         final TextView subtitleText;
-        final TextView creatorNameText;
-        final TextView editorNameText;
+        final TextView creatorEditorLineText;
         final TextView createdTimeText;
         final ImageView creatorProfileImage;
 
@@ -183,8 +180,7 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
             titleText = itemView.findViewById(R.id.text_game_title);
             statusText = itemView.findViewById(R.id.text_game_status);
             subtitleText = itemView.findViewById(R.id.text_game_subtitle);
-            creatorNameText = itemView.findViewById(R.id.text_creator_name);
-            editorNameText = itemView.findViewById(R.id.text_editor_name);
+            creatorEditorLineText = itemView.findViewById(R.id.text_creator_editor_line);
             createdTimeText = itemView.findViewById(R.id.text_created_time);
             creatorProfileImage = itemView.findViewById(R.id.image_creator_profile);
         }

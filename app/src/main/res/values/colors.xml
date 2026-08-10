@@ -8,112 +8,112 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    
-    <!-- Dark Financial App Theme Colors -->
-    <color name="primary_blue">#FF141B2D</color>
-    <color name="primary_blue_dark">#FF0E1424</color>
-    <color name="primary_blue_light">#FF24324A</color>
-    <color name="accent_blue">#FF2196F3</color>
-    <color name="accent_blue_dark">#FF1976D2</color>
-    <color name="accent_blue_light">#FF64B5F6</color>
-    
-    <!-- Background Colors - Dark Theme -->
-    <color name="background_primary">#FF101827</color>
-    <color name="background_dark">#FF101827</color>
-    <color name="background_secondary">#FF172338</color>
-    <color name="background_tertiary">#FF20324C</color>
-    <color name="surface_color">#FF172338</color>
-    <color name="surface_variant">#FF20324C</color>
-    
-    <!-- Text Colors - Dark Theme -->
-    <color name="text_primary">#FFFFFFFF</color>
-    <color name="text_secondary">#FFC2CEE2</color>
-    <color name="text_hint">#FF808080</color>
+
+    <!-- Plasma Theme — Primary palette -->
+    <color name="primary_blue">#FF18182A</color>
+    <color name="primary_blue_dark">#FF000000</color>
+    <color name="primary_blue_light">#FF20203A</color>
+    <color name="accent_blue">#FF8C52FF</color>
+    <color name="accent_blue_dark">#FF6B35E8</color>
+    <color name="accent_blue_light">#FFB47EFF</color>
+
+    <!-- Background Colors — OLED Black -->
+    <color name="background_primary">#FF000000</color>
+    <color name="background_dark">#FF000000</color>
+    <color name="background_secondary">#FF0D0D14</color>
+    <color name="background_tertiary">#FF18182A</color>
+    <color name="surface_color">#FF0D0D14</color>
+    <color name="surface_variant">#FF18182A</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#FFFAFAFA</color>
+    <color name="text_secondary">#FFAAAACC</color>
+    <color name="text_hint">#FF555570</color>
     <color name="text_white">#FFFFFFFF</color>
     <color name="text_dark">#FF000000</color>
-    
+
     <!-- Financial Status Colors -->
-    <color name="profit_green">#FF4CAF50</color>
-    <color name="loss_red">#FFF44336</color>
-    <color name="neutral_gray">#FF9E9E9E</color>
-    
+    <color name="profit_green">#FF00E676</color>
+    <color name="loss_red">#FFFF1744</color>
+    <color name="neutral_gray">#FF555570</color>
+
     <!-- Amount Background Colors -->
-    <color name="positive_background">#FF1B5E20</color>
-    <color name="negative_background">#FF5D4037</color>
-    
+    <color name="positive_background">#1A00E676</color>
+    <color name="negative_background">#1AFF1744</color>
+
     <!-- Ranking Colors -->
-    <color name="success_green">#FF4CAF50</color>
-    <color name="warning_orange">#FFFF9800</color>
-    <color name="error_red">#FFF44336</color>
-    
+    <color name="success_green">#FF00E676</color>
+    <color name="warning_orange">#FFFFCC00</color>
+    <color name="error_red">#FFFF1744</color>
+
     <!-- Status Colors -->
-    <color name="status_online">#FF4CAF50</color>
-    <color name="status_offline">#FF757575</color>
-    <color name="status_away">#FFFF9800</color>
-    
+    <color name="status_online">#FF00E676</color>
+    <color name="status_offline">#FF555570</color>
+    <color name="status_away">#FFFFCC00</color>
+
     <!-- Card and Shadow Colors -->
-    <color name="card_background">#FF1A2940</color>
-    <color name="card_background_elevated">#FF213652</color>
-    <color name="divider_color">#FF325075</color>
-    <color name="settlement_summary_card_background">#FF111C24</color>
-    <color name="settlement_summary_card_border">#FF34434D</color>
+    <color name="card_background">#FF18182A</color>
+    <color name="card_background_elevated">#FF20203A</color>
+    <color name="divider_color">#FF26264A</color>
+    <color name="settlement_summary_card_background">#FF0D0D14</color>
+    <color name="settlement_summary_card_border">#FF26264A</color>
     <color name="shadow_color">#40000000</color>
-    
+
     <!-- Header and Navigation Colors -->
-    <color name="header_background">#FF16253A</color>
-    <color name="header_gradient_start">#FF1A2940</color>
-    <color name="header_gradient_end">#FF0E1424</color>
-    <color name="navigation_background">#FF16253A</color>
-    <color name="navigation_selected">#FF2196F3</color>
-    <color name="navigation_header_start">#FF203A5E</color>
-    <color name="navigation_header_end">#FF101827</color>
-    <color name="navigation_item_selected_bg">#263FA7F5</color>
-    <color name="navigation_item_selected_bg_strong">#3347B5FF</color>
-    <color name="navigation_item_pressed_bg">#1F64B5F6</color>
-    <color name="navigation_item_icon">#FFC2CEE2</color>
-    <color name="navigation_item_text">#FFE5EDF8</color>
-    <color name="navigation_section_text">#FF9FB0C8</color>
-    <color name="navigation_sign_out">#FFFF8A80</color>
-    <color name="navigation_footer_background">#FF111C2E</color>
-    <color name="navigation_role_badge_bg">#263FA7F5</color>
-    
+    <color name="header_background">#FF000000</color>
+    <color name="header_gradient_start">#FF0D0D14</color>
+    <color name="header_gradient_end">#FF000000</color>
+    <color name="navigation_background">#FF000000</color>
+    <color name="navigation_selected">#FF8C52FF</color>
+    <color name="navigation_header_start">#FF18182A</color>
+    <color name="navigation_header_end">#FF000000</color>
+    <color name="navigation_item_selected_bg">#268C52FF</color>
+    <color name="navigation_item_selected_bg_strong">#338C52FF</color>
+    <color name="navigation_item_pressed_bg">#1F8C52FF</color>
+    <color name="navigation_item_icon">#FFAAAACC</color>
+    <color name="navigation_item_text">#FFD0D0EE</color>
+    <color name="navigation_section_text">#FF8080A0</color>
+    <color name="navigation_sign_out">#FFFF4D6D</color>
+    <color name="navigation_footer_background">#FF000000</color>
+    <color name="navigation_role_badge_bg">#268C52FF</color>
+
     <!-- Search and Input Colors -->
-    <color name="search_background">#FF20324C</color>
-    <color name="search_hint">#FF808080</color>
-    <color name="input_background">#FF20324C</color>
-    <color name="input_border">#FF325075</color>
-    
+    <color name="search_background">#FF18182A</color>
+    <color name="search_hint">#FF555570</color>
+    <color name="input_background">#FF18182A</color>
+    <color name="input_border">#FF26264A</color>
+
     <!-- Bottom Navigation Colors -->
-    <color name="bottom_nav_background">#FF16253A</color>
-    <color name="bottom_nav_selected">#FF2196F3</color>
-    <color name="bottom_nav_unselected">#FF808080</color>
-    
-    <!-- Legacy Colors for Existing Drawables -->
-    <color name="background_light">#FF172338</color>
-    <color name="background_very_light">#FF20324C</color>
-    <color name="accent_orange">#FF2196F3</color>
-    <color name="accent_orange_dark">#FF1976D2</color>
-    
+    <color name="bottom_nav_background">#FF000000</color>
+    <color name="bottom_nav_selected">#FF8C52FF</color>
+    <color name="bottom_nav_unselected">#FF555570</color>
+
+    <!-- Legacy Colors -->
+    <color name="background_light">#FF0D0D14</color>
+    <color name="background_very_light">#FF18182A</color>
+    <color name="accent_orange">#FFFFAA00</color>
+    <color name="accent_orange_dark">#FFFF8F00</color>
+
     <!-- User Management Colors -->
     <color name="primary_text_color">@color/text_primary</color>
     <color name="secondary_text_color">@color/text_secondary</color>
-    <color name="admin_role_color">#FFFF6B35</color>
-    <color name="regular_role_color">#FF64B5F6</color>
+    <color name="admin_role_color">#FFFF8F00</color>
+    <color name="regular_role_color">#FFB47EFF</color>
     <color name="role_badge_background">@color/surface_variant</color>
     <color name="promote_button_color">@color/success_green</color>
     <color name="demote_button_color">@color/warning_orange</color>
 
-    <!-- Dedicated game view palette -->
-    <color name="view_background">#FF090B14</color>
-    <color name="view_surface">#FF121623</color>
-    <color name="view_surface_soft">#FF171C2C</color>
-    <color name="view_stroke">#FF252B3D</color>
-    <color name="view_text_primary">#FFF7F8FC</color>
-    <color name="view_text_secondary">#FFB7BED0</color>
-    <color name="view_text_muted">#FF7F889D</color>
-    <color name="view_violet">#FF7357F6</color>
-    <color name="view_violet_light">#FFA895FF</color>
-    <color name="view_mint">#FF62E6B7</color>
-    <color name="view_gold">#FFFFCB66</color>
-    <color name="view_coral">#FFFF7B86</color>
+    <!-- Dedicated game view palette — Plasma -->
+    <color name="view_background">#FF000000</color>
+    <color name="view_surface">#FF0D0D14</color>
+    <color name="view_surface_soft">#FF12121E</color>
+    <color name="view_stroke">#FF26264A</color>
+    <color name="view_text_primary">#FFFAFAFA</color>
+    <color name="view_text_secondary">#FFAAAACC</color>
+    <color name="view_text_muted">#FF555570</color>
+    <color name="view_violet">#FF8C52FF</color>
+    <color name="view_violet_light">#FFB47EFF</color>
+    <color name="view_mint">#FF00E676</color>
+    <color name="view_gold">#FFFFD600</color>
+    <color name="view_coral">#FFFF1744</color>
 </resources>

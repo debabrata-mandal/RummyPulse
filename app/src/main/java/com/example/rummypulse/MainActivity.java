@@ -13,6 +13,7 @@ import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.ImageView;
 
@@ -23,6 +24,7 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.RequestOptions;
 import com.example.rummypulse.utils.LanguagePreferenceManager;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -597,63 +599,80 @@ public class MainActivity extends AppCompatActivity {
     private void showVoiceSettingsDialog() {
         boolean isMuted = LanguagePreferenceManager.isMuted(this);
         String currentLanguage = LanguagePreferenceManager.loadLanguagePreference(this).getLanguage();
-        
-        // Create custom dialog
+
         android.app.Dialog dialog = new android.app.Dialog(this);
         dialog.setContentView(R.layout.dialog_announcements);
         dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
         dialog.setCancelable(true);
-        
-        // Get views
-        android.widget.TextView textCurrentStatus = dialog.findViewById(R.id.text_current_status);
-        android.widget.ImageButton btnClose = dialog.findViewById(R.id.btn_close);
-        android.widget.Button btnBengali = dialog.findViewById(R.id.btn_bengali);
-        android.widget.Button btnEnglish = dialog.findViewById(R.id.btn_english);
-        android.widget.Button btnMuteToggle = dialog.findViewById(R.id.btn_mute_toggle);
-        
-        // Update current status
-        String languageText = currentLanguage.equals("bn") ? "Bengali" : "English";
-        String muteText = isMuted ? "Muted" : "Enabled";
-        textCurrentStatus.setText("Currently: " + languageText + " | " + muteText);
-        
-        // Highlight selected language
-        if (currentLanguage.equals("bn")) {
-            btnBengali.setText("✓ বাংলা (Bengali)");
-            btnBengali.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // Green
-        } else {
-            btnEnglish.setText("✓ English");
-            btnEnglish.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // Green
-        }
-        
-        // Update mute button text
+
+        TextView textCurrentStatus = dialog.findViewById(R.id.text_current_status);
+        View btnClose = dialog.findViewById(R.id.btn_close);
+        MaterialButton btnBengali = dialog.findViewById(R.id.btn_bengali);
+        MaterialButton btnEnglish = dialog.findViewById(R.id.btn_english);
+        MaterialButton btnMuteToggle = dialog.findViewById(R.id.btn_mute_toggle);
+
+        String languageText = currentLanguage.equals("bn")
+                ? getString(R.string.voice_announcements_language_bengali)
+                : getString(R.string.voice_announcements_language_english);
+        String muteText = isMuted
+                ? getString(R.string.voice_announcements_status_muted)
+                : getString(R.string.voice_announcements_status_enabled);
+        textCurrentStatus.setText(getString(
+                R.string.voice_announcements_status_format, languageText, muteText));
+
+        styleVoiceLanguageButton(btnBengali, currentLanguage.equals("bn"));
+        styleVoiceLanguageButton(btnEnglish, !currentLanguage.equals("bn"));
+
         if (isMuted) {
-            btnMuteToggle.setText("🔊 Unmute Voice");
-            btnMuteToggle.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4CAF50)); // Green
+            btnMuteToggle.setText(R.string.voice_announcements_unmute);
+            btnMuteToggle.setBackgroundTintList(
+                    ColorStateList.valueOf(ContextCompat.getColor(this, R.color.view_mint)));
         } else {
-            btnMuteToggle.setText("🔇 Mute Voice");
-            btnMuteToggle.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFFFF6B6B)); // Red
+            btnMuteToggle.setText(R.string.voice_announcements_mute);
+            btnMuteToggle.setBackgroundTintList(
+                    ColorStateList.valueOf(ContextCompat.getColor(this, R.color.view_coral)));
         }
-        
-        // Set button listeners
+
         btnClose.setOnClickListener(v -> dialog.dismiss());
-        
+
         btnBengali.setOnClickListener(v -> {
             switchLanguage(new Locale("bn", "IN"));
             dialog.dismiss();
         });
-        
+
         btnEnglish.setOnClickListener(v -> {
             switchLanguage(Locale.US);
             dialog.dismiss();
         });
-        
+
         btnMuteToggle.setOnClickListener(v -> {
             toggleMuteVoice();
             dialog.dismiss();
         });
-        
+
         dialog.show();
         applySettingsDialogWidth(dialog);
+    }
+
+    private void styleVoiceLanguageButton(MaterialButton button, boolean selected) {
+        if (selected) {
+            button.setText(button.getId() == R.id.btn_bengali
+                    ? R.string.voice_announcements_language_bengali_selected
+                    : R.string.voice_announcements_language_english_selected);
+            button.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+            button.setBackgroundTintList(
+                    ColorStateList.valueOf(ContextCompat.getColor(this, R.color.view_violet)));
+            button.setStrokeWidth(0);
+        } else {
+            button.setText(button.getId() == R.id.btn_bengali
+                    ? R.string.voice_announcements_language_bengali
+                    : R.string.voice_announcements_language_english);
+            button.setTextColor(ContextCompat.getColor(this, R.color.view_text_primary));
+            button.setBackgroundTintList(ColorStateList.valueOf(0x24111424));
+            button.setStrokeColor(ColorStateList.valueOf(
+                    ContextCompat.getColor(this, R.color.view_stroke)));
+            button.setStrokeWidth(getResources().getDimensionPixelSize(R.dimen.view_button_stroke_width));
+        }
     }
 
     /**
@@ -700,8 +719,8 @@ public class MainActivity extends AppCompatActivity {
             android.widget.TextView textBuild = dialog.findViewById(R.id.text_build);
             android.widget.TextView textDate = dialog.findViewById(R.id.text_date);
             android.widget.TextView textUpdateStatus = dialog.findViewById(R.id.text_update_status);
-            android.widget.ImageButton btnClose = dialog.findViewById(R.id.btn_close);
-            android.widget.Button btnCheckUpdates = dialog.findViewById(R.id.btn_check_updates);
+            View btnClose = dialog.findViewById(R.id.btn_close);
+            MaterialButton btnCheckUpdates = dialog.findViewById(R.id.btn_check_updates);
             
             // Set values
             textVersion.setText(versionName);
@@ -741,7 +760,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
-        int maxWidth = Math.round(420 * dm.density);
+        int maxWidth = getResources().getDimensionPixelSize(R.dimen.dialog_create_game_max_width);
         int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
         dialog.getWindow().setLayout(
                 width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);

@@ -3,7 +3,7 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:background="@android:color/white">
+    android:background="@color/background_secondary">
 
     <!-- Player Header -->
     <LinearLayout
@@ -11,7 +11,7 @@
         android:layout_height="48dp"
         android:orientation="horizontal"
         android:gravity="center"
-        android:background="#F5F5F5"
+        android:background="@color/background_tertiary"
         android:padding="8dp">
 
         <TextView
@@ -25,7 +25,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Player"
-            android:textColor="@android:color/black"
+            android:textColor="@color/text_primary"
             android:textSize="14sp"
             android:textStyle="bold" />
 
@@ -42,7 +42,7 @@
             android:layout_height="48dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="#007bff"
+            android:background="@color/accent_blue"
             android:padding="4dp">
 
             <TextView
@@ -55,7 +55,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R1"
-                android:textColor="@android:color/black"
+                android:textColor="@color/text_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -66,7 +66,7 @@
             android:layout_height="48dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="#007bff"
+            android:background="@color/accent_blue"
             android:padding="4dp">
 
             <TextView
@@ -79,7 +79,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R2"
-                android:textColor="@android:color/black"
+                android:textColor="@color/text_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -90,7 +90,7 @@
             android:layout_height="48dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="#007bff"
+            android:background="@color/accent_blue"
             android:padding="4dp">
 
             <TextView
@@ -103,7 +103,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R3"
-                android:textColor="@android:color/black"
+                android:textColor="@color/text_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -114,7 +114,7 @@
             android:layout_height="48dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="#007bff"
+            android:background="@color/accent_blue"
             android:padding="4dp">
 
             <TextView
@@ -127,7 +127,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R4"
-                android:textColor="@android:color/black"
+                android:textColor="@color/text_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -138,7 +138,7 @@
             android:layout_height="48dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="#007bff"
+            android:background="@color/accent_blue"
             android:padding="4dp">
 
             <TextView
@@ -151,7 +151,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R5"
-                android:textColor="@android:color/black"
+                android:textColor="@color/text_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -162,7 +162,7 @@
             android:layout_height="48dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="#007bff"
+            android:background="@color/accent_blue"
             android:padding="4dp">
 
             <TextView
@@ -175,7 +175,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R6"
-                android:textColor="@android:color/black"
+                android:textColor="@color/text_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -186,7 +186,7 @@
             android:layout_height="48dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="#007bff"
+            android:background="@color/accent_blue"
             android:padding="4dp">
 
             <TextView
@@ -199,7 +199,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R7"
-                android:textColor="@android:color/black"
+                android:textColor="@color/text_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -210,7 +210,7 @@
             android:layout_height="48dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="#007bff"
+            android:background="@color/accent_blue"
             android:padding="4dp">
 
             <TextView
@@ -223,7 +223,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R8"
-                android:textColor="@android:color/black"
+                android:textColor="@color/text_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -234,7 +234,7 @@
             android:layout_height="48dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="#007bff"
+            android:background="@color/accent_blue"
             android:padding="4dp">
 
             <TextView
@@ -247,7 +247,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R9"
-                android:textColor="@android:color/black"
+                android:textColor="@color/text_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
@@ -258,7 +258,7 @@
             android:layout_height="48dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="#007bff"
+            android:background="@color/accent_blue"
             android:padding="4dp">
 
             <TextView
@@ -271,7 +271,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="R10"
-                android:textColor="@android:color/black"
+                android:textColor="@color/text_primary"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
