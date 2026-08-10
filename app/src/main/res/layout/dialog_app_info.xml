@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/dialog_background"
+    android:background="@drawable/bg_view_hero"
     android:orientation="vertical"
     android:paddingStart="18dp"
     android:paddingTop="18dp"
@@ -17,35 +17,10 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-        <ImageButton
-            android:id="@+id/btn_close"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/app_info_close_background"
-            android:contentDescription="Close"
-            android:padding="9dp"
-            android:src="@drawable/ic_close"
-            app:tint="@color/text_secondary" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:background="@drawable/app_info_header_background"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="16dp">
-
         <ImageView
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:background="@drawable/profile_image_circle"
+            android:background="@drawable/bg_view_pin_icon"
             android:contentDescription="@string/app_info_title"
             android:padding="8dp"
             android:src="@mipmap/ic_launcher" />
@@ -53,7 +28,7 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="14dp"
+            android:layout_marginStart="12dp"
             android:layout_weight="1"
             android:orientation="vertical">
 
@@ -61,55 +36,93 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/app_info_title"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/view_text_primary"
                 android:textSize="19sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="2dp"
+                android:lineSpacingMultiplier="1.1"
                 android:text="@string/app_info_subtitle"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/view_text_secondary"
                 android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/text_update_status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/app_info_status_background"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_create_game_inner"
                 android:paddingHorizontal="10dp"
                 android:paddingVertical="5dp"
-                android:textColor="@color/text_primary"
+                android:textColor="@color/view_violet_light"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 tools:text="Automatic checks enabled" />
         </LinearLayout>
+
+        <ImageView
+            android:id="@+id/btn_close"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_view_action"
+            android:clickable="true"
+            android:contentDescription="@string/dialog_close"
+            android:focusable="true"
+            android:padding="9dp"
+            android:src="@drawable/ic_close"
+            android:tint="@color/view_text_secondary" />
     </LinearLayout>
 
-    <LinearLayout
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
         android:layout_marginTop="16dp"
-        android:orientation="vertical">
+        android:layout_marginEnd="4dp"
+        app:cardBackgroundColor="#38111424"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/view_stroke"
+        app:strokeWidth="1dp">
 
-        <include layout="@layout/item_app_info_row_version" />
-    </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/app_info_details_section_title"
+                android:textColor="@color/view_text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <include
+                layout="@layout/item_app_info_row_version"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_check_updates"
         style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/bg_view_primary_button"
         android:minHeight="48dp"
         android:text="@string/app_info_check_updates"
         android:textAllCaps="false"
         android:textColor="@android:color/white"
-        android:textSize="15sp"
-        android:textStyle="bold"
-        app:backgroundTint="@color/accent_blue"
+        app:backgroundTint="@null"
         app:cornerRadius="10dp"
         app:icon="@drawable/ic_refresh"
         app:iconGravity="textStart"
