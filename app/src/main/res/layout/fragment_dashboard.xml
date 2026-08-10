@@ -54,7 +54,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="RummyPulse Dashboard"
+                                android:text="@string/dashboard_title"
                                 android:textColor="@color/text_primary"
                                 android:textSize="20sp"
                                 android:textStyle="bold" />
@@ -68,7 +68,7 @@
                                 android:paddingTop="4dp"
                                 android:paddingEnd="10dp"
                                 android:paddingBottom="4dp"
-                                android:text="SYNCING"
+                                android:text="@string/dashboard_status_syncing"
                                 android:textColor="@color/text_primary"
                                 android:textSize="11sp"
                                 android:textStyle="bold" />
@@ -78,7 +78,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="Track active games, completed games, and live updates"
+                            android:text="@string/dashboard_subtitle"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp" />
 
@@ -101,7 +101,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Active"
+                                    android:text="@string/dashboard_metric_label_active"
                                     android:textAlignment="center"
                                     android:textColor="@color/accent_blue_light"
                                     android:textSize="10sp"
@@ -133,7 +133,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Completed"
+                                    android:text="@string/dashboard_metric_label_completed"
                                     android:textAlignment="center"
                                     android:textColor="@color/accent_blue_light"
                                     android:textSize="10sp"
@@ -164,7 +164,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Total"
+                                    android:text="@string/dashboard_metric_label_total"
                                     android:textAlignment="center"
                                     android:textColor="@color/accent_blue_light"
                                     android:textSize="10sp"
@@ -224,7 +224,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Active Games"
+                                android:text="@string/dashboard_section_active_games"
                                 android:textColor="@color/text_primary"
                                 android:textSize="18sp"
                                 android:textStyle="bold" />
@@ -268,7 +268,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:padding="12dp"
-                                android:text="No active games"
+                                android:text="@string/dashboard_empty_active"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="14sp"
                                 android:visibility="gone" />
@@ -321,7 +321,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Completed Games"
+                                android:text="@string/dashboard_section_completed_games"
                                 android:textColor="@color/text_primary"
                                 android:textSize="18sp"
                                 android:textStyle="bold" />
@@ -366,7 +366,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:padding="12dp"
-                                android:text="No completed games yet"
+                                android:text="@string/dashboard_empty_completed"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="14sp"
                                 android:visibility="gone" />
@@ -400,7 +400,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="No active games"
+                        android:text="@string/dashboard_empty_state_title"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary"
@@ -409,7 +409,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="All games are either completed or not started yet"
+                        android:text="@string/dashboard_empty_state_message"
                         android:textSize="14sp"
                         android:textColor="@color/text_secondary"
                         android:textAlignment="center" />

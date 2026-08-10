@@ -112,7 +112,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Net: ₹0"
-            android:textColor="#4CAF50"
+            android:textColor="#FF00E676"
             android:textSize="16sp"
             android:textStyle="bold"
             android:layout_marginTop="1dp"

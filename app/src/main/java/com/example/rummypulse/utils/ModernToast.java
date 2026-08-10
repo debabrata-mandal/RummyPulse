@@ -286,12 +286,12 @@ public class ModernToast {
         
         switch (type) {
             case SUCCESS:
-                backgroundColor = Color.parseColor("#4CAF50"); // Green
+                backgroundColor = Color.parseColor("#00E676");
                 iconResource = android.R.drawable.ic_dialog_info; // You can replace with custom icons
                 break;
                 
             case ERROR:
-                backgroundColor = Color.parseColor("#F44336"); // Red
+                backgroundColor = Color.parseColor("#FF1744");
                 iconResource = android.R.drawable.ic_dialog_alert;
                 break;
                 
@@ -301,7 +301,7 @@ public class ModernToast {
                 break;
                 
             case PROGRESS:
-                backgroundColor = Color.parseColor("#2196F3"); // Blue
+                backgroundColor = Color.parseColor("#8C52FF");
                 iconResource = android.R.drawable.ic_popup_sync;
                 break;
                 
