@@ -14,6 +14,11 @@
     <string name="menu_game_review">Game Review</string>
     <string name="menu_user_management">User Management</string>
     <string name="menu_voice_announcements">Voice Announcements</string>
+    <string name="menu_share_app">Share app</string>
+    <string name="share_app_text">Keep score and review your rummy games with RummyPulse. Download the latest version: %1$s</string>
+    <string name="share_app_chooser_title">Share RummyPulse via</string>
+    <string name="share_app_no_handler">No app available to share RummyPulse.</string>
+    <string name="share_app_download_url" translatable="false">https://github.com/debabrata-mandal/RummyPulse/releases/latest</string>
     <string name="nav_role_checking">Checking access</string>
     <string name="nav_role_admin">Admin</string>
     <string name="nav_role_player">Player</string>
@@ -176,6 +181,9 @@
     <string name="review_delete_selected_progress">Deleting %1$d game(s)…</string>
     <string name="review_delete_selected_success_one">1 game deleted.</string>
     <string name="review_delete_selected_success_many">%1$d games deleted.</string>
+    <string name="review_operation_approving_one">Approving game…</string>
+    <string name="review_operation_approving_many">Approving %1$d games…</string>
+    <string name="review_delete_success_one">Game deleted.</string>
     <string name="review_access_restricted">Administrator access required</string>
     <string name="review_access_restricted_detail">This screen is limited to admin accounts. Contact an administrator if you need access.</string>
     <string name="review_edit_economics_title">Edit point value &amp; contribution</string>

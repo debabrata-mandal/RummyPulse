@@ -161,6 +161,10 @@ public class MainActivity extends AppCompatActivity {
                 showVoiceSettingsDialog();
                 drawerLayout.closeDrawers();
                 return true;
+            } else if (item.getItemId() == R.id.nav_share_app) {
+                shareApp();
+                drawerLayout.closeDrawers();
+                return true;
             } else if (item.getItemId() == R.id.nav_app_info) {
                 showAppInfoDialog();
                 drawerLayout.closeDrawers();
@@ -430,6 +434,24 @@ public class MainActivity extends AppCompatActivity {
         }
         if (versionFooter != null) {
             versionFooter.setText(getString(R.string.nav_app_version, getAppVersionName()));
+        }
+    }
+
+    private void shareApp() {
+        String downloadUrl = getString(R.string.share_app_download_url);
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.app_name));
+        shareIntent.putExtra(Intent.EXTRA_TEXT, getString(R.string.share_app_text, downloadUrl));
+
+        try {
+            startActivity(Intent.createChooser(
+                    shareIntent,
+                    getString(R.string.share_app_chooser_title)));
+        } catch (android.content.ActivityNotFoundException exception) {
+            com.example.rummypulse.utils.ModernToast.error(
+                    this,
+                    getString(R.string.share_app_no_handler));
         }
     }
 

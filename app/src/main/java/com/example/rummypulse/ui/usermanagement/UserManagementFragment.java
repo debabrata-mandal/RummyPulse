@@ -27,7 +27,7 @@ import java.util.List;
 
 /**
  * Fragment for managing users - only accessible by admin users
- * Allows viewing all users and promoting/demoting user roles
+ * Allows viewing all users, promoting/demoting user roles, and deleting users (admin only)
  */
 public class UserManagementFragment extends Fragment {
 
@@ -55,7 +55,8 @@ public class UserManagementFragment extends Fragment {
     }
 
     private void setupRecyclerView() {
-        adapter = new UserManagementAdapter(new ArrayList<>(), this::onRoleChangeClicked);
+        adapter = new UserManagementAdapter(
+                new ArrayList<>(), this::onRoleChangeClicked, this::onDeleteClicked);
         layoutManager = new LinearLayoutManager(getContext());
         binding.recyclerViewUsers.setLayoutManager(layoutManager);
         binding.recyclerViewUsers.setAdapter(adapter);
@@ -118,6 +119,12 @@ public class UserManagementFragment extends Fragment {
                 com.example.rummypulse.utils.ModernToast.success(getContext(), "User role updated successfully");
             }
         });
+
+        userManagementViewModel.getDeleteSuccess().observe(getViewLifecycleOwner(), success -> {
+            if (success != null && success) {
+                com.example.rummypulse.utils.ModernToast.success(getContext(), "User deleted successfully");
+            }
+        });
     }
 
     private void onRoleChangeClicked(AppUser user) {
@@ -169,6 +176,70 @@ public class UserManagementFragment extends Fragment {
             Log.d(TAG, "Changing role for user: " + user.getDisplayName()
                     + " to " + targetRole.getDisplayName());
             userManagementViewModel.updateUserRole(user.getUserId(), targetRole);
+            dialog.dismiss();
+        });
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(
+                    new android.graphics.drawable.ColorDrawable(
+                            android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm =
+                    getResources().getDisplayMetrics();
+            int maxWidth = Math.round(420 * dm.density);
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
+            dialog.getWindow().setLayout(
+                    width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void onDeleteClicked(AppUser user) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null && currentUser.getUid().equals(user.getUserId())) {
+            com.example.rummypulse.utils.ModernToast.warning(getContext(),
+                    "You cannot delete your own account");
+            return;
+        }
+
+        View dialogView = LayoutInflater.from(requireContext()).inflate(
+                R.layout.dialog_action_confirmation, null, false);
+        android.widget.ImageView icon =
+                dialogView.findViewById(R.id.image_action_dialog_icon);
+        android.widget.TextView title =
+                dialogView.findViewById(R.id.text_action_dialog_title);
+        android.widget.TextView subtitle =
+                dialogView.findViewById(R.id.text_action_dialog_subtitle);
+        android.widget.TextView message =
+                dialogView.findViewById(R.id.text_action_dialog_message);
+        com.google.android.material.card.MaterialCardView messageCard =
+                dialogView.findViewById(R.id.card_action_dialog_message);
+        com.google.android.material.button.MaterialButton cancel =
+                dialogView.findViewById(R.id.btn_action_dialog_cancel);
+        com.google.android.material.button.MaterialButton confirm =
+                dialogView.findViewById(R.id.btn_action_dialog_confirm);
+
+        int red = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.error_red);
+        icon.setImageResource(R.drawable.ic_delete);
+        icon.setBackgroundResource(R.drawable.view_access_icon_rejected_background);
+        icon.setImageTintList(android.content.res.ColorStateList.valueOf(red));
+        title.setText("Delete user?");
+        subtitle.setText(user.getDisplayName());
+        message.setText("This permanently removes the user from RummyPulse. This action cannot be undone.");
+        message.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(red));
+        messageCard.setStrokeColor(red);
+        cancel.setText("Keep user");
+        confirm.setText("Delete user");
+        confirm.setBackgroundTintList(android.content.res.ColorStateList.valueOf(red));
+
+        androidx.appcompat.app.AlertDialog dialog =
+                new androidx.appcompat.app.AlertDialog.Builder(
+                        requireContext(), R.style.DarkDialogTheme)
+                        .setView(dialogView)
+                        .setCancelable(true)
+                        .create();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        confirm.setOnClickListener(v -> {
+            Log.d(TAG, "Deleting user: " + user.getDisplayName());
+            userManagementViewModel.deleteUser(user.getUserId());
             dialog.dismiss();
         });
         dialog.show();

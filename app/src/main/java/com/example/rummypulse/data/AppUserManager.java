@@ -82,6 +82,13 @@ public class AppUserManager {
     public void updateUserRole(String userId, UserRole newRole, AppUserRepository.AppUserCallback callback) {
         repository.updateUserRole(userId, newRole, callback);
     }
+
+    /**
+     * Delete a user by userId (admin function)
+     */
+    public void deleteUser(String userId, AppUserRepository.VoidCallback callback) {
+        repository.deleteUser(userId, callback);
+    }
     
     /**
      * Get AppUser repository instance

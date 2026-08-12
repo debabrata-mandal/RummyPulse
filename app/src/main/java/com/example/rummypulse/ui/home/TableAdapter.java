@@ -34,6 +34,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     private OnGameActionListener actionListener;
     private OnSelectionChangedListener selectionChangedListener;
     private final ReviewSelectionModel selection = new ReviewSelectionModel();
+    private boolean actionsEnabled = true;
 
     public interface OnGameActionListener {
         void onApproveGst(GameItem game, int position);
@@ -83,6 +84,14 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         return selection.snapshot();
     }
 
+    public void setActionsEnabled(boolean enabled) {
+        if (actionsEnabled == enabled) {
+            return;
+        }
+        actionsEnabled = enabled;
+        notifyDataSetChanged();
+    }
+
     @NonNull
     @Override
     public TableViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -97,8 +106,12 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             String gameId = item.getGameId();
 
             holder.selectGameCheckBox.setOnCheckedChangeListener(null);
+            holder.selectGameCheckBox.setEnabled(actionsEnabled);
             holder.selectGameCheckBox.setChecked(selection.isSelected(gameId));
             holder.selectGameCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (!actionsEnabled) {
+                    return;
+                }
                 selection.setSelected(gameId, isChecked);
                 notifySelectionChanged();
             });
@@ -209,19 +222,19 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             boolean isGameCompleted = "Completed".equals(gameStatus);
             
             
-            holder.btnApproveGst.setEnabled(isGameCompleted);
-            // Remove alpha setting - handled by state list drawable now
+            holder.btnApproveGst.setEnabled(actionsEnabled && isGameCompleted);
+            holder.btnDeleteGame.setEnabled(actionsEnabled);
             
             // Set up button click listeners
             holder.btnApproveGst.setOnClickListener(v -> {
-                if (actionListener != null && isGameCompleted) {
+                if (actionListener != null && actionsEnabled && isGameCompleted) {
                     actionListener.onApproveGst(item, position);
                 }
             });
 
 
             holder.btnDeleteGame.setOnClickListener(v -> {
-                if (actionListener != null) {
+                if (actionListener != null && actionsEnabled) {
                     actionListener.onDeleteGame(item, position);
                 }
             });

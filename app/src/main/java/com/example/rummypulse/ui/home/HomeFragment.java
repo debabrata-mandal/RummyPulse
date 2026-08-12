@@ -36,7 +36,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
     private boolean adminViewConfigured;
     private boolean lockedViewConfigured;
     private boolean updatingSelectionControls;
-    private boolean bulkDeleteInProgress;
+    private boolean reviewOperationInProgress;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -135,9 +135,56 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
         homeViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
+                if (reviewOperationInProgress) {
+                    endReviewOperation();
+                }
                 com.example.rummypulse.utils.ModernToast.error(getContext(), error);
             }
         });
+    }
+
+    private void beginReviewOperation(String message) {
+        if (binding == null) {
+            return;
+        }
+        reviewOperationInProgress = true;
+        binding.reviewOperationLoading.setVisibility(View.VISIBLE);
+        binding.textReviewOperationMessage.setText(message);
+        binding.swipeRefresh.setAlpha(0.35f);
+        setReviewControlsEnabled(false);
+    }
+
+    private void endReviewOperation() {
+        if (binding == null) {
+            return;
+        }
+        reviewOperationInProgress = false;
+        binding.reviewOperationLoading.setVisibility(View.GONE);
+        binding.swipeRefresh.setAlpha(1f);
+        setReviewControlsEnabled(true);
+    }
+
+    private void setReviewControlsEnabled(boolean enabled) {
+        if (binding == null) {
+            return;
+        }
+        Integer completedGames = homeViewModel.getCompletedGames().getValue();
+        int completed = completedGames != null ? completedGames : 0;
+        binding.btnApproveAll.setEnabled(enabled && completed > 0);
+        binding.btnRefresh.setEnabled(enabled);
+        if (tableAdapter != null) {
+            binding.checkboxSelectAll.setEnabled(
+                    enabled && tableAdapter.getItemCount() > 0);
+            tableAdapter.setActionsEnabled(enabled);
+            int selectedCount = tableAdapter.getSelectedGameIds().size();
+            int itemCount = tableAdapter.getItemCount();
+            updateSelectionControls(
+                    selectedCount,
+                    itemCount > 0 && selectedCount == itemCount);
+        } else {
+            binding.checkboxSelectAll.setEnabled(false);
+            binding.btnDeleteSelected.setEnabled(false);
+        }
     }
 
     @Override
@@ -243,12 +290,17 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 "The game will move to the approved list and its results will be finalized.",
                 "Approve",
                 false,
-                () -> homeViewModel.approveGame(game, () -> {
-                    if (isAdded() && getContext() != null) {
+                () -> {
+                    beginReviewOperation(getString(R.string.review_operation_approving_one));
+                    homeViewModel.approveGame(game, () -> {
+                        if (!isAdded() || getContext() == null) {
+                            return;
+                        }
+                        endReviewOperation();
                         com.example.rummypulse.utils.ModernToast.success(
                                 getContext(), "✅ Game approved successfully!");
-                    }
-                }));
+                    });
+                });
     }
 
 
@@ -262,8 +314,24 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 "Delete game",
                 true,
                 () -> {
-                    homeViewModel.deleteGame(game.getGameId());
-                    com.example.rummypulse.utils.ModernToast.success(getContext(), "🗑️ Game deleted successfully!");
+                    beginReviewOperation(getString(R.string.review_delete_selected_progress, 1));
+                    homeViewModel.deleteGame(
+                            game.getGameId(),
+                            () -> {
+                                if (!isAdded() || getContext() == null) {
+                                    return;
+                                }
+                                endReviewOperation();
+                                com.example.rummypulse.utils.ModernToast.success(
+                                        getContext(),
+                                        getString(R.string.review_delete_success_one));
+                            },
+                            error -> {
+                                if (!isAdded()) {
+                                    return;
+                                }
+                                endReviewOperation();
+                            });
                 });
     }
 
@@ -275,16 +343,16 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         binding.checkboxSelectAll.setChecked(allSelected);
         updatingSelectionControls = false;
         binding.checkboxSelectAll.setEnabled(
-                !bulkDeleteInProgress && tableAdapter.getItemCount() > 0);
+                !reviewOperationInProgress && tableAdapter.getItemCount() > 0);
         binding.textSelectedGames.setText(selectedCount == 0
                 ? getString(R.string.review_selected_none)
                 : getString(R.string.review_selected_count, selectedCount));
         binding.btnDeleteSelected.setEnabled(
-                !bulkDeleteInProgress && selectedCount > 0);
+                !reviewOperationInProgress && selectedCount > 0);
     }
 
     private void onDeleteSelectedClicked() {
-        if (tableAdapter == null || bulkDeleteInProgress || getContext() == null) {
+        if (tableAdapter == null || reviewOperationInProgress || getContext() == null) {
             return;
         }
         List<String> selectedGameIds = tableAdapter.getSelectedGameIds();
@@ -303,10 +371,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 getString(R.string.review_delete_selected),
                 true,
                 () -> {
-                    bulkDeleteInProgress = true;
-                    updateSelectionControls(selectedCount, false);
-                    com.example.rummypulse.utils.ModernToast.progress(
-                            getContext(),
+                    beginReviewOperation(
                             getString(R.string.review_delete_selected_progress, selectedCount));
                     homeViewModel.deleteGames(
                             selectedGameIds,
@@ -314,8 +379,8 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                                 if (!isAdded() || binding == null || getContext() == null) {
                                     return;
                                 }
-                                bulkDeleteInProgress = false;
                                 tableAdapter.clearSelection();
+                                endReviewOperation();
                                 com.example.rummypulse.utils.ModernToast.success(
                                         getContext(),
                                         selectedCount == 1
@@ -328,7 +393,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                                 if (!isAdded() || binding == null || tableAdapter == null) {
                                     return;
                                 }
-                                bulkDeleteInProgress = false;
+                                endReviewOperation();
                                 updateSelectionControls(
                                         tableAdapter.getSelectedGameIds().size(),
                                         false);
@@ -361,13 +426,18 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 "Each game will move to the approved list and its results will be finalized.",
                 "Approve all",
                 false,
-                () -> homeViewModel.approveAllCompletedGames(items, () -> {
-                    if (!isAdded() || getContext() == null) {
-                        return;
-                    }
-                    com.example.rummypulse.utils.ModernToast.success(getContext(),
-                            approvedCount == 1 ? "1 game approved." : approvedCount + " games approved.");
-                }));
+                () -> {
+                    beginReviewOperation(getString(
+                            R.string.review_operation_approving_many, approvedCount));
+                    homeViewModel.approveAllCompletedGames(items, () -> {
+                        if (!isAdded() || getContext() == null) {
+                            return;
+                        }
+                        endReviewOperation();
+                        com.example.rummypulse.utils.ModernToast.success(getContext(),
+                                approvedCount == 1 ? "1 game approved." : approvedCount + " games approved.");
+                    });
+                });
     }
 
     private void showReviewActionDialog(

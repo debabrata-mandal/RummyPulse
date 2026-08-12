@@ -204,6 +204,22 @@ public class AppUserRepository {
     }
 
     /**
+     * Deletes a user document. Clears the cached user directory on success.
+     */
+    public void deleteUser(String userId, VoidCallback callback) {
+        db.collection(FirestoreCollections.APP_USER).document(userId)
+                .delete()
+                .addOnSuccessListener(unused -> {
+                    invalidateUserDirectoryCache();
+                    Log.d(TAG, "User deleted with operations: reads=0 writes=1 for " + userId);
+                    if (callback != null) {
+                        callback.onSuccess();
+                    }
+                })
+                .addOnFailureListener(exception -> notifyVoidFailure(callback, exception));
+    }
+
+    /**
      * Updates a role with one write and returns a minimal local result without rereading the user.
      */
     public void updateUserRole(String userId, UserRole newRole, AppUserCallback callback) {
@@ -426,7 +442,20 @@ public class AppUserRepository {
         }
     }
 
+    private static void invalidateUserDirectoryCache() {
+        synchronized (DIRECTORY_LOCK) {
+            cachedUserDirectory = null;
+            cachedUserDirectoryAt = 0;
+        }
+    }
+
     private static void notifyFailure(@Nullable AppUserCallback callback, Exception exception) {
+        if (callback != null) {
+            callback.onFailure(exception != null ? exception : new Exception("Unknown Firestore error"));
+        }
+    }
+
+    private static void notifyVoidFailure(@Nullable VoidCallback callback, Exception exception) {
         if (callback != null) {
             callback.onFailure(exception != null ? exception : new Exception("Unknown Firestore error"));
         }
@@ -479,6 +508,11 @@ public class AppUserRepository {
 
     public interface UsersCallback {
         void onSuccess(List<AppUser> users);
+        void onFailure(Exception exception);
+    }
+
+    public interface VoidCallback {
+        void onSuccess();
         void onFailure(Exception exception);
     }
 }

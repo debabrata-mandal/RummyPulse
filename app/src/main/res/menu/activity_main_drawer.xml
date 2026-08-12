@@ -46,6 +46,10 @@
                 android:icon="@drawable/ic_voice"
                 android:title="@string/menu_voice_announcements" />
             <item
+                android:id="@+id/nav_share_app"
+                android:icon="@drawable/ic_share"
+                android:title="@string/menu_share_app" />
+            <item
                 android:id="@+id/nav_app_info"
                 android:icon="@drawable/ic_info"
                 android:title="App Info" />

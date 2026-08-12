@@ -182,7 +182,9 @@ service cloud.firestore {
 
     match /appUser_v2/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin();
     }
 
     match /gameDefaults_v2/{docId} {
