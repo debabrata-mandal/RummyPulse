@@ -1328,19 +1328,30 @@ public class GameRepository {
     }
 
     public void deleteGame(String gameId) {
+        deleteGame(gameId, null, null);
+    }
+
+    public void deleteGame(String gameId, Runnable onSuccess, Consumer<String> onFailure) {
         deleteScoreHistoryForGames(java.util.Collections.singletonList(gameId), () -> {
             viewApprovalRepository.deleteAllForGame(gameId);
             // Keep games_v2 until history is gone so the admin-only cleanup runs first.
             db.collection(FirestoreCollections.GAME_DATA).document(gameId).delete()
                     .addOnSuccessListener(unused ->
                             db.collection(FirestoreCollections.GAMES).document(gameId).delete()
-                                    .addOnSuccessListener(ignored -> loadAllGames())
-                                    .addOnFailureListener(error -> errorLiveData.setValue(
+                                    .addOnSuccessListener(ignored -> {
+                                        loadAllGames();
+                                        if (onSuccess != null) {
+                                            onSuccess.run();
+                                        }
+                                    })
+                                    .addOnFailureListener(error -> reportDeleteFailure(
                                             "Failed to delete game: "
-                                                    + safeErrorMessage(error))))
-                    .addOnFailureListener(error -> errorLiveData.setValue(
-                            "Failed to delete game data: " + safeErrorMessage(error)));
-        }, message -> errorLiveData.setValue(message));
+                                                    + safeErrorMessage(error),
+                                            onFailure)))
+                    .addOnFailureListener(error -> reportDeleteFailure(
+                            "Failed to delete game data: " + safeErrorMessage(error),
+                            onFailure));
+        }, message -> reportDeleteFailure(message, onFailure));
     }
 
     /**

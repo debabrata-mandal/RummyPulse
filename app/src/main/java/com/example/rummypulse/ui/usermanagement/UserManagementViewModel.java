@@ -31,6 +31,7 @@ public class UserManagementViewModel extends ViewModel {
     private final MutableLiveData<Boolean> loadingMore = new MutableLiveData<>(false);
     private final MutableLiveData<String> error = new MutableLiveData<>();
     private final MutableLiveData<Boolean> roleUpdateSuccess = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> deleteSuccess = new MutableLiveData<>();
 
     private DocumentSnapshot nextCursor;
     private boolean hasMore = true;
@@ -55,6 +56,10 @@ public class UserManagementViewModel extends ViewModel {
 
     public LiveData<Boolean> getRoleUpdateSuccess() {
         return roleUpdateSuccess;
+    }
+
+    public LiveData<Boolean> getDeleteSuccess() {
+        return deleteSuccess;
     }
 
     /**
@@ -157,6 +162,34 @@ public class UserManagementViewModel extends ViewModel {
                 error.setValue("Failed to update user role: " + exception.getMessage());
                 loading.setValue(false);
                 roleUpdateSuccess.setValue(false);
+            }
+        });
+    }
+
+    /**
+     * Deletes the user document and removes the row from the current list without a full reload.
+     */
+    public void deleteUser(String userId) {
+        loading.setValue(true);
+        error.setValue(null);
+        deleteSuccess.setValue(false);
+
+        appUserRepository.deleteUser(userId, new AppUserRepository.VoidCallback() {
+            @Override
+            public void onSuccess() {
+                List<AppUser> updatedList = new ArrayList<>(safeUsers());
+                updatedList.removeIf(user -> userId.equals(user.getUserId()));
+                users.setValue(updatedList);
+                loading.setValue(false);
+                deleteSuccess.setValue(true);
+                Log.d(TAG, "Removed deleted user locally: " + userId);
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                error.setValue("Failed to delete user: " + exception.getMessage());
+                loading.setValue(false);
+                deleteSuccess.setValue(false);
             }
         });
     }

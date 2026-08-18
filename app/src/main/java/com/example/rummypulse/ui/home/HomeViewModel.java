@@ -139,6 +139,13 @@ public class HomeViewModel extends ViewModel {
         gameRepository.deleteGame(gameId);
     }
 
+    public void deleteGame(
+            String gameId,
+            Runnable onSuccess,
+            java.util.function.Consumer<String> onFailure) {
+        gameRepository.deleteGame(gameId, onSuccess, onFailure);
+    }
+
     public void deleteGames(
             List<String> gameIds,
             Runnable onSuccess,

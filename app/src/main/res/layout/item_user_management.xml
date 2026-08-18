@@ -15,25 +15,22 @@
         android:orientation="horizontal"
         android:padding="16dp">
 
-        <!-- Profile Image -->
         <ImageView
             android:id="@+id/imageViewUserProfile"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:layout_marginEnd="16dp"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginEnd="14dp"
             android:scaleType="centerCrop"
             android:contentDescription="User Profile Photo"
             android:src="@drawable/ic_person"
             tools:src="@drawable/ic_person" />
 
-        <!-- User Info Container -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <!-- User Name and Role Row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -46,7 +43,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textSize="18sp"
+                    android:textSize="17sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
                     tools:text="John Doe" />
@@ -55,61 +52,93 @@
                     android:id="@+id/textViewUserRole"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:textStyle="bold"
-                    android:padding="6dp"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="4dp"
                     android:background="@drawable/role_badge_background"
-                    tools:text="🔑 Admin User" />
+                    tools:text="Admin User" />
 
             </LinearLayout>
 
-        <!-- Email -->
-        <TextView
-            android:id="@+id/textViewUserEmail"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="4dp"
-            tools:text="john.doe@example.com" />
-
-        <!-- Provider and Last Login Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
-
             <TextView
-                android:id="@+id/textViewUserProvider"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"
-                tools:text="Provider: Google" />
-
-            <TextView
-                android:id="@+id/textViewLastLogin"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"
-                tools:text="Last login: Oct 15, 2024 14:30" />
-
-        </LinearLayout>
-
-            <!-- Action Button -->
-            <Button
-                android:id="@+id/buttonChangeRole"
+                android:id="@+id/textViewUserEmail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/button_rounded_dark"
-                android:textColor="@color/text_white"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:layout_marginTop="4dp"
-                tools:text="Promote to Admin" />
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary"
+                android:layout_marginBottom="2dp"
+                tools:text="john.doe@example.com" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="10dp">
+
+                <TextView
+                    android:id="@+id/textViewUserProvider"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="11sp"
+                    android:textColor="@color/text_secondary"
+                    tools:text="Provider: Google" />
+
+                <TextView
+                    android:id="@+id/textViewLastLogin"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="11sp"
+                    android:textColor="@color/text_secondary"
+                    tools:text="Last login: Oct 15, 2024" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutUserActions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonChangeRole"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:minHeight="36dp"
+                    android:paddingVertical="0dp"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_white"
+                    android:textSize="13sp"
+                    app:cornerRadius="8dp"
+                    tools:text="Promote" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonDeleteUser"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:minHeight="36dp"
+                    android:paddingVertical="0dp"
+                    android:text="Delete"
+                    android:textAllCaps="false"
+                    android:textColor="@color/error_red"
+                    android:textSize="13sp"
+                    android:visibility="gone"
+                    app:cornerRadius="8dp"
+                    app:icon="@drawable/ic_delete"
+                    app:iconGravity="textStart"
+                    app:iconPadding="6dp"
+                    app:iconSize="16dp"
+                    app:iconTint="@color/error_red"
+                    app:strokeColor="@color/error_red"
+                    tools:visibility="visible" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

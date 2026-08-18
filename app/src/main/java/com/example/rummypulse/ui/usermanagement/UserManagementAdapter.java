@@ -3,7 +3,6 @@ package com.example.rummypulse.ui.usermanagement;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -17,6 +16,7 @@ import com.example.rummypulse.R;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.data.UserRole;
+import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
@@ -31,14 +31,23 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
 
     private List<AppUser> users;
     private OnRoleChangeClickListener roleChangeClickListener;
+    private OnDeleteClickListener deleteClickListener;
 
     public interface OnRoleChangeClickListener {
         void onRoleChangeClicked(AppUser user);
     }
 
-    public UserManagementAdapter(List<AppUser> users, OnRoleChangeClickListener listener) {
+    public interface OnDeleteClickListener {
+        void onDeleteClicked(AppUser user);
+    }
+
+    public UserManagementAdapter(
+            List<AppUser> users,
+            OnRoleChangeClickListener roleChangeListener,
+            OnDeleteClickListener deleteListener) {
         this.users = users;
-        this.roleChangeClickListener = listener;
+        this.roleChangeClickListener = roleChangeListener;
+        this.deleteClickListener = deleteListener;
     }
 
     public void updateUsers(List<AppUser> newUsers) {
@@ -57,7 +66,7 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
     @Override
     public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
         AppUser user = users.get(position);
-        holder.bind(user, roleChangeClickListener);
+        holder.bind(user, roleChangeClickListener, deleteClickListener);
     }
 
     @Override
@@ -72,7 +81,8 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
         private final TextView roleTextView;
         private final TextView providerTextView;
         private final TextView lastLoginTextView;
-        private final Button roleChangeButton;
+        private final MaterialButton roleChangeButton;
+        private final MaterialButton deleteButton;
 
         public UserViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -83,9 +93,13 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
             providerTextView = itemView.findViewById(R.id.textViewUserProvider);
             lastLoginTextView = itemView.findViewById(R.id.textViewLastLogin);
             roleChangeButton = itemView.findViewById(R.id.buttonChangeRole);
+            deleteButton = itemView.findViewById(R.id.buttonDeleteUser);
         }
 
-        public void bind(AppUser user, OnRoleChangeClickListener listener) {
+        public void bind(
+                AppUser user,
+                OnRoleChangeClickListener roleListener,
+                OnDeleteClickListener deleteListener) {
             // Load profile image with Glide
             if (user.getPhotoUrl() != null && !user.getPhotoUrl().isEmpty()) {
                 Glide.with(itemView.getContext())
@@ -97,19 +111,15 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
                         .diskCacheStrategy(DiskCacheStrategy.ALL))
                     .into(profileImageView);
             } else {
-                // No photo URL, show default icon
                 profileImageView.setImageResource(R.drawable.ic_person);
             }
-            
-            // Set user information
+
             nameTextView.setText(user.getDisplayName() != null ? user.getDisplayName() : "No Name");
             emailTextView.setText(user.getEmail() != null ? user.getEmail() : "No Email");
-            
-            // Set role with appropriate styling
+
             String roleText = user.getRole().getDisplayName();
             roleTextView.setText(roleText);
-            
-            // Color code the role
+
             if (user.getRole() == UserRole.ADMIN_USER) {
                 roleTextView.setTextColor(itemView.getContext().getColor(R.color.admin_role_color));
                 roleTextView.setText("🔑 " + roleText);
@@ -117,68 +127,86 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
                 roleTextView.setTextColor(itemView.getContext().getColor(R.color.regular_role_color));
                 roleTextView.setText("👤 " + roleText);
             }
-            
-            // Set provider
-            providerTextView.setText("Provider: " + (user.getProvider() != null ? user.getProvider() : "Unknown"));
-            
-            // Set last login
+
+            providerTextView.setText("Provider: "
+                    + (user.getProvider() != null ? user.getProvider() : "Unknown"));
+
             if (user.getLastLoginAt() != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault());
                 lastLoginTextView.setText("Last login: " + sdf.format(user.getLastLoginAt()));
             } else {
                 lastLoginTextView.setText("Last login: Never");
             }
-            
-            // Check if this is the current user
+
             FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-            boolean isCurrentUser = currentUser != null && 
-                                  currentUser.getUid().equals(user.getUserId());
-            
-            // Check if current user is admin to show/hide role change buttons
+            boolean isCurrentUser = currentUser != null
+                    && currentUser.getUid().equals(user.getUserId());
+
             AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
                 @Override
                 public void onResult(boolean isAdmin) {
                     if (!isAdmin) {
-                        // Non-admin user - hide the role change button entirely
                         roleChangeButton.setVisibility(View.GONE);
-                    } else {
-                        // Admin user - show and configure the button
-                        roleChangeButton.setVisibility(View.VISIBLE);
-                        
-                        if (isCurrentUser) {
-                            // Current user cannot change their own role
-                            roleChangeButton.setText("Current User");
-                            roleChangeButton.setEnabled(false);
-                            roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                                itemView.getContext().getColor(R.color.neutral_gray)));
-                            roleChangeButton.setTextColor(itemView.getContext().getColor(R.color.text_secondary));
-                            roleChangeButton.setOnClickListener(null);
-                        } else {
-                            // Other users can have their roles changed
-                            String buttonText = user.getRole() == UserRole.ADMIN_USER ? 
-                                "Demote to Regular" : "Promote to Admin";
-                            roleChangeButton.setText(buttonText);
-                            roleChangeButton.setEnabled(true);
-                            
-                            // Set button styling based on action
-                            if (user.getRole() == UserRole.ADMIN_USER) {
-                                roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                                    itemView.getContext().getColor(R.color.demote_button_color)));
-                            } else {
-                                roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                                    itemView.getContext().getColor(R.color.promote_button_color)));
-                            }
-                            
-                            // Set text color to white for better contrast
-                            roleChangeButton.setTextColor(itemView.getContext().getColor(R.color.text_white));
-                            
-                            roleChangeButton.setOnClickListener(v -> {
-                                if (listener != null) {
-                                    listener.onRoleChangeClicked(user);
-                                }
-                            });
-                        }
+                        deleteButton.setVisibility(View.GONE);
+                        return;
                     }
+
+                    roleChangeButton.setVisibility(View.VISIBLE);
+                    configureRoleChangeButton(user, isCurrentUser, roleListener);
+                    configureDeleteButton(isCurrentUser, user, deleteListener);
+                }
+            });
+        }
+
+        private void configureRoleChangeButton(
+                AppUser user,
+                boolean isCurrentUser,
+                OnRoleChangeClickListener listener) {
+            if (isCurrentUser) {
+                roleChangeButton.setText("Current user");
+                roleChangeButton.setEnabled(false);
+                roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    itemView.getContext().getColor(R.color.neutral_gray)));
+                roleChangeButton.setTextColor(itemView.getContext().getColor(R.color.text_secondary));
+                roleChangeButton.setOnClickListener(null);
+                return;
+            }
+
+            String buttonText = user.getRole() == UserRole.ADMIN_USER ? "Demote" : "Promote";
+            roleChangeButton.setText(buttonText);
+            roleChangeButton.setEnabled(true);
+
+            if (user.getRole() == UserRole.ADMIN_USER) {
+                roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    itemView.getContext().getColor(R.color.demote_button_color)));
+            } else {
+                roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    itemView.getContext().getColor(R.color.promote_button_color)));
+            }
+
+            roleChangeButton.setTextColor(itemView.getContext().getColor(R.color.text_white));
+            roleChangeButton.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onRoleChangeClicked(user);
+                }
+            });
+        }
+
+        private void configureDeleteButton(
+                boolean isCurrentUser,
+                AppUser user,
+                OnDeleteClickListener listener) {
+            if (isCurrentUser) {
+                deleteButton.setVisibility(View.GONE);
+                deleteButton.setOnClickListener(null);
+                return;
+            }
+
+            deleteButton.setVisibility(View.VISIBLE);
+            deleteButton.setEnabled(true);
+            deleteButton.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onDeleteClicked(user);
                 }
             });
         }
