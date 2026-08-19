@@ -159,7 +159,7 @@ Configuration is resolved in this order:
 
 ```properties
 GROQ_API_KEY=gsk_your_key_here
-GROQ_MODEL_ID=llama-3.1-8b-instant
+GROQ_MODEL_ID=openai/gpt-oss-20b
 ```
 
 > The key is compiled into the APK and can be extracted. Use a backend proxy

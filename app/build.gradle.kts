@@ -44,11 +44,12 @@ android {
         targetSdk = 34
         versionCode = 101
         versionName = "1.0.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Groq: see groqConfig() — properties, env, or local.properties (not committed).
         val groqKey = escapeForBuildConfig(groqConfig("GROQ_API_KEY"))
         val groqModel = escapeForBuildConfig(
-            groqConfig("GROQ_MODEL_ID", "llama-3.1-8b-instant"),
+            groqConfig("GROQ_MODEL_ID", "openai/gpt-oss-20b"),
         )
         buildConfigField("String", "GROQ_API_KEY", "\"$groqKey\"")
         buildConfigField("String", "GROQ_MODEL_ID", "\"$groqModel\"")
@@ -115,6 +116,7 @@ dependencies {
     testImplementation("androidx.arch.core:core-testing:2.2.0")
     testImplementation("org.mockito:mockito-core:5.14.2")
     androidTestImplementation(libs.ext.junit)
+    androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation(libs.room.testing)
     androidTestImplementation("androidx.test:core:1.7.0")
     

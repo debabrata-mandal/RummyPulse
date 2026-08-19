@@ -153,11 +153,7 @@ public final class GroqGameNameService {
         userMessage.put("role", "user");
         userMessage.put("content", PROMPT);
 
-        JSONObject body = new JSONObject();
-        body.put("model", modelId);
-        body.put("messages", new JSONArray().put(userMessage));
-        body.put("temperature", 0.9);
-        body.put("max_tokens", 64);
+        JSONObject body = createRequestBody(modelId, userMessage);
 
         byte[] bodyBytes = body.toString().getBytes(StandardCharsets.UTF_8);
         conn.setFixedLengthStreamingMode(bodyBytes.length);
@@ -174,6 +170,17 @@ public final class GroqGameNameService {
         }
 
         return parseNameFromChatResponse(response);
+    }
+
+    static JSONObject createRequestBody(String modelId, JSONObject userMessage) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("model", modelId);
+        body.put("messages", new JSONArray().put(userMessage));
+        body.put("temperature", 0.6);
+        body.put("max_completion_tokens", 128);
+        body.put("reasoning_effort", "low");
+        body.put("include_reasoning", false);
+        return body;
     }
 
     private static String parseErrorMessage(String json, int code) {
