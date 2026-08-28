@@ -22,9 +22,13 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
+import com.example.rummypulse.data.GameAmountVisibilityPolicy;
+import com.example.rummypulse.data.GameDefaultsRepository;
 import com.example.rummypulse.data.Player;
 import com.example.rummypulse.utils.GameAttributionFormatter;
 import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -351,7 +355,13 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             double pointValue = gameItem.getPointValueAsDouble();
             double gstPercent = Double.parseDouble(gameItem.getGstPercentage());
             int numPlayers = gameItem.getNumberOfPlayersAsInt();
-            
+            boolean showLiveAmounts = GameDefaultsRepository.getInstance(context)
+                    .isDisplayIntermediateCalculationEnabled();
+            boolean gameCompleted = gameItem.isCompleted();
+            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+            String viewerUserId = currentUser == null ? null : currentUser.getUid();
+            String amountHidden = context.getString(R.string.game_view_amount_hidden);
+
             for (int i = 0; i < players.size(); i++) {
                 Player player = players.get(i);
                 View playerView = LayoutInflater.from(context).inflate(R.layout.item_player_score, null);
@@ -399,21 +409,25 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 
                 playerNameText.setText(rankIndicator + playerName);
                 playerScoreText.setText(String.valueOf(playerScore));
-                
-                // Format and color net amount
-                String netAmountFormatted;
-                if (netAmount > 0) {
-                    netAmountFormatted = "+₹" + Math.round(netAmount);
-                    netAmountText.setTextColor(context.getColor(R.color.success_green)); // Green for winners
+
+                boolean amountVisible = GameAmountVisibilityPolicy.shouldShowPlayerAmount(
+                        showLiveAmounts,
+                        gameCompleted,
+                        player.getUserId(),
+                        viewerUserId);
+                if (!amountVisible) {
+                    netAmountText.setText(amountHidden);
+                    netAmountText.setTextColor(context.getColor(R.color.text_secondary));
+                } else if (netAmount > 0) {
+                    netAmountText.setText("+₹" + Math.round(netAmount));
+                    netAmountText.setTextColor(context.getColor(R.color.success_green));
                 } else if (netAmount < 0) {
-                    netAmountFormatted = "₹" + Math.round(netAmount);
-                    netAmountText.setTextColor(context.getColor(R.color.error_red)); // Red for losers
+                    netAmountText.setText("₹" + Math.round(netAmount));
+                    netAmountText.setTextColor(context.getColor(R.color.error_red));
                 } else {
-                    netAmountFormatted = "₹0";
-                    netAmountText.setTextColor(context.getColor(R.color.text_secondary)); // Gray for break-even
+                    netAmountText.setText("₹0");
+                    netAmountText.setTextColor(context.getColor(R.color.text_secondary));
                 }
-                
-                netAmountText.setText(netAmountFormatted);
                 
                 playersContainer.addView(playerView);
             }
