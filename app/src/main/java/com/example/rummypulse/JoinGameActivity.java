@@ -52,6 +52,7 @@ import com.example.rummypulse.data.sync.GameOperationType;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
 import com.example.rummypulse.ui.join.PlayerRoundStatistics;
 import com.example.rummypulse.ui.join.PlayerRoundStatisticsCalculator;
+import com.example.rummypulse.utils.DisplayNameUtils;
 import com.example.rummypulse.utils.ModernToast;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -1213,7 +1214,14 @@ public class JoinGameActivity extends AppCompatActivity {
             viewModel.clearViewAccessBlocked();
         });
 
-        viewModel.getGameAuth().observe(this, auth -> updateViewRequestsSectionVisibility(auth));
+        viewModel.getGameAuth().observe(this, auth -> {
+            updateViewRequestsSectionVisibility(auth);
+            com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+            if (gameData != null && (editAccess == null || !editAccess)) {
+                updateViewMode(gameData);
+            }
+        });
 
         viewModel.getPendingViewRequests().observe(this, this::renderViewRequests);
 
@@ -1711,78 +1719,121 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView positionView,
             TextView balanceLabel,
             TextView balanceView) {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String currentUserId = currentUser == null ? null : currentUser.getUid();
         List<PlayerStanding> standings = calculateStandings(gameData);
         standings.sort((a, b) -> Integer.compare(a.totalScore, b.totalScore));
 
-        PlayerStanding currentStanding = null;
-        int currentPosition = -1;
-        if (selectedViewRoundPlayerKey != null) {
+        View viewRoot = binding.viewModeContent.getRoot();
+        View personalMetrics = viewRoot.findViewById(R.id.view_mode_personal_metrics);
+        View playerStats = viewRoot.findViewById(R.id.view_mode_player_stats);
+
+        Player mappedPlayer = findMappedPlayerForViewer(gameData);
+        Player focusPlayer = mappedPlayer != null
+                ? mappedPlayer
+                : findPlayerBySelectionKey(gameData, selectedViewRoundPlayerKey);
+        if (focusPlayer == null) {
+            title.setText("Game Overview");
+            if (personalMetrics != null) {
+                personalMetrics.setVisibility(View.GONE);
+            }
+            if (playerStats != null) {
+                playerStats.setVisibility(View.GONE);
+            }
+            return;
+        }
+
+        PlayerStanding focusStanding = findStandingForPlayer(standings, focusPlayer);
+        int focusPosition = -1;
+        if (focusStanding != null) {
             for (int i = 0; i < standings.size(); i++) {
-                Player candidate = standings.get(i).player;
-                if (selectedViewRoundPlayerKey.equals(viewPlayerSelectionKey(candidate))) {
-                    currentStanding = standings.get(i);
-                    currentPosition = i + 1;
+                if (standings.get(i) == focusStanding) {
+                    focusPosition = i + 1;
                     break;
                 }
             }
         }
-        for (int i = 0; i < standings.size(); i++) {
-            Player candidate = standings.get(i).player;
-            if (currentStanding == null && !TextUtils.isEmpty(currentUserId)
-                    && currentUserId.equals(candidate.getUserId())) {
-                currentStanding = standings.get(i);
-                currentPosition = i + 1;
-                break;
-            }
-        }
 
-        // When the viewer is not mapped, use the lowest-score player as the neutral
-        // default for this summary rather than leaving the card empty.
-        if (currentStanding == null && !standings.isEmpty()) {
-            currentStanding = standings.get(0);
-            currentPosition = 1;
+        if (personalMetrics != null) {
+            personalMetrics.setVisibility(View.VISIBLE);
         }
-
-        renderViewModePlayerStatistics(gameData,
-                currentStanding == null ? null : currentStanding.player);
-
-        if (currentStanding == null) {
-            title.setText("Player");
-            balanceLabel.setText("Balance");
-            positionView.setText("—");
-            balanceView.setText("—");
-            balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
-            return;
+        if (playerStats != null) {
+            playerStats.setVisibility(View.VISIBLE);
         }
+        renderViewModePlayerStatistics(gameData, focusPlayer);
 
-        boolean isCurrentPlayer = !TextUtils.isEmpty(currentUserId)
-                && currentUserId.equals(currentStanding.player.getUserId());
-        if (isCurrentPlayer) {
-            title.setText("My Performance");
-        } else {
-            String playerName = currentStanding.player.getName();
-            title.setText((TextUtils.isEmpty(playerName) ? "Player" : playerName)
-                    + "'s Performance");
-        }
+        title.setText(isViewModeSelfPlayer(gameData, focusPlayer)
+                ? "My Performance"
+                : buildPlayerPerformanceTitle(focusPlayer.getName()));
         balanceLabel.setText("Balance");
-        positionView.setText("#" + currentPosition + " of " + standings.size());
-        if (!shouldShowStandingAmountForPlayer(gameData, currentStanding.player)) {
+        positionView.setText(focusPosition > 0
+                ? "#" + focusPosition + " of " + standings.size()
+                : "—");
+        if (focusStanding == null
+                || !shouldShowStandingAmountForPlayer(gameData, focusStanding.player)) {
             balanceView.setText(getString(R.string.game_view_amount_hidden));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
-        } else if (currentStanding.netAmount > 0) {
+        } else if (focusStanding.netAmount > 0) {
             balanceView.setText("+₹" + String.format(Locale.getDefault(), "%.0f",
-                    currentStanding.netAmount));
+                    focusStanding.netAmount));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
-        } else if (currentStanding.netAmount < 0) {
+        } else if (focusStanding.netAmount < 0) {
             balanceView.setText("-₹" + String.format(Locale.getDefault(), "%.0f",
-                    Math.abs(currentStanding.netAmount)));
+                    Math.abs(focusStanding.netAmount)));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
         } else {
             balanceView.setText("₹0");
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
         }
+    }
+
+    private String buildPlayerPerformanceTitle(String playerName) {
+        return (TextUtils.isEmpty(playerName) ? "Player" : playerName) + "'s Performance";
+    }
+
+    private boolean isViewModeSelfPlayer(
+            com.example.rummypulse.data.GameData gameData, Player player) {
+        if (player == null) {
+            return false;
+        }
+        Player mappedPlayer = findMappedPlayerForViewer(gameData);
+        if (mappedPlayer != null) {
+            return isSamePlayer(mappedPlayer, player);
+        }
+        String userId = currentUserId();
+        if (!TextUtils.isEmpty(userId) && userId.equals(player.getUserId())) {
+            return true;
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null && !TextUtils.isEmpty(user.getDisplayName())
+                && !TextUtils.isEmpty(player.getName())) {
+            return DisplayNameUtils.firstName(user.getDisplayName())
+                    .equalsIgnoreCase(player.getName());
+        }
+        return false;
+    }
+
+    private boolean isSamePlayer(Player left, Player right) {
+        if (left == null || right == null) {
+            return false;
+        }
+        if (!TextUtils.isEmpty(left.getPlayerId())
+                && left.getPlayerId().equals(right.getPlayerId())) {
+            return true;
+        }
+        return !TextUtils.isEmpty(left.getUserId())
+                && left.getUserId().equals(right.getUserId());
+    }
+
+    private PlayerStanding findStandingForPlayer(
+            List<PlayerStanding> standings, Player player) {
+        if (player == null || standings == null) {
+            return null;
+        }
+        for (PlayerStanding standing : standings) {
+            if (isSamePlayer(player, standing.player)) {
+                return standing;
+            }
+        }
+        return null;
     }
 
     private void renderViewModePlayerStatistics(
@@ -1813,20 +1864,13 @@ public class JoinGameActivity extends AppCompatActivity {
         hiddenRows.removeAllViews();
         List<PlayerStanding> standings = calculateStandings(gameData);
         standings.sort((a, b) -> Integer.compare(a.totalScore, b.totalScore));
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String currentUserId = currentUser == null ? null : currentUser.getUid();
-        if (selectedViewRoundPlayerKey == null && !TextUtils.isEmpty(currentUserId)) {
-            for (PlayerStanding standing : standings) {
-                if (currentUserId.equals(standing.player.getUserId())) {
-                    selectedViewRoundPlayerKey = viewPlayerSelectionKey(standing.player);
-                    break;
-                }
+        Player mappedPlayer = findMappedPlayerForViewer(gameData);
+        if (selectedViewRoundPlayerKey == null) {
+            if (mappedPlayer != null) {
+                selectedViewRoundPlayerKey = viewPlayerSelectionKey(mappedPlayer);
+            } else if (!standings.isEmpty()) {
+                selectedViewRoundPlayerKey = viewPlayerSelectionKey(standings.get(0).player);
             }
-        }
-        // Keep the personal summary and round-score card aligned for unmapped viewers:
-        // default both to the lowest-score player until the viewer selects another row.
-        if (selectedViewRoundPlayerKey == null && !standings.isEmpty()) {
-            selectedViewRoundPlayerKey = viewPlayerSelectionKey(standings.get(0).player);
         }
         int positiveCount = 0;
         int negativeCount = 0;
@@ -1846,8 +1890,7 @@ public class JoinGameActivity extends AppCompatActivity {
             }
             View row = LayoutInflater.from(this).inflate(
                     R.layout.item_view_settlement_row, targetRows, false);
-            boolean isCurrentPlayer = !TextUtils.isEmpty(currentUserId)
-                    && currentUserId.equals(standing.player.getUserId());
+            boolean isCurrentPlayer = isViewModeSelfPlayer(gameData, standing.player);
             String selectionKey = viewPlayerSelectionKey(standing.player);
             boolean isSelected = selectionKey.equals(selectedViewRoundPlayerKey);
             row.setBackgroundResource(isSelected
@@ -1893,12 +1936,6 @@ public class JoinGameActivity extends AppCompatActivity {
             row.setOnClickListener(v -> {
                 selectedViewRoundPlayerKey = selectionKey;
                 renderViewModeSettlementRows(gameData);
-                View selectedRoot = binding.viewModeContent.getRoot();
-                renderCurrentPlayerPerformance(gameData,
-                        selectedRoot.findViewById(R.id.view_mode_settlement_status),
-                        selectedRoot.findViewById(R.id.view_mode_player_position),
-                        selectedRoot.findViewById(R.id.view_mode_balance_label),
-                        selectedRoot.findViewById(R.id.view_mode_player_balance));
                 renderViewModeRoundRows(gameData);
             });
             targetRows.addView(row);
@@ -1923,6 +1960,50 @@ public class JoinGameActivity extends AppCompatActivity {
         return "n:" + String.valueOf(player.getName());
     }
 
+    private Player findMappedPlayerForViewer(com.example.rummypulse.data.GameData gameData) {
+        String userId = currentUserId();
+        if (TextUtils.isEmpty(userId) || gameData == null || gameData.getPlayers() == null) {
+            return null;
+        }
+        Player creatorSlot = null;
+        for (Player player : gameData.getPlayers()) {
+            if (userId.equals(player.getUserId())) {
+                return player;
+            }
+            if (Boolean.TRUE.equals(player.getIsCreator())) {
+                creatorSlot = player;
+            }
+        }
+        com.example.rummypulse.data.GameAuth auth = viewModel.getGameAuth().getValue();
+        if (auth != null && userId.equals(auth.getCreatorUserId())) {
+            if (creatorSlot != null) {
+                return creatorSlot;
+            }
+            String creatorName = auth.getCreatorName();
+            if (!TextUtils.isEmpty(creatorName)) {
+                for (Player player : gameData.getPlayers()) {
+                    if (creatorName.equalsIgnoreCase(player.getName())) {
+                        return player;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private Player findPlayerBySelectionKey(
+            com.example.rummypulse.data.GameData gameData, String selectionKey) {
+        if (TextUtils.isEmpty(selectionKey) || gameData == null || gameData.getPlayers() == null) {
+            return null;
+        }
+        for (Player player : gameData.getPlayers()) {
+            if (selectionKey.equals(viewPlayerSelectionKey(player))) {
+                return player;
+            }
+        }
+        return null;
+    }
+
     private void renderViewModeRoundRows(com.example.rummypulse.data.GameData gameData) {
         LinearLayout container = binding.viewModeContent.getRoot().findViewById(R.id.view_mode_round_rows);
         TextView empty = binding.viewModeContent.getRoot().findViewById(R.id.view_mode_round_empty);
@@ -1933,28 +2014,11 @@ public class JoinGameActivity extends AppCompatActivity {
         TextView totalScore = binding.viewModeContent.getRoot().findViewById(
                 R.id.view_mode_round_total_score);
         container.removeAllViews();
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String currentUserId = currentUser == null ? null : currentUser.getUid();
-        Player currentPlayer = null;
-        if (gameData.getPlayers() != null && selectedViewRoundPlayerKey != null) {
-            for (Player player : gameData.getPlayers()) {
-                if (selectedViewRoundPlayerKey.equals(viewPlayerSelectionKey(player))) {
-                    currentPlayer = player;
-                    break;
-                }
-            }
+        Player displayPlayer = findPlayerBySelectionKey(gameData, selectedViewRoundPlayerKey);
+        if (displayPlayer == null) {
+            displayPlayer = findMappedPlayerForViewer(gameData);
         }
-        if (currentPlayer == null && gameData.getPlayers() != null
-                && !TextUtils.isEmpty(currentUserId)) {
-            for (Player player : gameData.getPlayers()) {
-                if (currentUserId.equals(player.getUserId())) {
-                    currentPlayer = player;
-                    selectedViewRoundPlayerKey = viewPlayerSelectionKey(player);
-                    break;
-                }
-            }
-        }
-        if (currentPlayer == null) {
+        if (displayPlayer == null) {
             container.setVisibility(View.GONE);
             empty.setVisibility(View.VISIBLE);
             title.setText("Round Scores");
@@ -1966,13 +2030,12 @@ public class JoinGameActivity extends AppCompatActivity {
         container.setVisibility(View.VISIBLE);
         empty.setVisibility(View.GONE);
         totalContainer.setVisibility(View.VISIBLE);
-        totalScore.setText(String.valueOf(currentPlayer.getTotalScore()));
-        boolean isCurrentPlayer = !TextUtils.isEmpty(currentUserId)
-                && currentUserId.equals(currentPlayer.getUserId());
+        totalScore.setText(String.valueOf(displayPlayer.getTotalScore()));
+        boolean isCurrentPlayer = isViewModeSelfPlayer(gameData, displayPlayer);
         title.setText(isCurrentPlayer
                 ? "My Round Scores"
-                : currentPlayer.getName() + "'s Round Scores");
-        subtitle.setText("Performance across all ten rounds");
+                : displayPlayer.getName() + "'s Scores");
+        subtitle.setText("Scores across all ten rounds");
         int currentRound = calculateCurrentRound(gameData);
         LinearLayout row = null;
         for (int round = 0; round < 10; round++) {
@@ -1993,9 +2056,9 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView roundView = tile.findViewById(R.id.view_round_number);
             TextView scoreView = tile.findViewById(R.id.view_round_score);
             roundView.setText("R" + (round + 1));
-            Integer score = currentPlayer.getScores() != null
-                    && round < currentPlayer.getScores().size()
-                    ? currentPlayer.getScores().get(round) : null;
+            Integer score = displayPlayer.getScores() != null
+                    && round < displayPlayer.getScores().size()
+                    ? displayPlayer.getScores().get(round) : null;
             if (score != null && score >= 0) {
                 scoreView.setText(String.valueOf(score));
                 if (score == 0 || score < 40) {
@@ -3877,11 +3940,12 @@ public class JoinGameActivity extends AppCompatActivity {
     private boolean shouldShowStandingAmountForPlayer(
             com.example.rummypulse.data.GameData gameData,
             com.example.rummypulse.data.Player player) {
-        boolean playerIsMapped = player != null && !TextUtils.isEmpty(player.getUserId());
+        String playerUserId = player == null ? null : player.getUserId();
         return com.example.rummypulse.data.GameAmountVisibilityPolicy.shouldShowPlayerAmount(
                 isLiveAmountDisplayEnabled(),
                 gameData != null && isGameCompleted(gameData),
-                playerIsMapped);
+                playerUserId,
+                currentUserId());
     }
 
     private boolean isLiveAmountDisplayEnabled() {

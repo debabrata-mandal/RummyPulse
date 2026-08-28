@@ -171,6 +171,7 @@
                         </LinearLayout>
 
                         <LinearLayout
+                            android:id="@+id/view_mode_personal_metrics"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
@@ -204,6 +205,7 @@
                         </LinearLayout>
 
                         <LinearLayout
+                            android:id="@+id/view_mode_player_stats"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="7dp"
