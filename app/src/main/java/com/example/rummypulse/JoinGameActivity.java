@@ -65,6 +65,7 @@ import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -111,6 +112,13 @@ public class JoinGameActivity extends AppCompatActivity {
     // Timing constants
     private static final long EDIT_MODE_DEBOUNCE_MS = 4000; // 4 seconds for edit mode
     private static final String REAL_PLAYER_CARD_TAG = "real_player_card";
+
+    private enum PlayerListSortMode {
+        GAME_ORDER,
+        SETTLEMENT_ORDER
+    }
+
+    private PlayerListSortMode playerListSortMode = PlayerListSortMode.GAME_ORDER;
     private static final long VIEW_MODE_DEBOUNCE_MS = 2000; // 2 seconds for view mode
     private static final long BULK_UPDATE_DEBOUNCE_MS = 6000; // 6 seconds for bulk updates
     private static final long GAME_COMPLETION_BUFFER_MS = 2000; // 2 seconds buffer after pending announcements
@@ -1194,6 +1202,27 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Setup collapsible sections
         setupCollapsibleSections();
+        setupPlayerListSortToggle();
+    }
+
+    private void setupPlayerListSortToggle() {
+        binding.playerListSortToggle.check(R.id.btn_sort_game_order);
+        binding.playerListSortToggle.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (!isChecked) {
+                return;
+            }
+            PlayerListSortMode selectedMode = checkedId == R.id.btn_sort_settlement_order
+                    ? PlayerListSortMode.SETTLEMENT_ORDER
+                    : PlayerListSortMode.GAME_ORDER;
+            if (selectedMode == playerListSortMode) {
+                return;
+            }
+            playerListSortMode = selectedMode;
+            com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+            if (gameData != null) {
+                generatePlayerCards(gameData);
+            }
+        });
     }
 
     private void observeViewModel() {
@@ -2275,161 +2304,283 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void generatePlayerCards(com.example.rummypulse.data.GameData gameData) {
+        if (gameData == null || gameData.getPlayers() == null) {
+            return;
+        }
         GameDataSchema.normalize(gameData);
-        // Clear existing player cards
         binding.playersContainer.removeAllViews();
         java.util.Map<String, PlayerStanding> standingsByPlayerId =
                 buildStandingsByPlayerId(gameData);
 
-        // Add player cards
-        for (int i = 0; i < gameData.getPlayers().size(); i++) {
-            final int playerIndex = i;
-            com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
-            final String stablePlayerId = player.getPlayerId();
-            View playerCardView = LayoutInflater.from(this).inflate(R.layout.item_player_card, binding.playersContainer, false);
-            
-            // Set player name
-            EditText playerName = playerCardView.findViewById(R.id.text_player_name);
-            TextView mapPlayerButton = playerCardView.findViewById(R.id.btn_map_player);
-            playerName.setText(player.getName());
-            applyMappedPlayerNameLock(playerName, player);
-            
-            // Add text change listener for player name
-            playerName.addTextChangedListener(new android.text.TextWatcher() {
-                private String previousName = player.getName();
-                
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    previousName = s.toString();
+        if (playerListSortMode == PlayerListSortMode.SETTLEMENT_ORDER) {
+            generateSettlementOrderedPlayerCards(gameData, standingsByPlayerId);
+        } else {
+            generateGameOrderedPlayerCards(gameData, standingsByPlayerId);
+        }
+    }
+
+    private void generateGameOrderedPlayerCards(
+            com.example.rummypulse.data.GameData gameData,
+            java.util.Map<String, PlayerStanding> standingsByPlayerId) {
+        for (int playerIndex = 0; playerIndex < gameData.getPlayers().size(); playerIndex++) {
+            com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
+            binding.playersContainer.addView(
+                    createPlayerCardView(
+                            player,
+                            gameData,
+                            standingsByPlayerId,
+                            playerIndex));
+        }
+    }
+
+    private void generateSettlementOrderedPlayerCards(
+            com.example.rummypulse.data.GameData gameData,
+            java.util.Map<String, PlayerStanding> standingsByPlayerId) {
+        for (com.example.rummypulse.data.Player player :
+                getSettlementOrderedPlayers(gameData, standingsByPlayerId)) {
+            binding.playersContainer.addView(
+                    createPlayerCardView(
+                            player,
+                            gameData,
+                            standingsByPlayerId,
+                            -1));
+        }
+    }
+
+    private java.util.List<com.example.rummypulse.data.Player> getSettlementOrderedPlayers(
+            com.example.rummypulse.data.GameData gameData,
+            java.util.Map<String, PlayerStanding> standingsByPlayerId) {
+        java.util.List<PlayerStanding> receivers = new java.util.ArrayList<>();
+        java.util.List<PlayerStanding> payers = new java.util.ArrayList<>();
+        java.util.List<PlayerStanding> even = new java.util.ArrayList<>();
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            PlayerStanding standing = standingsByPlayerId.get(player.getPlayerId());
+            if (standing == null) {
+                PlayerStanding placeholder = new PlayerStanding();
+                placeholder.player = player;
+                even.add(placeholder);
+                continue;
+            }
+            if (standing.netAmount > 0) {
+                receivers.add(standing);
+            } else if (standing.netAmount < 0) {
+                payers.add(standing);
+            } else {
+                even.add(standing);
+            }
+        }
+        Comparator<PlayerStanding> byRank = Comparator.comparingInt(s -> s.rank);
+        receivers.sort(byRank);
+        payers.sort(byRank);
+        even.sort(byRank);
+
+        java.util.List<com.example.rummypulse.data.Player> ordered = new java.util.ArrayList<>();
+        for (PlayerStanding standing : receivers) {
+            ordered.add(standing.player);
+        }
+        for (PlayerStanding standing : payers) {
+            ordered.add(standing.player);
+        }
+        for (PlayerStanding standing : even) {
+            ordered.add(standing.player);
+        }
+        return ordered;
+    }
+
+    private View createPlayerCardView(
+            com.example.rummypulse.data.Player player,
+            com.example.rummypulse.data.GameData gameData,
+            java.util.Map<String, PlayerStanding> standingsByPlayerId,
+            int playerIndex) {
+        final String stablePlayerId = player.getPlayerId();
+        View playerCardView = LayoutInflater.from(this).inflate(
+                R.layout.item_player_card, binding.playersContainer, false);
+
+        EditText playerName = playerCardView.findViewById(R.id.text_player_name);
+        TextView mapPlayerButton = playerCardView.findViewById(R.id.btn_map_player);
+        playerName.setText(player.getName());
+        applyMappedPlayerNameLock(playerName, player);
+
+        playerName.addTextChangedListener(new android.text.TextWatcher() {
+            private String previousName = player.getName();
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                previousName = s.toString();
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                if (suppressPlayerNamePersistence) {
+                    return;
                 }
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-                @Override
-                public void afterTextChanged(android.text.Editable s) {
-                    if (suppressPlayerNamePersistence) {
-                        return;
-                    }
-                    // Update player name in the data model
-                    String newName = s.toString().trim();
-                    if (!newName.isEmpty()) {
-                        enqueueGameOperation(
-                                GameOperationType.RENAME_PLAYER,
-                                stablePlayerId,
-                                GameOperationPayload.rename(newName),
-                                null);
-                    }
-                    // Note: If name is empty, we don't update - user can still type
+                String newName = s.toString().trim();
+                if (!newName.isEmpty()) {
+                    enqueueGameOperation(
+                            GameOperationType.RENAME_PLAYER,
+                            stablePlayerId,
+                            GameOperationPayload.rename(newName),
+                            null);
                 }
-            });
+            }
+        });
 
-            // Handle done action on player name
-            playerName.setOnEditorActionListener((v, actionId, event) -> {
-                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
-                    // Hide keyboard and clear focus
-                    android.view.inputmethod.InputMethodManager imm = 
-                        (android.view.inputmethod.InputMethodManager) getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
-                    imm.hideSoftInputFromWindow(playerName.getWindowToken(), 0);
-                    playerName.clearFocus();
+        playerName.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                android.view.inputmethod.InputMethodManager imm =
+                        (android.view.inputmethod.InputMethodManager) getSystemService(
+                                android.content.Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(playerName.getWindowToken(), 0);
+                playerName.clearFocus();
+                return true;
+            }
+            return false;
+        });
+
+        playerName.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) {
+                String currentText = playerName.getText().toString().trim();
+                if (currentText.isEmpty()) {
+                    playerName.setText(player.getName());
+                }
+            }
+        });
+
+        TextView playerId = playerCardView.findViewById(R.id.text_player_id);
+        if (gameData.getNumPlayers() > 2 && player.getRandomNumber() != null) {
+            playerId.setText("#" + player.getRandomNumber());
+            playerId.setVisibility(View.VISIBLE);
+        }
+        TextView pendingSync =
+                playerCardView.findViewById(R.id.text_player_pending_sync);
+        pendingSync.setVisibility(
+                pendingPlayerIds.contains(stablePlayerId)
+                        ? View.VISIBLE
+                        : View.GONE);
+
+        ImageView deleteButton = playerCardView.findViewById(R.id.btn_delete_player);
+        deleteButton.setOnClickListener(v -> showDeletePlayerConfirmation(player, gameData));
+
+        bindMapPlayerButton(mapPlayerButton, player);
+        mapPlayerButton.setOnClickListener(v -> {
+            Boolean canEdit = viewModel.getEditAccessGranted().getValue();
+            if (!Boolean.TRUE.equals(canEdit)) {
+                ModernToast.info(this, getString(R.string.map_player_editor_only));
+                return;
+            }
+            com.example.rummypulse.data.GameData latestGameData =
+                    viewModel.getGameData().getValue();
+            com.example.rummypulse.data.Player latestPlayer =
+                    GameDataSchema.findPlayer(latestGameData, stablePlayerId);
+            if (latestGameData == null || latestPlayer == null) {
+                ModernToast.error(this, "Latest game data is unavailable. Please retry.");
+                return;
+            }
+            showMapPlayerDialog(
+                    stablePlayerId,
+                    latestPlayer,
+                    latestGameData,
+                    mapPlayerButton,
+                    playerName);
+        });
+
+        ImageView dragHandle = playerCardView.findViewById(R.id.drag_handle);
+        Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+        boolean dragEnabled = editAccess != null && editAccess
+                && playerListSortMode == PlayerListSortMode.GAME_ORDER
+                && playerIndex >= 0;
+        if (dragEnabled) {
+            dragHandle.setVisibility(View.VISIBLE);
+            setupDragAndDrop(playerCardView, playerIndex, gameData);
+        } else {
+            dragHandle.setVisibility(View.GONE);
+        }
+
+        bindMergedPlayerMetrics(playerCardView, player, gameData, standingsByPlayerId);
+
+        playerCardView.setOnClickListener(v -> toggleEditPlayerRoundSheet(stablePlayerId));
+        playerCardView.setTag(REAL_PLAYER_CARD_TAG);
+        playerCardView.setTag(R.id.text_player_id, stablePlayerId);
+        return playerCardView;
+    }
+
+    private boolean shouldRegeneratePlayerCards(com.example.rummypulse.data.GameData gameData) {
+        if (gameData == null || gameData.getPlayers() == null) {
+            return true;
+        }
+        if (countPlayerCardsInContainer() != gameData.getPlayers().size()) {
+            return true;
+        }
+        if (playerListSortMode == PlayerListSortMode.GAME_ORDER) {
+            for (int index = 0; index < gameData.getPlayers().size(); index++) {
+                View child = binding.playersContainer.getChildAt(index);
+                if (!REAL_PLAYER_CARD_TAG.equals(child.getTag())) {
                     return true;
                 }
-                return false;
-            });
-            
-            // Handle focus change to restore name if left empty
-            playerName.setOnFocusChangeListener((v, hasFocus) -> {
-                if (!hasFocus) {
-                    // When focus is lost, if field is empty, restore the player's name
-                    String currentText = playerName.getText().toString().trim();
-                    if (currentText.isEmpty()) {
-                        // Restore the saved name from player object
-                        playerName.setText(player.getName());
-                    }
+                Object renderedId = child.getTag(R.id.text_player_id);
+                if (!gameData.getPlayers().get(index).getPlayerId().equals(renderedId)) {
+                    return true;
                 }
-            });
-
-            // Set player ID if available (for games with more than 2 players)
-            TextView playerId = playerCardView.findViewById(R.id.text_player_id);
-            if (gameData.getNumPlayers() > 2 && player.getRandomNumber() != null) {
-                playerId.setText("#" + player.getRandomNumber());
-                playerId.setVisibility(View.VISIBLE);
             }
-            TextView pendingSync =
-                    playerCardView.findViewById(R.id.text_player_pending_sync);
-            pendingSync.setVisibility(
-                    pendingPlayerIds.contains(stablePlayerId)
-                            ? View.VISIBLE
-                            : View.GONE);
-
-            // Setup delete player button
-            ImageView deleteButton = playerCardView.findViewById(R.id.btn_delete_player);
-            deleteButton.setOnClickListener(v -> {
-                showDeletePlayerConfirmation(player, gameData);
-            });
-
-            bindMapPlayerButton(mapPlayerButton, player);
-            mapPlayerButton.setOnClickListener(v -> {
-                Boolean canEdit = viewModel.getEditAccessGranted().getValue();
-                if (!Boolean.TRUE.equals(canEdit)) {
-                    ModernToast.info(this, getString(R.string.map_player_editor_only));
-                    return;
-                }
-                com.example.rummypulse.data.GameData latestGameData =
-                        viewModel.getGameData().getValue();
-                com.example.rummypulse.data.Player latestPlayer =
-                        GameDataSchema.findPlayer(latestGameData, stablePlayerId);
-                if (latestGameData == null || latestPlayer == null) {
-                    ModernToast.error(this, "Latest game data is unavailable. Please retry.");
-                    return;
-                }
-                showMapPlayerDialog(
-                        stablePlayerId,
-                        latestPlayer,
-                        latestGameData,
-                        mapPlayerButton,
-                        playerName);
-            });
-
-            // Setup drag handle and drag-and-drop functionality (edit mode only)
-            ImageView dragHandle = playerCardView.findViewById(R.id.drag_handle);
-            Boolean editAccess = viewModel.getEditAccessGranted().getValue();
-            if (editAccess != null && editAccess) {
-                dragHandle.setVisibility(View.VISIBLE);
-                setupDragAndDrop(playerCardView, playerIndex, gameData);
-            } else {
-                dragHandle.setVisibility(View.GONE);
-            }
-
-            bindMergedPlayerMetrics(
-                    playerCardView, player, gameData, standingsByPlayerId);
-
-            playerCardView.setOnClickListener(v ->
-                    toggleEditPlayerRoundSheet(stablePlayerId));
-
-            playerCardView.setTag(REAL_PLAYER_CARD_TAG);
-            playerCardView.setTag(R.id.text_player_id, stablePlayerId);
-            binding.playersContainer.addView(playerCardView);
+            return false;
         }
-        refreshAllPlayerTotalScores(gameData);
+        java.util.List<com.example.rummypulse.data.Player> ordered =
+                getSettlementOrderedPlayers(gameData, buildStandingsByPlayerId(gameData));
+        for (int index = 0; index < ordered.size(); index++) {
+            View child = binding.playersContainer.getChildAt(index);
+            if (!REAL_PLAYER_CARD_TAG.equals(child.getTag())) {
+                return true;
+            }
+            Object renderedId = child.getTag(R.id.text_player_id);
+            if (!ordered.get(index).getPlayerId().equals(renderedId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int countPlayerCardsInContainer() {
+        int count = 0;
+        for (int index = 0; index < binding.playersContainer.getChildCount(); index++) {
+            if (REAL_PLAYER_CARD_TAG.equals(
+                    binding.playersContainer.getChildAt(index).getTag())) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private View findPlayerCardById(String playerId) {
+        if (TextUtils.isEmpty(playerId)) {
+            return null;
+        }
+        for (int index = 0; index < binding.playersContainer.getChildCount(); index++) {
+            View child = binding.playersContainer.getChildAt(index);
+            if (!REAL_PLAYER_CARD_TAG.equals(child.getTag())) {
+                continue;
+            }
+            Object renderedId = child.getTag(R.id.text_player_id);
+            if (playerId.equals(renderedId)) {
+                return child;
+            }
+        }
+        return null;
     }
 
     private void renderPlayerCardsFromState(
             com.example.rummypulse.data.GameData gameData) {
-        if (gameData == null || gameData.getPlayers() == null
-                || binding.playersContainer.getChildCount()
-                != gameData.getPlayers().size()) {
+        if (shouldRegeneratePlayerCards(gameData)) {
             generatePlayerCards(gameData);
             return;
         }
         java.util.Map<String, PlayerStanding> standingsByPlayerId =
                 buildStandingsByPlayerId(gameData);
-        for (int index = 0; index < gameData.getPlayers().size(); index++) {
-            com.example.rummypulse.data.Player player =
-                    gameData.getPlayers().get(index);
-            View card = binding.playersContainer.getChildAt(index);
-            Object renderedId = card.getTag(R.id.text_player_id);
-            if (!player.getPlayerId().equals(renderedId)) {
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            View card = findPlayerCardById(player.getPlayerId());
+            if (card == null) {
                 generatePlayerCards(gameData);
                 return;
             }
@@ -2850,6 +3001,9 @@ public class JoinGameActivity extends AppCompatActivity {
                 gameData.getPlayers().size());
         for (int index = 0; index < count; index++) {
             View card = binding.playersContainer.getChildAt(index);
+            if (!REAL_PLAYER_CARD_TAG.equals(card.getTag())) {
+                continue;
+            }
             TextView avatar = card.findViewById(R.id.btn_map_player);
             if (avatar != null) {
                 bindMapPlayerButton(avatar, gameData.getPlayers().get(index));
@@ -2907,11 +3061,14 @@ public class JoinGameActivity extends AppCompatActivity {
         PlayerStanding standing = standingsByPlayerId.get(player.getPlayerId());
         TextView position = playerCard.findViewById(R.id.text_player_position);
         TextView total = playerCard.findViewById(R.id.text_player_total_score);
+        TextView direction = playerCard.findViewById(R.id.text_net_direction);
         TextView amount = playerCard.findViewById(R.id.text_net_amount);
         if (standing == null) {
             position.setText("—");
             total.setText("—");
+            applyStandingDirectionPlaceholder(direction);
             applyStandingNetAmountPlaceholder(amount);
+            applyPlayerCardRoleStyle(playerCard, null);
             populateLastCompletedRound(playerCard, player, gameData);
             return;
         }
@@ -2919,7 +3076,9 @@ public class JoinGameActivity extends AppCompatActivity {
         position.setText(String.valueOf(standing.rank));
         styleTotalScoreTextView(total, standing.totalScore);
         populateLastCompletedRound(playerCard, player, gameData);
+        applyStandingDirectionDisplay(direction, standing, gameData);
         applyStandingNetAmountDisplay(amount, standing, gameData);
+        applyPlayerCardRoleStyle(playerCard, standing);
 
         String playerKey = player.getPlayerId();
         Integer previousRank = previousRanks.put(playerKey, standing.rank);
@@ -2929,6 +3088,49 @@ public class JoinGameActivity extends AppCompatActivity {
                     : R.anim.rank_down_animation;
             playerCard.startAnimation(
                     android.view.animation.AnimationUtils.loadAnimation(this, animation));
+        }
+    }
+
+    private void applyPlayerCardRoleStyle(View playerCard, PlayerStanding standing) {
+        if (playerCard == null) {
+            return;
+        }
+        View stripe = playerCard.findViewById(R.id.player_role_stripe);
+        TextView avatar = playerCard.findViewById(R.id.btn_map_player);
+        if (standing == null) {
+            if (stripe != null) {
+                stripe.setVisibility(View.GONE);
+            }
+            if (avatar != null) {
+                avatar.setBackgroundResource(R.drawable.bg_view_avatar);
+            }
+            return;
+        }
+        if (standing.netAmount > 0) {
+            if (stripe != null) {
+                stripe.setVisibility(View.VISIBLE);
+                stripe.setBackgroundColor(ContextCompat.getColor(this, R.color.view_mint));
+            }
+            if (avatar != null) {
+                avatar.setBackgroundResource(R.drawable.bg_view_avatar_receive);
+            }
+        } else if (standing.netAmount < 0) {
+            if (stripe != null) {
+                stripe.setVisibility(View.VISIBLE);
+                stripe.setBackgroundColor(ContextCompat.getColor(this, R.color.view_coral));
+            }
+            if (avatar != null) {
+                avatar.setBackgroundResource(R.drawable.bg_view_avatar_pay);
+            }
+        } else {
+            if (stripe != null) {
+                stripe.setVisibility(View.VISIBLE);
+                stripe.setBackgroundColor(
+                        ContextCompat.getColor(this, R.color.view_text_secondary));
+            }
+            if (avatar != null) {
+                avatar.setBackgroundResource(R.drawable.bg_view_avatar);
+            }
         }
     }
 
@@ -2952,8 +3154,14 @@ public class JoinGameActivity extends AppCompatActivity {
         if (playerIndex >= binding.playersContainer.getChildCount()) {
             return;
         }
-        View playerCard = binding.playersContainer.getChildAt(playerIndex);
         com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
+        View playerCard = playerListSortMode == PlayerListSortMode.GAME_ORDER
+                ? binding.playersContainer.getChildAt(playerIndex)
+                : findPlayerCardById(player.getPlayerId());
+        if (playerCard == null || !REAL_PLAYER_CARD_TAG.equals(playerCard.getTag())) {
+            generatePlayerCards(gameData);
+            return;
+        }
         bindMergedPlayerMetrics(
                 playerCard, player, gameData, buildStandingsByPlayerId(gameData));
     }
@@ -2964,12 +3172,16 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         java.util.Map<String, PlayerStanding> standingsByPlayerId =
                 buildStandingsByPlayerId(gameData);
-        int count = Math.min(binding.playersContainer.getChildCount(), gameData.getPlayers().size());
-        for (int i = 0; i < count; i++) {
-            View card = binding.playersContainer.getChildAt(i);
-            com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
-            Object renderedId = card.getTag(R.id.text_player_id);
-            if (renderedId != null && !player.getPlayerId().equals(renderedId)) {
+        if (shouldRegeneratePlayerCards(gameData)) {
+            generatePlayerCards(gameData);
+            return;
+        }
+        for (int index = 0; index < gameData.getPlayers().size(); index++) {
+            com.example.rummypulse.data.Player player = gameData.getPlayers().get(index);
+            View card = playerListSortMode == PlayerListSortMode.GAME_ORDER
+                    ? binding.playersContainer.getChildAt(index)
+                    : findPlayerCardById(player.getPlayerId());
+            if (card == null) {
                 generatePlayerCards(gameData);
                 return;
             }
@@ -3963,6 +4175,33 @@ public class JoinGameActivity extends AppCompatActivity {
         netAmountText.setBackground(null);
     }
 
+    private void applyStandingDirectionPlaceholder(TextView directionText) {
+        if (directionText == null) {
+            return;
+        }
+        directionText.setText(R.string.standing_balance);
+        directionText.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
+    }
+
+    private void applyStandingDirectionDisplay(TextView directionText,
+                                               PlayerStanding standing,
+                                               com.example.rummypulse.data.GameData gameData) {
+        if (directionText == null || standing == null) {
+            return;
+        }
+        // Direction is safe to show even when amounts are restricted (matches view mode).
+        if (standing.netAmount > 0) {
+            directionText.setText(R.string.edit_settlement_direction_receives);
+            directionText.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
+        } else if (standing.netAmount < 0) {
+            directionText.setText(R.string.edit_settlement_direction_pays);
+            directionText.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
+        } else {
+            directionText.setText(R.string.edit_settlement_direction_even);
+            directionText.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
+        }
+    }
+
     private void applyStandingNetAmountDisplay(TextView netAmountText, PlayerStanding standing,
                                                com.example.rummypulse.data.GameData gameData) {
         if (netAmountText == null) {
@@ -3972,17 +4211,20 @@ public class JoinGameActivity extends AppCompatActivity {
             applyStandingNetAmountPlaceholder(netAmountText);
             return;
         }
-        String amount = String.format("%.0f", Math.abs(standing.netAmount));
-        netAmountText.setText(standing.netAmount > 0
-                ? "+₹" + amount
-                : standing.netAmount < 0 ? "-₹" + amount : "₹0");
+        String amount = String.format(Locale.getDefault(), "%.0f", Math.abs(standing.netAmount));
         if (standing.netAmount > 0) {
+            netAmountText.setText("+₹" + amount);
             netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
+            netAmountText.setBackgroundResource(R.drawable.bg_view_amount_receive);
+        } else if (standing.netAmount < 0) {
+            netAmountText.setText("-₹" + amount);
+            netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
+            netAmountText.setBackgroundResource(R.drawable.bg_view_amount_pay);
         } else {
-            netAmountText.setTextColor(ContextCompat.getColor(this,
-                    standing.netAmount < 0 ? R.color.view_coral : R.color.view_text_secondary));
+            netAmountText.setText("₹0");
+            netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
+            netAmountText.setBackground(null);
         }
-        netAmountText.setBackground(null);
     }
 
     private boolean isGameCompleted(com.example.rummypulse.data.GameData gameData) {
@@ -5186,17 +5428,16 @@ public class JoinGameActivity extends AppCompatActivity {
             if (current == null || current.getPlayers() == null) {
                 return;
             }
-            int count = Math.min(
-                    current.getPlayers().size(),
-                    binding.playersContainer.getChildCount());
-            for (int index = 0; index < count; index++) {
-                View card = binding.playersContainer.getChildAt(index);
+            for (com.example.rummypulse.data.Player player : current.getPlayers()) {
+                View card = findPlayerCardById(player.getPlayerId());
+                if (card == null) {
+                    continue;
+                }
                 TextView badge =
                         card.findViewById(R.id.text_player_pending_sync);
                 if (badge != null) {
                     badge.setVisibility(
-                            pendingPlayerIds.contains(
-                                    current.getPlayers().get(index).getPlayerId())
+                            pendingPlayerIds.contains(player.getPlayerId())
                                     ? View.VISIBLE
                                     : View.GONE);
                 }

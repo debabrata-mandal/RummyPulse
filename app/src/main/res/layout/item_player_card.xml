@@ -1,238 +1,266 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/player_card_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:background="@drawable/bg_view_player_row"
-    android:padding="14dp"
     android:layout_marginBottom="12dp"
-    android:elevation="0dp">
+    android:background="@drawable/bg_view_player_row"
+    android:elevation="0dp"
+    android:orientation="horizontal">
 
-    <!-- Compact player row: mapping | name | delete | reorder -->
+    <View
+        android:id="@+id/player_role_stripe"
+        android:layout_width="4dp"
+        android:layout_height="match_parent"
+        android:background="@color/view_text_muted"
+        android:visibility="gone" />
+
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <FrameLayout
-            android:layout_width="48dp"
-            android:layout_height="46dp"
-            android:layout_marginEnd="10dp">
-
-            <TextView
-                android:id="@+id/btn_map_player"
-                android:layout_width="42dp"
-                android:layout_height="42dp"
-                android:layout_gravity="start|top"
-                android:background="@drawable/bg_view_avatar"
-                android:clickable="true"
-                android:contentDescription="@string/map_player_icon_description"
-                android:focusable="true"
-                android:gravity="center"
-                android:text="P"
-                android:textColor="@color/view_violet_light"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/text_player_position"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_gravity="end|bottom"
-                android:background="@drawable/bg_view_rank"
-                android:gravity="center"
-                android:text="—"
-                android:textColor="@android:color/white"
-                android:textSize="10sp"
-                android:textStyle="bold" />
-
-        </FrameLayout>
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="14dp">
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <EditText
-                android:id="@+id/text_player_name"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minEms="6"
-                android:maxEms="12"
-                android:text="Player Name"
-                android:hint="Tap to enter name"
-                android:textColorHint="@color/view_text_muted"
-                android:textColor="@color/view_text_primary"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:background="@android:color/transparent"
-                android:inputType="textPersonName"
-                android:maxLines="1"
-                android:ellipsize="end"
-                android:imeOptions="actionDone"
-                android:selectAllOnFocus="true" />
-
-            <TextView
-                android:id="@+id/text_player_id"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="#21"
-                android:textColor="@color/view_text_secondary"
-                android:textSize="12sp"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/text_player_pending_sync"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/player_change_pending_sync"
-                android:textColor="@color/view_gold"
-                android:textSize="11sp"
-                android:visibility="gone" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="46dp"
-            android:layout_marginStart="8dp"
-            android:gravity="center"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <ImageView
-                android:id="@+id/btn_delete_player"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="@drawable/small_delete_action_background"
-                android:clickable="true"
-                android:contentDescription="Delete Player"
-                android:focusable="true"
-                android:padding="11dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_delete"
-                android:tint="#FFFFFF" />
+            <FrameLayout
+                android:layout_width="48dp"
+                android:layout_height="46dp"
+                android:layout_marginEnd="10dp">
 
-            <ImageView
-                android:id="@+id/drag_handle"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_marginStart="4dp"
-                android:background="?android:attr/selectableItemBackground"
-                android:clickable="true"
-                android:contentDescription="Drag to reorder"
-                android:focusable="true"
-                android:padding="6dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_drag_handle"
-                android:tint="@color/view_text_secondary"
-                android:visibility="gone" />
+                <TextView
+                    android:id="@+id/btn_map_player"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_gravity="start|top"
+                    android:background="@drawable/bg_view_avatar"
+                    android:clickable="true"
+                    android:contentDescription="@string/map_player_icon_description"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:text="P"
+                    android:textColor="@color/view_violet_light"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/text_player_position"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_gravity="end|bottom"
+                    android:background="@drawable/bg_view_rank"
+                    android:gravity="center"
+                    android:text="—"
+                    android:textColor="@android:color/white"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <EditText
+                        android:id="@+id/text_player_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@android:color/transparent"
+                        android:ellipsize="end"
+                        android:hint="Tap to enter name"
+                        android:imeOptions="actionDone"
+                        android:inputType="textPersonName"
+                        android:maxEms="12"
+                        android:maxLines="1"
+                        android:minEms="6"
+                        android:selectAllOnFocus="true"
+                        android:text="Player Name"
+                        android:textColor="@color/view_text_primary"
+                        android:textColorHint="@color/view_text_muted"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/text_player_id"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="#21"
+                    android:textColor="@color/view_text_secondary"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/text_player_pending_sync"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/player_change_pending_sync"
+                    android:textColor="@color/view_gold"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="46dp"
+                android:layout_marginStart="8dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/btn_delete_player"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/small_delete_action_background"
+                    android:clickable="true"
+                    android:contentDescription="Delete Player"
+                    android:focusable="true"
+                    android:padding="11dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_delete"
+                    android:tint="#FFFFFF" />
+
+                <ImageView
+                    android:id="@+id/drag_handle"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="4dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:contentDescription="Drag to reorder"
+                    android:focusable="true"
+                    android:padding="6dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_drag_handle"
+                    android:tint="@color/view_text_secondary"
+                    android:visibility="gone" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:background="@drawable/bg_view_metric"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:paddingTop="9dp"
-        android:paddingBottom="9dp">
-
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_view_metric"
             android:gravity="center"
-            android:orientation="vertical">
+            android:orientation="horizontal"
+            android:paddingTop="9dp"
+            android:paddingBottom="9dp">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/standing_total_score"
-                android:textColor="@color/view_text_muted"
-                android:textSize="9sp" />
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/text_player_total_score"
-                android:layout_width="wrap_content"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/standing_total_score"
+                    android:textColor="@color/view_text_muted"
+                    android:textSize="9sp" />
+
+                <TextView
+                    android:id="@+id/text_player_total_score"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="—"
+                    android:textColor="@color/view_gold"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="34dp"
+                android:background="@color/view_stroke" />
+
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:text="—"
-                android:textColor="@color/view_gold"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
 
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/text_last_round_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/standing_last_round"
+                    android:textColor="@color/view_text_muted"
+                    android:textSize="9sp" />
 
-        <View
-            android:layout_width="1dp"
-            android:layout_height="34dp"
-            android:background="@color/view_stroke" />
+                <TextView
+                    android:id="@+id/text_last_round_score"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="—"
+                    android:textColor="@color/view_mint"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical">
+            </LinearLayout>
 
-            <TextView
-                android:id="@+id/text_last_round_label"
-                android:layout_width="wrap_content"
+            <View
+                android:layout_width="1dp"
+                android:layout_height="34dp"
+                android:background="@color/view_stroke" />
+
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="@string/standing_last_round"
-                android:textColor="@color/view_text_muted"
-                android:textSize="9sp" />
+                android:layout_weight="1"
+                android:gravity="center"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/text_last_round_score"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:text="—"
-                android:textColor="@color/view_mint"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/text_net_direction"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/standing_balance"
+                    android:textColor="@color/view_text_muted"
+                    android:textSize="9sp" />
 
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/text_net_amount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:minWidth="56dp"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:text="—"
+                    android:textColor="@color/view_text_muted"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
-        <View
-            android:layout_width="1dp"
-            android:layout_height="34dp"
-            android:background="@color/view_stroke" />
-
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/standing_balance"
-                android:textColor="@color/view_text_muted"
-                android:textSize="9sp" />
-
-            <TextView
-                android:id="@+id/text_net_amount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="—"
-                android:textColor="@color/view_text_muted"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+            </LinearLayout>
 
         </LinearLayout>
 

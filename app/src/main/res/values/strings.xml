@@ -235,6 +235,14 @@
     <string name="standing_last_round">Last Round</string>
     <string name="standing_round_score">R%1$d Score</string>
     <string name="standing_balance">Balance</string>
+    <string name="edit_settlement_receives_group">Receives · %1$d</string>
+    <string name="edit_settlement_pays_group">Pays · %1$d</string>
+    <string name="edit_settlement_even_group">Even · %1$d</string>
+    <string name="edit_settlement_direction_receives">Receives</string>
+    <string name="edit_settlement_direction_pays">Pays</string>
+    <string name="edit_settlement_direction_even">Even</string>
+    <string name="edit_player_sort_game_order">Game order</string>
+    <string name="edit_player_sort_settlement_order">Settlement order</string>
     <string name="correct_past_round_none">No past rounds to correct yet.</string>
 
     <!-- Add player confirmation when scores already exist -->

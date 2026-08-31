@@ -468,6 +468,46 @@
 
                 </LinearLayout>
 
+                <!-- Sort: game order (drag) vs settlement order (grouped) -->
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/player_list_sort_toggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    app:checkedButton="@+id/btn_sort_game_order"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_sort_game_order"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minHeight="36dp"
+                        android:text="@string/edit_player_sort_game_order"
+                        android:textAllCaps="false"
+                        android:textSize="11sp"
+                        app:strokeColor="@color/view_stroke" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_sort_settlement_order"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minHeight="36dp"
+                        android:text="@string/edit_player_sort_settlement_order"
+                        android:textAllCaps="false"
+                        android:textSize="11sp"
+                        app:strokeColor="@color/view_stroke" />
+
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
                 <!-- Collapsible Players Content -->
                 <LinearLayout
                     android:id="@+id/players_content"
