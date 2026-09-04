@@ -113,6 +113,12 @@
     <color name="view_text_muted">#FF555570</color>
     <color name="view_violet">#FF8C52FF</color>
     <color name="view_violet_light">#FFB47EFF</color>
+    <!-- Donut slices. Four separate hues rather than shades, so neighbouring arcs never blend:
+         cool colours mark winners, warm colours mark losers. -->
+    <color name="leaderboard_slice_win_1">#FF00E676</color>
+    <color name="leaderboard_slice_win_2">#FF00B0FF</color>
+    <color name="leaderboard_slice_loss_1">#FFFFAB00</color>
+    <color name="leaderboard_slice_loss_2">#FFFF1744</color>
     <color name="view_mint">#FF00E676</color>
     <color name="view_gold">#FFFFD600</color>
     <color name="view_coral">#FFFF1744</color>

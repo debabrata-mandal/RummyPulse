@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
@@ -12,8 +13,8 @@ import com.example.rummypulse.utils.DisplayNameUtils;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.GameViewApprovalRepository;
 import com.example.rummypulse.data.GameCreationPolicy;
+import com.example.rummypulse.data.PlayerLeaderboardRepository;
 import com.example.rummypulse.data.PlayerStats;
-import com.example.rummypulse.data.PlayerStatsKeys;
 import com.example.rummypulse.data.PlayerStatsRepository;
 import com.example.rummypulse.ui.home.GameItem;
 import com.google.firebase.auth.FirebaseAuth;
@@ -33,6 +34,8 @@ public class DashboardViewModel extends ViewModel {
 
     private final GameRepository gameRepository;
     private final PlayerStatsRepository playerStatsRepository;
+    private final PlayerLeaderboardRepository leaderboardRepository;
+    private final MediatorLiveData<Leaderboard> leaderboard;
     private final MutableLiveData<Boolean> showAllGames;
     private final MutableLiveData<StatsPeriod> selectedPeriod;
     private final MutableLiveData<List<GameItem>> mInProgressGames;
@@ -115,8 +118,17 @@ public class DashboardViewModel extends ViewModel {
         gameRepository = GameRepository.getDashboardInstance();
         playerStatsRepository = new PlayerStatsRepository();
         playerStatsRepository.start();
+        leaderboardRepository = new PlayerLeaderboardRepository();
+        leaderboardRepository.start();
         showAllGames = new MutableLiveData<>(gameRepository.isShowingAllGames());
         selectedPeriod = new MutableLiveData<>(StatsPeriod.THIS_MONTH);
+
+        // Ranking is recomputed locally, so changing period never touches Firestore.
+        leaderboard = new MediatorLiveData<>();
+        leaderboard.setValue(Leaderboard.empty());
+        leaderboard.addSource(
+                leaderboardRepository.getAllStats(), stats -> rebuildLeaderboard());
+        leaderboard.addSource(selectedPeriod, period -> rebuildLeaderboard());
         mInProgressGames = new MutableLiveData<>();
         mCompletedGames = new MutableLiveData<>();
         mActiveGamesCount = new MutableLiveData<>();
@@ -272,10 +284,23 @@ public class DashboardViewModel extends ViewModel {
     public void loadGames() {
         gameRepository.startDashboardListener();
         playerStatsRepository.start();
+        leaderboardRepository.start();
     }
 
     public LiveData<PlayerStats> getPlayerStats() {
         return playerStatsRepository.getStats();
+    }
+
+    public LiveData<Leaderboard> getLeaderboard() {
+        return leaderboard;
+    }
+
+    private void rebuildLeaderboard() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        leaderboard.setValue(Leaderboard.from(
+                leaderboardRepository.getAllStats().getValue(),
+                selectedPeriod.getValue(),
+                user == null ? null : user.getUid()));
     }
 
     public LiveData<Boolean> getShowAllGames() {
@@ -307,20 +332,10 @@ public class DashboardViewModel extends ViewModel {
 
     /** Resolves the bucket for a period, never null. */
     public PlayerStats.Bucket bucketFor(PlayerStats stats, StatsPeriod period) {
-        if (stats == null || period == null) {
+        if (period == null) {
             return new PlayerStats.Bucket();
         }
-        switch (period) {
-            case THIS_MONTH:
-                return stats.monthOrEmpty(PlayerStatsKeys.currentMonthKey());
-            case LAST_MONTH:
-                return stats.monthOrEmpty(PlayerStatsKeys.previousMonthKey());
-            case THIS_WEEK:
-                return stats.weekOrEmpty(PlayerStatsKeys.currentWeekKey());
-            case ALL_TIME:
-            default:
-                return stats.allTimeOrEmpty();
-        }
+        return period.bucketOf(stats);
     }
 
     public void refreshCreatorDashboardRows() {
@@ -637,6 +652,7 @@ public class DashboardViewModel extends ViewModel {
         super.onCleared();
         cancelCreationSlowNotice();
         playerStatsRepository.stop();
+        leaderboardRepository.stop();
         // Clean up listeners when ViewModel is destroyed
         if (gameRepository != null) {
             gameRepository.removeListeners();

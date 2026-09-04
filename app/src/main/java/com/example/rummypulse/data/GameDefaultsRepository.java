@@ -79,6 +79,57 @@ public class GameDefaultsRepository {
         cachedResolved.setShowDashboardApprovalCounts(enabled);
     }
 
+    public boolean isShowDashboardLeaderboardEnabled() {
+        return cachedResolved.isShowDashboardLeaderboard();
+    }
+
+    public boolean isShowDashboardLeaderboardAmountsEnabled() {
+        return cachedResolved.isShowDashboardLeaderboardAmounts();
+    }
+
+    public void setShowDashboardLeaderboardCached(boolean enabled) {
+        cachedResolved.setShowDashboardLeaderboard(enabled);
+    }
+
+    public void setShowDashboardLeaderboardAmountsCached(boolean enabled) {
+        cachedResolved.setShowDashboardLeaderboardAmounts(enabled);
+    }
+
+    /** Merge only {@code showDashboardLeaderboard} to Firestore. */
+    public com.google.android.gms.tasks.Task<Void> saveShowDashboardLeaderboard(boolean enabled) {
+        setShowDashboardLeaderboardCached(enabled);
+        return mergeFlag("showDashboardLeaderboard", enabled);
+    }
+
+    /** Merge only {@code showDashboardLeaderboardAmounts} to Firestore. */
+    public com.google.android.gms.tasks.Task<Void> saveShowDashboardLeaderboardAmounts(boolean enabled) {
+        setShowDashboardLeaderboardAmountsCached(enabled);
+        return mergeFlag("showDashboardLeaderboardAmounts", enabled);
+    }
+
+    /** Writes one boolean field, then re-reads so the cache reflects the stored document. */
+    private com.google.android.gms.tasks.Task<Void> mergeFlag(String field, boolean enabled) {
+        Map<String, Object> map = new HashMap<>();
+        map.put(field, enabled);
+        return db.collection(COLLECTION).document(DOCUMENT_ID)
+                .set(map, SetOptions.merge())
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful()) {
+                        Exception e = task.getException();
+                        return e != null
+                                ? Tasks.forException(e)
+                                : Tasks.forException(new IllegalStateException("set failed"));
+                    }
+                    return db.collection(COLLECTION).document(DOCUMENT_ID).get();
+                })
+                .continueWith(task -> {
+                    if (task.isSuccessful() && task.getResult() != null) {
+                        applySnapshot((DocumentSnapshot) task.getResult());
+                    }
+                    return null;
+                });
+    }
+
     /** Merge only {@code displayIntermediateCalculation} to Firestore. */
     public com.google.android.gms.tasks.Task<Void> saveDisplayIntermediateCalculation(boolean enabled) {
         setDisplayIntermediateCalculationCached(enabled);
@@ -159,6 +210,13 @@ public class GameDefaultsRepository {
             }
             if (snapshot.contains("showDashboardApprovalCounts")) {
                 raw.setShowDashboardApprovalCounts(snapshot.getBoolean("showDashboardApprovalCounts"));
+            }
+            if (snapshot.contains("showDashboardLeaderboard")) {
+                raw.setShowDashboardLeaderboard(snapshot.getBoolean("showDashboardLeaderboard"));
+            }
+            if (snapshot.contains("showDashboardLeaderboardAmounts")) {
+                raw.setShowDashboardLeaderboardAmounts(
+                        snapshot.getBoolean("showDashboardLeaderboardAmounts"));
             }
             cachedResolved = GameDefaults.resolvedFromFirestoreBean(raw);
         } else {

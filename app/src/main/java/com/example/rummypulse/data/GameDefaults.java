@@ -12,12 +12,16 @@ public class GameDefaults {
     public static final long FALLBACK_MID_GAME_INCREMENT = 2L;
     public static final boolean FALLBACK_DISPLAY_INTERMEDIATE_CALCULATION = true;
     public static final boolean FALLBACK_SHOW_DASHBOARD_APPROVAL_COUNTS = true;
+    public static final boolean FALLBACK_SHOW_DASHBOARD_LEADERBOARD = true;
+    public static final boolean FALLBACK_SHOW_DASHBOARD_LEADERBOARD_AMOUNTS = true;
 
     private Double defaultPointValue;
     private Double defaultGstPercent;
     private Long defaultMidGameNewPlayerScoreIncrement;
     private Boolean displayIntermediateCalculation;
     private Boolean showDashboardApprovalCounts;
+    private Boolean showDashboardLeaderboard;
+    private Boolean showDashboardLeaderboardAmounts;
     private Timestamp updatedAt;
     private String updatedByUserId;
     private String updatedByUserName;
@@ -69,6 +73,27 @@ public class GameDefaults {
         this.showDashboardApprovalCounts = showDashboardApprovalCounts;
     }
 
+    /** When true, the dashboard shows the top/bottom performer leaderboard. */
+    public boolean isShowDashboardLeaderboard() {
+        return showDashboardLeaderboard == null || showDashboardLeaderboard;
+    }
+
+    public void setShowDashboardLeaderboard(Boolean showDashboardLeaderboard) {
+        this.showDashboardLeaderboard = showDashboardLeaderboard;
+    }
+
+    /**
+     * When true, leaderboard rows show each player's net amount. When false the ranking is still
+     * by net amount, but the figures stay hidden.
+     */
+    public boolean isShowDashboardLeaderboardAmounts() {
+        return showDashboardLeaderboardAmounts == null || showDashboardLeaderboardAmounts;
+    }
+
+    public void setShowDashboardLeaderboardAmounts(Boolean showDashboardLeaderboardAmounts) {
+        this.showDashboardLeaderboardAmounts = showDashboardLeaderboardAmounts;
+    }
+
     public Timestamp getUpdatedAt() {
         return updatedAt;
     }
@@ -102,6 +127,8 @@ public class GameDefaults {
             g.setDefaultMidGameNewPlayerScoreIncrement(FALLBACK_MID_GAME_INCREMENT);
             g.setDisplayIntermediateCalculation(FALLBACK_DISPLAY_INTERMEDIATE_CALCULATION);
             g.setShowDashboardApprovalCounts(FALLBACK_SHOW_DASHBOARD_APPROVAL_COUNTS);
+            g.setShowDashboardLeaderboard(FALLBACK_SHOW_DASHBOARD_LEADERBOARD);
+            g.setShowDashboardLeaderboardAmounts(FALLBACK_SHOW_DASHBOARD_LEADERBOARD_AMOUNTS);
             return g;
         }
         g.setDefaultPointValue(fromDb.defaultPointValue != null && fromDb.defaultPointValue > 0
@@ -117,6 +144,12 @@ public class GameDefaults {
         g.setShowDashboardApprovalCounts(fromDb.showDashboardApprovalCounts != null
                 ? fromDb.showDashboardApprovalCounts
                 : FALLBACK_SHOW_DASHBOARD_APPROVAL_COUNTS);
+        g.setShowDashboardLeaderboard(fromDb.showDashboardLeaderboard != null
+                ? fromDb.showDashboardLeaderboard
+                : FALLBACK_SHOW_DASHBOARD_LEADERBOARD);
+        g.setShowDashboardLeaderboardAmounts(fromDb.showDashboardLeaderboardAmounts != null
+                ? fromDb.showDashboardLeaderboardAmounts
+                : FALLBACK_SHOW_DASHBOARD_LEADERBOARD_AMOUNTS);
         g.setUpdatedAt(fromDb.updatedAt);
         g.setUpdatedByUserId(fromDb.updatedByUserId);
         g.setUpdatedByUserName(fromDb.updatedByUserName);

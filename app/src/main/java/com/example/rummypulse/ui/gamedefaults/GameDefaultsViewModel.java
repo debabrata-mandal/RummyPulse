@@ -104,6 +104,28 @@ public class GameDefaultsViewModel extends AndroidViewModel {
                         e.getMessage() != null ? e.getMessage() : "Failed to save display setting"));
     }
 
+    /** Admin-only: the flag is global, so it changes the dashboard for every player. */
+    public void saveShowDashboardLeaderboard(boolean enabled, boolean isAdmin) {
+        if (!isAdmin) {
+            return;
+        }
+        repository.saveShowDashboardLeaderboard(enabled)
+                .addOnFailureListener(e -> error.postValue(e.getMessage() != null
+                        ? e.getMessage()
+                        : "Failed to save leaderboard setting"));
+    }
+
+    /** Admin-only: the flag is global, so it changes the dashboard for every player. */
+    public void saveShowDashboardLeaderboardAmounts(boolean enabled, boolean isAdmin) {
+        if (!isAdmin) {
+            return;
+        }
+        repository.saveShowDashboardLeaderboardAmounts(enabled)
+                .addOnFailureListener(e -> error.postValue(e.getMessage() != null
+                        ? e.getMessage()
+                        : "Failed to save leaderboard amount setting"));
+    }
+
     public void saveShowDashboardApprovalCounts(boolean enabled) {
         repository.setShowDashboardApprovalCountsCached(enabled);
         repository.saveShowDashboardApprovalCounts(enabled)

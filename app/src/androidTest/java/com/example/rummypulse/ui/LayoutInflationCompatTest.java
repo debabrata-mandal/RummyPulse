@@ -65,8 +65,10 @@ public class LayoutInflationCompatTest {
             R.layout.item_dashboard_game,
             R.layout.item_map_user,
             R.layout.item_player_card,
-            // Not retinted, but guards the gradient angle that crashed pre-API 29 inflation.
+            // Not retinted, but guards the gradient angle that crashed pre-API 29 inflation and
+            // the custom donut view, which is only ever constructed from XML.
             R.layout.fragment_dashboard,
+            R.layout.item_leaderboard_legend,
     };
 
     @Test

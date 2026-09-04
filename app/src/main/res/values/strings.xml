@@ -373,6 +373,11 @@
     <string name="game_defaults_display_intermediate_admin_only_helper">Admins only.</string>
     <string name="cd_game_defaults_display_intermediate_locked">Show live amounts locked. Admins only.</string>
     <string name="game_defaults_show_dashboard_approval_counts_title">Show dashboard request counts</string>
+    <string name="game_defaults_show_dashboard_leaderboard_title">Show dashboard leaderboard</string>
+    <string name="game_defaults_show_dashboard_leaderboard_amounts_title">Show leaderboard amounts</string>
+    <string name="game_defaults_leaderboard_admin_only_helper">Admins only.</string>
+    <string name="game_defaults_leaderboard_amounts_off_helper">Turn the leaderboard on to show amounts.</string>
+    <string name="cd_game_defaults_leaderboard_locked">Leaderboard settings locked. Admins only.</string>
     <string name="game_view_amount_hidden">—</string>
     <string name="game_defaults_increment_hint">Mid-game new player score increment</string>
     <string name="game_defaults_increment_required">Enter the increment (0 or higher)</string>
@@ -483,4 +488,10 @@
     <string name="dashboard_scope_all_games">All Games</string>
     <string name="dashboard_scope_summary">Active %1$d  ·  Completed %2$d  ·  Total %3$d</string>
     <string name="dashboard_avatar_description">Your profile photo</string>
+    <string name="dashboard_leaderboard_title">Leaderboard</string>
+    <string name="dashboard_leaderboard_center_label">LEADER</string>
+    <string name="dashboard_leaderboard_legend_detail">Rank #%1$d</string>
+    <string name="dashboard_leaderboard_legend_you">%1$s (You)</string>
+    <string name="dashboard_leaderboard_empty">No ranked players in this period yet</string>
+    <string name="dashboard_leaderboard_summary">%1$d players ranked</string>
 </resources>

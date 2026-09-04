@@ -314,6 +314,114 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- Leaderboard: ranked locally from the stats already streamed, so it follows the
+                     period selector above without additional reads. -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_leaderboard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginEnd="12dp"
+                    app:cardBackgroundColor="@android:color/transparent"
+                    app:cardCornerRadius="20dp"
+                    app:cardElevation="4dp"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_dashboard_hero"
+                        android:orientation="vertical"
+                        android:padding="14dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/dashboard_leaderboard_title"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/text_leaderboard_summary"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/view_text_secondary"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/text_leaderboard_empty"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center"
+                            android:text="@string/dashboard_leaderboard_empty"
+                            android:textColor="@color/view_text_secondary"
+                            android:textSize="12sp"
+                            android:visibility="gone" />
+
+                        <!-- One ring for every ranked player; slice size is the net magnitude. -->
+                        <FrameLayout
+                            android:id="@+id/group_leaderboard_chart"
+                            android:layout_width="match_parent"
+                            android:layout_height="204dp"
+                            android:layout_marginTop="10dp">
+
+                            <com.example.rummypulse.ui.dashboard.LeaderboardDonutView
+                                android:id="@+id/view_leaderboard_donut"
+                                android:layout_width="204dp"
+                                android:layout_height="match_parent"
+                                android:layout_gravity="center" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:gravity="center"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:letterSpacing="0.1"
+                                    android:text="@string/dashboard_leaderboard_center_label"
+                                    android:textColor="@color/view_text_secondary"
+                                    android:textSize="9sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/text_leaderboard_center_name"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:maxWidth="96dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="15sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </FrameLayout>
+
+                        <!-- Legend: two rows of two, so the ring stays the focus. -->
+                        <LinearLayout
+                            android:id="@+id/container_leaderboard_legend"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="vertical" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
                 <!-- Games scope: My Games keeps the listener scoped to this user's games. -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"

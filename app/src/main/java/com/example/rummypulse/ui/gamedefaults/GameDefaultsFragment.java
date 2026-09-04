@@ -63,6 +63,21 @@ public class GameDefaultsFragment extends Fragment {
             viewModel.saveShowDashboardApprovalCounts(isChecked);
         });
 
+        binding.switchShowDashboardLeaderboard.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchCallback || !isAdmin) {
+                return;
+            }
+            viewModel.saveShowDashboardLeaderboard(isChecked, true);
+            applyAdminOnlyFieldStates();
+        });
+
+        binding.switchShowDashboardLeaderboardAmounts.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (suppressSwitchCallback || !isAdmin) {
+                return;
+            }
+            viewModel.saveShowDashboardLeaderboardAmounts(isChecked, true);
+        });
+
         viewModel.getDefaults().observe(getViewLifecycleOwner(), this::populateFieldsFromDefaults);
         viewModel.getLoading().observe(getViewLifecycleOwner(), loading -> {
             boolean b = Boolean.TRUE.equals(loading);
@@ -146,6 +161,49 @@ public class GameDefaultsFragment extends Fragment {
                     getString(R.string.cd_game_defaults_display_intermediate_locked));
             binding.textDisplayIntermediateHelper.setVisibility(View.VISIBLE);
         }
+
+        applyLeaderboardFieldStates();
+    }
+
+    /**
+     * Both leaderboard flags are global, so only admins may change them. The amounts switch also
+     * depends on the leaderboard being visible at all.
+     */
+    private void applyLeaderboardFieldStates() {
+        binding.switchShowDashboardLeaderboard.setEnabled(isAdmin);
+        boolean leaderboardOn = binding.switchShowDashboardLeaderboard.isChecked();
+        binding.switchShowDashboardLeaderboardAmounts.setEnabled(isAdmin && leaderboardOn);
+
+        styleSettingIcon(binding.iconDashboardLeaderboard, isAdmin);
+        styleSettingIcon(binding.iconDashboardLeaderboardAmounts, isAdmin && leaderboardOn);
+
+        binding.switchShowDashboardLeaderboard.setContentDescription(isAdmin
+                ? null
+                : getString(R.string.cd_game_defaults_leaderboard_locked));
+        binding.switchShowDashboardLeaderboardAmounts.setContentDescription(isAdmin
+                ? null
+                : getString(R.string.cd_game_defaults_leaderboard_locked));
+
+        binding.textDashboardLeaderboardHelper.setVisibility(isAdmin ? View.GONE : View.VISIBLE);
+        if (!isAdmin) {
+            binding.textDashboardLeaderboardAmountsHelper.setText(
+                    R.string.game_defaults_leaderboard_admin_only_helper);
+            binding.textDashboardLeaderboardAmountsHelper.setVisibility(View.VISIBLE);
+        } else if (!leaderboardOn) {
+            binding.textDashboardLeaderboardAmountsHelper.setText(
+                    R.string.game_defaults_leaderboard_amounts_off_helper);
+            binding.textDashboardLeaderboardAmountsHelper.setVisibility(View.VISIBLE);
+        } else {
+            binding.textDashboardLeaderboardAmountsHelper.setVisibility(View.GONE);
+        }
+    }
+
+    private void styleSettingIcon(android.widget.ImageView icon, boolean unlocked) {
+        icon.setImageDrawable(ContextCompat.getDrawable(requireContext(),
+                unlocked ? R.drawable.ic_visibility : R.drawable.ic_lock));
+        icon.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(requireContext(),
+                unlocked ? R.color.accent_blue_light : R.color.text_secondary)));
+        icon.setContentDescription(null);
     }
 
     private void populateFieldsFromDefaults(GameDefaults g) {
@@ -158,6 +216,8 @@ public class GameDefaultsFragment extends Fragment {
         suppressSwitchCallback = true;
         binding.switchDisplayIntermediateCalculation.setChecked(g.isDisplayIntermediateCalculation());
         binding.switchShowDashboardApprovalCounts.setChecked(g.isShowDashboardApprovalCounts());
+        binding.switchShowDashboardLeaderboard.setChecked(g.isShowDashboardLeaderboard());
+        binding.switchShowDashboardLeaderboardAmounts.setChecked(g.isShowDashboardLeaderboardAmounts());
         suppressSwitchCallback = false;
         clearFieldErrors();
         binding.textAudit.setText(buildAuditText(g));

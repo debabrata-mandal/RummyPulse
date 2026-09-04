@@ -4,6 +4,7 @@ import android.animation.ValueAnimator;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -19,6 +20,7 @@ import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -38,6 +40,7 @@ import com.example.rummypulse.data.PlayerStats;
 import com.example.rummypulse.databinding.FragmentDashboardBinding;
 import com.example.rummypulse.service.GroqGameNameService;
 import com.example.rummypulse.ui.home.GameItem;
+import com.example.rummypulse.utils.DisplayNameUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.android.material.textfield.TextInputEditText;
@@ -45,7 +48,9 @@ import com.google.android.material.textfield.TextInputLayout;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -63,6 +68,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     private ConnectivityManager.NetworkCallback networkCallback;
     private Runnable openCreateDialogNetworkUpdater;
     private PlayerStats latestStats;
+    private boolean showLeaderboardAmounts = true;
     private final Map<TextView, ValueAnimator> runningAnimators = new HashMap<>();
     private static final long COUNTER_DURATION_MS = 520L;
 
@@ -213,6 +219,9 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             renderPerformance(true);
         });
 
+        dashboardViewModel.getLeaderboard().observe(
+                getViewLifecycleOwner(), this::renderLeaderboard);
+
         dashboardViewModel.getShowAllGames().observe(getViewLifecycleOwner(), showAll -> {
             boolean all = Boolean.TRUE.equals(showAll);
             styleSegment(binding.segmentMyGames, !all);
@@ -319,6 +328,144 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         animateCount(binding.textPerfWinRate, bucket.winRatePercent(), "%", animate);
     }
 
+    /**
+     * Draws every ranked player as one donut, winners first so the ring reads clockwise from the
+     * leader. Slice size is the net magnitude; colour carries the direction.
+     */
+    private void renderLeaderboard(Leaderboard leaderboard) {
+        if (binding == null) {
+            return;
+        }
+        GameDefaultsRepository defaults = GameDefaultsRepository.getInstance(requireContext());
+        if (!defaults.isShowDashboardLeaderboardEnabled()) {
+            binding.cardLeaderboard.setVisibility(View.GONE);
+            return;
+        }
+        binding.cardLeaderboard.setVisibility(View.VISIBLE);
+        showLeaderboardAmounts = defaults.isShowDashboardLeaderboardAmountsEnabled();
+
+        Leaderboard board = leaderboard == null ? Leaderboard.empty() : leaderboard;
+        boolean empty = board.isEmpty();
+
+        binding.textLeaderboardEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
+        binding.groupLeaderboardChart.setVisibility(empty ? View.GONE : View.VISIBLE);
+        binding.containerLeaderboardLegend.setVisibility(empty ? View.GONE : View.VISIBLE);
+        binding.textLeaderboardSummary.setText(empty
+                ? ""
+                : getString(R.string.dashboard_leaderboard_summary, board.getRankedPlayers()));
+        if (empty) {
+            binding.viewLeaderboardDonut.setSlices(new ArrayList<>());
+            binding.containerLeaderboardLegend.removeAllViews();
+            return;
+        }
+
+        List<LeaderboardEntry> entries = new ArrayList<>(board.getTop());
+        entries.addAll(board.getBottom());
+        int[] colors = sliceColorsFor(board);
+
+        List<LeaderboardDonutView.Slice> slices = new ArrayList<>(entries.size());
+        for (int i = 0; i < entries.size(); i++) {
+            LeaderboardEntry entry = entries.get(i);
+            slices.add(new LeaderboardDonutView.Slice(
+                    (float) Math.abs(entry.getNetAmount()),
+                    colors[i],
+                    // Amounts live on the ring; withholding them leaves the arcs unlabelled.
+                    showLeaderboardAmounts ? formatSignedAmount(entry.getNetAmount()) : null));
+        }
+        binding.viewLeaderboardDonut.setSlices(slices);
+
+        binding.textLeaderboardCenterName.setText(entries.get(0).getDisplayName());
+        bindLeaderboardLegend(entries, colors);
+    }
+
+    /** Greens for the winning slices, reds for the losing ones, brightest at each extreme. */
+    private int[] sliceColorsFor(Leaderboard board) {
+        int[] winColors = {
+                ContextCompat.getColor(requireContext(), R.color.leaderboard_slice_win_1),
+                ContextCompat.getColor(requireContext(), R.color.leaderboard_slice_win_2)};
+        int[] lossColors = {
+                ContextCompat.getColor(requireContext(), R.color.leaderboard_slice_loss_1),
+                ContextCompat.getColor(requireContext(), R.color.leaderboard_slice_loss_2)};
+
+        int topCount = board.getTop().size();
+        int bottomCount = board.getBottom().size();
+        int[] colors = new int[topCount + bottomCount];
+        for (int i = 0; i < topCount; i++) {
+            colors[i] = winColors[Math.min(i, winColors.length - 1)];
+        }
+        for (int i = 0; i < bottomCount; i++) {
+            // Last entry is the worst result, so it takes the brightest red.
+            int fromEnd = bottomCount - 1 - i;
+            colors[topCount + i] = lossColors[Math.max(0, lossColors.length - 1 - fromEnd)];
+        }
+        return colors;
+    }
+
+    /** Two cells per row, so four players stay compact under the ring. */
+    private void bindLeaderboardLegend(List<LeaderboardEntry> entries, int[] colors) {
+        ViewGroup legend = binding.containerLeaderboardLegend;
+        legend.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(legend.getContext());
+
+        LinearLayout row = null;
+        for (int i = 0; i < entries.size(); i++) {
+            if (i % 2 == 0) {
+                row = new LinearLayout(legend.getContext());
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setBaselineAligned(false);
+                LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT);
+                rowParams.topMargin = dpToPx(6);
+                row.setLayoutParams(rowParams);
+                legend.addView(row);
+            }
+            row.addView(buildLegendCell(inflater, row, entries.get(i), colors[i], i % 2 == 1));
+        }
+
+        // An odd count would leave a stretched final cell, so pad the gap.
+        if (entries.size() % 2 == 1 && row != null) {
+            View filler = new View(legend.getContext());
+            filler.setLayoutParams(new LinearLayout.LayoutParams(0, 1, 1f));
+            row.addView(filler);
+        }
+    }
+
+    private View buildLegendCell(
+            LayoutInflater inflater,
+            ViewGroup parent,
+            LeaderboardEntry entry,
+            int color,
+            boolean secondColumn) {
+        View cell = inflater.inflate(R.layout.item_leaderboard_legend, parent, false);
+
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        if (secondColumn) {
+            params.leftMargin = dpToPx(6);
+        }
+        cell.setLayoutParams(params);
+        cell.setBackgroundResource(entry.isCurrentUser()
+                ? R.drawable.bg_leaderboard_row_self
+                : R.drawable.bg_leaderboard_row);
+
+        cell.findViewById(R.id.legend_dot)
+                .setBackgroundTintList(ColorStateList.valueOf(color));
+
+        TextView name = cell.findViewById(R.id.legend_name);
+        name.setText(entry.isCurrentUser()
+                ? getString(R.string.dashboard_leaderboard_legend_you, entry.getDisplayName())
+                : entry.getDisplayName());
+
+        ((TextView) cell.findViewById(R.id.legend_detail)).setText(getString(
+                R.string.dashboard_leaderboard_legend_detail, entry.getRank()));
+        return cell;
+    }
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * getResources().getDisplayMetrics().density);
+    }
+
     private void animateAmount(TextView target, double value, boolean animate) {
         double from = animate ? parseAmount(target.getText()) : value;
         cancelAnimator(target);
@@ -408,9 +555,9 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     private String buildWelcomeTitle() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
-            String displayName = user.getDisplayName();
-            if (displayName != null && !displayName.trim().isEmpty()) {
-                return "Welcome " + displayName.trim();
+            String firstName = DisplayNameUtils.firstName(user.getDisplayName());
+            if (!firstName.isEmpty()) {
+                return "Welcome " + firstName;
             }
             String email = user.getEmail();
             if (email != null && email.contains("@")) {
@@ -872,6 +1019,8 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 if (completedGameAdapter != null) {
                     completedGameAdapter.notifyDataSetChanged();
                 }
+                // Leaderboard visibility and amount masking both come from these defaults.
+                renderLeaderboard(dashboardViewModel.getLeaderboard().getValue());
             });
         }
         if (connectivityManager != null && networkCallback != null) {
