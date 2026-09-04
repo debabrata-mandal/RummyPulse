@@ -23,7 +23,7 @@
             android:contentDescription="@null"
             android:padding="10dp"
             android:src="@drawable/ic_people"
-            android:tint="@color/accent_blue" />
+            app:tint="@color/accent_blue" />
 
         <LinearLayout
             android:layout_width="0dp"

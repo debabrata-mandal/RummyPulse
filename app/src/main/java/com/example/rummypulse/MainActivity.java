@@ -378,31 +378,17 @@ public class MainActivity extends AppCompatActivity {
         }
 
         int baseTopPadding = dpToPx(NAV_HEADER_BASE_TOP_PADDING_DP);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            headerView.setOnApplyWindowInsetsListener((view, insets) -> {
-                int topInset = insets.getSystemWindowInsetTop();
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
-                        && insets.getDisplayCutout() != null) {
-                    topInset = Math.max(topInset, insets.getDisplayCutout().getSafeInsetTop());
-                }
-                view.setPadding(view.getPaddingLeft(), baseTopPadding + topInset,
-                        view.getPaddingRight(), view.getPaddingBottom());
-                return insets;
-            });
-            headerView.requestApplyInsets();
-        } else {
-            headerView.setPadding(headerView.getPaddingLeft(),
-                    baseTopPadding + getStatusBarHeight(),
-                    headerView.getPaddingRight(), headerView.getPaddingBottom());
-        }
-    }
-
-    private int getStatusBarHeight() {
-        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
-        if (resourceId > 0) {
-            return getResources().getDimensionPixelSize(resourceId);
-        }
-        return 0;
+        headerView.setOnApplyWindowInsetsListener((view, insets) -> {
+            int topInset = insets.getSystemWindowInsetTop();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+                    && insets.getDisplayCutout() != null) {
+                topInset = Math.max(topInset, insets.getDisplayCutout().getSafeInsetTop());
+            }
+            view.setPadding(view.getPaddingLeft(), baseTopPadding + topInset,
+                    view.getPaddingRight(), view.getPaddingBottom());
+            return insets;
+        });
+        headerView.requestApplyInsets();
     }
 
     private int dpToPx(int dp) {
@@ -723,7 +709,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             PackageInfo packageInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
             String versionName = packageInfo.versionName;
-            long versionCode = packageInfo.getLongVersionCode();
+            long versionCode = BuildConfig.VERSION_CODE;
             
             FirebaseUser currentUser = mAuth.getCurrentUser();
             

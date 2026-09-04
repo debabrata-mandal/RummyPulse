@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/player_card_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -133,7 +134,7 @@
                     android:padding="11dp"
                     android:scaleType="centerInside"
                     android:src="@drawable/ic_delete"
-                    android:tint="#FFFFFF" />
+                    app:tint="#FFFFFF" />
 
                 <ImageView
                     android:id="@+id/drag_handle"
@@ -147,7 +148,7 @@
                     android:padding="6dp"
                     android:scaleType="centerInside"
                     android:src="@drawable/ic_drag_handle"
-                    android:tint="@color/view_text_secondary"
+                    app:tint="@color/view_text_secondary"
                     android:visibility="gone" />
 
             </LinearLayout>

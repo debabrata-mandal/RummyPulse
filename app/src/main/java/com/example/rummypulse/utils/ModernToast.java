@@ -250,7 +250,7 @@ public class ModernToast {
     private static int getTopInset(Context context) {
         if (context instanceof Activity) {
             View content = ((Activity) context).findViewById(android.R.id.content);
-            if (content != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (content != null) {
                 android.view.WindowInsets insets = content.getRootWindowInsets();
                 if (insets != null) {
                     int statusTop = insets.getSystemWindowInsetTop();

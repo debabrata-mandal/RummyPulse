@@ -69,7 +69,7 @@
             android:contentDescription="@string/dialog_correct_player_edit_action"
             android:padding="8dp"
             android:src="@drawable/ic_edit"
-            android:tint="@color/view_violet_light" />
+            app:tint="@color/view_violet_light" />
 
     </LinearLayout>
 

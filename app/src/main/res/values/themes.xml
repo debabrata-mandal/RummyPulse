@@ -20,7 +20,7 @@
         <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
         <!-- Navigation bar color -->
         <item name="android:navigationBarColor" tools:targetApi="l">@color/primary_blue_dark</item>
-        <item name="android:windowLightNavigationBar" tools:targetApi="o">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
         <item name="alertDialogTheme">@style/DarkAlertDialog</item>
         <item name="materialAlertDialogTheme">@style/DarkAlertDialog</item>
         <item name="popupMenuStyle">@style/DarkPopupMenuStyle</item>

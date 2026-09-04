@@ -23,7 +23,7 @@
             android:contentDescription="@string/map_player_icon_description"
             android:padding="10dp"
             android:src="@drawable/ic_link_players"
-            android:tint="@color/view_violet_light" />
+            app:tint="@color/view_violet_light" />
 
         <LinearLayout
             android:layout_width="0dp"

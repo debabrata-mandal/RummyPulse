@@ -186,7 +186,7 @@
                             android:layout_height="18dp"
                             android:contentDescription="Share"
                             android:src="@android:drawable/ic_menu_share"
-                            android:tint="@color/view_violet_light" />
+                            app:tint="@color/view_violet_light" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -365,7 +365,7 @@
                                 android:layout_width="24dp"
                                 android:layout_height="24dp"
                                 android:src="@drawable/ic_gamepad"
-                                android:tint="@color/view_violet_light"
+                                app:tint="@color/view_violet_light"
                                 android:layout_marginEnd="8dp"
                                 android:contentDescription="@null" />
 
@@ -455,7 +455,7 @@
                         android:padding="6dp"
                         android:scaleType="centerInside"
                         android:src="@drawable/ic_edit"
-                        android:tint="@color/view_violet_light"
+                        app:tint="@color/view_violet_light"
                         android:visibility="gone" />
 
                     <!-- Collapse/Expand Icon -->
@@ -464,7 +464,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_expand_less"
-                        android:tint="@color/view_text_secondary" />
+                        app:tint="@color/view_text_secondary" />
 
                 </LinearLayout>
 
@@ -566,7 +566,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_visibility"
-                            android:tint="@color/view_gold"
+                            app:tint="@color/view_gold"
                             android:layout_marginEnd="8dp"
                             android:contentDescription="@string/view_requests_section_title" />
 
@@ -599,7 +599,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_expand_more"
-                            android:tint="@color/view_text_secondary"
+                            app:tint="@color/view_text_secondary"
                             android:contentDescription="@string/view_requests_section_title" />
 
                     </LinearLayout>
@@ -682,7 +682,7 @@
                                     android:layout_width="24dp"
                                     android:layout_height="24dp"
                                     android:src="@drawable/ic_bar_chart"
-                                    android:tint="@color/view_violet_light"
+                                    app:tint="@color/view_violet_light"
                                     android:layout_marginEnd="8dp" />
 
                                 <TextView
@@ -704,7 +704,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_expand_less"
-                            android:tint="@color/view_text_secondary" />
+                            app:tint="@color/view_text_secondary" />
 
                     </LinearLayout>
 
@@ -758,7 +758,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_shield"
-                        android:tint="@color/view_mint"
+                        app:tint="@color/view_mint"
                         android:layout_marginEnd="8dp" />
 
                     <TextView
@@ -776,7 +776,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_close"
-                        android:tint="@color/view_coral"
+                        app:tint="@color/view_coral"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:padding="4dp" />
 
@@ -827,7 +827,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:src="@drawable/ic_expand_more"
-                            android:tint="@color/view_text_secondary" />
+                            app:tint="@color/view_text_secondary" />
 
                     </LinearLayout>
 
@@ -1143,7 +1143,7 @@
                 android:focusable="true"
                 android:padding="9dp"
                 android:src="@drawable/ic_close"
-                android:tint="@color/view_text_secondary" />
+                app:tint="@color/view_text_secondary" />
         </LinearLayout>
 
         <LinearLayout

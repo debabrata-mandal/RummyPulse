@@ -23,7 +23,7 @@
             android:contentDescription="@null"
             android:padding="10dp"
             android:src="@drawable/ic_delete"
-            android:tint="@color/view_coral" />
+            app:tint="@color/view_coral" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -76,7 +76,7 @@
                 android:layout_height="24dp"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_info"
-                android:tint="@color/view_coral" />
+                app:tint="@color/view_coral" />
 
             <LinearLayout
                 android:layout_width="0dp"

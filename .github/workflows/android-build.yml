@@ -118,8 +118,8 @@ jobs:
         elif [[ $commit_msg =~ ^(chore|docs|style|refactor|perf|test)(\(.+\))?: ]]; then
           echo "Build number bump (chore)"
           patch=$((patch + 1))
-        elif [[ $commit_msg =~ ^(BREAKING CHANGE|!): ]]; then
-          echo "Major version bump (breaking change)"
+        elif [[ $commit_msg =~ ^(major)(\(.+\))?: ]]; then
+          echo "Major version bump"
           major=$((major + 1))
           minor=0
           patch=0
@@ -226,8 +226,8 @@ jobs:
         elif [[ $commit_msg =~ ^(chore|docs|style|refactor|perf|test)(\(.+\))?: ]]; then
           echo "Build number bump (chore)"
           patch=$((patch + 1))
-        elif [[ $commit_msg =~ ^(BREAKING CHANGE|!): ]]; then
-          echo "Major version bump (breaking change)"
+        elif [[ $commit_msg =~ ^(major)(\(.+\))?: ]]; then
+          echo "Major version bump"
           major=$((major + 1))
           minor=0
           patch=0

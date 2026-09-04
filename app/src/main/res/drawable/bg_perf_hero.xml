@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Performance hero surface: deep plasma gradient with a translucent accent edge. -->
+<!-- Performance hero surface: deep plasma gradient with a translucent accent edge.
+     The angle must stay a multiple of 45; GradientDrawable rejects anything else before
+     API 29, which fails layout inflation on Android 9 and older. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <corners android:radius="26dp" />
     <gradient
-        android:angle="300"
+        android:angle="315"
         android:startColor="#FF07060F"
         android:centerColor="#FF14102A"
         android:endColor="#FF241A4D"

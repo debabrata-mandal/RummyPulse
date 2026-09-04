@@ -23,6 +23,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -182,6 +183,13 @@ public class JoinGameActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(JoinGameViewModel.class);
         operationRepository = GameOperationRepository.getInstance(getApplicationContext());
 
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleBackPress();
+            }
+        });
+
         // Initialize views
         initializeViews();
         setupClickListeners();
@@ -232,11 +240,6 @@ public class JoinGameActivity extends AppCompatActivity {
     public boolean onSupportNavigateUp() {
         handleBackPress();
         return true;
-    }
-    
-    @Override
-    public void onBackPressed() {
-        handleBackPress();
     }
     
     private void handleBackPress() {
@@ -495,34 +498,32 @@ public class JoinGameActivity extends AppCompatActivity {
                     System.out.println("TTS initialized successfully with locale: " + currentTtsLocale.getDisplayLanguage());
                     
                     // Set up utterance progress listener to know when speech completes
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
-                        textToSpeech.setOnUtteranceProgressListener(new android.speech.tts.UtteranceProgressListener() {
-                            @Override
-                            public void onStart(String utteranceId) {
-                                System.out.println("TTS: Started speaking utterance: " + utteranceId);
-                            }
-                            
-                            @Override
-                            public void onDone(String utteranceId) {
-                                System.out.println("TTS: Finished speaking utterance: " + utteranceId);
-                                // Process next announcement after this one completes
-                                ttsHandler.postDelayed(() -> {
-                                    isAnnouncementInProgress = false;
-                                    processAnnouncementQueue();
-                                }, ANNOUNCEMENT_GAP_MS);
-                            }
-                            
-                            @Override
-                            public void onError(String utteranceId) {
-                                System.err.println("TTS: Error speaking utterance: " + utteranceId);
-                                // Still process next announcement on error
-                                ttsHandler.postDelayed(() -> {
-                                    isAnnouncementInProgress = false;
-                                    processAnnouncementQueue();
-                                }, ANNOUNCEMENT_GAP_MS);
-                            }
-                        });
-                    }
+                    textToSpeech.setOnUtteranceProgressListener(new android.speech.tts.UtteranceProgressListener() {
+                        @Override
+                        public void onStart(String utteranceId) {
+                            System.out.println("TTS: Started speaking utterance: " + utteranceId);
+                        }
+
+                        @Override
+                        public void onDone(String utteranceId) {
+                            System.out.println("TTS: Finished speaking utterance: " + utteranceId);
+                            // Process next announcement after this one completes
+                            ttsHandler.postDelayed(() -> {
+                                isAnnouncementInProgress = false;
+                                processAnnouncementQueue();
+                            }, ANNOUNCEMENT_GAP_MS);
+                        }
+
+                        @Override
+                        public void onError(String utteranceId) {
+                            System.err.println("TTS: Error speaking utterance: " + utteranceId);
+                            // Still process next announcement on error
+                            ttsHandler.postDelayed(() -> {
+                                isAnnouncementInProgress = false;
+                                processAnnouncementQueue();
+                            }, ANNOUNCEMENT_GAP_MS);
+                        }
+                    });
                 } else {
                     System.out.println("TTS language not supported");
                 }
@@ -643,14 +644,8 @@ public class JoinGameActivity extends AppCompatActivity {
         queueAnnouncement(() -> {
             String utteranceId = "score_" + (utteranceIdCounter++);
             
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                android.os.Bundle params = new android.os.Bundle();
-                textToSpeech.speak(announcement, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params, utteranceId);
-            } else {
-                java.util.HashMap<String, String> params = new java.util.HashMap<>();
-                params.put(android.speech.tts.TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId);
-                textToSpeech.speak(announcement, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params);
-            }
+            android.os.Bundle params = new android.os.Bundle();
+            textToSpeech.speak(announcement, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params, utteranceId);
             System.out.println("TTS Speaking: " + announcement);
         });
     }
@@ -844,14 +839,8 @@ public class JoinGameActivity extends AppCompatActivity {
             queueAnnouncement(() -> {
                 String utteranceId = "game_completion_" + (utteranceIdCounter++);
                 
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                    android.os.Bundle params = new android.os.Bundle();
-                    textToSpeech.speak(announcementText, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params, utteranceId);
-                } else {
-                    java.util.HashMap<String, String> params = new java.util.HashMap<>();
-                    params.put(android.speech.tts.TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId);
-                    textToSpeech.speak(announcementText, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params);
-                }
+                android.os.Bundle params = new android.os.Bundle();
+                textToSpeech.speak(announcementText, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params, utteranceId);
             });
         }, calculatedDelay);
     }
@@ -916,7 +905,7 @@ public class JoinGameActivity extends AppCompatActivity {
         viewModel.stopPendingViewRequestsListener();
 
         // Unregister network callback
-        if (networkCallback != null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+        if (networkCallback != null) {
             android.net.ConnectivityManager connectivityManager = 
                 (android.net.ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
             if (connectivityManager != null) {
@@ -3438,16 +3427,6 @@ public class JoinGameActivity extends AppCompatActivity {
                     }
                 });
                 
-                // Vibrate for haptic feedback
-                try {
-                    android.os.Vibrator vibrator = (android.os.Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                    if (vibrator != null && vibrator.hasVibrator()) {
-                        vibrator.vibrate(50); // 50ms vibration
-                    }
-                } catch (Exception e) {
-                    // Ignore vibration errors
-                }
-                
                 return true;
                 
             case android.view.MotionEvent.ACTION_MOVE:
@@ -5717,29 +5696,27 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            networkCallback = new android.net.ConnectivityManager.NetworkCallback() {
-                @Override
-                public void onAvailable(android.net.Network network) {
-                    runOnUiThread(() -> {
-                        isConnected = true;
-                        updateNetworkStatus(true);
-                        // Attempt to reconnect listener if it was disconnected
-                        attemptReconnect();
-                    });
-                }
-                
-                @Override
-                public void onLost(android.net.Network network) {
-                    runOnUiThread(() -> {
-                        isConnected = false;
-                        updateNetworkStatus(false);
-                    });
-                }
-            };
-            
-            connectivityManager.registerDefaultNetworkCallback(networkCallback);
-        }
+        networkCallback = new android.net.ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(android.net.Network network) {
+                runOnUiThread(() -> {
+                    isConnected = true;
+                    updateNetworkStatus(true);
+                    // Attempt to reconnect listener if it was disconnected
+                    attemptReconnect();
+                });
+            }
+
+            @Override
+            public void onLost(android.net.Network network) {
+                runOnUiThread(() -> {
+                    isConnected = false;
+                    updateNetworkStatus(false);
+                });
+            }
+        };
+
+        connectivityManager.registerDefaultNetworkCallback(networkCallback);
         
         // Initial status check
         updateNetworkStatus(isNetworkAvailable());
@@ -5756,20 +5733,15 @@ public class JoinGameActivity extends AppCompatActivity {
             return false;
         }
         
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            android.net.Network network = connectivityManager.getActiveNetwork();
-            if (network == null) return false;
-            
-            android.net.NetworkCapabilities capabilities = 
-                connectivityManager.getNetworkCapabilities(network);
-            return capabilities != null && 
-                   (capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
-                    capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                    capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET));
-        } else {
-            android.net.NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-            return activeNetworkInfo != null && activeNetworkInfo.isConnected();
-        }
+        android.net.Network network = connectivityManager.getActiveNetwork();
+        if (network == null) return false;
+
+        android.net.NetworkCapabilities capabilities =
+            connectivityManager.getNetworkCapabilities(network);
+        return capabilities != null &&
+               (capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
+                capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET));
     }
     
     /**

@@ -17,11 +17,8 @@ public class ApprovedGameData {
      */
     private List<ApprovedPlayer> players;
     /**
-     * Player name -> Total score.
-     *
-     * @deprecated Superseded by {@link #players}, which keeps the {@code userId} and does not merge
-     *     players sharing a name. Still written so existing readers keep working; read through
-     *     {@link #resolvePlayers()} rather than directly.
+     * @deprecated Legacy name-keyed map from before {@link #players} existed. No longer written on
+     *     new approvals; kept only so {@link #resolvePlayers()} can read older archived games.
      */
     @Deprecated
     private Map<String, Integer> playerScores;
@@ -39,6 +36,13 @@ public class ApprovedGameData {
                            Map<String, Integer> playerScores, Timestamp approvedAt, String version,
                            String gstAmount, String gameStatus, String creationDateTime) {
         this(gameId, numPlayers, pointValue, gstPercent, null, playerScores, approvedAt, version,
+                gstAmount, gameStatus, creationDateTime);
+    }
+
+    public ApprovedGameData(String gameId, int numPlayers, double pointValue, double gstPercent,
+                           List<ApprovedPlayer> players, Timestamp approvedAt, String version,
+                           String gstAmount, String gameStatus, String creationDateTime) {
+        this(gameId, numPlayers, pointValue, gstPercent, players, null, approvedAt, version,
                 gstAmount, gameStatus, creationDateTime);
     }
 

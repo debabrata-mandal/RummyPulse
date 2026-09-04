@@ -13,7 +13,6 @@ import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -23,6 +22,8 @@ import android.provider.Settings;
 import android.util.Log;
 import android.widget.Toast;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import com.example.rummypulse.R;
 import com.example.rummypulse.UpdateProgressActivity;
@@ -536,20 +537,15 @@ public class ModernUpdateChecker {
                 return false;
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                android.net.Network network = connectivityManager.getActiveNetwork();
-                if (network == null) return false;
-                
-                android.net.NetworkCapabilities capabilities = 
-                    connectivityManager.getNetworkCapabilities(network);
-                return capabilities != null && 
-                       (capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
-                        capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                        capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET));
-            } else {
-                NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-                return activeNetworkInfo != null && activeNetworkInfo.isConnected();
-            }
+            android.net.Network network = connectivityManager.getActiveNetwork();
+            if (network == null) return false;
+
+            android.net.NetworkCapabilities capabilities =
+                connectivityManager.getNetworkCapabilities(network);
+            return capabilities != null &&
+                   (capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
+                    capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                    capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET));
         } catch (Exception e) {
             Log.e(TAG, "Error checking network availability", e);
             return true; // Assume network is available if we can't check
@@ -684,11 +680,8 @@ public class ModernUpdateChecker {
             // Register with application context so completion still delivers if the Activity is destroyed.
             // DownloadManager sends this from the system process — must be RECEIVER_EXPORTED on API 33+.
             IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                appContext.registerReceiver(downloadReceiver, filter, Context.RECEIVER_EXPORTED);
-            } else {
-                appContext.registerReceiver(downloadReceiver, filter);
-            }
+            ContextCompat.registerReceiver(
+                    appContext, downloadReceiver, filter, ContextCompat.RECEIVER_EXPORTED);
 
             // Create download request
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(downloadUrl));
@@ -1206,12 +1199,8 @@ public class ModernUpdateChecker {
             }
 
             if (apkUri == null && apkFile != null && apkFile.exists()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    apkUri = FileProvider.getUriForFile(appContext,
-                        appContext.getPackageName() + ".fileprovider", apkFile);
-                } else {
-                    apkUri = Uri.fromFile(apkFile);
-                }
+                apkUri = FileProvider.getUriForFile(appContext,
+                    appContext.getPackageName() + ".fileprovider", apkFile);
             }
 
             if (apkUri == null) {
@@ -1281,6 +1270,7 @@ public class ModernUpdateChecker {
      * Android 12+ (API 31+): install update in-process with {@link PackageInstaller.SessionParams#USER_ACTION_NOT_REQUIRED}
      * when the OS allows it (same app updating itself). Falls back to the package installer UI if needed.
      */
+    @RequiresApi(Build.VERSION_CODES.S)
     private void startPackageInstallerSession(File apkFile, Uri fallbackUri, @Nullable File fileToDelete) {
         unregisterInstallResultReceiver();
         pendingSessionArgs = new PendingSessionArgs(apkFile, fallbackUri, fileToDelete);
@@ -1326,11 +1316,8 @@ public class ModernUpdateChecker {
         };
 
         IntentFilter filter = new IntentFilter(ACTION_SESSION_INSTALL_STATUS);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            appContext.registerReceiver(installResultReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            appContext.registerReceiver(installResultReceiver, filter);
-        }
+        ContextCompat.registerReceiver(
+                appContext, installResultReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
         sessionInstallInProgress = true;
 
         executor.execute(() -> {

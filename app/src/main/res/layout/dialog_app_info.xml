@@ -73,7 +73,7 @@
             android:focusable="true"
             android:padding="9dp"
             android:src="@drawable/ic_close"
-            android:tint="@color/view_text_secondary" />
+            app:tint="@color/view_text_secondary" />
     </LinearLayout>
 
     <com.google.android.material.card.MaterialCardView

@@ -1886,16 +1886,12 @@ public class GameRepository {
             GameItem gameItem,
             GameDataWrapper wrapper,
             GameData gameData) {
-        // One row per player, keeping the account behind it. The legacy name-keyed map is still
-        // written for existing readers, but it merges players sharing a name, so it must not be
-        // the source of truth.
+        // One row per player, keeping the account behind it.
         List<ApprovedPlayer> approvedPlayers = new ArrayList<>();
-        Map<String, Integer> playerScores = new HashMap<>();
         if (gameData.getPlayers() != null) {
             for (Player player : gameData.getPlayers()) {
                 approvedPlayers.add(new ApprovedPlayer(
                         player.getName(), player.getUserId(), player.getTotalScore()));
-                playerScores.put(player.getName(), player.getTotalScore());
             }
         }
         String gstAmount = gameItem.getGstAmount();
@@ -1908,7 +1904,6 @@ public class GameRepository {
                 gameData.getPointValue(),
                 gameData.getGstPercent(),
                 approvedPlayers,
-                playerScores,
                 com.google.firebase.Timestamp.now(),
                 wrapper.getVersion(),
                 gstAmount,

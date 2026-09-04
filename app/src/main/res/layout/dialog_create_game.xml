@@ -25,7 +25,7 @@
             android:contentDescription="@null"
             android:padding="10dp"
             android:src="@drawable/ic_gamepad"
-            android:tint="@color/view_violet_light" />
+            app:tint="@color/view_violet_light" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -163,7 +163,7 @@
                             android:contentDescription="@string/cd_generate_game_name"
                             android:padding="10dp"
                             android:src="@drawable/ic_ai_generate"
-                            android:tint="@color/view_violet_light" />
+                            app:tint="@color/view_violet_light" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -237,7 +237,7 @@
                             android:contentDescription="@string/cd_decrease_point_value"
                             android:padding="10dp"
                             android:src="@drawable/ic_counter_minus"
-                            android:tint="@color/view_violet_light" />
+                            app:tint="@color/view_violet_light" />
 
                         <com.google.android.material.textfield.TextInputLayout
                             android:id="@+id/layout_point_value"
@@ -278,7 +278,7 @@
                             android:contentDescription="@string/cd_increase_point_value"
                             android:padding="10dp"
                             android:src="@drawable/ic_add"
-                            android:tint="@color/view_violet_light" />
+                            app:tint="@color/view_violet_light" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

@@ -24,7 +24,7 @@
             android:contentDescription="@null"
             android:padding="10dp"
             android:src="@drawable/ic_reset_mapping"
-            android:tint="@color/error_red" />
+            app:tint="@color/error_red" />
 
         <LinearLayout
             android:layout_width="0dp"
