@@ -2,6 +2,7 @@ package com.example.rummypulse.ui.playerconsolidation;
 
 import static org.junit.Assert.assertEquals;
 
+import com.example.rummypulse.data.GameData;
 import com.example.rummypulse.data.Player;
 import com.example.rummypulse.ui.home.GameItem;
 
@@ -64,7 +65,17 @@ public class PlayerSettlementCalculatorTest {
         Player alice = player("Alice", 10);
 
         PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute(null, alice);
+                PlayerSettlementCalculator.compute((GameItem) null, alice);
+
+        assertSettlement(result, 0, 0.0, 0.0, 0.0);
+    }
+
+    @Test
+    public void compute_nullGameData_returnsZeroSettlement() {
+        Player alice = player("Alice", 10);
+
+        PlayerSettlementCalculator.PlayerSettlement result =
+                PlayerSettlementCalculator.compute((GameData) null, alice);
 
         assertSettlement(result, 0, 0.0, 0.0, 0.0);
     }

@@ -1,5 +1,7 @@
 package com.example.rummypulse.data;
 
+import com.google.firebase.firestore.Exclude;
+
 import java.util.List;
 
 public class PointValueReport {
@@ -7,6 +9,11 @@ public class PointValueReport {
     private int totalGames;
     private double totalGstCollected;
     private int totalPlayers;
+    /**
+     * The games this row was aggregated from. Available while a report is being built, but never
+     * persisted: the totals above are all the Reports UI reads, so storing whole game documents
+     * inside the monthly report only duplicated {@code approvedGames_v2}.
+     */
     private List<ApprovedGameData> games;
 
     public PointValueReport() {
@@ -55,10 +62,12 @@ public class PointValueReport {
         this.totalPlayers = totalPlayers;
     }
 
+    @Exclude
     public List<ApprovedGameData> getGames() {
         return games;
     }
 
+    @Exclude
     public void setGames(List<ApprovedGameData> games) {
         this.games = games;
     }

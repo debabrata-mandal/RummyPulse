@@ -1,5 +1,6 @@
 package com.example.rummypulse.ui.dashboard;
 
+import android.animation.ValueAnimator;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -15,6 +16,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -32,6 +34,7 @@ import com.example.rummypulse.JoinGameActivity;
 import com.example.rummypulse.R;
 import com.example.rummypulse.data.GameDefaults;
 import com.example.rummypulse.data.GameDefaultsRepository;
+import com.example.rummypulse.data.PlayerStats;
 import com.example.rummypulse.databinding.FragmentDashboardBinding;
 import com.example.rummypulse.service.GroqGameNameService;
 import com.example.rummypulse.ui.home.GameItem;
@@ -42,7 +45,9 @@ import com.google.android.material.textfield.TextInputLayout;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class DashboardFragment extends Fragment implements DashboardGameAdapter.OnGameJoinListener {
 
@@ -57,6 +62,9 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     private ConnectivityManager connectivityManager;
     private ConnectivityManager.NetworkCallback networkCallback;
     private Runnable openCreateDialogNetworkUpdater;
+    private PlayerStats latestStats;
+    private final Map<TextView, ValueAnimator> runningAnimators = new HashMap<>();
+    private static final long COUNTER_DURATION_MS = 520L;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -65,16 +73,53 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         binding = FragmentDashboardBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
         binding.textDashboardTitle.setText(buildWelcomeTitle());
+        loadPlayerAvatar();
 
         setupRecyclerView();
         setupSwipeRefresh();
         setupCollapsibleSections();
         setupConnectivityMonitoring();
         setupCreateGameButton();
+        setupPeriodSelector();
+        setupScopeSelector();
         observeViewModel();
         updateLiveStatusChip();
         
         return root;
+    }
+
+    private void loadPlayerAvatar() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String photoUrl = user != null && user.getPhotoUrl() != null
+                ? user.getPhotoUrl().toString()
+                : null;
+        if (photoUrl == null || getContext() == null) {
+            return;
+        }
+        com.bumptech.glide.Glide.with(this)
+                .load(photoUrl)
+                .circleCrop()
+                .placeholder(R.drawable.ic_person)
+                .error(R.drawable.ic_person)
+                .into(binding.imagePlayerAvatar);
+    }
+
+    private void setupPeriodSelector() {
+        binding.segmentAllTime.setOnClickListener(
+                v -> dashboardViewModel.setSelectedPeriod(StatsPeriod.ALL_TIME));
+        binding.segmentThisMonth.setOnClickListener(
+                v -> dashboardViewModel.setSelectedPeriod(StatsPeriod.THIS_MONTH));
+        binding.segmentLastMonth.setOnClickListener(
+                v -> dashboardViewModel.setSelectedPeriod(StatsPeriod.LAST_MONTH));
+        binding.segmentThisWeek.setOnClickListener(
+                v -> dashboardViewModel.setSelectedPeriod(StatsPeriod.THIS_WEEK));
+    }
+
+    private void setupScopeSelector() {
+        binding.segmentMyGames.setOnClickListener(
+                v -> dashboardViewModel.setShowAllGames(false));
+        binding.segmentAllGames.setOnClickListener(
+                v -> dashboardViewModel.setShowAllGames(true));
     }
 
     private void setupRecyclerView() {
@@ -157,6 +202,23 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             updateEmptyStateVisibility();
         });
 
+        // Performance: one stats document feeds every period, so switching is purely local.
+        dashboardViewModel.getPlayerStats().observe(getViewLifecycleOwner(), stats -> {
+            latestStats = stats;
+            renderPerformance(true);
+        });
+
+        dashboardViewModel.getSelectedPeriod().observe(getViewLifecycleOwner(), period -> {
+            applyPeriodSelection(period);
+            renderPerformance(true);
+        });
+
+        dashboardViewModel.getShowAllGames().observe(getViewLifecycleOwner(), showAll -> {
+            boolean all = Boolean.TRUE.equals(showAll);
+            styleSegment(binding.segmentMyGames, !all);
+            styleSegment(binding.segmentAllGames, all);
+        });
+
         // Observe game creation event (only for games created by others)
         dashboardViewModel.getGameCreationEvent().observe(getViewLifecycleOwner(), gameCreationData -> {
             if (gameCreationData != null && getContext() != null) {
@@ -209,6 +271,138 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         int active = gameAdapter != null ? gameAdapter.getItemCount() : 0;
         int completed = completedGameAdapter != null ? completedGameAdapter.getItemCount() : 0;
         binding.textMetricTotal.setText(String.valueOf(active + completed));
+        binding.textScopeSummary.setText(getString(
+                R.string.dashboard_scope_summary, active, completed, active + completed));
+    }
+
+    private void applyPeriodSelection(StatsPeriod period) {
+        StatsPeriod selected = period == null ? StatsPeriod.THIS_MONTH : period;
+        styleSegment(binding.segmentAllTime, selected == StatsPeriod.ALL_TIME);
+        styleSegment(binding.segmentThisMonth, selected == StatsPeriod.THIS_MONTH);
+        styleSegment(binding.segmentLastMonth, selected == StatsPeriod.LAST_MONTH);
+        styleSegment(binding.segmentThisWeek, selected == StatsPeriod.THIS_WEEK);
+        binding.textPerfNetLabel.setText(selected.getNetLabelRes());
+    }
+
+    private void styleSegment(TextView segment, boolean selected) {
+        segment.setBackgroundResource(selected
+                ? R.drawable.bg_segment_selected
+                : R.drawable.bg_segment_unselected);
+        segment.setTextColor(ContextCompat.getColor(requireContext(), selected
+                ? R.color.text_primary
+                : R.color.view_text_secondary));
+    }
+
+    /**
+     * Renders the selected period. Values are animated from their previous state because switching
+     * periods reads no data, so a spinner would be misleading.
+     */
+    private void renderPerformance(boolean animate) {
+        if (binding == null) {
+            return;
+        }
+        StatsPeriod period = dashboardViewModel.getSelectedPeriod().getValue();
+        PlayerStats.Bucket bucket = dashboardViewModel.bucketFor(latestStats, period);
+
+        boolean hasGames = bucket.getGames() > 0;
+        binding.textPerfEmpty.setVisibility(hasGames ? View.GONE : View.VISIBLE);
+
+        double net = bucket.getNetAmount();
+        int netColor = !hasGames || Math.abs(net) < 0.5
+                ? R.color.view_text_secondary
+                : net > 0 ? R.color.view_mint : R.color.view_coral;
+        binding.textPerfNet.setTextColor(ContextCompat.getColor(requireContext(), netColor));
+
+        animateAmount(binding.textPerfNet, net, animate);
+        animateCount(binding.textPerfGames, bucket.getGames(), "", animate);
+        animateCount(binding.textPerfWins, bucket.getWins(), "", animate);
+        animateCount(binding.textPerfWinRate, bucket.winRatePercent(), "%", animate);
+    }
+
+    private void animateAmount(TextView target, double value, boolean animate) {
+        double from = animate ? parseAmount(target.getText()) : value;
+        cancelAnimator(target);
+        if (!animate || Math.abs(from - value) < 0.5) {
+            target.setText(formatSignedAmount(value));
+            return;
+        }
+        ValueAnimator animator = ValueAnimator.ofFloat((float) from, (float) value);
+        animator.setDuration(COUNTER_DURATION_MS);
+        animator.setInterpolator(new DecelerateInterpolator());
+        animator.addUpdateListener(a ->
+                target.setText(formatSignedAmount((Float) a.getAnimatedValue())));
+        runningAnimators.put(target, animator);
+        animator.start();
+    }
+
+    private void animateCount(TextView target, long value, String suffix, boolean animate) {
+        long from = animate ? parseCount(target.getText()) : value;
+        cancelAnimator(target);
+        if (!animate || from == value) {
+            target.setText(value + suffix);
+            return;
+        }
+        ValueAnimator animator = ValueAnimator.ofInt((int) from, (int) value);
+        animator.setDuration(COUNTER_DURATION_MS);
+        animator.setInterpolator(new DecelerateInterpolator());
+        animator.addUpdateListener(a -> target.setText(a.getAnimatedValue() + suffix));
+        runningAnimators.put(target, animator);
+        animator.start();
+    }
+
+    private void cancelAnimator(TextView target) {
+        ValueAnimator existing = runningAnimators.remove(target);
+        if (existing != null) {
+            existing.cancel();
+        }
+    }
+
+    private void cancelAllAnimators() {
+        for (ValueAnimator animator : runningAnimators.values()) {
+            animator.cancel();
+        }
+        runningAnimators.clear();
+    }
+
+    private static String formatSignedAmount(double value) {
+        long rounded = Math.round(value);
+        if (rounded > 0) {
+            return String.format(Locale.getDefault(), "+₹%,d", rounded);
+        }
+        if (rounded < 0) {
+            return String.format(Locale.getDefault(), "-₹%,d", Math.abs(rounded));
+        }
+        return "₹0";
+    }
+
+    private static double parseAmount(CharSequence text) {
+        if (text == null) {
+            return 0;
+        }
+        String digits = text.toString().replaceAll("[^0-9-]", "");
+        if (digits.isEmpty() || "-".equals(digits)) {
+            return 0;
+        }
+        try {
+            return Double.parseDouble(digits);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private static long parseCount(CharSequence text) {
+        if (text == null) {
+            return 0;
+        }
+        String digits = text.toString().replaceAll("[^0-9]", "");
+        if (digits.isEmpty()) {
+            return 0;
+        }
+        try {
+            return Long.parseLong(digits);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private String buildWelcomeTitle() {
@@ -645,6 +839,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        cancelAllAnimators();
         // Stop time updates when fragment is destroyed
         if (gameAdapter != null) {
             gameAdapter.stopTimeUpdates();

@@ -71,6 +71,8 @@ public class GameRepository {
     // Track seen games
     private Set<String> seenGameIds = new HashSet<>();
     private Context appContext;
+    /** False (the default) scopes the dashboard listener to games the user participates in. */
+    private boolean showAllGames = false;
 
     public GameRepository() {
         db = FirebaseFirestore.getInstance();
@@ -109,9 +111,28 @@ public class GameRepository {
         return reportsSummariesLiveData;
     }
 
+    public boolean isShowingAllGames() {
+        return showAllGames;
+    }
+
     /**
-     * Load all games with real-time listener (for Dashboard)
-     * This method sets up a real-time listener that automatically updates when data changes
+     * Switches the dashboard between the games the user participates in and every game.
+     *
+     * <p>Defaulting to the user's own games is the main dashboard read saving: the listener returns
+     * only their games, so only those attract a {@code gameData_v2} listener and only their updates
+     * are pushed back.
+     */
+    public void setShowAllGames(boolean showAll) {
+        if (showAllGames == showAll && gamesListener != null) {
+            return;
+        }
+        showAllGames = showAll;
+        loadAllGamesWithRealtimeListener();
+    }
+
+    /**
+     * Load games with a real-time listener (for Dashboard).
+     * Honours {@link #setShowAllGames(boolean)}: scoped to the current user's games by default.
      */
     public void loadAllGamesWithRealtimeListener() {
         System.out.println("GameRepository: Setting up real-time listener for games collection");
@@ -121,13 +142,26 @@ public class GameRepository {
         if (gamesListener != null) {
             gamesListener.remove();
         }
-        
-        // Set up real-time listener for games collection
-        gamesListener = db.collection(FirestoreCollections.GAMES)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .addSnapshotListener((querySnapshot, error) -> {
+
+        String currentUserId = currentUserId();
+        boolean scopedToMyGames = !showAllGames && currentUserId != null;
+        Query query = db.collection(FirestoreCollections.GAMES);
+        if (scopedToMyGames) {
+            query = query.whereArrayContains(GameMembership.FIELD, currentUserId);
+        }
+        query = query.orderBy("createdAt", Query.Direction.DESCENDING);
+
+        gamesListener = query.addSnapshotListener((querySnapshot, error) -> {
                     if (error != null) {
                         System.out.println("GameRepository: Error listening to games collection: " + error.getMessage());
+                        if (scopedToMyGames) {
+                            // Most likely the composite index is still building. Fall back to the
+                            // unfiltered listener so the dashboard is never empty.
+                            System.out.println("GameRepository: Falling back to all games");
+                            showAllGames = true;
+                            loadAllGamesWithRealtimeListener();
+                            return;
+                        }
                         errorLiveData.setValue("Failed to load games: " + error.getMessage());
                         return;
                     }
@@ -145,6 +179,40 @@ public class GameRepository {
                         loadGameDataForIdsWithListeners(querySnapshot);
                     }
                 });
+    }
+
+    private static String currentUserId() {
+        com.google.firebase.auth.FirebaseUser user =
+                FirebaseAuth.getInstance().getCurrentUser();
+        return user == null ? null : user.getUid();
+    }
+
+    /**
+     * Starts the dashboard listener, running the one-off membership backfill first if needed.
+     *
+     * <p>Games created before {@code memberUserIds} existed cannot be found by the My Games query,
+     * and the repair path that populates the field only sees games that are currently loaded. So on
+     * the first run after upgrading we deliberately load every game once, which lets
+     * {@link #repairDashboardSummaryIfStale} stamp membership onto each game this user can read,
+     * then switch to the scoped listener for all subsequent sessions.
+     */
+    public void startDashboardListener() {
+        String userId = currentUserId();
+        if (userId == null) {
+            loadAllGamesWithRealtimeListener();
+            return;
+        }
+        if (appContext == null || MembershipBackfill.isComplete(appContext, userId)) {
+            loadAllGamesWithRealtimeListener();
+            return;
+        }
+        System.out.println("GameRepository: Running one-time membership backfill");
+        showAllGames = true;
+        loadAllGamesWithRealtimeListener();
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            MembershipBackfill.markComplete(appContext, userId);
+            setShowAllGames(false);
+        }, MembershipBackfill.SETTLE_DELAY_MS);
     }
     
     /**
@@ -723,6 +791,11 @@ public class GameRepository {
     }
 
     private void syncDashboardSummaryOnGameDoc(String gameId, GameData gameData) {
+        syncDashboardSummaryOnGameDoc(gameId, gameData, null);
+    }
+
+    private void syncDashboardSummaryOnGameDoc(
+            String gameId, GameData gameData, @Nullable GameAuth auth) {
         if (gameId == null || gameData == null) {
             return;
         }
@@ -733,6 +806,10 @@ public class GameRepository {
         String status = gameData.getGameStatus();
         summary.put("dashboardGameStatus",
                 status != null && !status.trim().isEmpty() ? status.trim() : "R1");
+        if (auth != null) {
+            summary.put(GameMembership.FIELD, GameMembership.resolve(
+                    gameData, auth.getCreatorUserId(), auth.getActiveEditorUserId()));
+        }
         db.collection(FirestoreCollections.GAMES)
                 .document(gameId)
                 .update(summary)
@@ -771,6 +848,12 @@ public class GameRepository {
         String normalizedStatus = status == null || status.trim().isEmpty()
                 ? "R1"
                 : status.trim();
+        // Also repairs memberUserIds on games created before the My Games filter existed, which is
+        // how existing games become discoverable without a separate migration pass.
+        boolean membershipStale = !GameMembership.matches(
+                auth.getMemberUserIds(),
+                GameMembership.resolve(
+                        gameData, auth.getCreatorUserId(), auth.getActiveEditorUserId()));
         boolean stale = auth.getDashboardNumPlayers() == null
                 || auth.getDashboardNumPlayers() != playerCount
                 || auth.getDashboardPointValue() == null
@@ -778,9 +861,10 @@ public class GameRepository {
                 || auth.getDashboardGstPercent() == null
                 || Double.compare(auth.getDashboardGstPercent(), gameData.getGstPercent()) != 0
                 || auth.getDashboardGameStatus() == null
-                || !normalizedStatus.equals(auth.getDashboardGameStatus().trim());
+                || !normalizedStatus.equals(auth.getDashboardGameStatus().trim())
+                || membershipStale;
         if (stale) {
-            syncDashboardSummaryOnGameDoc(gameId, gameData);
+            syncDashboardSummaryOnGameDoc(gameId, gameData, auth);
         }
     }
 
@@ -1686,6 +1770,15 @@ public class GameRepository {
                     }
 
                     List<ApprovedGameData> approvedGames = new ArrayList<>();
+                    // Collected inside the transaction body so a retry cannot accumulate
+                    // duplicates.
+                    Map<String, GameData> approvedGameData = new LinkedHashMap<>();
+                    // Archiving deletes gameData_v2 along with the record of what each game has
+                    // already contributed to player stats, so anything still outstanding has to be
+                    // applied here, while that record is readable. Normally empty: the game was
+                    // recorded when it completed.
+                    Map<String, List<PlayerStatsRecorder.PeriodDelta>> statsDeltas =
+                            new LinkedHashMap<>();
                     for (int index = 0; index < games.size(); index++) {
                         GameItem gameItem = games.get(index);
                         DocumentSnapshot snapshot = gameDataSnapshots.get(index);
@@ -1698,6 +1791,37 @@ public class GameRepository {
                         GameData gameData = ApprovalBatchValidator.validateGameData(
                                 gameItem.getGameId(), wrapper);
                         approvedGames.add(buildApprovedGame(gameItem, wrapper, gameData));
+                        approvedGameData.put(gameItem.getGameId(), gameData);
+                        for (Map.Entry<String, PlayerStatsRecorder.PeriodDelta> entry
+                                : PlayerStatsRecorder
+                                        .deltasForApproval(snapshot, gameData).entrySet()) {
+                            // A user can appear in several games of one batch; their deltas are
+                            // kept separate because they may belong to different months.
+                            List<PlayerStatsRecorder.PeriodDelta> forUser =
+                                    statsDeltas.get(entry.getKey());
+                            if (forUser == null) {
+                                forUser = new ArrayList<>();
+                                statsDeltas.put(entry.getKey(), forUser);
+                            }
+                            forUser.add(entry.getValue());
+                        }
+                    }
+
+                    // Firestore requires every read before the first write.
+                    Map<String, DocumentSnapshot> statsSnapshots = new LinkedHashMap<>();
+                    for (String userId : statsDeltas.keySet()) {
+                        statsSnapshots.put(userId,
+                                transaction.get(PlayerStatsRecorder.statsRef(db, userId)));
+                    }
+                    for (Map.Entry<String, List<PlayerStatsRecorder.PeriodDelta>> entry
+                            : statsDeltas.entrySet()) {
+                        transaction.set(
+                                PlayerStatsRecorder.statsRef(db, entry.getKey()),
+                                PlayerStatsRecorder.buildStatsDocument(
+                                        PlayerStatsRecorder.readStats(
+                                                statsSnapshots.get(entry.getKey())),
+                                        entry.getKey(),
+                                        entry.getValue()));
                     }
 
                     for (int index = 0; index < games.size(); index++) {
@@ -1714,9 +1838,10 @@ public class GameRepository {
                     for (DocumentReference cleanupReference : cleanupReferences) {
                         transaction.delete(cleanupReference);
                     }
-                    return games.size();
+                    return approvedGameData;
                 })
-                .addOnSuccessListener(approvedCount -> {
+                .addOnSuccessListener(approvedGameData -> {
+                    int approvedCount = approvedGameData.size();
                     long elapsed = android.os.SystemClock.elapsedRealtime() - startedAt;
                     android.util.Log.d("GameRepository",
                             "Atomic approval committed: games=" + approvedCount
@@ -1727,6 +1852,7 @@ public class GameRepository {
                     loadAllGames();
                     loadApprovedGames();
                     viewApprovalRepository.cleanupAfterGamesRemoved(gameIds);
+                    cleanupScoreHistoryAfterApproval(gameIds, 0);
                     if (onSuccess != null) {
                         onSuccess.run();
                     }
@@ -1740,13 +1866,35 @@ public class GameRepository {
                 });
     }
 
+    /**
+     * Approval cannot delete the score-history events inside its transaction, because Firestore
+     * transactions cannot query collections. Sweep them once the commit has landed; with
+     * {@code gameData_v2} gone no further events can be written for these games.
+     */
+    private void cleanupScoreHistoryAfterApproval(List<String> gameIds, int attempt) {
+        deleteScoreHistoryForGames(gameIds, () -> {}, message -> {
+            if (attempt < 1) {
+                cleanupScoreHistoryAfterApproval(gameIds, attempt + 1);
+            } else {
+                android.util.Log.w("GameRepository",
+                        "Score-history cleanup after approval failed: " + message);
+            }
+        });
+    }
+
     private ApprovedGameData buildApprovedGame(
             GameItem gameItem,
             GameDataWrapper wrapper,
             GameData gameData) {
+        // One row per player, keeping the account behind it. The legacy name-keyed map is still
+        // written for existing readers, but it merges players sharing a name, so it must not be
+        // the source of truth.
+        List<ApprovedPlayer> approvedPlayers = new ArrayList<>();
         Map<String, Integer> playerScores = new HashMap<>();
         if (gameData.getPlayers() != null) {
             for (Player player : gameData.getPlayers()) {
+                approvedPlayers.add(new ApprovedPlayer(
+                        player.getName(), player.getUserId(), player.getTotalScore()));
                 playerScores.put(player.getName(), player.getTotalScore());
             }
         }
@@ -1759,6 +1907,7 @@ public class GameRepository {
                 gameData.getNumPlayers(),
                 gameData.getPointValue(),
                 gameData.getGstPercent(),
+                approvedPlayers,
                 playerScores,
                 com.google.firebase.Timestamp.now(),
                 wrapper.getVersion(),

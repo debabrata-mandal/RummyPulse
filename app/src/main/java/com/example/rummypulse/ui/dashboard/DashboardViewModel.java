@@ -12,6 +12,9 @@ import com.example.rummypulse.utils.DisplayNameUtils;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.GameViewApprovalRepository;
 import com.example.rummypulse.data.GameCreationPolicy;
+import com.example.rummypulse.data.PlayerStats;
+import com.example.rummypulse.data.PlayerStatsKeys;
+import com.example.rummypulse.data.PlayerStatsRepository;
 import com.example.rummypulse.ui.home.GameItem;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -29,6 +32,9 @@ import java.util.UUID;
 public class DashboardViewModel extends ViewModel {
 
     private final GameRepository gameRepository;
+    private final PlayerStatsRepository playerStatsRepository;
+    private final MutableLiveData<Boolean> showAllGames;
+    private final MutableLiveData<StatsPeriod> selectedPeriod;
     private final MutableLiveData<List<GameItem>> mInProgressGames;
     private final MutableLiveData<List<GameItem>> mCompletedGames;
     private final MutableLiveData<String> mActiveGamesCount;
@@ -107,6 +113,10 @@ public class DashboardViewModel extends ViewModel {
 
     public DashboardViewModel() {
         gameRepository = GameRepository.getDashboardInstance();
+        playerStatsRepository = new PlayerStatsRepository();
+        playerStatsRepository.start();
+        showAllGames = new MutableLiveData<>(gameRepository.isShowingAllGames());
+        selectedPeriod = new MutableLiveData<>(StatsPeriod.THIS_MONTH);
         mInProgressGames = new MutableLiveData<>();
         mCompletedGames = new MutableLiveData<>();
         mActiveGamesCount = new MutableLiveData<>();
@@ -260,7 +270,57 @@ public class DashboardViewModel extends ViewModel {
     }
 
     public void loadGames() {
-        gameRepository.loadAllGamesWithRealtimeListener();
+        gameRepository.startDashboardListener();
+        playerStatsRepository.start();
+    }
+
+    public LiveData<PlayerStats> getPlayerStats() {
+        return playerStatsRepository.getStats();
+    }
+
+    public LiveData<Boolean> getShowAllGames() {
+        return showAllGames;
+    }
+
+    /**
+     * Switches the games list between the user's own games and every game. Performance figures are
+     * always personal and are unaffected by this scope.
+     */
+    public void setShowAllGames(boolean showAll) {
+        if (Boolean.valueOf(showAll).equals(showAllGames.getValue())) {
+            return;
+        }
+        showAllGames.setValue(showAll);
+        gameRepository.setShowAllGames(showAll);
+    }
+
+    public LiveData<StatsPeriod> getSelectedPeriod() {
+        return selectedPeriod;
+    }
+
+    /** Local only: every period is already present in the single stats document. */
+    public void setSelectedPeriod(StatsPeriod period) {
+        if (period != null && period != selectedPeriod.getValue()) {
+            selectedPeriod.setValue(period);
+        }
+    }
+
+    /** Resolves the bucket for a period, never null. */
+    public PlayerStats.Bucket bucketFor(PlayerStats stats, StatsPeriod period) {
+        if (stats == null || period == null) {
+            return new PlayerStats.Bucket();
+        }
+        switch (period) {
+            case THIS_MONTH:
+                return stats.monthOrEmpty(PlayerStatsKeys.currentMonthKey());
+            case LAST_MONTH:
+                return stats.monthOrEmpty(PlayerStatsKeys.previousMonthKey());
+            case THIS_WEEK:
+                return stats.weekOrEmpty(PlayerStatsKeys.currentWeekKey());
+            case ALL_TIME:
+            default:
+                return stats.allTimeOrEmpty();
+        }
     }
 
     public void refreshCreatorDashboardRows() {
@@ -388,6 +448,11 @@ public class DashboardViewModel extends ViewModel {
         authData.put("dashboardNumPlayers", 2);
         authData.put("dashboardGstPercent", request.gstPercentage);
         authData.put("dashboardGameStatus", "R1");
+        // Seeds the My Games filter; Player 2 is unlinked at creation so the creator is the only
+        // member until someone is mapped to an account.
+        authData.put(
+                com.example.rummypulse.data.GameMembership.FIELD,
+                new ArrayList<>(java.util.Collections.singletonList(request.creatorUserId)));
         authData.put("creationRequestId", request.requestId);
         authData.put("initializationStatus",
                 GameCreationPolicy.INITIALIZATION_PENDING);
@@ -571,6 +636,7 @@ public class DashboardViewModel extends ViewModel {
     protected void onCleared() {
         super.onCleared();
         cancelCreationSlowNotice();
+        playerStatsRepository.stop();
         // Clean up listeners when ViewModel is destroyed
         if (gameRepository != null) {
             gameRepository.removeListeners();

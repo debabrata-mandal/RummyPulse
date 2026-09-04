@@ -195,5 +195,13 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }
+
+    // Pre-aggregated dashboard performance. The editor who completes a game records stats for
+    // every mapped player, so writes are not restricted to the owning user - the same posture
+    // already used by games_v2 and approvedGames_v2.
+    match /playerStats_v2/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
   }
 }

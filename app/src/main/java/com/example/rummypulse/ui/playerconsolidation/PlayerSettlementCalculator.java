@@ -1,5 +1,6 @@
 package com.example.rummypulse.ui.playerconsolidation;
 
+import com.example.rummypulse.data.GameData;
 import com.example.rummypulse.data.Player;
 import com.example.rummypulse.ui.home.GameItem;
 
@@ -14,8 +15,36 @@ public final class PlayerSettlementCalculator {
         if (game == null || player == null) {
             return PlayerSettlement.zero();
         }
+        return compute(
+                game.getPlayers(),
+                player,
+                game.getPointValueAsDouble(),
+                parseGstPercent(game.getGstPercentage()),
+                game.getNumberOfPlayersAsInt());
+    }
 
-        List<Player> players = game.getPlayers();
+    /**
+     * Same settlement math against the canonical {@link GameData}, so dashboard performance totals
+     * match the amounts a player already sees inside the game.
+     */
+    public static PlayerSettlement compute(GameData game, Player player) {
+        if (game == null || player == null) {
+            return PlayerSettlement.zero();
+        }
+        return compute(
+                game.getPlayers(),
+                player,
+                game.getPointValue(),
+                game.getGstPercent(),
+                game.getNumPlayers());
+    }
+
+    private static PlayerSettlement compute(
+            List<Player> players,
+            Player player,
+            double pointValue,
+            double gstPercent,
+            int declaredNumPlayers) {
         if (players == null || players.isEmpty()) {
             return PlayerSettlement.zero();
         }
@@ -26,9 +55,7 @@ public final class PlayerSettlementCalculator {
         }
 
         int playerScore = player.getTotalScore();
-        double pointValue = game.getPointValueAsDouble();
-        double gstPercent = parseGstPercent(game.getGstPercentage());
-        int numPlayers = game.getNumberOfPlayersAsInt();
+        int numPlayers = declaredNumPlayers;
         if (numPlayers <= 0) {
             numPlayers = players.size();
         }

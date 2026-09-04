@@ -48,7 +48,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     public PlayerConsolidationViewModel() {
         gameRepository = new GameRepository();
-        gameRepository.loadAllGamesWithRealtimeListener();
+        // Cross-game settlement spans every game, not just the ones this user plays in.
+        gameRepository.setShowAllGames(true);
     }
 
     PlayerConsolidationViewModel(GameRepository gameRepository) {

@@ -42,8 +42,8 @@ android {
         applicationId = "com.example.rummypulse"
         minSdk = 24
         targetSdk = 34
-        versionCode = 101
-        versionName = "1.0.0"
+        versionCode = 102
+        versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Groq: see groqConfig() — properties, env, or local.properties (not committed).

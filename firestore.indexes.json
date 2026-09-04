@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "games_v2",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "memberUserIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

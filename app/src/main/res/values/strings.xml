@@ -464,4 +464,23 @@
     <string name="dashboard_empty_completed">No completed games yet</string>
     <string name="dashboard_empty_state_title">No active games</string>
     <string name="dashboard_empty_state_message">All games are either completed or not started yet</string>
+
+    <!-- Dashboard performance -->
+    <string name="dashboard_performance_subtitle">Your performance</string>
+    <string name="dashboard_period_all_time">All Time</string>
+    <string name="dashboard_period_this_month">Month</string>
+    <string name="dashboard_period_last_month">Last Month</string>
+    <string name="dashboard_period_this_week">Week</string>
+    <string name="dashboard_net_label_all_time">NET ALL TIME</string>
+    <string name="dashboard_net_label_this_month">NET THIS MONTH</string>
+    <string name="dashboard_net_label_last_month">NET LAST MONTH</string>
+    <string name="dashboard_net_label_this_week">NET THIS WEEK</string>
+    <string name="dashboard_stat_games">GAMES</string>
+    <string name="dashboard_stat_wins">WINS</string>
+    <string name="dashboard_stat_win_rate">WIN RATE</string>
+    <string name="dashboard_performance_empty">No completed games in this period yet</string>
+    <string name="dashboard_scope_my_games">My Games</string>
+    <string name="dashboard_scope_all_games">All Games</string>
+    <string name="dashboard_scope_summary">Active %1$d  ·  Completed %2$d  ·  Total %3$d</string>
+    <string name="dashboard_avatar_description">Your profile photo</string>
 </resources>

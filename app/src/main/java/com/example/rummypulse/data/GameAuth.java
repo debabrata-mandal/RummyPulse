@@ -25,6 +25,8 @@ public class GameAuth {
     private Integer dashboardNumPlayers;
     private Double dashboardGstPercent;
     private String dashboardGameStatus;
+    /** Linked players plus creator and active editor; see {@link GameMembership}. */
+    private java.util.List<String> memberUserIds;
 
     public GameAuth() {
         // Default constructor required for Firestore
@@ -192,6 +194,14 @@ public class GameAuth {
 
     public void setDashboardGameStatus(String dashboardGameStatus) {
         this.dashboardGameStatus = dashboardGameStatus;
+    }
+
+    public java.util.List<String> getMemberUserIds() {
+        return memberUserIds;
+    }
+
+    public void setMemberUserIds(java.util.List<String> memberUserIds) {
+        this.memberUserIds = memberUserIds;
     }
 
     public boolean hasDashboardSummary() {

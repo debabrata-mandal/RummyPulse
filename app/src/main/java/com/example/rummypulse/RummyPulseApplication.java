@@ -67,7 +67,7 @@ public class RummyPulseApplication extends Application {
                     Log.d(TAG, "Global auth state: User is signed in - " + user.getEmail());
                     // Save authentication state as backup
                     authStateManager.saveAuthState(user);
-                    gameRepository.loadAllGamesWithRealtimeListener();
+                    gameRepository.startDashboardListener();
                     com.example.rummypulse.data.GameDefaultsRepository.getInstance(RummyPulseApplication.this)
                             .refreshFromServer(null);
                 } else {

@@ -13,6 +13,7 @@ public final class FirestoreCollections {
     public static final String GAME_DEFAULTS = "gameDefaults_v2";
     public static final String GAME_VIEW_APPROVALS = "gameViewApprovals_v2";
     public static final String GAME_SCORE_HISTORY = "gameScoreHistory_v2";
+    public static final String PLAYER_STATS = "playerStats_v2";
 
     private FirestoreCollections() {
     }

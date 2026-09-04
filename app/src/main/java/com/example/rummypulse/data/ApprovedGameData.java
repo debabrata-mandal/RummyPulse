@@ -1,6 +1,7 @@
 package com.example.rummypulse.data;
 
 import com.google.firebase.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -9,7 +10,21 @@ public class ApprovedGameData {
     private int numPlayers;
     private double pointValue;
     private double gstPercent;
-    private Map<String, Integer> playerScores; // Player name -> Total score
+    /**
+     * Authoritative player results, carrying the account behind each row.
+     *
+     * <p>Null on games archived before this field existed; those fall back to {@link #playerScores}.
+     */
+    private List<ApprovedPlayer> players;
+    /**
+     * Player name -> Total score.
+     *
+     * @deprecated Superseded by {@link #players}, which keeps the {@code userId} and does not merge
+     *     players sharing a name. Still written so existing readers keep working; read through
+     *     {@link #resolvePlayers()} rather than directly.
+     */
+    @Deprecated
+    private Map<String, Integer> playerScores;
     private Timestamp approvedAt;
     private String version;
     private String gstAmount;
@@ -20,9 +35,18 @@ public class ApprovedGameData {
         // Default constructor required for Firestore
     }
 
-    public ApprovedGameData(String gameId, int numPlayers, double pointValue, double gstPercent, 
-                           Map<String, Integer> playerScores, Timestamp approvedAt, String version, 
+    public ApprovedGameData(String gameId, int numPlayers, double pointValue, double gstPercent,
+                           Map<String, Integer> playerScores, Timestamp approvedAt, String version,
                            String gstAmount, String gameStatus, String creationDateTime) {
+        this(gameId, numPlayers, pointValue, gstPercent, null, playerScores, approvedAt, version,
+                gstAmount, gameStatus, creationDateTime);
+    }
+
+    public ApprovedGameData(String gameId, int numPlayers, double pointValue, double gstPercent,
+                           List<ApprovedPlayer> players, Map<String, Integer> playerScores,
+                           Timestamp approvedAt, String version,
+                           String gstAmount, String gameStatus, String creationDateTime) {
+        this.players = players;
         this.gameId = gameId;
         this.numPlayers = numPlayers;
         this.pointValue = pointValue;
@@ -68,12 +92,45 @@ public class ApprovedGameData {
         this.gstPercent = gstPercent;
     }
 
+    public List<ApprovedPlayer> getPlayers() {
+        return players;
+    }
+
+    public void setPlayers(List<ApprovedPlayer> players) {
+        this.players = players;
+    }
+
+    /** @deprecated Use {@link #resolvePlayers()}. */
+    @Deprecated
     public Map<String, Integer> getPlayerScores() {
         return playerScores;
     }
 
+    /** @deprecated Use {@link #setPlayers(List)}. */
+    @Deprecated
     public void setPlayerScores(Map<String, Integer> playerScores) {
         this.playerScores = playerScores;
+    }
+
+    /**
+     * Player results for this game, preferring {@link #players} and falling back to the legacy
+     * {@link #playerScores} map for games archived before identity was retained. Rows recovered
+     * from the fallback carry no {@code userId}.
+     */
+    public List<ApprovedPlayer> resolvePlayers() {
+        if (players != null && !players.isEmpty()) {
+            return players;
+        }
+        List<ApprovedPlayer> recovered = new ArrayList<>();
+        if (playerScores != null) {
+            for (Map.Entry<String, Integer> entry : playerScores.entrySet()) {
+                recovered.add(new ApprovedPlayer(
+                        entry.getKey(),
+                        null,
+                        entry.getValue() == null ? 0 : entry.getValue()));
+            }
+        }
+        return recovered;
     }
 
     public Timestamp getApprovedAt() {
@@ -119,10 +176,13 @@ public class ApprovedGameData {
 
     // Helper methods
     public int getTotalGameScore() {
-        if (playerScores == null) return 0;
-        return playerScores.values().stream()
-                .mapToInt(score -> score != null && score > 0 ? score : 0)
-                .sum();
+        int total = 0;
+        for (ApprovedPlayer player : resolvePlayers()) {
+            if (player != null && player.getScore() > 0) {
+                total += player.getScore();
+            }
+        }
+        return total;
     }
 
     public double getGstAmountAsDouble() {
