@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_dark"
     tools:context=".ui.dashboard.DashboardFragment">
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -104,7 +103,7 @@
                                 android:paddingBottom="4dp"
                                 android:text="@string/dashboard_status_syncing"
                                 android:textColor="@color/text_primary"
-                                android:textSize="10sp"
+                                android:textSize="10dp"
                                 android:textStyle="bold" />
                         </LinearLayout>
 
@@ -182,7 +181,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="18dp"
                             android:gravity="center"
-                            android:text="₹0"
+                            tools:text="₹0"
                             android:textColor="@color/view_text_secondary"
                             android:textSize="40sp"
                             android:textStyle="bold" />
@@ -196,7 +195,7 @@
                             android:letterSpacing="0.14"
                             android:text="@string/dashboard_net_label_this_month"
                             android:textColor="@color/view_text_muted"
-                            android:textSize="10sp"
+                            android:textSize="10dp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -215,6 +214,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="18dp"
+                            android:baselineAligned="false"
                             android:orientation="horizontal">
 
                             <LinearLayout
@@ -232,7 +232,7 @@
                                     android:id="@+id/text_perf_games"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="0"
+                                    tools:text="0"
                                     android:textColor="@color/text_primary"
                                     android:textSize="22sp"
                                     android:textStyle="bold" />
@@ -244,7 +244,7 @@
                                     android:letterSpacing="0.1"
                                     android:text="@string/dashboard_stat_games"
                                     android:textColor="@color/view_text_secondary"
-                                    android:textSize="9sp"
+                                    android:textSize="9dp"
                                     android:textStyle="bold" />
                             </LinearLayout>
 
@@ -264,7 +264,7 @@
                                     android:id="@+id/text_perf_wins"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="0"
+                                    tools:text="0"
                                     android:textColor="@color/text_primary"
                                     android:textSize="22sp"
                                     android:textStyle="bold" />
@@ -276,7 +276,7 @@
                                     android:letterSpacing="0.1"
                                     android:text="@string/dashboard_stat_wins"
                                     android:textColor="@color/view_text_secondary"
-                                    android:textSize="9sp"
+                                    android:textSize="9dp"
                                     android:textStyle="bold" />
                             </LinearLayout>
 
@@ -295,7 +295,7 @@
                                     android:id="@+id/text_perf_win_rate"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="0%"
+                                    tools:text="0%"
                                     android:textColor="@color/text_primary"
                                     android:textSize="22sp"
                                     android:textStyle="bold" />
@@ -307,7 +307,7 @@
                                     android:letterSpacing="0.1"
                                     android:text="@string/dashboard_stat_win_rate"
                                     android:textColor="@color/view_text_secondary"
-                                    android:textSize="9sp"
+                                    android:textSize="9dp"
                                     android:textStyle="bold" />
                             </LinearLayout>
                         </LinearLayout>
@@ -395,7 +395,7 @@
                                     android:letterSpacing="0.1"
                                     android:text="@string/dashboard_leaderboard_center_label"
                                     android:textColor="@color/view_text_secondary"
-                                    android:textSize="9sp"
+                                    android:textSize="9dp"
                                     android:textStyle="bold" />
 
                                 <TextView
@@ -493,21 +493,21 @@
                             android:id="@+id/text_metric_active"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0"
+                            tools:text="0"
                             android:visibility="gone" />
 
                         <TextView
                             android:id="@+id/text_metric_completed"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0"
+                            tools:text="0"
                             android:visibility="gone" />
 
                         <TextView
                             android:id="@+id/text_metric_total"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0"
+                            tools:text="0"
                             android:visibility="gone" />
 
                         <!-- Active Games -->
@@ -546,7 +546,7 @@
                                 android:paddingTop="3dp"
                                 android:paddingEnd="10dp"
                                 android:paddingBottom="3dp"
-                                android:text="0"
+                                tools:text="0"
                                 android:textColor="@color/text_primary"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
@@ -556,7 +556,7 @@
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
                                 android:layout_marginStart="10dp"
-                                android:contentDescription="Toggle active games section"
+                                android:contentDescription="@string/cd_toggle_active_games"
                                 android:src="@drawable/ic_expand_less"
                                 app:tint="@color/text_secondary" />
                         </LinearLayout>
@@ -622,7 +622,7 @@
                                 android:paddingTop="3dp"
                                 android:paddingEnd="10dp"
                                 android:paddingBottom="3dp"
-                                android:text="0"
+                                tools:text="0"
                                 android:textColor="@color/text_primary"
                                 android:textSize="12sp"
                                 android:textStyle="bold" />
@@ -632,7 +632,7 @@
                                 android:layout_width="20dp"
                                 android:layout_height="20dp"
                                 android:layout_marginStart="10dp"
-                                android:contentDescription="Toggle completed games section"
+                                android:contentDescription="@string/cd_toggle_completed_games"
                                 android:src="@drawable/ic_expand_more"
                                 app:tint="@color/text_secondary" />
                         </LinearLayout>
@@ -679,7 +679,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
-                        android:text="🎮"
+                        tools:text="🎮"
                         android:textSize="48sp" />
 
                     <TextView
@@ -720,7 +720,7 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:background="@drawable/bg_view_refresh_gradient"
-        android:contentDescription="Create New Game"
+        android:contentDescription="@string/cd_create_new_game"
         android:elevation="8dp"
         android:padding="16dp"
         android:src="@drawable/ic_add"

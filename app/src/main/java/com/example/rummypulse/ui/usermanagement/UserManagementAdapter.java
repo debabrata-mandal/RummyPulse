@@ -7,6 +7,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
@@ -50,6 +51,7 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
         this.deleteClickListener = deleteListener;
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void updateUsers(List<AppUser> newUsers) {
         this.users = newUsers;
         notifyDataSetChanged();
@@ -122,20 +124,25 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
 
             if (user.getRole() == UserRole.ADMIN_USER) {
                 roleTextView.setTextColor(itemView.getContext().getColor(R.color.admin_role_color));
-                roleTextView.setText("🔑 " + roleText);
+                roleTextView.setText(itemView.getContext().getString(
+                        R.string.user_management_role_admin_prefix, roleText));
             } else {
                 roleTextView.setTextColor(itemView.getContext().getColor(R.color.regular_role_color));
-                roleTextView.setText("👤 " + roleText);
+                roleTextView.setText(itemView.getContext().getString(
+                        R.string.user_management_role_user_prefix, roleText));
             }
 
-            providerTextView.setText("Provider: "
-                    + (user.getProvider() != null ? user.getProvider() : "Unknown"));
+            providerTextView.setText(itemView.getContext().getString(
+                    R.string.user_management_provider,
+                    user.getProvider() != null ? user.getProvider() : "Unknown"));
 
             if (user.getLastLoginAt() != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault());
-                lastLoginTextView.setText("Last login: " + sdf.format(user.getLastLoginAt()));
+                lastLoginTextView.setText(itemView.getContext().getString(
+                        R.string.user_management_last_login, sdf.format(user.getLastLoginAt())));
             } else {
-                lastLoginTextView.setText("Last login: Never");
+                lastLoginTextView.setText(itemView.getContext().getString(
+                        R.string.user_management_last_login_never));
             }
 
             FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -163,7 +170,8 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
                 boolean isCurrentUser,
                 OnRoleChangeClickListener listener) {
             if (isCurrentUser) {
-                roleChangeButton.setText("Current user");
+                roleChangeButton.setText(itemView.getContext().getString(
+                        R.string.user_management_current_user));
                 roleChangeButton.setEnabled(false);
                 roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
                     itemView.getContext().getColor(R.color.neutral_gray)));

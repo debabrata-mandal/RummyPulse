@@ -210,7 +210,7 @@
             android:drawablePadding="7dp"
             android:text="@string/player_consolidation_adjustment_session_info"
             android:textColor="@color/text_secondary"
-            android:textSize="10sp"
+            android:textSize="10dp"
             app:drawableStartCompat="@drawable/ic_info"
             app:drawableTint="@color/text_secondary" />
     </LinearLayout>

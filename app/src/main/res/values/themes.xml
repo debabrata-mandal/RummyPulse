@@ -16,10 +16,10 @@
         <item name="colorOnBackground">@color/text_primary</item>
         <item name="colorOnSurface">@color/text_primary</item>
         <!-- Status bar color. -->
-        <item name="android:statusBarColor" tools:targetApi="l">@color/primary_blue_dark</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        <item name="android:statusBarColor">@color/primary_blue_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
         <!-- Navigation bar color -->
-        <item name="android:navigationBarColor" tools:targetApi="l">@color/primary_blue_dark</item>
+        <item name="android:navigationBarColor">@color/primary_blue_dark</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
         <item name="alertDialogTheme">@style/DarkAlertDialog</item>
         <item name="materialAlertDialogTheme">@style/DarkAlertDialog</item>
@@ -36,36 +36,10 @@
 
     <style name="Theme.RummyPulse.PopupOverlay" parent="ThemeOverlay.AppCompat.Dark" />
 
-    <!-- Navigation Drawer Styles -->
-    <style name="NavigationViewStyle" parent="Widget.MaterialComponents.NavigationView">
-        <item name="android:background">@color/navigation_background</item>
-        <item name="itemTextColor">@color/text_primary</item>
-        <item name="itemIconTint">@color/text_primary</item>
-        <item name="android:theme">@style/ThemeOverlay.AppCompat.Dark</item>
-    </style>
-
     <style name="NavigationSectionText" parent="TextAppearance.MaterialComponents.Body2">
         <item name="android:textColor">@color/navigation_section_text</item>
         <item name="android:textSize">13sp</item>
         <item name="android:fontFamily">sans-serif-medium</item>
-    </style>
-
-    <!-- Financial App Table Styles -->
-    <style name="TableHeaderText">
-        <item name="android:textSize">16sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/text_primary</item>
-        <item name="android:gravity">center</item>
-        <item name="android:padding">12dp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
-    </style>
-
-    <style name="TableRowText">
-        <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/text_primary</item>
-        <item name="android:gravity">center</item>
-        <item name="android:padding">12dp</item>
-        <item name="android:fontFamily">sans-serif</item>
     </style>
 
     <style name="TableRowTextSecondary">
@@ -76,25 +50,6 @@
         <item name="android:fontFamily">sans-serif</item>
     </style>
 
-    <!-- Financial Status Text Styles -->
-    <style name="ProfitText">
-        <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/profit_green</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
-    </style>
-
-    <style name="LossText">
-        <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/loss_red</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
-    </style>
-
-    <style name="NeutralText">
-        <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/neutral_gray</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
-    </style>
-
     <style name="StatusIndicator">
         <item name="android:layout_width">8dp</item>
         <item name="android:layout_height">8dp</item>
@@ -102,65 +57,10 @@
         <item name="android:background">@drawable/status_indicator_online</item>
     </style>
 
-    <style name="CardViewStyle">
-        <item name="android:layout_margin">4dp</item>
-        <item name="android:layout_marginStart">8dp</item>
-        <item name="android:layout_marginEnd">8dp</item>
-        <item name="cardCornerRadius">8dp</item>
-        <item name="cardElevation">4dp</item>
-        <item name="cardBackgroundColor">@color/card_background</item>
-    </style>
-
-    <style name="CardViewStyleElevated">
-        <item name="android:layout_margin">4dp</item>
-        <item name="android:layout_marginStart">8dp</item>
-        <item name="android:layout_marginEnd">8dp</item>
-        <item name="cardCornerRadius">8dp</item>
-        <item name="cardElevation">6dp</item>
-        <item name="cardBackgroundColor">@color/card_background_elevated</item>
-    </style>
-
-    <style name="AppTitle">
-        <item name="android:textSize">28sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/text_primary</item>
-        <item name="android:gravity">center</item>
-        <item name="android:padding">20dp</item>
-        <item name="android:fontFamily">sans-serif-light</item>
-        <item name="android:shadowColor">@color/shadow_color</item>
-        <item name="android:shadowDx">0</item>
-        <item name="android:shadowDy">2</item>
-        <item name="android:shadowRadius">4</item>
-    </style>
-
-    <!-- Search Bar Styles -->
-    <style name="SearchBarStyle">
-        <item name="android:background">@color/search_background</item>
-        <item name="android:textColor">@color/text_primary</item>
-        <item name="android:textColorHint">@color/search_hint</item>
-        <item name="android:textSize">16sp</item>
-        <item name="android:padding">12dp</item>
-        <item name="android:drawablePadding">8dp</item>
-    </style>
-
-    <!-- Bottom Navigation Styles -->
-    <style name="BottomNavigationStyle">
-        <item name="android:background">@color/bottom_nav_background</item>
-        <item name="itemTextColor">@color/bottom_nav_unselected</item>
-        <item name="itemIconTint">@color/bottom_nav_unselected</item>
-        <item name="android:theme">@style/ThemeOverlay.AppCompat.Dark</item>
-    </style>
-
     <!-- Market Overview Styles -->
     <style name="MarketOverviewTitle">
         <item name="android:textSize">18sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/text_primary</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
-    </style>
-
-    <style name="MarketOverviewValue">
-        <item name="android:textSize">16sp</item>
         <item name="android:textColor">@color/text_primary</item>
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>

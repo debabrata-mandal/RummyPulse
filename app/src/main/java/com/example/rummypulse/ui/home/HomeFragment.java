@@ -256,9 +256,10 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
         TextView lockedMessage = new TextView(getContext());
         lockedMessage.setId(LOCKED_OVERLAY_VIEW_ID);
-        lockedMessage.setText(getString(R.string.review_access_restricted)
-                + "\n\n"
-                + getString(R.string.review_access_restricted_detail));
+        lockedMessage.setText(getString(
+                R.string.review_access_restricted_combined,
+                getString(R.string.review_access_restricted),
+                getString(R.string.review_access_restricted_detail)));
         lockedMessage.setTextSize(15);
         lockedMessage.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
         lockedMessage.setLineSpacing(4f, 1f);
@@ -314,7 +315,8 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 "Delete game",
                 true,
                 () -> {
-                    beginReviewOperation(getString(R.string.review_delete_selected_progress, 1));
+                    beginReviewOperation(getResources().getQuantityString(
+                            R.plurals.review_delete_selected_progress, 1, 1));
                     homeViewModel.deleteGame(
                             game.getGameId(),
                             () -> {
@@ -346,7 +348,8 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 !reviewOperationInProgress && tableAdapter.getItemCount() > 0);
         binding.textSelectedGames.setText(selectedCount == 0
                 ? getString(R.string.review_selected_none)
-                : getString(R.string.review_selected_count, selectedCount));
+                : getResources().getQuantityString(
+                        R.plurals.review_selected_count, selectedCount, selectedCount));
         binding.btnDeleteSelected.setEnabled(
                 !reviewOperationInProgress && selectedCount > 0);
     }
@@ -367,12 +370,17 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 selectedCount == 1
                         ? "Remove 1 selected game"
                         : "Remove " + selectedCount + " selected games",
-                getString(R.string.review_delete_selected_message, selectedCount),
+                getResources().getQuantityString(
+                        R.plurals.review_delete_selected_message,
+                        selectedCount,
+                        selectedCount),
                 getString(R.string.review_delete_selected),
                 true,
                 () -> {
-                    beginReviewOperation(
-                            getString(R.string.review_delete_selected_progress, selectedCount));
+                    beginReviewOperation(getResources().getQuantityString(
+                            R.plurals.review_delete_selected_progress,
+                            selectedCount,
+                            selectedCount));
                     homeViewModel.deleteGames(
                             selectedGameIds,
                             () -> {
@@ -383,11 +391,10 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                                 endReviewOperation();
                                 com.example.rummypulse.utils.ModernToast.success(
                                         getContext(),
-                                        selectedCount == 1
-                                                ? getString(R.string.review_delete_selected_success_one)
-                                                : getString(
-                                                        R.string.review_delete_selected_success_many,
-                                                        selectedCount));
+                                        getResources().getQuantityString(
+                                                R.plurals.review_delete_selected_success,
+                                                selectedCount,
+                                                selectedCount));
                             },
                             error -> {
                                 if (!isAdded() || binding == null || tableAdapter == null) {
@@ -420,9 +427,8 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         showReviewActionDialog(
                 R.drawable.ic_approve,
                 "Approve all completed games?",
-                approvedCount == 1
-                        ? "Finalize 1 completed game"
-                        : "Finalize " + approvedCount + " completed games",
+                getResources().getQuantityString(
+                        R.plurals.review_finalize_completed_games, approvedCount, approvedCount),
                 "Each game will move to the approved list and its results will be finalized.",
                 "Approve all",
                 false,
@@ -435,7 +441,10 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                         }
                         endReviewOperation();
                         com.example.rummypulse.utils.ModernToast.success(getContext(),
-                                approvedCount == 1 ? "1 game approved." : approvedCount + " games approved.");
+                                getResources().getQuantityString(
+                                        R.plurals.review_games_approved,
+                                        approvedCount,
+                                        approvedCount));
                     });
                 });
     }
@@ -476,8 +485,8 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             icon.setBackgroundResource(
                     R.drawable.view_access_icon_rejected_background);
             icon.setImageTintList(android.content.res.ColorStateList.valueOf(red));
-            messageView.setCompoundDrawableTintList(
-                    android.content.res.ColorStateList.valueOf(red));
+            androidx.core.widget.TextViewCompat.setCompoundDrawableTintList(
+                    messageView, android.content.res.ColorStateList.valueOf(red));
             messageCard.setStrokeColor(red);
             confirm.setBackgroundTintList(
                     android.content.res.ColorStateList.valueOf(red));

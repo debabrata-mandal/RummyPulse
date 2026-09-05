@@ -6,6 +6,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
@@ -13,6 +14,7 @@ import com.example.rummypulse.R;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 public final class SettlementPlayerSummaryAdapter
         extends RecyclerView.Adapter<SettlementPlayerSummaryAdapter.ViewHolder> {
@@ -20,6 +22,7 @@ public final class SettlementPlayerSummaryAdapter
     private final List<ConsolidatedPlayerGroup> groups = new ArrayList<>();
     private Runnable editMappingsListener;
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setGroups(List<ConsolidatedPlayerGroup> updatedGroups) {
         groups.clear();
         if (updatedGroups != null) {
@@ -52,14 +55,11 @@ public final class SettlementPlayerSummaryAdapter
         int gameCount = group.getMembers().size();
         holder.avatar.setText(name == null || name.trim().isEmpty()
                 ? "?"
-                : name.trim().substring(0, 1).toUpperCase());
+                : name.trim().substring(0, 1).toUpperCase(Locale.getDefault()));
         holder.name.setText(name);
         holder.games.setText(String.valueOf(gameCount));
-        holder.gamesSubtitle.setText(holder.itemView.getContext().getString(
-                gameCount == 1
-                        ? R.string.player_consolidation_game_count_one
-                        : R.string.player_consolidation_game_count,
-                gameCount));
+        holder.gamesSubtitle.setText(holder.itemView.getContext().getResources().getQuantityString(
+                R.plurals.player_consolidation_game_count_plural, gameCount, gameCount));
         bindSigned(holder.finalBalance, group.getAdjustedNetAmount());
         holder.itemView.setOnClickListener(v -> {
             if (editMappingsListener != null) {

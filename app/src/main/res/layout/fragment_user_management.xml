@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary"
     tools:context=".ui.usermanagement.UserManagementFragment">
 
     <!-- SwipeRefreshLayout containing RecyclerView -->
@@ -57,7 +56,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:gravity="center"
-        android:text="Error loading users"
+        android:text="@string/user_management_error_loading"
         android:textColor="@android:color/holo_red_dark"
         android:textSize="16sp"
         android:visibility="gone"
@@ -73,7 +72,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:gravity="center"
-        android:text="No users found"
+        android:text="@string/user_management_no_users"
         android:textColor="@color/text_secondary"
         android:textSize="16sp"
         android:visibility="gone"

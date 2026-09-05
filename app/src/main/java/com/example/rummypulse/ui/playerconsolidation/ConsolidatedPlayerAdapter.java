@@ -6,6 +6,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -14,9 +15,11 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.checkbox.MaterialCheckBox;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<ConsolidatedPlayerAdapter.ViewHolder> {
@@ -33,11 +36,13 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
         this.listener = listener;
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setGroups(List<ConsolidatedPlayerGroup> groups) {
         this.groups = groups != null ? groups : new ArrayList<>();
         notifyDataSetChanged();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setSelectedEntryIds(Set<String> selectedEntryIds) {
         this.selectedEntryIds = selectedEntryIds != null ? selectedEntryIds : new HashSet<>();
         notifyDataSetChanged();
@@ -59,7 +64,7 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
         holder.avatarInitialText.setText(
                 displayName == null || displayName.trim().isEmpty()
                         ? "?"
-                        : displayName.trim().substring(0, 1).toUpperCase());
+                        : displayName.trim().substring(0, 1).toUpperCase(Locale.getDefault()));
         Set<String> gameIds = new LinkedHashSet<>();
         Set<String> gameNames = new LinkedHashSet<>();
         for (GamePlayerEntry member : group.getMembers()) {
@@ -69,11 +74,8 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
             }
         }
         int gameCount = gameIds.size();
-        holder.gameCountText.setText(holder.itemView.getContext().getString(
-                gameCount == 1
-                        ? R.string.player_consolidation_game_count_one
-                        : R.string.player_consolidation_game_count,
-                gameCount));
+        holder.gameCountText.setText(holder.itemView.getContext().getResources().getQuantityString(
+                R.plurals.player_consolidation_game_count_plural, gameCount, gameCount));
         holder.gameNamesText.setText(String.join(" · ", gameNames));
         holder.gameNamesText.setVisibility(gameNames.isEmpty() ? View.GONE : View.VISIBLE);
 

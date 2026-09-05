@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -35,7 +36,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Update available"
+                android:text="@string/update_available_title"
                 android:textColor="@color/text_primary"
                 android:textSize="19sp"
                 android:textStyle="bold" />
@@ -44,7 +45,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="A new version is ready to install."
+                android:text="@string/update_available_message"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
 
@@ -55,7 +56,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="@drawable/app_info_close_background"
-            android:contentDescription="Close"
+            android:contentDescription="@string/dialog_close"
             android:padding="9dp"
             android:src="@drawable/ic_close"
             app:tint="@color/text_secondary" />
@@ -87,7 +88,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Current version"
+                    android:text="@string/update_available_current_version"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp" />
 
@@ -111,7 +112,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Latest version"
+                    android:text="@string/update_available_latest_version"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp" />
 
@@ -148,7 +149,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="What’s new"
+                android:text="@string/update_available_whats_new"
                 android:textColor="@color/accent_blue_light"
                 android:textSize="12sp"
                 android:textStyle="bold" />
@@ -179,7 +180,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:minHeight="48dp"
-        android:text="Update now"
+        android:text="@string/update_available_update_now"
         android:textAllCaps="false"
         android:textColor="@android:color/white"
         app:backgroundTint="@color/accent_blue"

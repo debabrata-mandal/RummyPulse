@@ -75,7 +75,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/standing_total_score"
                 android:textColor="@color/view_text_muted"
-                android:textSize="9sp" />
+                android:textSize="9dp" />
 
             <TextView
                 android:id="@+id/text_score"
@@ -113,7 +113,7 @@
                 android:maxLines="1"
                 android:text="@string/standing_last_round"
                 android:textColor="@color/view_text_muted"
-                android:textSize="9sp" />
+                android:textSize="9dp" />
 
             <TextView
                 android:id="@+id/text_last_round_score"
@@ -148,7 +148,7 @@
                 android:gravity="end"
                 android:text="@string/standing_balance"
                 android:textColor="@color/view_text_muted"
-                android:textSize="9sp" />
+                android:textSize="9dp" />
 
             <TextView
                 android:id="@+id/text_net_amount"

@@ -1,6 +1,7 @@
 package com.example.rummypulse.data;
 
 import java.util.List;
+import java.util.Locale;
 
 public class MonthlyPointValueReport {
     private String monthYear; // Format: "September 2024"
@@ -49,11 +50,7 @@ public class MonthlyPointValueReport {
     }
 
     public String getFormattedMonthlyGst() {
-        return "₹" + String.format("%.0f", getTotalGstForMonth());
+        return "₹" + String.format(Locale.getDefault(), "%.0f", getTotalGstForMonth());
     }
 
-    public String getMonthlyGamesText() {
-        int total = getTotalGamesForMonth();
-        return total + " Game" + (total != 1 ? "s" : "");
-    }
 }

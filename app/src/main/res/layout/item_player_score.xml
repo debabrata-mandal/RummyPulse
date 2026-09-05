@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:baselineAligned="false"
     android:orientation="horizontal"
     android:background="@drawable/professional_row_background"
     android:padding="16dp"
@@ -17,7 +19,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Player Name"
+            tools:text="Player Name"
             android:textSize="14sp"
             android:textColor="@color/text_secondary"
             android:textStyle="bold" />
@@ -26,7 +28,7 @@
             android:id="@+id/text_player_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Player 1"
+            tools:text="Player 1"
             android:textSize="16sp"
             android:textColor="@color/text_primary"
             android:textStyle="bold"
@@ -54,7 +56,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Score"
+                android:text="@string/score_label"
                 android:textSize="12sp"
                 android:textColor="@color/text_secondary"
                 android:textStyle="bold" />
@@ -63,7 +65,7 @@
                 android:id="@+id/text_player_score"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0"
+                tools:text="0"
                 android:textSize="16sp"
                 android:textColor="@color/accent_blue"
                 android:textStyle="bold"
@@ -84,7 +86,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Net Amount"
+                android:text="@string/net_amount_label"
                 android:textSize="12sp"
                 android:textColor="@color/text_secondary"
                 android:textStyle="bold" />
@@ -93,7 +95,7 @@
                 android:id="@+id/text_net_amount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="₹0"
+                tools:text="₹0"
                 android:textSize="16sp"
                 android:textColor="@color/text_primary"
                 android:textStyle="bold"

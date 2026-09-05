@@ -2,6 +2,7 @@ package com.example.rummypulse.ui.home;
 
 import com.example.rummypulse.data.Player;
 import java.util.List;
+import java.util.Locale;
 
 public class GameItem {
     private String gameId;
@@ -218,7 +219,7 @@ public class GameItem {
     private String calculateAge(String creationDateTime) {
         try {
             // Parse the creation date time (format: "yyyy-MM-dd HH:mm:ss")
-            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
             java.util.Date creationDate = sdf.parse(creationDateTime);
             long currentTime = System.currentTimeMillis();
             long timeDiff = currentTime - creationDate.getTime();

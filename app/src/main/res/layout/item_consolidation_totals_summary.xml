@@ -81,7 +81,7 @@
                 android:layout_marginTop="10dp"
                 android:text="@string/player_consolidation_contribution_info"
                 android:textColor="@color/text_secondary"
-                android:textSize="9sp" />
+                android:textSize="9dp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -105,29 +105,17 @@
             android:paddingTop="14dp"
             android:paddingBottom="14dp">
 
-            <LinearLayout
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:drawablePadding="10dp"
                 android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_sitting_summary"
-                    app:tint="@color/accent_blue_light" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1"
-                    android:text="@string/player_consolidation_sitting_summary"
-                    android:textColor="@color/accent_blue_light"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                android:text="@string/player_consolidation_sitting_summary"
+                android:textColor="@color/accent_blue_light"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                app:drawableStartCompat="@drawable/ic_sitting_summary"
+                app:drawableTint="@color/accent_blue_light" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -150,7 +138,7 @@
                         android:maxLines="1"
                         android:text="@string/player_consolidation_total_gross"
                         android:textColor="@color/text_secondary"
-                        android:textSize="9sp" />
+                        android:textSize="9dp" />
 
                     <TextView
                         android:id="@+id/text_total_gross"
@@ -183,7 +171,7 @@
                         android:maxLines="1"
                         android:text="@string/player_consolidation_total_contribution"
                         android:textColor="@color/text_secondary"
-                        android:textSize="9sp" />
+                        android:textSize="9dp" />
 
                     <TextView
                         android:id="@+id/text_summary_contribution"
@@ -216,7 +204,7 @@
                         android:maxLines="1"
                         android:text="@string/player_consolidation_net_player_balance"
                         android:textColor="@color/text_secondary"
-                        android:textSize="9sp" />
+                        android:textSize="9dp" />
 
                     <TextView
                         android:id="@+id/text_net_player_balance"

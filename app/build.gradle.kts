@@ -107,14 +107,14 @@ dependencies {
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
     implementation(libs.room.runtime)
-    annotationProcessor("androidx.room:room-compiler:2.7.2")
+    annotationProcessor("androidx.room:room-compiler:2.8.4")
     implementation(libs.work.runtime)
     implementation(libs.gson)
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     testImplementation(libs.junit)
     testImplementation(libs.room.testing)
     testImplementation("androidx.arch.core:core-testing:2.2.0")
-    testImplementation("org.mockito:mockito-core:5.14.2")
+    testImplementation("org.mockito:mockito-core:5.23.0")
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation(libs.room.testing)
@@ -122,17 +122,17 @@ dependencies {
     
     // QR Code generation library
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
-    implementation("com.google.zxing:core:3.5.2")
+    implementation("com.google.zxing:core:3.5.4")
     
     // Firebase dependencies
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-config")
     
     // Google Sign-In
-    implementation("com.google.android.gms:play-services-auth:21.0.0")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
     
     // Glide for image loading
     implementation("com.github.bumptech.glide:glide:4.16.0")

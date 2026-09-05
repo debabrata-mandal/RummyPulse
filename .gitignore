@@ -11,6 +11,8 @@ local.properties
 
 # Log/OS Files
 *.log
+lint*.txt
+build*.txt
 
 # Android Studio generated files and folders
 captures/

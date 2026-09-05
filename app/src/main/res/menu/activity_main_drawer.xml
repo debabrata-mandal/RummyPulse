@@ -23,7 +23,7 @@
     </group>
 
     <item
-        android:title="Manage">
+        android:title="@string/menu_manage">
         <menu>
             <group android:checkableBehavior="single">
                 <item
@@ -39,7 +39,7 @@
     </item>
 
     <item
-        android:title="Utilities">
+        android:title="@string/menu_utilities">
         <menu>
             <item
                 android:id="@+id/nav_voice_settings"
@@ -52,7 +52,7 @@
             <item
                 android:id="@+id/nav_app_info"
                 android:icon="@drawable/ic_info"
-                android:title="App Info" />
+                android:title="@string/menu_app_info" />
         </menu>
     </item>
 </menu>

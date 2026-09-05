@@ -74,9 +74,9 @@
                 android:id="@+id/text_selected_names"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:drawableStart="@drawable/ic_people"
+                app:drawableStartCompat="@drawable/ic_people"
                 android:drawablePadding="8dp"
-                android:drawableTint="@color/accent_blue_light"
+                app:drawableTint="@color/accent_blue_light"
                 android:textColor="@color/text_secondary"
                 android:textSize="13sp"
                 tools:text="Debu, Lebu" />

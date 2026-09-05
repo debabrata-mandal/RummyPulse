@@ -24,6 +24,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
@@ -176,8 +177,8 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     private void observeViewModel() {
-        binding.textActiveGamesHeader.setText("Active Games");
-        binding.textCompletedGamesHeader.setText("Completed Games");
+        binding.textActiveGamesHeader.setText(getString(R.string.dashboard_section_active_games));
+        binding.textCompletedGamesHeader.setText(getString(R.string.dashboard_section_completed_games));
 
         // Observe in-progress games
         dashboardViewModel.getInProgressGames().observe(getViewLifecycleOwner(), games -> {
@@ -352,7 +353,10 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         binding.containerLeaderboardLegend.setVisibility(empty ? View.GONE : View.VISIBLE);
         binding.textLeaderboardSummary.setText(empty
                 ? ""
-                : getString(R.string.dashboard_leaderboard_summary, board.getRankedPlayers()));
+                : getResources().getQuantityString(
+                        R.plurals.dashboard_leaderboard_summary,
+                        board.getRankedPlayers(),
+                        board.getRankedPlayers()));
         if (empty) {
             binding.viewLeaderboardDonut.setSlices(new ArrayList<>());
             binding.containerLeaderboardLegend.removeAllViews();
@@ -482,17 +486,26 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         animator.start();
     }
 
+    private void setCountText(TextView target, long value, String suffix) {
+        if (suffix.isEmpty()) {
+            target.setText(String.valueOf(value));
+        } else {
+            target.setText(getString(R.string.dashboard_percent_format, value));
+        }
+    }
+
     private void animateCount(TextView target, long value, String suffix, boolean animate) {
         long from = animate ? parseCount(target.getText()) : value;
         cancelAnimator(target);
         if (!animate || from == value) {
-            target.setText(value + suffix);
+            setCountText(target, value, suffix);
             return;
         }
         ValueAnimator animator = ValueAnimator.ofInt((int) from, (int) value);
         animator.setDuration(COUNTER_DURATION_MS);
         animator.setInterpolator(new DecelerateInterpolator());
-        animator.addUpdateListener(a -> target.setText(a.getAnimatedValue() + suffix));
+        animator.addUpdateListener(a ->
+                setCountText(target, (Integer) a.getAnimatedValue(), suffix));
         runningAnimators.put(target, animator);
         animator.start();
     }
@@ -1006,6 +1019,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     @Override
+    @SuppressLint("NotifyDataSetChanged")
     public void onStart() {
         super.onStart();
         if (getContext() != null) {

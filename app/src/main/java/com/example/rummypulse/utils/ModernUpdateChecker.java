@@ -43,6 +43,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.Locale;
 
 /**
  * Modern update checker using ExecutorService instead of deprecated AsyncTask
@@ -389,8 +390,8 @@ public class ModernUpdateChecker {
             android.widget.ImageButton btnClose = dialog.findViewById(R.id.btn_close);
             android.widget.Button btnUpdateNow = dialog.findViewById(R.id.btn_update_now);
 
-            textCurrentVersion.setText("v" + currentVersion);
-            textLatestVersion.setText("v" + updateInfo.version);
+            textCurrentVersion.setText(context.getString(R.string.version_prefix, currentVersion));
+            textLatestVersion.setText(context.getString(R.string.version_prefix, updateInfo.version));
             textReleaseNotes.setText(formatReleaseNotes(updateInfo.releaseNotes));
 
             btnClose.setOnClickListener(v -> {
@@ -454,7 +455,7 @@ public class ModernUpdateChecker {
                 String monthName = month > 0 && month <= 12 ? monthNames[month - 1] : String.valueOf(month);
                 
                 String friendlyDate = "Released: " + monthName + " " + 
-                                     String.format("%02d", day) + ", " + year;
+                                     String.format(Locale.getDefault(), "%02d", day) + ", " + year;
                 formatted = dateMatcher.replaceFirst(friendlyDate);
             } catch (Exception e) {
                 // If parsing fails, just remove the date line
@@ -463,7 +464,7 @@ public class ModernUpdateChecker {
         }
         
         // Remove installation instructions section (not needed in update dialog)
-        int installIndex = formatted.toLowerCase().indexOf("installation instructions");
+        int installIndex = formatted.toLowerCase(Locale.getDefault()).indexOf("installation instructions");
         if (installIndex != -1) {
             formatted = formatted.substring(0, installIndex).trim();
         }
@@ -1118,15 +1119,15 @@ public class ModernUpdateChecker {
             icon.setBackgroundResource(
                     R.drawable.view_access_icon_rejected_background);
             icon.setImageTintList(android.content.res.ColorStateList.valueOf(red));
-            title.setText("Download failed");
-            subtitle.setText("The update could not be downloaded");
+            title.setText(activity.getString(R.string.update_download_failed_title));
+            subtitle.setText(activity.getString(R.string.update_download_failed_subtitle));
             message.setText(errorMessage);
-            message.setCompoundDrawableTintList(
-                    android.content.res.ColorStateList.valueOf(red));
+            androidx.core.widget.TextViewCompat.setCompoundDrawableTintList(
+                    message, android.content.res.ColorStateList.valueOf(red));
             messageCard.setStrokeColor(red);
             manual.setVisibility(android.view.View.VISIBLE);
-            manual.setText("Manual download");
-            retry.setText("Try again");
+            manual.setText(activity.getString(R.string.update_manual_download));
+            retry.setText(activity.getString(R.string.update_try_again));
             retry.setVisibility(showRetryOption
                     ? android.view.View.VISIBLE : android.view.View.GONE);
 

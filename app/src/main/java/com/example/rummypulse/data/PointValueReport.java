@@ -3,6 +3,7 @@ package com.example.rummypulse.data;
 import com.google.firebase.firestore.Exclude;
 
 import java.util.List;
+import java.util.Locale;
 
 public class PointValueReport {
     private double pointValue; // Point value like 0.15, 0.25, etc.
@@ -74,11 +75,11 @@ public class PointValueReport {
 
     // Helper methods for display
     public String getFormattedPointValue() {
-        return "₹" + String.format("%.2f", pointValue);
+        return "₹" + String.format(Locale.getDefault(), "%.2f", pointValue);
     }
 
     public String getFormattedGstAmount() {
-        return "₹" + String.format("%.0f", totalGstCollected);
+        return "₹" + String.format(Locale.getDefault(), "%.0f", totalGstCollected);
     }
 
     public double getAverageGstPerGame() {
@@ -89,7 +90,4 @@ public class PointValueReport {
         return totalGames > 0 ? (double) totalPlayers / totalGames : 0.0;
     }
 
-    public String getGamesText() {
-        return totalGames + " Game" + (totalGames != 1 ? "s" : "");
-    }
 }

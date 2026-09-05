@@ -157,11 +157,11 @@ public class UserManagementFragment extends Fragment {
         com.google.android.material.button.MaterialButton confirm =
                 dialogView.findViewById(R.id.btn_action_dialog_confirm);
         icon.setImageResource(R.drawable.ic_moderator);
-        title.setText("Change user role?");
+        title.setText(getString(R.string.user_management_change_role_title));
         subtitle.setText(user.getDisplayName());
-        message.setText("Change role from " + currentRole + " to " + newRole + "?");
-        cancel.setText("Keep current role");
-        confirm.setText("Change role");
+        message.setText(getString(R.string.user_management_change_role_message, currentRole, newRole));
+        cancel.setText(getString(R.string.user_management_keep_current_role));
+        confirm.setText(getString(R.string.user_management_change_role_confirm));
 
         androidx.appcompat.app.AlertDialog dialog =
                 new androidx.appcompat.app.AlertDialog.Builder(
@@ -221,13 +221,14 @@ public class UserManagementFragment extends Fragment {
         icon.setImageResource(R.drawable.ic_delete);
         icon.setBackgroundResource(R.drawable.view_access_icon_rejected_background);
         icon.setImageTintList(android.content.res.ColorStateList.valueOf(red));
-        title.setText("Delete user?");
+        title.setText(getString(R.string.user_management_delete_user_title));
         subtitle.setText(user.getDisplayName());
-        message.setText("This permanently removes the user from RummyPulse. This action cannot be undone.");
-        message.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(red));
+        message.setText(getString(R.string.user_management_delete_user_message));
+        androidx.core.widget.TextViewCompat.setCompoundDrawableTintList(
+                message, android.content.res.ColorStateList.valueOf(red));
         messageCard.setStrokeColor(red);
-        cancel.setText("Keep user");
-        confirm.setText("Delete user");
+        cancel.setText(getString(R.string.user_management_keep_user));
+        confirm.setText(getString(R.string.user_management_delete_user_confirm));
         confirm.setBackgroundTintList(android.content.res.ColorStateList.valueOf(red));
 
         androidx.appcompat.app.AlertDialog dialog =
@@ -265,7 +266,7 @@ public class UserManagementFragment extends Fragment {
 
     private void showError(String error) {
         binding.errorText.setVisibility(View.VISIBLE);
-        binding.errorText.setText("Error: " + error);
+        binding.errorText.setText(getString(R.string.error_with_message, error));
         binding.recyclerViewUsers.setVisibility(View.GONE);
         binding.emptyState.setVisibility(View.GONE);
         binding.progressBar.setVisibility(View.GONE);

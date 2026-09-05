@@ -131,7 +131,7 @@
                         android:text="@string/dialog_enter_round_score_section_player"
                         android:textAllCaps="true"
                         android:textColor="@color/view_text_muted"
-                        android:textSize="10sp" />
+                        android:textSize="10dp" />
 
                     <TextView
                         android:id="@+id/text_dialog_player_name"

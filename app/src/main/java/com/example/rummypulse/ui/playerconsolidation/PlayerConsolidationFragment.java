@@ -206,7 +206,8 @@ public class PlayerConsolidationFragment extends Fragment {
         boolean canContinue = count >= 2;
         binding.btnContinue.setEnabled(canContinue);
         binding.btnContinue.setVisibility(canContinue ? View.VISIBLE : View.GONE);
-        binding.btnContinue.setText(getString(R.string.player_consolidation_continue, count));
+        binding.btnContinue.setText(getResources().getQuantityString(
+                R.plurals.player_consolidation_continue, count, count));
         updateStageVisibility();
     }
 

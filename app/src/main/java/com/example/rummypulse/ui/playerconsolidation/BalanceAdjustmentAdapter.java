@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
@@ -30,6 +31,7 @@ public final class BalanceAdjustmentAdapter
         deleteListener = listener;
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setAdjustments(List<BalanceAdjustment> updatedAdjustments) {
         adjustments.clear();
         if (updatedAdjustments != null) {

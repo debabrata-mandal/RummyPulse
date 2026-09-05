@@ -1,14 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RummyPulse</string>
-    <string name="navigation_drawer_open">Open navigation drawer</string>
-    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="join_game_title">Join Game</string>
     <string name="nav_header_title">Rummy Pulse</string>
     <string name="nav_header_subtitle">Smart Gaming Analytics</string>
     
     <!-- Build trigger for GitHub Actions with updated Firebase config -->
     <string name="nav_header_desc">Navigation header</string>
     <string name="nav_header_name_fallback">Player</string>
-    <string name="action_settings">Settings</string>
 
     <string name="menu_home">Review</string>
     <string name="menu_game_review">Game Review</string>
@@ -28,7 +27,6 @@
     <string name="app_info_version_label">Version</string>
     <string name="app_info_build_label">Build</string>
     <string name="app_info_updated_label">Checked</string>
-    <string name="app_info_update_status_label">Updates</string>
     <string name="app_info_update_status_debug">Manual checks only in debug</string>
     <string name="app_info_update_status_release">Automatic checks enabled</string>
     <string name="app_info_check_updates">Check for updates</string>
@@ -43,7 +41,7 @@
     <string name="voice_announcements_status_muted">Muted</string>
     <string name="voice_announcements_status_enabled">Enabled</string>
     <string name="voice_announcements_unmute">Unmute voice</string>
-    <string name="voice_announcements_mute">Mute voice</string>
+    <string name="voice_announcements_mute">🔇 Mute Voice</string>
     <string name="dialog_close">Close</string>
     <string name="menu_dashboard">Dashboard</string>
     <string name="menu_reports">Reports</string>
@@ -60,8 +58,6 @@
     <string name="reports_stat_avg_contribution_per_game">Avg contribution / game</string>
     <string name="reports_stat_total_players">Total players</string>
     <string name="reports_stat_avg_players_per_game">Avg players / game</string>
-    <string name="reports_stat_icon_contribution_desc">Contribution</string>
-    <string name="reports_stat_icon_players_desc">Players</string>
 
     <!-- default_web_client_id is supplied by google-services.json (merged at build time). -->
 
@@ -77,7 +73,6 @@
     <string name="pin_input_hint">4-digit PIN</string>
     <string name="pin_input_security_message">Edit access allows changes to scores, players, and game details.</string>
     <string name="pin_input_icon_description">Game PIN</string>
-    <string name="pin_input_security_icon_description">Edit access information</string>
     <string name="pin_input_cancel">Cancel</string>
     <string name="pin_input_verify">Verify PIN</string>
     <string name="exit_dialog_title">Leave this game?</string>
@@ -91,19 +86,15 @@
     <string name="exit_dialog_transfer_icon_description">Transfer edit access</string>
     <string name="edit_access_transferred_offline">Edit access was transferred while you were offline. Your unsaved changes were discarded.</string>
     <string name="round_saved_offline_pending_sync">Round saved offline — pending sync.</string>
-    <string name="round_saved_syncing_background">Round %1$d saved — syncing in background.</string>
-    <string name="dialog_correct_round_choose_player">Choose player to correct in round %1$d</string>
     <string name="dialog_correct_round_score_save">Save change</string>
     <string name="dialog_correct_player_title">Choose a player</string>
     <string name="dialog_correct_player_subtitle">Whose score needs correction?</string>
     <string name="dialog_correct_player_hint">Only the selected player’s score will change. Everyone else stays untouched.</string>
     <string name="dialog_correct_player_round_badge">R%1$d</string>
-    <string name="dialog_correct_player_current_score">Current score · %1$d points</string>
     <string name="dialog_correct_player_edit_action">Edit this player’s score</string>
     <string name="pending_round_edit_access_changed">A pending round belongs to an older edit session. It was kept locally and was not uploaded.</string>
     <string name="pending_round_sync_conflict">Pending round was kept locally: %1$s</string>
 
-    <string name="version_gate_loading">Checking for updates…</string>
     <string name="minimum_version_title">Update required</string>
     <string name="minimum_version_message">This version of RummyPulse is no longer supported. Tap Update app to download and install the latest APK (same as Check for updates). If that isn’t available, the releases page will open in your browser.</string>
     <!-- Official APK distribution (app is not on Play Store). Used when Remote Config update_url is empty. -->
@@ -174,13 +165,8 @@
     <string name="review_select_game">Select game</string>
     <string name="review_select_all">Select all</string>
     <string name="review_selected_none">None selected</string>
-    <string name="review_selected_count">%1$d selected</string>
     <string name="review_delete_selected">Delete</string>
     <string name="review_delete_selected_title">Delete selected games?</string>
-    <string name="review_delete_selected_message">Permanently delete %1$d selected game(s) and their related data? This cannot be undone.</string>
-    <string name="review_delete_selected_progress">Deleting %1$d game(s)…</string>
-    <string name="review_delete_selected_success_one">1 game deleted.</string>
-    <string name="review_delete_selected_success_many">%1$d games deleted.</string>
     <string name="review_operation_approving_one">Approving game…</string>
     <string name="review_operation_approving_many">Approving %1$d games…</string>
     <string name="review_delete_success_one">Game deleted.</string>
@@ -192,8 +178,6 @@
     <string name="review_edit_economics_saved">Game economics updated</string>
     <string name="cd_decrease_point_value">Decrease point value</string>
     <string name="cd_increase_point_value">Increase point value</string>
-    <string name="cd_decrease_contribution">Decrease contribution</string>
-    <string name="cd_increase_contribution">Increase contribution</string>
     <string name="dialog_game_name_hint">Name</string>
     <string name="dialog_game_name_generating">Generating…</string>
     <string name="cd_generate_game_name">Generate game name</string>
@@ -201,7 +185,6 @@
     <string name="dialog_game_name_generate_failed">Could not generate a name. Try again.</string>
 
     <!-- Sequential round score entry (edit mode) -->
-    <string name="btn_enter_round_scores">Enter round scores</string>
     <string name="cd_enter_round_scores">Enter round scores one player at a time</string>
     <string name="dialog_enter_round_score_title">Round %1$d</string>
     <string name="dialog_enter_round_score_subtitle">Enter this player\'s points for the round</string>
@@ -213,31 +196,20 @@
     <string name="dialog_enter_round_score_back">Back</string>
     <string name="dialog_enter_round_score_next">Next</string>
     <string name="dialog_enter_round_score_done">Done</string>
-    <string name="dialog_enter_round_score_saving">Saving…</string>
-    <string name="dialog_enter_round_score_retry">Retry</string>
-    <string name="dialog_enter_round_score_saved">Round %1$d saved.</string>
-    <string name="dialog_enter_round_score_save_failed">Could not save this round: %1$s</string>
     <string name="enter_round_scores_all_done">Everyone has a score for this round.</string>
     <string name="enter_round_scores_game_over">Game is complete — tap the edit icon to fix earlier rounds.</string>
 
     <!-- Correct past round (edit mode) -->
-    <string name="btn_correct_past_round">Correct past round</string>
     <string name="cd_correct_past_round">Edit past round scores</string>
-    <string name="player_card_total_label">Total</string>
     <string name="dialog_pick_past_round_title">Correct past round</string>
     <string name="dialog_pick_past_round_subtitle">Select a round to update scores</string>
     <string name="dialog_pick_past_round_hint">Choose the completed round that contains the score you want to correct.</string>
-    <string name="dialog_pick_round_item">Round %1$d</string>
     <string name="dialog_pick_round_chip">R%1$d</string>
     <string name="dialog_pick_past_round_continue">Continue</string>
     <string name="dialog_correct_round_score_title">Correct Round %1$d</string>
     <string name="standing_total_score">Total Score</string>
     <string name="standing_last_round">Last Round</string>
-    <string name="standing_round_score">R%1$d Score</string>
     <string name="standing_balance">Balance</string>
-    <string name="edit_settlement_receives_group">Receives · %1$d</string>
-    <string name="edit_settlement_pays_group">Pays · %1$d</string>
-    <string name="edit_settlement_even_group">Even · %1$d</string>
     <string name="edit_settlement_direction_receives">Receives</string>
     <string name="edit_settlement_direction_pays">Pays</string>
     <string name="edit_settlement_direction_even">Even</string>
@@ -248,7 +220,6 @@
     <!-- Add player confirmation when scores already exist -->
     <string name="add_player_confirm_title">Add another player?</string>
     <string name="add_player_confirm_message">This game already has recorded scores. The new player will receive an automatic catch-up score for completed rounds.</string>
-    <string name="add_player_confirm_count">Current game · %1$d players</string>
     <string name="add_player_confirm_preserved">Existing players and their scores will remain unchanged.</string>
     <string name="add_player_confirm_add">Add player</string>
     <string name="delete_player_dialog_title">Delete player?</string>
@@ -261,11 +232,8 @@
     <string name="menu_game_defaults">Game defaults</string>
     <string name="menu_player_consolidation">Settlement</string>
     <string name="player_consolidation_subtitle">Select at least 2 games.</string>
-    <string name="player_consolidation_continue">Continue (%1$d selected)</string>
     <string name="player_consolidation_empty">No games available</string>
     <string name="player_consolidation_game_subtitle">%1$s players · ₹%2$s per point</string>
-    <string name="player_consolidation_map_title">Map players</string>
-    <string name="player_consolidation_map_subtitle">Link names used by the same player.</string>
     <string name="player_consolidation_mapping_step_title">Step 1 · Map the players</string>
     <string name="player_consolidation_mapping_step_subtitle">Select matching names and link them.</string>
     <string name="player_consolidation_mapping_confirmed_title">Player mapping confirmed</string>
@@ -296,27 +264,15 @@
     <string name="player_consolidation_link_dialog_title">Link selected players</string>
     <string name="player_consolidation_link_dialog_subtitle">Merge these entries into one settlement identity.</string>
     <string name="player_consolidation_link_dialog_hint">Display name</string>
-    <string name="player_consolidation_alias_format">%1$s (%2$s)</string>
     <string name="player_consolidation_no_players">No players found in the selected games.</string>
-    <string name="player_consolidation_totals_title">Consolidated totals</string>
-    <string name="player_consolidation_net_label">Net amount</string>
-    <string name="player_consolidation_contribution_label">Total contribution</string>
-    <string name="player_consolidation_contribution_value">Contribution %1$s</string>
-    <string name="player_consolidation_contribution_short">Contrib %1$s</string>
-    <string name="player_consolidation_selected_games_label">Selected games</string>
     <string name="player_consolidation_change_games">Change games</string>
     <string name="player_consolidation_refresh_data">Refresh game data</string>
     <string name="player_consolidation_refresh_data_done">Game data updated.</string>
     <string name="player_consolidation_refresh_missing_members">Some mapped players were removed from a game.</string>
-    <string name="player_consolidation_transfer_amount">Add balance adjustment</string>
     <string name="player_consolidation_transfer_dialog_title">Add balance adjustment</string>
     <string name="player_consolidation_transfer_dialog_subtitle">Add a previous due or off-game amount.</string>
-    <string name="player_consolidation_transfer_from_label">Adjust balance from</string>
-    <string name="player_consolidation_transfer_from_option">From %1$s (%2$s)</string>
     <string name="player_consolidation_transfer_amount_hint">Amount</string>
-    <string name="player_consolidation_transfer_confirm">Add adjustment</string>
     <string name="player_consolidation_transfer_invalid_amount">Enter an amount greater than zero.</string>
-    <string name="player_consolidation_transfer_adj">Adjustment %1$s</string>
     <string name="player_consolidation_add_adjustment">Add</string>
     <string name="player_consolidation_save_adjustment">Save adjustment</string>
     <string name="player_consolidation_adjustment_from">From (payer)</string>
@@ -334,7 +290,6 @@
     <string name="player_consolidation_settlement_subtitle">Cash payments to settle balances</string>
     <string name="player_consolidation_player_payments">Player payments</string>
     <string name="player_consolidation_payment_count">Transfers</string>
-    <string name="player_consolidation_payment_route">%1$s pays %2$s</string>
     <string name="player_consolidation_mark_paid">Mark payment as paid</string>
     <string name="player_consolidation_payer_total">%1$s pays in total</string>
     <string name="player_consolidation_distribution_recipient">to %1$s</string>
@@ -343,21 +298,13 @@
     <string name="player_consolidation_all_settled">No payments needed.</string>
     <string name="player_consolidation_settlement_unbalanced">Balances and contribution do not match.</string>
     <string name="player_consolidation_final_balance">Final balance</string>
-    <string name="player_consolidation_game_count">%1$d games</string>
-    <string name="player_consolidation_game_count_one">%1$d game</string>
-    <string name="player_consolidation_gross_label">GROSS</string>
     <string name="player_consolidation_contribution_column">CONTRIBUTION</string>
-    <string name="player_consolidation_net_column">NET</string>
-    <string name="player_consolidation_adjustment_column">ADJUSTMENT</string>
-    <string name="player_consolidation_adjustment_short">ADJ</string>
     <string name="player_consolidation_contribution_collected">Contribution</string>
     <string name="player_consolidation_contribution_info">Paid to Contribution during settlement</string>
     <string name="player_consolidation_sitting_summary">Sitting summary</string>
     <string name="player_consolidation_total_gross">Gross winnings</string>
     <string name="player_consolidation_total_contribution">Contribution</string>
     <string name="player_consolidation_net_player_balance">Net player balance</string>
-    <string name="player_consolidation_created_by">Created by </string>
-    <string name="player_consolidation_edited_by">Edited by </string>
     <string name="player_consolidation_started">Started %1$s</string>
     <string name="player_consolidation_creator_photo">Game creator photo</string>
 
@@ -390,8 +337,6 @@
     <string name="game_defaults_firestore_permission">Firestore blocked game defaults (missing or insufficient permission). In Firebase Console open Firestore → Rules and allow signed-in users to read and write collection gameDefaults_v2 (document config).</string>
 
     <!-- Game view approval -->
-    <string name="view_access_pending">View request sent. Waiting for approval from the game editor.</string>
-    <string name="view_access_rejected">View access was denied for this game.</string>
     <string name="view_access_check_failed">Could not verify view access. Please try again.</string>
     <string name="view_access_dialog_ok">Got it</string>
     <string name="view_access_dialog_pending_title">View request sent</string>
@@ -408,14 +353,10 @@
     <string name="view_request_approve">Approve</string>
     <string name="view_request_reject">Reject</string>
     <string name="view_request_empty">No view requests yet</string>
-    <string name="view_request_pending_badge">%1$d pending</string>
-    <string name="view_request_total_badge">%1$d requests</string>
-    <string name="view_request_badge_summary">%1$d requests (%2$d pending)</string>
     <string name="view_request_status_pending">Pending approval</string>
     <string name="view_request_status_approved">Approved</string>
     <string name="view_request_status_rejected">Rejected</string>
     <string name="view_request_requested_at">Requested %1$s</string>
-    <string name="view_request_decided_at">Updated %1$s</string>
     <string name="map_player_title">Map player to user</string>
     <string name="map_player_subtitle">Choose the app user who is playing as %1$s.</string>
     <string name="map_player_search_hint">Search by name or email</string>
@@ -426,13 +367,10 @@
     <string name="map_player_icon_description">Link this player to an app user</string>
     <string name="map_player_linked_icon_description">Linked to %1$s. Tap to change.</string>
     <string name="map_player_editor_only">Only the current editor can link players.</string>
-    <string name="map_player_already_linked">%1$s is already linked to %2$s.</string>
     <string name="map_player_linked">Linked %1$s to %2$s.</string>
     <string name="map_player_linking_background">Linking %1$s to %2$s in the background…</string>
-    <string name="map_player_background_failed">Could not link this player: %1$s Tap the player icon to retry.</string>
     <string name="map_player_unlinked">Removed the real-user link for %1$s.</string>
     <string name="map_player_unlinking_background">Removing %1$s’s link and view access in the background…</string>
-    <string name="map_player_unlink_background_failed">Could not remove this link: %1$s Tap the player icon to retry.</string>
     <string name="map_player_load_failed">Could not load the player list. Check your connection and try again.</string>
     <string name="map_player_currently_linked">Currently linked</string>
     <string name="map_player_email_linked">%1$s • Currently linked</string>
@@ -459,10 +397,6 @@
     <string name="dashboard_status_syncing">SYNCING</string>
     <string name="dashboard_status_offline">OFFLINE</string>
     <string name="dashboard_title">RummyPulse Dashboard</string>
-    <string name="dashboard_subtitle">Track active games, completed games, and live updates</string>
-    <string name="dashboard_metric_label_active">Active</string>
-    <string name="dashboard_metric_label_completed">Completed</string>
-    <string name="dashboard_metric_label_total">Total</string>
     <string name="dashboard_section_active_games">Active Games</string>
     <string name="dashboard_section_completed_games">Completed Games</string>
     <string name="dashboard_empty_active">No active games</string>
@@ -493,5 +427,218 @@
     <string name="dashboard_leaderboard_legend_detail">Rank #%1$d</string>
     <string name="dashboard_leaderboard_legend_you">%1$s (You)</string>
     <string name="dashboard_leaderboard_empty">No ranked players in this period yet</string>
-    <string name="dashboard_leaderboard_summary">%1$d players ranked</string>
+
+    <!-- Layout HardcodedText fixes -->
+    <string name="account_not_linked_message">Your account is not linked to a player in this game</string>
+    <string name="admin_mode_title">Admin Mode</string>
+    <string name="amounts_hidden_label">AMOUNTS HIDDEN</string>
+    <string name="login_welcome_message">Welcome to RummyPulse!\n\nSign in with your Google account to access review and analytics.</string>
+    <string name="login_security_message">🔒 Your data is secure and protected.\nWe only use your Google account for authentication.</string>
+    <string name="settlement_how_it_works_title">💡 How Settlement Works</string>
+    <string name="settlement_example_title">💡 Example:</string>
+    <string name="full_hand_label">Full Hand</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="loading_game_data">Loading game data\u2026</string>
+    <string name="made_game_label">Made Game</string>
+    <string name="my_performance_title">My Performance</string>
+    <string name="net_amount_label">Net Amount</string>
+    <string name="no_negative_balances">No negative balances</string>
+    <string name="no_positive_balances">No positive balances</string>
+    <string name="packed_label">Packed</string>
+    <string name="player_performance_title">Player Performance</string>
+    <string name="players_round_scores_subtitle">Performance across all ten rounds</string>
+    <string name="players_round_scores_title">Player\'s Round Scores</string>
+    <string name="point_value_label">Point Value</string>
+    <string name="position_label">Position</string>
+    <string name="qr_code_scan_hint">Scan to open this game instantly.</string>
+    <string name="qr_code_share_hint">Share this code with players, or tap it to copy the game ID.</string>
+    <string name="qr_code_title">Game QR code</string>
+    <string name="score_label">Score</string>
+    <string name="settlement_contribution_description">Contribution: Only winners pay 55% on positive amounts</string>
+    <string name="settlement_example_formula">Your settlement = (Total of all 4 scores - 25 × 4) × ₹99</string>
+    <string name="settlement_example_intro">If you score 25 points in a 4-player game with ₹99/point:</string>
+    <string name="settlement_formula_description">Formula: (Total All Scores - Your Score × 4) × ₹99</string>
+    <string name="settlement_losers_description">Losers (Red): Pay money, no contribution required</string>
+    <string name="settlement_net_amount_description">Net Amount: Gross Amount - Contribution (for winners) or just Gross Amount (for losers)</string>
+    <string name="settlement_overview_title">Settlement Overview</string>
+    <string name="settlement_winners_description">Winners (Green): Receive money but pay 55% on winnings</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="standings_title">Standings</string>
+    <string name="tap_to_enter_name_hint">Tap to enter name</string>
+    <string name="total_players_label">Total Players</string>
+    <string name="update_available_current_version">Current version</string>
+    <string name="update_available_latest_version">Latest version</string>
+    <string name="update_available_message">A new version is ready to install.</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_update_now">Update now</string>
+    <string name="update_available_whats_new">What’s new</string>
+    <string name="user_management_error_loading">Error loading users</string>
+    <string name="user_management_no_users">No users found</string>
+
+    <!-- SetTextI18n / PluralsCandidate (Java) -->
+    <string name="format_rupee_amount">₹%1$s</string>
+    <string name="format_rupee_amount_positive">+₹%1$s</string>
+    <string name="format_rupee_amount_negative">-₹%1$s</string>
+    <string name="format_rupee_amount_rounded">₹%1$d</string>
+    <string name="game_id_label">Game ID: %1$s</string>
+    <string name="game_id_header">GAME  ·  %1$s</string>
+    <string name="player_number_label">Player %1$d</string>
+    <string name="player_id_prefix">#%1$d</string>
+    <string name="standing_position_of">#%1$d of %2$d</string>
+    <string name="voice_language_not_installed">%1$s voice is not installed</string>
+    <string name="version_prefix">v%1$s</string>
+    <string name="user_management_role_admin_prefix">🔑 %1$s</string>
+    <string name="user_management_role_user_prefix">👤 %1$s</string>
+    <string name="user_management_provider">Provider: %1$s</string>
+    <string name="user_management_last_login">Last login: %1$s</string>
+    <string name="user_management_change_role_message">Change role from %1$s to %2$s?</string>
+    <string name="error_with_message">Error: %1$s</string>
+    <string name="game_round_status_complete">Complete · Round %1$d of %2$d</string>
+    <string name="game_round_status_live">Live · Round %1$d of %2$d</string>
+    <string name="settlement_winners_rule_dynamic">Winners (Green): Receive money but pay %1$s on winnings</string>
+    <string name="settlement_formula_description_dynamic">Formula: (Total All Scores - Your Score × %1$d) × %2$s</string>
+    <string name="settlement_contribution_rule_dynamic">Contribution: Only winners pay %1$s on positive amounts</string>
+    <string name="settlement_example_intro_dynamic">If you score 25 points in a %1$d-player game with %2$s/point:</string>
+    <string name="format_rupee_amount_zero">₹0.00</string>
+    <string name="dashboard_percent_format">%1$d%%</string>
+    <string name="review_access_restricted_combined">%1$s\n\n%2$s</string>
+    <string name="game_header_loading">Loading\u2026</string>
+    <string name="game_overview_title">Game Overview</string>
+    <string name="voice_language_data_missing_title">Language data missing</string>
+    <string name="voice_language_data_missing_message">Install the voice data to use spoken score announcements in this language.</string>
+    <string name="voice_language_install">Install</string>
+    <string name="view_mode_round_scores_title">Round Scores</string>
+    <string name="view_mode_select_player_subtitle">Select a player from the settlement board</string>
+    <string name="view_mode_select_player_empty">Select a player above to view round scores</string>
+    <string name="my_round_scores_title">My Round Scores</string>
+    <string name="network_status_online">Online</string>
+    <string name="network_status_offline">Offline</string>
+    <string name="update_download_failed_title">Download failed</string>
+    <string name="update_download_failed_subtitle">The update could not be downloaded</string>
+    <string name="update_manual_download">Manual download</string>
+    <string name="update_try_again">Try again</string>
+    <string name="no_players_data_available">No players data available</string>
+    <string name="player_rank_winner">🏆 %1$s</string>
+    <string name="player_rank_second">🥈 %1$s</string>
+    <string name="player_rank_third">🥉 %1$s</string>
+    <string name="player_rank_numbered">%1$d. %2$s</string>
+    <string name="user_management_last_login_never">Last login: Never</string>
+    <string name="user_management_current_user">Current user</string>
+    <string name="user_management_change_role_title">Change user role?</string>
+    <string name="user_management_keep_current_role">Keep current role</string>
+    <string name="user_management_change_role_confirm">Change role</string>
+    <string name="user_management_delete_user_title">Delete user?</string>
+    <string name="user_management_delete_user_message">This permanently removes the user from RummyPulse. This action cannot be undone.</string>
+    <string name="user_management_keep_user">Keep user</string>
+    <string name="user_management_delete_user_confirm">Delete user</string>
+
+    <string name="player_consolidation_continue_placeholder">Continue</string>
+
+    <plurals name="round_saved_syncing_background">
+        <item quantity="one">Round %d saved — syncing in background.</item>
+        <item quantity="other">Round %d saved — syncing in background.</item>
+    </plurals>
+    <plurals name="dialog_correct_player_current_score">
+        <item quantity="one">Current score · %d point</item>
+        <item quantity="other">Current score · %d points</item>
+    </plurals>
+    <plurals name="review_selected_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <plurals name="review_delete_selected_message">
+        <item quantity="one">Permanently delete 1 selected game and its related data? This cannot be undone.</item>
+        <item quantity="other">Permanently delete %d selected games and their related data? This cannot be undone.</item>
+    </plurals>
+    <plurals name="review_delete_selected_progress">
+        <item quantity="one">Deleting 1 game…</item>
+        <item quantity="other">Deleting %d games…</item>
+    </plurals>
+    <plurals name="review_delete_selected_success">
+        <item quantity="one">1 game deleted.</item>
+        <item quantity="other">%d games deleted.</item>
+    </plurals>
+    <plurals name="standing_round_score">
+        <item quantity="one">R%d Score</item>
+        <item quantity="other">R%d Score</item>
+    </plurals>
+    <plurals name="add_player_confirm_count">
+        <item quantity="one">Current game · 1 player</item>
+        <item quantity="other">Current game · %d players</item>
+    </plurals>
+    <plurals name="player_consolidation_continue">
+        <item quantity="one">Continue (1 selected)</item>
+        <item quantity="other">Continue (%d selected)</item>
+    </plurals>
+    <plurals name="view_request_pending_badge">
+        <item quantity="one">1 pending</item>
+        <item quantity="other">%d pending</item>
+    </plurals>
+    <plurals name="view_request_total_badge">
+        <item quantity="one">1 request</item>
+        <item quantity="other">%d requests</item>
+    </plurals>
+    <plurals name="view_request_badge_summary">
+        <item quantity="one">1 request (%2$d pending)</item>
+        <item quantity="other">%d requests (%2$d pending)</item>
+    </plurals>
+    <plurals name="dashboard_leaderboard_summary">
+        <item quantity="one">1 player ranked</item>
+        <item quantity="other">%d players ranked</item>
+    </plurals>
+    <plurals name="standing_score_points">
+        <item quantity="one">%d point</item>
+        <item quantity="other">%d points</item>
+    </plurals>
+    <plurals name="settlement_example_formula_dynamic">
+        <item quantity="one">Your settlement = (Total of all %d score - 25 × %2$d) × %3$s</item>
+        <item quantity="other">Your settlement = (Total of all %d scores - 25 × %2$d) × %3$s</item>
+    </plurals>
+
+    <plurals name="report_games_count">
+        <item quantity="one">%d Game</item>
+        <item quantity="other">%d Games</item>
+    </plurals>
+    <plurals name="report_point_values_count">
+        <item quantity="one">%d Point Value</item>
+        <item quantity="other">%d Point Values</item>
+    </plurals>
+    <plurals name="player_consolidation_game_count_plural">
+        <item quantity="one">%d game</item>
+        <item quantity="other">%d games</item>
+    </plurals>
+    <plurals name="review_games_approved">
+        <item quantity="one">1 game approved.</item>
+        <item quantity="other">%d games approved.</item>
+    </plurals>
+    <plurals name="review_finalize_completed_games">
+        <item quantity="one">Finalize 1 completed game</item>
+        <item quantity="other">Finalize %d completed games</item>
+    </plurals>
+
+    <!-- Content descriptions and menu labels (HardcodedText) -->
+    <string name="menu_manage">Manage</string>
+    <string name="menu_utilities">Utilities</string>
+    <string name="menu_app_info">App Info</string>
+    <string name="edit_access">Edit Access</string>
+    <string name="cd_show_qr_code">Show QR Code</string>
+    <string name="cd_share">Share</string>
+    <string name="cd_add_player">Add Player</string>
+    <string name="cd_refresh">Refresh</string>
+    <string name="cd_close_round_scores">Close round scores</string>
+    <string name="cd_rummypulse_logo">RummyPulse Logo</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_more_options">More options</string>
+    <string name="cd_tap_to_copy_game_id">Tap to copy Game ID</string>
+    <string name="cd_toggle_active_games">Toggle active games section</string>
+    <string name="cd_toggle_completed_games">Toggle completed games section</string>
+    <string name="cd_toggle_players_section">Toggle players section</string>
+    <string name="cd_toggle_standings_section">Toggle standings section</string>
+    <string name="cd_toggle_settlement_section">Toggle settlement section</string>
+    <string name="cd_create_new_game">Create New Game</string>
+    <string name="cd_game_creator_profile_photo">Game creator profile photo</string>
+    <string name="cd_delete_player">Delete Player</string>
+    <string name="cd_drag_to_reorder">Drag to reorder</string>
+    <string name="cd_user_profile_photo">User Profile Photo</string>
+    <string name="cd_toast_icon">Toast icon</string>
 </resources>

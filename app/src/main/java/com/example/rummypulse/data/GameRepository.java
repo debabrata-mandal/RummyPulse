@@ -440,11 +440,11 @@ public class GameRepository {
         String unknown = "—";
 
         String pointValueStr = auth.getDashboardPointValue() != null
-                ? String.format("%.2f", auth.getDashboardPointValue()) : unknown;
+                ? String.format(Locale.getDefault(), "%.2f", auth.getDashboardPointValue()) : unknown;
         String playersStr = auth.getDashboardNumPlayers() != null
                 ? String.valueOf(auth.getDashboardNumPlayers()) : unknown;
         String gstStr = auth.getDashboardGstPercent() != null
-                ? String.format("%.0f", auth.getDashboardGstPercent()) : unknown;
+                ? String.format(Locale.getDefault(), "%.0f", auth.getDashboardGstPercent()) : unknown;
         String gameStatus = dashboardStatusForDisplay(auth.getDashboardGameStatus());
 
         GameItem gameItem = new GameItem(
@@ -1324,14 +1324,14 @@ public class GameRepository {
         int totalScore = gameData.getTotalScore();
         
         // Format point value (convert from double to string with 2 decimal places)
-        String pointValueStr = String.format("%.2f", gameData.getPointValue());
+        String pointValueStr = String.format(Locale.getDefault(), "%.2f", gameData.getPointValue());
         
         // Format GST percentage
-        String gstPercentageStr = String.format("%.0f", gameData.getGstPercent());
+        String gstPercentageStr = String.format(Locale.getDefault(), "%.0f", gameData.getGstPercent());
         
         // Calculate GST amount
         double gstAmount = gameData.getGstAmount();
-        String gstAmountStr = String.format("%.0f", gstAmount);
+        String gstAmountStr = String.format(Locale.getDefault(), "%.0f", gstAmount);
         
         // Format creation date (from timestamp)
         String creationDateTime = formatTimestamp(createdAt);
@@ -1370,7 +1370,7 @@ public class GameRepository {
         }
         
         java.util.Date date = timestamp.toDate();
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         return sdf.format(date);
     }
     
@@ -1963,7 +1963,7 @@ public class GameRepository {
                         }
                         totalApprovedGstLiveData.setValue(totalGst);
                         approvedGamesCountLiveData.setValue(approvedCount);
-                        System.out.println("Total approved GST amount: ₹" + String.format("%.0f", totalGst));
+                        System.out.println("Total approved GST amount: ₹" + String.format(Locale.getDefault(), "%.0f", totalGst));
                         System.out.println("Total approved games count: " + approvedCount);
                     }
                 });
@@ -1995,7 +1995,7 @@ public class GameRepository {
                         }
                         totalApprovedGstLiveData.setValue(totalGst);
                         approvedGamesCountLiveData.setValue(approvedCount);
-                        System.out.println("Total approved GST amount: ₹" + String.format("%.0f", totalGst));
+                        System.out.println("Total approved GST amount: ₹" + String.format(Locale.getDefault(), "%.0f", totalGst));
                         System.out.println("Total approved games count: " + approvedCount);
                     }
                 })
