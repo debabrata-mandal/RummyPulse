@@ -9,6 +9,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
@@ -26,6 +27,7 @@ public final class SettlementPaymentAdapter
     private final List<PayerGroup> payerGroups = new ArrayList<>();
     private final Set<String> paidPaymentIds = new HashSet<>();
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setPayments(List<SettlementPayment> updatedPayments) {
         Set<String> validIds = new HashSet<>();
         Map<String, PayerGroup> grouped = new LinkedHashMap<>();

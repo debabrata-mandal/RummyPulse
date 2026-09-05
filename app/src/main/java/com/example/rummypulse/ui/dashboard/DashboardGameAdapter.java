@@ -22,6 +22,7 @@ import com.google.zxing.WriterException;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
@@ -31,6 +32,7 @@ import com.example.rummypulse.utils.GameAttributionFormatter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdapter.GameViewHolder> {
 
@@ -48,6 +50,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         this.joinListener = listener;
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setGameItems(List<GameItem> gameItems) {
         this.gameItems = gameItems != null ? gameItems : new ArrayList<>();
         notifyDataSetChanged();
@@ -104,7 +107,8 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         
         // If this is a partial update for time only
         if (!payloads.isEmpty() && payloads.contains("time_update")) {
-            holder.createdTimeText.setText("Started " + formatDateTime(item.getCreationDateTime()));
+            holder.createdTimeText.setText(holder.itemView.getContext().getString(
+                    R.string.player_consolidation_started, formatDateTime(item.getCreationDateTime())));
             return;
         }
         
@@ -168,10 +172,10 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         // Set point value with color coding
         String pointValue = item.getPointValue();
         if (pointValue == null || pointValue.isEmpty()) {
-            holder.pointValueText.setText("₹0.00");
+            holder.pointValueText.setText(context.getString(R.string.format_rupee_amount_zero));
             holder.pointValueText.setTextColor(holder.itemView.getContext().getColor(R.color.success_green));
         } else {
-            holder.pointValueText.setText("₹" + pointValue);
+            holder.pointValueText.setText(context.getString(R.string.format_rupee_amount, pointValue));
             
             // Color code based on point value
             try {
@@ -203,7 +207,8 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         holder.gstText.setText(item.getGstPercentage());
         
         // Set created time
-        holder.createdTimeText.setText("Started " + formatDateTime(item.getCreationDateTime()));
+        holder.createdTimeText.setText(holder.itemView.getContext().getString(
+                R.string.player_consolidation_started, formatDateTime(item.getCreationDateTime())));
         
         // Creator ownership and current/last editor are separate identities.
         holder.creatorSection.setVisibility(View.VISIBLE);
@@ -259,7 +264,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         
         try {
             // Parse the date time and calculate relative time
-            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
             java.util.Date creationDate = sdf.parse(dateTime);
             long currentTime = System.currentTimeMillis();
             long creationTime = creationDate.getTime();
@@ -271,7 +276,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             long diffInDays = diffInMillis / (1000 * 60 * 60 * 24);
             
             // Format the actual time
-            java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("hh:mm a");
+            java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("hh:mm a", Locale.getDefault());
             String actualTime = timeFormat.format(creationDate);
             
             if (diffInMinutes < 1) {
@@ -281,11 +286,11 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             } else if (diffInHours < 24) {
                 return diffInHours + " hours ago at " + actualTime;
             } else if (diffInDays < 7) {
-                java.text.SimpleDateFormat dateTimeFormat = new java.text.SimpleDateFormat("MMM dd 'at' hh:mm a");
+                java.text.SimpleDateFormat dateTimeFormat = new java.text.SimpleDateFormat("MMM dd 'at' hh:mm a", Locale.getDefault());
                 return dateTimeFormat.format(creationDate);
             } else {
                 // For older dates, show the actual date and time
-                java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a");
+                java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault());
                 return displayFormat.format(creationDate);
             }
         } catch (Exception e) {
@@ -301,7 +306,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
                 long diffInDays = diffInMillis / (1000 * 60 * 60 * 24);
                 
                 // Format the actual time
-                java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("hh:mm a");
+                java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("hh:mm a", Locale.getDefault());
                 java.util.Date date = new java.util.Date(timestamp);
                 String actualTime = timeFormat.format(date);
                 
@@ -312,10 +317,10 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
                 } else if (diffInHours < 24) {
                     return diffInHours + " hours ago at " + actualTime;
                 } else if (diffInDays < 7) {
-                    java.text.SimpleDateFormat dateTimeFormat = new java.text.SimpleDateFormat("MMM dd 'at' hh:mm a");
+                    java.text.SimpleDateFormat dateTimeFormat = new java.text.SimpleDateFormat("MMM dd 'at' hh:mm a", Locale.getDefault());
                     return dateTimeFormat.format(date);
                 } else {
-                    java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a");
+                    java.text.SimpleDateFormat displayFormat = new java.text.SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault());
                     return displayFormat.format(date);
                 }
             } catch (Exception ex) {
@@ -337,7 +342,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         ImageView closeButton = dialogView.findViewById(R.id.btn_close);
         
         // Set game information
-        gameIdText.setText("Game ID: " + gameItem.getGameId());
+        gameIdText.setText(context.getString(R.string.game_id_label, gameItem.getGameId()));
         
         // Generate QR code
         try {

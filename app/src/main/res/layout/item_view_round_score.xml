@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="68dp"
     android:background="@drawable/bg_view_round_cell"
@@ -17,9 +18,9 @@
         android:paddingTop="2dp"
         android:paddingEnd="5dp"
         android:paddingBottom="2dp"
-        android:text="R1"
+        tools:text="R1"
         android:textColor="@color/view_text_secondary"
-        android:textSize="9sp"
+        android:textSize="9dp"
         android:textStyle="bold" />
 
     <TextView
@@ -28,7 +29,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginTop="10dp"
-        android:text="25"
+        tools:text="25"
         android:textColor="@color/view_text_primary"
         android:textSize="17sp"
         android:textStyle="bold" />

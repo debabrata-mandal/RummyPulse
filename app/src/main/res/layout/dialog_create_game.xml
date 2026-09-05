@@ -116,7 +116,7 @@
                             android:maxLines="1"
                             android:text="@string/dialog_game_name_section_subtitle"
                             android:textColor="@color/view_text_secondary"
-                            android:textSize="10sp" />
+                            android:textSize="10dp" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -214,7 +214,7 @@
                             android:maxLines="1"
                             android:text="@string/dialog_point_value_subtitle"
                             android:textColor="@color/view_text_secondary"
-                            android:textSize="10sp" />
+                            android:textSize="10dp" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -264,7 +264,7 @@
                                 android:imeOptions="actionDone"
                                 android:inputType="numberDecimal"
                                 android:maxLength="8"
-                                android:text="0.15"
+                                tools:text="0.15"
                                 android:textColor="@color/view_mint"
                                 android:textSize="16sp"
                                 android:textStyle="bold" />
@@ -329,7 +329,7 @@
                             android:maxLines="1"
                             android:text="@string/dialog_contribution_subtitle"
                             android:textColor="@color/view_text_secondary"
-                            android:textSize="10sp" />
+                            android:textSize="10dp" />
                     </LinearLayout>
 
                     <TextView

@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_primary"
     tools:context=".ui.gamedefaults.GameDefaultsFragment">
 
     <androidx.core.widget.NestedScrollView
@@ -375,30 +374,17 @@
                     android:paddingEnd="16dp"
                     android:paddingBottom="14dp">
 
-                    <LinearLayout
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:drawablePadding="10dp"
+                        android:fontFamily="sans-serif-medium"
                         android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <ImageView
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:contentDescription="@null"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_info"
-                            app:tint="@color/accent_blue_light" />
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="10dp"
-                            android:layout_weight="1"
-                            android:fontFamily="sans-serif-medium"
-                            android:text="@string/game_defaults_section_audit"
-                            android:textColor="@color/text_primary"
-                            android:textSize="15sp" />
-                    </LinearLayout>
+                        android:text="@string/game_defaults_section_audit"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        app:drawableStartCompat="@drawable/ic_info"
+                        app:drawableTint="@color/accent_blue_light" />
 
                     <TextView
                         android:id="@+id/text_audit"

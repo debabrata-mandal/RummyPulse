@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/correct_player_dialog_root"
     android:layout_width="match_parent"
@@ -72,7 +73,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:background="@drawable/bg_create_game_inner"
-        android:drawableStart="@drawable/ic_info"
+        app:drawableStartCompat="@drawable/ic_info"
         android:drawablePadding="8dp"
         android:gravity="center_vertical"
         android:paddingStart="12dp"
@@ -82,7 +83,7 @@
         android:text="@string/dialog_correct_player_hint"
         android:textColor="@color/view_text_secondary"
         android:textSize="12sp"
-        android:drawableTint="@color/view_violet_light" />
+        app:drawableTint="@color/view_violet_light" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -110,7 +111,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:minHeight="48dp"
-        android:text="@android:string/cancel"
+        tools:text="@android:string/cancel"
         android:textAllCaps="false"
         android:textColor="@color/view_text_primary"
         app:backgroundTint="#24111424"

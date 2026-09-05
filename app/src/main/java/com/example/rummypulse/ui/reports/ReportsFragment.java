@@ -233,7 +233,7 @@ public class ReportsFragment extends Fragment {
 
     private void showError(String error) {
         errorText.setVisibility(View.VISIBLE);
-        errorText.setText("Error: " + error);
+        errorText.setText(getString(R.string.error_with_message, error));
         recyclerView.setVisibility(View.GONE);
         swipeRefreshLayout.setVisibility(View.GONE);
         emptyState.setVisibility(View.GONE);

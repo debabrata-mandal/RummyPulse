@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_dark"
     tools:context=".ui.home.HomeFragment">
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -93,6 +92,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="14dp"
+                            android:baselineAligned="false"
                             android:orientation="horizontal">
 
                             <LinearLayout
@@ -110,7 +110,7 @@
                                     android:layout_height="wrap_content"
                                     android:text="@string/review_metric_completed"
                                     android:textColor="@color/accent_blue_light"
-                                    android:textSize="10sp"
+                                    android:textSize="10dp"
                                     android:textStyle="bold" />
 
                                 <TextView
@@ -118,7 +118,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
-                                    android:text="0"
+                                    tools:text="0"
                                     android:textColor="@color/text_primary"
                                     android:textSize="24sp"
                                     android:textStyle="bold" />
@@ -139,7 +139,7 @@
                                     android:layout_height="wrap_content"
                                     android:text="@string/review_metric_in_progress"
                                     android:textColor="@color/accent_blue_light"
-                                    android:textSize="10sp"
+                                    android:textSize="10dp"
                                     android:textStyle="bold" />
 
                                 <TextView
@@ -147,7 +147,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="4dp"
-                                    android:text="0"
+                                    tools:text="0"
                                     android:textColor="@color/text_primary"
                                     android:textSize="24sp"
                                     android:textStyle="bold" />

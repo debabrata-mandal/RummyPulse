@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -511,7 +512,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
             return;
         }
         List<ConsolidatedPlayerGroup> sortedGroups = new ArrayList<>(groups);
-        sortedGroups.sort(Comparator.comparing(group -> group.getDisplayName().toLowerCase()));
+        sortedGroups.sort(Comparator.comparing(group -> group.getDisplayName().toLowerCase(Locale.getDefault())));
         playerGroups.setValue(sortedGroups);
         ConsolidationTotals totals = ConsolidationTotals.fromGroups(sortedGroups);
         consolidationTotals.setValue(totals);

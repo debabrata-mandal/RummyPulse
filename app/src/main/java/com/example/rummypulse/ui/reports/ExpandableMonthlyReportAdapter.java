@@ -6,6 +6,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
@@ -15,6 +16,7 @@ import com.example.rummypulse.data.PointValueReport;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
@@ -86,6 +88,7 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
         return items.size();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setMonthlyPointValueReports(List<MonthlyPointValueReport> reports) {
         items.clear();
         // Don't clear expandedStates to preserve user's expand/collapse preferences
@@ -223,13 +226,16 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
             boolean isExpanded = adapter.expandedStates.getOrDefault(monthYear, false);
 
             monthYearText.setText(monthYear);
-            monthlyGamesText.setText(report.getMonthlyGamesText());
+            monthlyGamesText.setText(itemView.getContext().getResources().getQuantityString(
+                    R.plurals.report_games_count,
+                    report.getTotalGamesForMonth(),
+                    report.getTotalGamesForMonth()));
             monthlyGstText.setText(report.getFormattedMonthlyGst());
             
             // Point values count
             int pointValuesCount = report.getPointValueReports() != null ? report.getPointValueReports().size() : 0;
-            String pointValuesText = pointValuesCount + " Point Value" + (pointValuesCount != 1 ? "s" : "");
-            pointValuesCountText.setText(pointValuesText);
+            pointValuesCountText.setText(itemView.getContext().getResources().getQuantityString(
+                    R.plurals.report_point_values_count, pointValuesCount, pointValuesCount));
 
             // Set expand/collapse icon
             expandCollapseIcon.setText(isExpanded ? "▼" : "▶");
@@ -268,15 +274,18 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
             monthYearText.setVisibility(View.GONE);
             
             pointValueText.setText(report.getFormattedPointValue());
-            totalGamesText.setText(report.getGamesText());
+            totalGamesText.setText(itemView.getContext().getResources().getQuantityString(
+                    R.plurals.report_games_count, report.getTotalGames(), report.getTotalGames()));
             
             // Format GST amounts
             totalGstText.setText(report.getFormattedGstAmount());
-            avgGstText.setText("₹" + String.format("%.1f", report.getAverageGstPerGame()));
+            avgGstText.setText(itemView.getContext().getString(
+                    R.string.format_rupee_amount,
+                    String.format(Locale.getDefault(), "%.1f", report.getAverageGstPerGame())));
             
             // Format player counts
             totalPlayersText.setText(String.valueOf(report.getTotalPlayers()));
-            avgPlayersText.setText(String.format("%.1f", report.getAveragePlayersPerGame()));
+            avgPlayersText.setText(String.format(Locale.getDefault(), "%.1f", report.getAveragePlayersPerGame()));
         }
     }
 }

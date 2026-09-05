@@ -6,6 +6,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
@@ -18,6 +19,7 @@ public class SelectedGamesStatusAdapter extends RecyclerView.Adapter<SelectedGam
 
     private List<GameItem> games = new ArrayList<>();
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setGames(List<GameItem> games) {
         this.games = games != null ? games : new ArrayList<>();
         notifyDataSetChanged();

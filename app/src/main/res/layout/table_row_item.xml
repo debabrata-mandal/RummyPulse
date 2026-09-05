@@ -156,7 +156,7 @@
                     android:letterSpacing="0.06"
                     android:text="@string/review_point_value_label"
                     android:textColor="@color/text_secondary"
-                    android:textSize="9sp"
+                    android:textSize="9dp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -196,7 +196,7 @@
                     android:letterSpacing="0.06"
                     android:text="@string/review_players_label"
                     android:textColor="@color/text_secondary"
-                    android:textSize="9sp"
+                    android:textSize="9dp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -236,7 +236,7 @@
                     android:letterSpacing="0.06"
                     android:text="@string/review_contribution_pct_label"
                     android:textColor="@color/text_secondary"
-                    android:textSize="9sp"
+                    android:textSize="9dp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -276,7 +276,7 @@
                     android:letterSpacing="0.06"
                     android:text="@string/review_contribution_amt_label"
                     android:textColor="@color/text_secondary"
-                    android:textSize="9sp"
+                    android:textSize="9dp"
                     android:textStyle="bold" />
 
                 <TextView

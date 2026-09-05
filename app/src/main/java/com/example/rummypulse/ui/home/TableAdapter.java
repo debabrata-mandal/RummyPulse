@@ -19,6 +19,7 @@ import com.google.zxing.WriterException;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
@@ -28,6 +29,7 @@ import com.google.android.material.checkbox.MaterialCheckBox;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHolder> {
     private List<GameItem> gameItems;
@@ -59,6 +61,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         notifySelectionChanged();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void submitItems(List<GameItem> items) {
         gameItems = items != null ? items : new ArrayList<>();
         selection.retainAvailable(availableGameIds());
@@ -66,6 +69,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         notifySelectionChanged();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void selectAll(boolean select) {
         if (select) {
             selection.selectAll(availableGameIds());
@@ -84,6 +88,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         return selection.snapshot();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setActionsEnabled(boolean enabled) {
         if (actionsEnabled == enabled) {
             return;
@@ -148,10 +153,12 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             // Set Point Value with currency formatting and null checking
             String pointValue = item.getPointValue();
             if (pointValue == null || pointValue.isEmpty()) {
-                holder.pointValueText.setText("₹0.00");
+                holder.pointValueText.setText(
+                        holder.itemView.getContext().getString(R.string.format_rupee_amount_zero));
                 System.out.println("Point value is null/empty for game " + item.getGameId() + ", setting to ₹0.00");
             } else {
-                holder.pointValueText.setText("₹" + pointValue);
+                holder.pointValueText.setText(
+                        holder.itemView.getContext().getString(R.string.format_rupee_amount, pointValue));
                 System.out.println("Setting point value for game " + item.getGameId() + ": ₹" + pointValue);
             }
 
@@ -189,7 +196,8 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 holder.gstAmountText.setVisibility(android.view.View.VISIBLE);
             } else {
                 System.out.println("TableAdapter: Setting gstAmount to ₹" + gstAmount);
-                holder.gstAmountText.setText("₹" + gstAmount);
+                holder.gstAmountText.setText(
+                        holder.itemView.getContext().getString(R.string.format_rupee_amount, gstAmount));
                 holder.gstAmountText.setVisibility(android.view.View.VISIBLE);
             }
         } else {
@@ -266,7 +274,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     private String formatNumber(String number) {
         try {
             int num = Integer.parseInt(number);
-            return String.format("%,d", num);
+            return String.format(Locale.getDefault(), "%,d", num);
         } catch (NumberFormatException e) {
             return number;
         }
@@ -322,7 +330,8 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
 
     private void showPlayersDialog(Context context, GameItem gameItem) {
         // Create dialog view
-        View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_players_list, null);
+        View dialogView = LayoutInflater.from(context)
+                .inflate(R.layout.dialog_players_list, new android.widget.FrameLayout(context), false);
         
         // Set game ID
         TextView gameIdText = dialogView.findViewById(R.id.text_dialog_game_id);
@@ -354,7 +363,8 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
 
             for (int i = 0; i < players.size(); i++) {
                 Player player = players.get(i);
-                View playerView = LayoutInflater.from(context).inflate(R.layout.item_player_score, null);
+                View playerView = LayoutInflater.from(context)
+                        .inflate(R.layout.item_player_score, new android.widget.FrameLayout(context), false);
                 
                 TextView playerNameText = playerView.findViewById(R.id.text_player_name);
                 TextView playerScoreText = playerView.findViewById(R.id.text_player_score);
@@ -382,29 +392,29 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 
                 // Add ranking indicator and winner highlighting
                 int rank = i + 1;
-                String rankIndicator = "";
                 if (rank == 1) {
-                    rankIndicator = "🏆 "; // Winner (lowest score)
+                    playerNameText.setText(context.getString(R.string.player_rank_winner, playerName));
                     playerScoreText.setTextColor(context.getColor(R.color.success_green));
                 } else if (rank == 2) {
-                    rankIndicator = "🥈 ";
+                    playerNameText.setText(context.getString(R.string.player_rank_second, playerName));
                     playerScoreText.setTextColor(context.getColor(R.color.warning_orange));
                 } else if (rank == 3) {
-                    rankIndicator = "🥉 ";
+                    playerNameText.setText(context.getString(R.string.player_rank_third, playerName));
                     playerScoreText.setTextColor(context.getColor(R.color.error_red));
                 } else {
-                    rankIndicator = rank + ". ";
+                    playerNameText.setText(context.getString(
+                            R.string.player_rank_numbered, rank, playerName));
                     playerScoreText.setTextColor(context.getColor(R.color.text_primary));
                 }
-                
-                playerNameText.setText(rankIndicator + playerName);
                 playerScoreText.setText(String.valueOf(playerScore));
 
                 if (netAmount > 0) {
-                    netAmountText.setText("+₹" + Math.round(netAmount));
+                    netAmountText.setText(context.getString(
+                            R.string.format_rupee_amount_positive, String.valueOf(Math.round(netAmount))));
                     netAmountText.setTextColor(context.getColor(R.color.success_green));
                 } else if (netAmount < 0) {
-                    netAmountText.setText("₹" + Math.round(netAmount));
+                    netAmountText.setText(context.getString(
+                            R.string.format_rupee_amount, String.valueOf(Math.round(netAmount))));
                     netAmountText.setTextColor(context.getColor(R.color.error_red));
                 } else {
                     netAmountText.setText("₹0");
@@ -416,7 +426,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         } else {
             // Show message if no players
             TextView noPlayersText = new TextView(context);
-            noPlayersText.setText("No players data available");
+            noPlayersText.setText(context.getString(R.string.no_players_data_available));
             noPlayersText.setTextSize(16);
             noPlayersText.setTextColor(context.getColor(R.color.text_secondary));
             noPlayersText.setPadding(32, 32, 32, 32);
@@ -457,7 +467,8 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.DarkDialogTheme);
         
         // Inflate custom layout
-        View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_qr_code, null);
+        View dialogView = LayoutInflater.from(context)
+                .inflate(R.layout.dialog_qr_code, new android.widget.FrameLayout(context), false);
         
         // Get views
         ImageView qrCodeImage = dialogView.findViewById(R.id.qr_code_image);
@@ -465,7 +476,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         ImageView closeButton = dialogView.findViewById(R.id.btn_close);
         
         // Set game information
-        gameIdText.setText("Game ID: " + gameItem.getGameId());
+        gameIdText.setText(context.getString(R.string.game_id_label, gameItem.getGameId()));
         
         // Generate QR code
         try {

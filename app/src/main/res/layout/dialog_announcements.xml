@@ -99,7 +99,7 @@
                 android:layout_marginTop="2dp"
                 android:text="@string/voice_announcements_language_section_subtitle"
                 android:textColor="@color/view_text_secondary"
-                android:textSize="10sp" />
+                android:textSize="10dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_bengali"

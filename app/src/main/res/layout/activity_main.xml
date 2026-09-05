@@ -59,7 +59,7 @@
                 android:focusable="true"
                 android:gravity="center_vertical"
                 android:paddingHorizontal="16dp"
-                android:text="Sign Out"
+                android:text="@string/sign_out"
                 android:textColor="@color/navigation_sign_out"
                 android:textSize="15sp"
                 android:textStyle="bold"

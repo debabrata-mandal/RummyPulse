@@ -20,80 +20,73 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_dashboard_game_card"
-        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:padding="10dp">
 
+        <TextView
+            android:id="@+id/text_avatar_initial"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:background="@drawable/circle_background"
+            android:backgroundTint="@color/accent_blue"
+            android:gravity="center"
+            android:textColor="@android:color/white"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            tools:text="A" />
+
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
 
             <TextView
-                android:id="@+id/text_avatar_initial"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:background="@drawable/circle_background"
-                android:backgroundTint="@color/accent_blue"
-                android:gravity="center"
-                android:textColor="@android:color/white"
+                android:id="@+id/text_display_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text_primary"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                tools:text="A" />
+                tools:text="Amit" />
 
-            <LinearLayout
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/text_game_count"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/text_display_name"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:textColor="@color/text_primary"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    tools:text="Amit" />
-
-                <TextView
-                    android:id="@+id/text_game_count"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="11sp"
-                    tools:text="3 games" />
-
-                <TextView
-                    android:id="@+id/text_game_names"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:ellipsize="end"
-                    android:maxLines="2"
-                    android:textColor="@color/accent_blue_light"
-                    android:textSize="10sp"
-                    tools:text="Rummy Champions · Deck Masters · Card Rush" />
-            </LinearLayout>
-
-            <com.google.android.material.checkbox.MaterialCheckBox
-                android:id="@+id/checkbox_player_selected"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:clickable="false"
-                android:focusable="false"
-                android:gravity="center_vertical"
-                android:minHeight="40dp"
-                android:text="@string/player_consolidation_select"
+                android:layout_marginTop="2dp"
                 android:textColor="@color/text_secondary"
-                android:textSize="11sp" />
+                android:textSize="11sp"
+                tools:text="3 games" />
 
+            <TextView
+                android:id="@+id/text_game_names"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/accent_blue_light"
+                android:textSize="10dp"
+                tools:text="Rummy Champions · Deck Masters · Card Rush" />
         </LinearLayout>
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/checkbox_player_selected"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:clickable="false"
+            android:focusable="false"
+            android:gravity="center_vertical"
+            android:minHeight="40dp"
+            android:text="@string/player_consolidation_select"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp" />
 
     </LinearLayout>
 

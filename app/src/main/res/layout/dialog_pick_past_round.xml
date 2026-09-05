@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -71,9 +72,9 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:drawableStart="@drawable/ic_info"
+                app:drawableStartCompat="@drawable/ic_info"
                 android:drawablePadding="8dp"
-                android:drawableTint="@color/view_violet_light"
+                app:drawableTint="@color/view_violet_light"
                 android:gravity="center_vertical"
                 android:text="@string/dialog_pick_past_round_hint"
                 android:textColor="@color/view_text_secondary"
@@ -108,7 +109,7 @@
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:minHeight="48dp"
-            android:text="@android:string/cancel"
+            tools:text="@android:string/cancel"
             android:textAllCaps="false"
             android:textColor="@color/view_text_primary"
             app:backgroundTint="#24111424"

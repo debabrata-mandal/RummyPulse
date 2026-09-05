@@ -1,5 +1,6 @@
 package com.example.rummypulse.utils;
 
+import java.util.Locale;
 import java.util.Random;
 
 public final class PinUtils {
@@ -12,7 +13,7 @@ public final class PinUtils {
         Random random = new Random();
         String pin;
         do {
-            pin = String.format("%04d", random.nextInt(10000));
+            pin = String.format(Locale.getDefault(), "%04d", random.nextInt(10000));
         } while ("0000".equals(pin));
         return pin;
     }

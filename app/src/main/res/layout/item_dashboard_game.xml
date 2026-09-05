@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -36,7 +37,7 @@
                     android:id="@+id/text_game_id"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Game #12345"
+                    tools:text="Game #12345"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
@@ -51,7 +52,7 @@
                     android:padding="3dp"
                     android:clickable="true"
                     android:focusable="true"
-                    android:contentDescription="Show QR Code" />
+                    android:contentDescription="@string/cd_show_qr_code" />
 
             </LinearLayout>
 
@@ -59,7 +60,7 @@
                 android:id="@+id/text_game_status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="In Progress"
+                tools:text="In Progress"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:textColor="@color/white"
@@ -103,7 +104,7 @@
                     android:minWidth="76dp"
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="6dp"
-                    android:text="Pending 0"
+                    tools:text="Pending 0"
                     android:textColor="@color/white"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -118,7 +119,7 @@
                     android:minWidth="82dp"
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="6dp"
-                    android:text="Approved 0"
+                    tools:text="Approved 0"
                     android:textColor="@color/white"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -132,7 +133,7 @@
                     android:minWidth="82dp"
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="6dp"
-                    android:text="Rejected 0"
+                    tools:text="Rejected 0"
                     android:textColor="@color/white"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -161,8 +162,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="POINT VALUE"
-                    android:textSize="9sp"
+                    android:text="@string/review_point_value_label"
+                    android:textSize="9dp"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
@@ -171,7 +172,7 @@
                     android:id="@+id/text_point_value"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="₹10.00"
+                    tools:text="₹10.00"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="@color/accent_blue"
@@ -199,8 +200,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="PLAYERS"
-                    android:textSize="9sp"
+                    android:text="@string/review_players_label"
+                    android:textSize="9dp"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
@@ -209,7 +210,7 @@
                     android:id="@+id/text_players"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="4"
+                    tools:text="4"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
@@ -236,37 +237,25 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="CONTRIBUTION"
-                    android:textSize="9sp"
+                    android:text="@string/player_consolidation_contribution_column"
+                    android:textSize="9dp"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
 
-                <LinearLayout
+                <TextView
+                    android:id="@+id/text_gst"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center"
-                    android:layout_marginTop="2dp">
-
-                    <ImageView
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:src="@drawable/ic_percent"
-                        app:tint="@color/success_green"
-                        android:layout_marginEnd="4dp"
-                        android:contentDescription="Percent" />
-
-                    <TextView
-                        android:id="@+id/text_gst"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="10"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
-
-                </LinearLayout>
+                    android:layout_marginTop="2dp"
+                    android:drawablePadding="4dp"
+                    android:gravity="center_vertical"
+                    tools:text="10"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    app:drawableStartCompat="@drawable/ic_percent"
+                    app:drawableTint="@color/success_green" />
 
             </LinearLayout>
 
@@ -298,7 +287,7 @@
                     android:layout_height="match_parent"
                     android:scaleType="centerCrop"
                     android:src="@drawable/ic_person"
-                    android:contentDescription="Game creator profile photo" />
+                    android:contentDescription="@string/cd_game_creator_profile_photo" />
 
             </androidx.cardview.widget.CardView>
 
@@ -315,7 +304,7 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
                     android:maxLines="2"
-                    android:text="Created &amp; Edited by John Doe"
+                    tools:text="Created &amp; Edited by John Doe"
                     android:textColor="@color/text_secondary"
                     android:textSize="11sp" />
 
@@ -323,7 +312,7 @@
                     android:id="@+id/text_created_time"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Started 2 hours ago"
+                    tools:text="Started 2 hours ago"
                     android:textSize="11sp"
                     android:textColor="@color/text_secondary"
                     android:layout_marginTop="2dp" />

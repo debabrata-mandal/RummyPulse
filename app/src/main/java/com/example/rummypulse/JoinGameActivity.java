@@ -788,9 +788,9 @@ public class JoinGameActivity extends AppCompatActivity {
                     announcement.append(playerName).append(" মোট স্কোর ").append(totalScore).append(" পয়েন্ট। ");
                     
                     if (netAmount > 0) {
-                        announcement.append("পাবেন ").append(String.format("%.0f", netAmount)).append(" টাকা। ");
+                        announcement.append("পাবেন ").append(String.format(Locale.getDefault(), "%.0f", netAmount)).append(" টাকা। ");
                     } else if (netAmount < 0) {
-                        announcement.append("দিতে হবে ").append(String.format("%.0f", Math.abs(netAmount))).append(" টাকা। ");
+                        announcement.append("দিতে হবে ").append(String.format(Locale.getDefault(), "%.0f", Math.abs(netAmount))).append(" টাকা। ");
                     } else {
                         announcement.append("কোন পেমেন্ট নেই। ");
                     }
@@ -799,7 +799,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Announce total contribution
                 if (totalContribution > 0) {
                     announcement.append("মোট অবদান সংগৃহীত ")
-                               .append(String.format("%.0f", totalContribution))
+                               .append(String.format(Locale.getDefault(), "%.0f", totalContribution))
                                .append(" টাকা।");
                 }
             } else {
@@ -816,9 +816,9 @@ public class JoinGameActivity extends AppCompatActivity {
                     announcement.append(playerName).append(" total score ").append(totalScore).append(" point. ");
                     
                     if (netAmount > 0) {
-                        announcement.append("Will receive ").append(String.format("%.0f", netAmount)).append(" rupees. ");
+                        announcement.append("Will receive ").append(String.format(Locale.getDefault(), "%.0f", netAmount)).append(" rupees. ");
                     } else if (netAmount < 0) {
-                        announcement.append("Will pay ").append(String.format("%.0f", Math.abs(netAmount))).append(" rupees. ");
+                        announcement.append("Will pay ").append(String.format(Locale.getDefault(), "%.0f", Math.abs(netAmount))).append(" rupees. ");
                     } else {
                         announcement.append("No payment. ");
                     }
@@ -827,7 +827,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 // Announce total contribution
                 if (totalContribution > 0) {
                     announcement.append("Total contribution collected is ")
-                               .append(String.format("%.0f", totalContribution))
+                               .append(String.format(Locale.getDefault(), "%.0f", totalContribution))
                                .append(" rupees.");
                 }
             }
@@ -1013,10 +1013,10 @@ public class JoinGameActivity extends AppCompatActivity {
         MaterialButton install =
                 dialogView.findViewById(R.id.btn_action_dialog_confirm);
         icon.setImageResource(R.drawable.ic_language);
-        title.setText("Language data missing");
-        subtitle.setText(languageName + " voice is not installed");
-        message.setText("Install the voice data to use spoken score announcements in this language.");
-        install.setText("Install");
+        title.setText(getString(R.string.voice_language_data_missing_title));
+        subtitle.setText(getString(R.string.voice_language_not_installed, languageName));
+        message.setText(getString(R.string.voice_language_data_missing_message));
+        install.setText(getString(R.string.voice_language_install));
 
         AlertDialog dialog = new AlertDialog.Builder(
                 this, R.style.DarkDialogTheme)
@@ -1070,7 +1070,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
             // Set placeholder player name
             TextView playerName = standingsRowView.findViewById(R.id.text_player_name);
-            playerName.setText("Player " + (i + 1));
+            playerName.setText(getString(R.string.player_number_label, i + 1));
 
             // Hide player ID during loading
             TextView playerId = standingsRowView.findViewById(R.id.text_player_id);
@@ -1098,7 +1098,7 @@ public class JoinGameActivity extends AppCompatActivity {
      */
     private void applyGameHeaderText() {
         if (currentGameId == null) {
-            binding.textGameIdHeader.setText("Loading...");
+            binding.textGameIdHeader.setText(getString(R.string.game_header_loading));
             return;
         }
         String name = viewModel.getGameDisplayName().getValue();
@@ -1123,7 +1123,7 @@ public class JoinGameActivity extends AppCompatActivity {
             
             // Set placeholder player name
             EditText playerNameText = playerCardView.findViewById(R.id.text_player_name);
-            playerNameText.setText("Player " + (i + 1));
+            playerNameText.setText(getString(R.string.player_number_label, i + 1));
             playerNameText.setEnabled(false);
 
             TextView totalScoreView = playerCardView.findViewById(R.id.text_player_total_score);
@@ -1711,18 +1711,20 @@ public class JoinGameActivity extends AppCompatActivity {
 
         String displayName = viewModel.getGameDisplayName().getValue();
         title.setText(TextUtils.isEmpty(displayName) ? "Rummy Game" : displayName);
-        gameId.setText(currentGameId == null ? "" : "GAME  ·  " + currentGameId);
+        gameId.setText(currentGameId == null ? "" : getString(R.string.game_id_header, currentGameId));
 
         int currentRound = calculateCurrentRound(gameData);
         boolean completed = isGameCompleted(gameData);
         int completedRounds = completed ? 10 : Math.max(0, currentRound - 1);
-        roundStatus.setText((completed ? "Complete" : "Live")
-                + " · Round " + (completed ? 10 : currentRound) + " of 10");
+        roundStatus.setText(getString(
+                completed ? R.string.game_round_status_complete : R.string.game_round_status_live,
+                completed ? 10 : currentRound,
+                10));
         progress.setMax(10);
         progress.setProgress(completedRounds);
         totalPlayers.setText(String.valueOf(
                 gameData.getPlayers() == null ? 0 : gameData.getPlayers().size()));
-        pointValue.setText("₹" + formatPointValue(gameData.getPointValue()));
+        pointValue.setText(getString(R.string.format_rupee_amount, formatPointValue(gameData.getPointValue())));
         contributionSummary.setText(String.format(Locale.getDefault(), "%.0f%% · ₹%d",
                 gameData.getGstPercent(), Math.round(calculateTotalContribution(gameData))));
         renderCurrentPlayerPerformance(gameData, settlementStatus,
@@ -1749,7 +1751,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 ? mappedPlayer
                 : findPlayerBySelectionKey(gameData, selectedViewRoundPlayerKey);
         if (focusPlayer == null) {
-            title.setText("Game Overview");
+            title.setText(getString(R.string.game_overview_title));
             if (personalMetrics != null) {
                 personalMetrics.setVisibility(View.GONE);
             }
@@ -1779,23 +1781,25 @@ public class JoinGameActivity extends AppCompatActivity {
         renderViewModePlayerStatistics(gameData, focusPlayer);
 
         title.setText(isViewModeSelfPlayer(gameData, focusPlayer)
-                ? "My Performance"
+                ? getString(R.string.my_performance_title)
                 : buildPlayerPerformanceTitle(focusPlayer.getName()));
-        balanceLabel.setText("Balance");
+        balanceLabel.setText(getString(R.string.standing_balance));
         positionView.setText(focusPosition > 0
-                ? "#" + focusPosition + " of " + standings.size()
+                ? getString(R.string.standing_position_of, focusPosition, standings.size())
                 : "—");
         if (focusStanding == null
                 || !shouldShowStandingAmountForPlayer(gameData, focusStanding.player)) {
             balanceView.setText(getString(R.string.game_view_amount_hidden));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
         } else if (focusStanding.netAmount > 0) {
-            balanceView.setText("+₹" + String.format(Locale.getDefault(), "%.0f",
-                    focusStanding.netAmount));
+            balanceView.setText(getString(
+                    R.string.format_rupee_amount_positive,
+                    String.format(Locale.getDefault(), "%.0f", focusStanding.netAmount)));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
         } else if (focusStanding.netAmount < 0) {
-            balanceView.setText("-₹" + String.format(Locale.getDefault(), "%.0f",
-                    Math.abs(focusStanding.netAmount)));
+            balanceView.setText(getString(
+                    R.string.format_rupee_amount_negative,
+                    String.format(Locale.getDefault(), "%.0f", Math.abs(focusStanding.netAmount))));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
         } else {
             balanceView.setText("₹0");
@@ -1916,7 +1920,11 @@ public class JoinGameActivity extends AppCompatActivity {
             ((TextView) row.findViewById(R.id.view_settlement_rank)).setText(String.valueOf(i + 1));
             ((TextView) row.findViewById(R.id.view_settlement_name)).setText(isCurrentPlayer
                     ? standing.player.getName() + "  ·  You" : standing.player.getName());
-            ((TextView) row.findViewById(R.id.view_settlement_score)).setText(standing.totalScore + " points");
+            ((TextView) row.findViewById(R.id.view_settlement_score)).setText(
+                    getResources().getQuantityString(
+                            R.plurals.standing_score_points,
+                            standing.totalScore,
+                            standing.totalScore));
             TextView avatar = row.findViewById(R.id.view_settlement_avatar);
             String playerName = standing.player.getName();
             avatar.setText(TextUtils.isEmpty(playerName)
@@ -1927,27 +1935,31 @@ public class JoinGameActivity extends AppCompatActivity {
                 applyStandingNetAmountPlaceholder(amount);
                 amount.setBackgroundResource(R.drawable.bg_view_amount_neutral);
                 if (standing.netAmount > 0) {
-                    direction.setText("Receives");
+                    direction.setText(getString(R.string.edit_settlement_direction_receives));
                 } else if (standing.netAmount < 0) {
-                    direction.setText("Pays");
+                    direction.setText(getString(R.string.edit_settlement_direction_pays));
                 } else {
-                    direction.setText("Even");
+                    direction.setText(getString(R.string.edit_settlement_direction_even));
                 }
             } else if (standing.netAmount > 0) {
-                amount.setText("+₹" + String.format(Locale.getDefault(), "%.0f", standing.netAmount));
+                amount.setText(getString(
+                        R.string.format_rupee_amount_positive,
+                        String.format(Locale.getDefault(), "%.0f", standing.netAmount)));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_receive);
-                direction.setText("Receives");
+                direction.setText(getString(R.string.edit_settlement_direction_receives));
             } else if (standing.netAmount < 0) {
-                amount.setText("-₹" + String.format(Locale.getDefault(), "%.0f", Math.abs(standing.netAmount)));
+                amount.setText(getString(
+                        R.string.format_rupee_amount_negative,
+                        String.format(Locale.getDefault(), "%.0f", Math.abs(standing.netAmount))));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_pay);
-                direction.setText("Pays");
+                direction.setText(getString(R.string.edit_settlement_direction_pays));
             } else {
-                amount.setText("₹0");
+                amount.setText(getString(R.string.format_rupee_amount_rounded, 0));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_neutral);
-                direction.setText("Even");
+                direction.setText(getString(R.string.edit_settlement_direction_even));
             }
             row.setClickable(true);
             row.setFocusable(true);
@@ -2039,9 +2051,9 @@ public class JoinGameActivity extends AppCompatActivity {
         if (displayPlayer == null) {
             container.setVisibility(View.GONE);
             empty.setVisibility(View.VISIBLE);
-            title.setText("Round Scores");
-            subtitle.setText("Select a player from the settlement board");
-            empty.setText("Select a player above to view round scores");
+            title.setText(getString(R.string.view_mode_round_scores_title));
+            subtitle.setText(getString(R.string.view_mode_select_player_subtitle));
+            empty.setText(getString(R.string.view_mode_select_player_empty));
             totalContainer.setVisibility(View.GONE);
             return;
         }
@@ -2051,9 +2063,9 @@ public class JoinGameActivity extends AppCompatActivity {
         totalScore.setText(String.valueOf(displayPlayer.getTotalScore()));
         boolean isCurrentPlayer = isViewModeSelfPlayer(gameData, displayPlayer);
         title.setText(isCurrentPlayer
-                ? "My Round Scores"
+                ? getString(R.string.my_round_scores_title)
                 : displayPlayer.getName() + "'s Scores");
-        subtitle.setText("Scores across all ten rounds");
+        subtitle.setText(getString(R.string.players_round_scores_subtitle));
         int currentRound = calculateCurrentRound(gameData);
         LinearLayout row = null;
         for (int round = 0; round < 10; round++) {
@@ -2073,7 +2085,7 @@ public class JoinGameActivity extends AppCompatActivity {
             tile.setLayoutParams(tileParams);
             TextView roundView = tile.findViewById(R.id.view_round_number);
             TextView scoreView = tile.findViewById(R.id.view_round_score);
-            roundView.setText("R" + (round + 1));
+            roundView.setText(getString(R.string.dialog_pick_round_chip, round + 1));
             Integer score = displayPlayer.getScores() != null
                     && round < displayPlayer.getScores().size()
                     ? displayPlayer.getScores().get(round) : null;
@@ -2114,7 +2126,8 @@ public class JoinGameActivity extends AppCompatActivity {
         });
         
         // Update Point Value
-        binding.textHeaderPointValue.setText("₹" + formatPointValue(gameData.getPointValue()));
+        binding.textHeaderPointValue.setText(getString(
+                R.string.format_rupee_amount, formatPointValue(gameData.getPointValue())));
         
         // Update Number of Players
         int numberOfPlayers = gameData.getPlayers() != null ? gameData.getPlayers().size() : 0;
@@ -2124,8 +2137,10 @@ public class JoinGameActivity extends AppCompatActivity {
         int currentRound = calculateCurrentRound(gameData);
         boolean completed = isGameCompleted(gameData);
         int completedRounds = completed ? 10 : Math.max(0, currentRound - 1);
-        binding.textHeaderCurrentRound.setText((completed ? "Complete" : "Live")
-                + " · Round " + (completed ? 10 : currentRound) + " of 10");
+        binding.textHeaderCurrentRound.setText(getString(
+                completed ? R.string.game_round_status_complete : R.string.game_round_status_live,
+                completed ? 10 : currentRound,
+                10));
         binding.editHeaderRoundProgress.setMax(10);
         binding.editHeaderRoundProgress.setProgress(completedRounds);
         
@@ -2135,7 +2150,8 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Update Total Contribution Amount (rounded, no decimals)
         double totalContribution = calculateTotalContribution(gameData);
-        binding.textHeaderTotalContribution.setText("₹" + Math.round(totalContribution));
+        binding.textHeaderTotalContribution.setText(getString(
+                R.string.format_rupee_amount_rounded, Math.round(totalContribution)));
 
         renderEditHeaderPerformance(gameData);
         
@@ -2165,7 +2181,7 @@ public class JoinGameActivity extends AppCompatActivity {
         }
 
         if (mappedStanding == null) {
-            binding.editHeaderPerformanceTitle.setText("Game Overview");
+            binding.editHeaderPerformanceTitle.setText(getString(R.string.game_overview_title));
             binding.editHeaderPlayerPosition.setText("—");
             binding.editHeaderPlayerBalance.setText("—");
             binding.editHeaderPlayerBalance.setTextColor(
@@ -2174,22 +2190,24 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
 
-        binding.editHeaderPerformanceTitle.setText("My Performance");
+        binding.editHeaderPerformanceTitle.setText(getString(R.string.my_performance_title));
         binding.editHeaderPlayerPosition.setText(
-                "#" + position + " of " + standings.size());
+                getString(R.string.standing_position_of, position, standings.size()));
         if (!shouldShowStandingAmountForPlayer(gameData, mappedStanding.player)) {
             binding.editHeaderPlayerBalance.setText(
                     getString(R.string.game_view_amount_hidden));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_text_muted));
         } else if (mappedStanding.netAmount > 0) {
-            binding.editHeaderPlayerBalance.setText("+₹" + String.format(
-                    Locale.getDefault(), "%.0f", mappedStanding.netAmount));
+            binding.editHeaderPlayerBalance.setText(getString(
+                    R.string.format_rupee_amount_positive,
+                    String.format(Locale.getDefault(), "%.0f", mappedStanding.netAmount)));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_mint));
         } else if (mappedStanding.netAmount < 0) {
-            binding.editHeaderPlayerBalance.setText("-₹" + String.format(
-                    Locale.getDefault(), "%.0f", Math.abs(mappedStanding.netAmount)));
+            binding.editHeaderPlayerBalance.setText(getString(
+                    R.string.format_rupee_amount_negative,
+                    String.format(Locale.getDefault(), "%.0f", Math.abs(mappedStanding.netAmount))));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_coral));
         } else {
@@ -2259,7 +2277,7 @@ public class JoinGameActivity extends AppCompatActivity {
     }
     
     private void updateHeaderPinVisibility() {
-        binding.headerPinSection.setVisibility(View.GONE);
+        binding.textHeaderGamePin.setVisibility(View.GONE);
         binding.headerPinDivider.setVisibility(View.GONE);
     }
     
@@ -2440,7 +2458,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
         TextView playerId = playerCardView.findViewById(R.id.text_player_id);
         if (gameData.getNumPlayers() > 2 && player.getRandomNumber() != null) {
-            playerId.setText("#" + player.getRandomNumber());
+            playerId.setText(getString(R.string.player_id_prefix, player.getRandomNumber()));
             playerId.setVisibility(View.VISIBLE);
         }
         TextView pendingSync =
@@ -3340,8 +3358,10 @@ public class JoinGameActivity extends AppCompatActivity {
                     && player.getScores().get(round1Based - 1) >= 0) {
                 currentScore = player.getScores().get(round1Based - 1);
             }
-            score.setText(getString(
-                    R.string.dialog_correct_player_current_score, currentScore));
+            score.setText(getResources().getQuantityString(
+                    R.plurals.dialog_correct_player_current_score,
+                    currentScore,
+                    currentScore));
             row.setOnClickListener(v -> {
                 dialog.dismiss();
                 activeRoundScoreDraft =
@@ -3377,6 +3397,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private View placeholderView = null;
     private boolean isDragging = false;
 
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
     private void setupDragAndDrop(View playerCardView, int playerIndex, com.example.rummypulse.data.GameData gameData) {
         ImageView dragHandle = playerCardView.findViewById(R.id.drag_handle);
         
@@ -3389,6 +3410,7 @@ public class JoinGameActivity extends AppCompatActivity {
         });
     }
     
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
     private boolean handleDragTouch(View playerCardView, int playerIndex, com.example.rummypulse.data.GameData gameData, android.view.MotionEvent event, View touchView) {
         switch (event.getAction()) {
             case android.view.MotionEvent.ACTION_DOWN:
@@ -3638,7 +3660,7 @@ public class JoinGameActivity extends AppCompatActivity {
         getSharedPreferences(ROUND_DRAFT_PREFERENCES, MODE_PRIVATE)
                 .edit()
                 .putString(roundDraftPreferenceKey(), stored)
-                .commit();
+                .apply();
         cachedRoomDraft = stored;
         operationRepository.saveRoundDraft(
                 currentGameId, viewModel.getActiveEditGeneration(), stored);
@@ -3683,7 +3705,7 @@ public class JoinGameActivity extends AppCompatActivity {
         getSharedPreferences(ROUND_DRAFT_PREFERENCES, MODE_PRIVATE)
                 .edit()
                 .remove(roundDraftPreferenceKey())
-                .commit();
+                .apply();
         cachedRoomDraft = null;
         operationRepository.deleteRoundDraft(
                 currentGameId, viewModel.getActiveEditGeneration());
@@ -4057,8 +4079,9 @@ public class JoinGameActivity extends AppCompatActivity {
                             ModernToast.info(
                                     JoinGameActivity.this,
                                     isNetworkAvailable()
-                                            ? getString(
-                                                    R.string.round_saved_syncing_background,
+                                            ? getResources().getQuantityString(
+                                                    R.plurals.round_saved_syncing_background,
+                                                    finalRound1,
                                                     finalRound1)
                                             : getString(
                                                     R.string.round_saved_offline_pending_sync));
@@ -4192,11 +4215,11 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         String amount = String.format(Locale.getDefault(), "%.0f", Math.abs(standing.netAmount));
         if (standing.netAmount > 0) {
-            netAmountText.setText("+₹" + amount);
+            netAmountText.setText(getString(R.string.format_rupee_amount_positive, amount));
             netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
             netAmountText.setBackgroundResource(R.drawable.bg_view_amount_receive);
         } else if (standing.netAmount < 0) {
-            netAmountText.setText("-₹" + amount);
+            netAmountText.setText(getString(R.string.format_rupee_amount_negative, amount));
             netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
             netAmountText.setBackgroundResource(R.drawable.bg_view_amount_pay);
         } else {
@@ -4408,7 +4431,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 tileParams.setMargins(margin, 0, margin, 0);
                 tile.setLayoutParams(tileParams);
                 ((TextView) tile.findViewById(R.id.view_round_number))
-                        .setText("R" + (roundIndex + 1));
+                        .setText(getString(R.string.dialog_pick_round_chip, roundIndex + 1));
                 TextView scoreView = tile.findViewById(R.id.view_round_score);
                 Integer score = player.getScores() != null
                         && roundIndex < player.getScores().size()
@@ -4572,7 +4595,10 @@ public class JoinGameActivity extends AppCompatActivity {
         }
 
         Integer lastScore = player.getScores().get(lastCompletedRound - 1);
-        label.setText(getString(R.string.standing_round_score, lastCompletedRound));
+        label.setText(getResources().getQuantityString(
+                R.plurals.standing_round_score,
+                lastCompletedRound,
+                lastCompletedRound));
         if (lastScore == null || lastScore < 0) {
             scoreView.setText("—");
             scoreView.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
@@ -4651,7 +4677,7 @@ public class JoinGameActivity extends AppCompatActivity {
                     if (score == 0) {
                         // Zero score (winning round) - show empty box with green filled background
                         roundScoreText.setText(""); // Empty - color indicates winning round
-                        roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box_zero, getTheme()));
+                        roundScoreText.setBackground(ContextCompat.getDrawable(this, R.drawable.round_score_box_zero));
                         roundScoreText.setTextColor(getResources().getColor(android.R.color.white, getTheme()));
                         roundScoreText.setTypeface(android.graphics.Typeface.DEFAULT_BOLD, android.graphics.Typeface.BOLD);
                         roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() | android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
@@ -4662,15 +4688,15 @@ public class JoinGameActivity extends AppCompatActivity {
                         
                         if (score > 65) {
                             // Very high score (bad round) - red boundary and text
-                            roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box_red, getTheme()));
+                            roundScoreText.setBackground(ContextCompat.getDrawable(this, R.drawable.round_score_box_red));
                             roundScoreText.setTextColor(getResources().getColor(R.color.error_red, getTheme()));
                         } else if (score >= 40) {
                             // High score - yellow boundary
-                            roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box_yellow, getTheme()));
+                            roundScoreText.setBackground(ContextCompat.getDrawable(this, R.drawable.round_score_box_yellow));
                             roundScoreText.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
                         } else {
                             // Low score (good performance) - green boundary
-                            roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box_green, getTheme()));
+                            roundScoreText.setBackground(ContextCompat.getDrawable(this, R.drawable.round_score_box_green));
                             roundScoreText.setTextColor(getResources().getColor(R.color.text_primary, getTheme()));
                         }
                         
@@ -4682,7 +4708,7 @@ public class JoinGameActivity extends AppCompatActivity {
                     // No score yet (null or -1) - show dash or asterisks for current round
                     if ((round + 1) == currentRound) {
                         // Current round - show cycling asterisks with blinking animation (* → ** → ***)
-                        roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box, getTheme()));
+                        roundScoreText.setBackground(ContextCompat.getDrawable(this, R.drawable.round_score_box));
                         roundScoreText.setTextColor(getResources().getColor(R.color.warning_orange, getTheme())); // Orange color for visibility
                         roundScoreText.setTypeface(android.graphics.Typeface.DEFAULT_BOLD, android.graphics.Typeface.BOLD);
                         roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() | android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
@@ -4719,7 +4745,7 @@ public class JoinGameActivity extends AppCompatActivity {
                     } else {
                         // Future rounds - show dash
                         roundScoreText.setText("-");
-                        roundScoreText.setBackground(getResources().getDrawable(R.drawable.round_score_box, getTheme()));
+                        roundScoreText.setBackground(ContextCompat.getDrawable(this, R.drawable.round_score_box));
                         roundScoreText.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
                         roundScoreText.setTypeface(null, android.graphics.Typeface.NORMAL);
                         roundScoreText.setPaintFlags(roundScoreText.getPaintFlags() & ~android.graphics.Paint.FAKE_BOLD_TEXT_FLAG);
@@ -4847,12 +4873,20 @@ public class JoinGameActivity extends AppCompatActivity {
             badgeView.setVisibility(View.VISIBLE);
             if (pendingCount > 0 && pendingCount < count) {
                 badgeView.setText(
-                        getString(R.string.view_request_badge_summary, count, pendingCount));
+                        getResources().getQuantityString(
+                                R.plurals.view_request_badge_summary,
+                                count,
+                                count,
+                                pendingCount));
             } else if (pendingCount > 0) {
                 badgeView.setText(
-                        getString(R.string.view_request_pending_badge, pendingCount));
+                        getResources().getQuantityString(
+                                R.plurals.view_request_pending_badge,
+                                pendingCount,
+                                pendingCount));
             } else {
-                badgeView.setText(getString(R.string.view_request_total_badge, count));
+                badgeView.setText(getResources().getQuantityString(
+                        R.plurals.view_request_total_badge, count, count));
             }
             emptyView.setVisibility(View.GONE);
         } else {
@@ -5016,36 +5050,42 @@ public class JoinGameActivity extends AppCompatActivity {
             // Format values - preserve fractional parts for point value
             String pointValueText = "₹" + formatPointValue(pointValue);
             
-            String gstPercentText = String.format("%.0f", gstPercent) + "%";
+            String gstPercentText = String.format(Locale.getDefault(), "%.0f", gstPercent) + "%";
             
             // Update Winners Rule
             TextView winnersRule = findViewById(R.id.text_settlement_winners_rule);
             if (winnersRule != null) {
-                winnersRule.setText("Winners (Green): Receive money but pay " + gstPercentText + " on winnings");
+                winnersRule.setText(getString(R.string.settlement_winners_rule_dynamic, gstPercentText));
             }
             
             // Update Formula
             TextView formulaText = findViewById(R.id.text_settlement_formula);
             if (formulaText != null) {
-                formulaText.setText("Formula: (Total All Scores - Your Score × " + playerCount + ") × " + pointValueText);
+                formulaText.setText(getString(
+                        R.string.settlement_formula_description_dynamic, playerCount, pointValueText));
             }
             
             // Update Contribution Rule
             TextView gstRule = findViewById(R.id.text_settlement_gst_rule);
             if (gstRule != null) {
-                gstRule.setText("Contribution: Only winners pay " + gstPercentText + " on positive amounts");
+                gstRule.setText(getString(R.string.settlement_contribution_rule_dynamic, gstPercentText));
             }
             
             // Update Example Description
             TextView exampleDesc = findViewById(R.id.text_settlement_example_description);
             if (exampleDesc != null) {
-                exampleDesc.setText("If you score 25 points in a " + playerCount + "-player game with " + pointValueText + "/point:");
+                exampleDesc.setText(getString(
+                        R.string.settlement_example_intro_dynamic, playerCount, pointValueText));
             }
             
             // Update Example Formula
             TextView exampleFormula = findViewById(R.id.text_settlement_example_formula);
             if (exampleFormula != null) {
-                exampleFormula.setText("Your settlement = (Total of all " + playerCount + " scores - 25 × " + playerCount + ") × " + pointValueText);
+                exampleFormula.setText(getResources().getQuantityString(
+                        R.plurals.settlement_example_formula_dynamic,
+                        playerCount,
+                        playerCount,
+                        pointValueText));
             }
             
         } catch (Exception e) {
@@ -5057,10 +5097,10 @@ public class JoinGameActivity extends AppCompatActivity {
         // Remove unnecessary trailing zeros while preserving meaningful decimals
         if (value == Math.floor(value)) {
             // Whole number - show without decimals
-            return String.format("%.0f", value);
+            return String.format(Locale.getDefault(), "%.0f", value);
         } else {
             // Has decimals - format to remove trailing zeros
-            String formatted = String.format("%.2f", value);
+            String formatted = String.format(Locale.getDefault(), "%.2f", value);
             // Remove trailing zeros after decimal point
             formatted = formatted.replaceAll("0*$", "").replaceAll("\\.$", "");
             return formatted;
@@ -5184,8 +5224,9 @@ public class JoinGameActivity extends AppCompatActivity {
         TextView playerCount = dialogView.findViewById(R.id.text_add_player_count);
         MaterialButton cancel = dialogView.findViewById(R.id.btn_add_player_cancel);
         MaterialButton confirm = dialogView.findViewById(R.id.btn_add_player_confirm);
-        playerCount.setText(getString(
-                R.string.add_player_confirm_count,
+        playerCount.setText(getResources().getQuantityString(
+                R.plurals.add_player_confirm_count,
+                gameData.getPlayers() == null ? 0 : gameData.getPlayers().size(),
                 gameData.getPlayers() == null ? 0 : gameData.getPlayers().size()));
 
         AlertDialog dialog = new AlertDialog.Builder(this, R.style.DarkDialogTheme)
@@ -5228,11 +5269,11 @@ public class JoinGameActivity extends AppCompatActivity {
         // Check if name already exists and make it unique
         java.util.Set<String> existingNames = new java.util.HashSet<>();
         for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
-            existingNames.add(player.getName().toLowerCase());
+            existingNames.add(player.getName().toLowerCase(Locale.getDefault()));
         }
         
         int counter = playerNumber;
-        while (existingNames.contains(defaultName.toLowerCase())) {
+        while (existingNames.contains(defaultName.toLowerCase(Locale.getDefault()))) {
             counter++;
             defaultName = "Player " + counter;
         }
@@ -5449,7 +5490,7 @@ public class JoinGameActivity extends AppCompatActivity {
         ImageView closeButton = dialogView.findViewById(R.id.btn_close);
         
         // Set game information
-        gameIdText.setText("Game ID: " + gameId);
+        gameIdText.setText(getString(R.string.game_id_label, gameId));
         
         // Generate QR code
         try {
@@ -5776,7 +5817,7 @@ public class JoinGameActivity extends AppCompatActivity {
         LinearLayout statusIndicator = binding.networkStatusIndicator;
         
         if (connected) {
-            statusText.setText("Online");
+            statusText.setText(getString(R.string.network_status_online));
             statusText.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
             if (statusDot != null) {
                 statusDot.setBackgroundResource(R.drawable.status_dot);
@@ -5795,7 +5836,7 @@ public class JoinGameActivity extends AppCompatActivity {
             });
         } else {
             // Show "Offline" status
-            statusText.setText("Offline");
+            statusText.setText(getString(R.string.network_status_offline));
             statusText.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
             if (statusDot != null) {
                 statusDot.setBackgroundResource(R.drawable.status_dot);
@@ -5876,7 +5917,7 @@ public class JoinGameActivity extends AppCompatActivity {
         getSharedPreferences(PENDING_ROUND_PREFERENCES, MODE_PRIVATE)
                 .edit()
                 .putString(key, valueToStore.serialize())
-                .commit();
+                .apply();
     }
 
     private void migrateLegacyPendingRoundsToOperationQueue(
@@ -5967,7 +6008,7 @@ public class JoinGameActivity extends AppCompatActivity {
         getSharedPreferences(PENDING_ROUND_PREFERENCES, MODE_PRIVATE)
                 .edit()
                 .remove(key)
-                .commit();
+                .apply();
     }
 
     private String pendingRoundKey(RoundScorePatch patch) {
@@ -6353,10 +6394,10 @@ public class JoinGameActivity extends AppCompatActivity {
             text.append("🎯 *Game ID:* ").append(currentGameId).append("\n");
         }
         text.append("👥 *Players:* ").append(gameData.getNumPlayers()).append("\n");
-        text.append("💰 *Point Value:* ₹").append(String.format("%.2f", gameData.getPointValue())).append("\n");
-        text.append("📊 *Contribution %:* ").append(String.format("%.0f", gameData.getGstPercent())).append("%\n");
+        text.append("💰 *Point Value:* ₹").append(String.format(Locale.getDefault(), "%.2f", gameData.getPointValue())).append("\n");
+        text.append("📊 *Contribution %:* ").append(String.format(Locale.getDefault(), "%.0f", gameData.getGstPercent())).append("%\n");
         text.append("💵 *Total Contribution:* ₹")
-                .append(String.format("%.0f", totalContribution))
+                .append(String.format(Locale.getDefault(), "%.0f", totalContribution))
                 .append("\n");
         text.append("━━━━━━━━━━━━━━━━━━━━━━\n");
         
@@ -6381,7 +6422,7 @@ public class JoinGameActivity extends AppCompatActivity {
             text.append(rankEmoji).append(" *").append(standing.player.getName()).append("*");
             text.append(" • Score: ").append(standing.totalScore);
             if (shouldShowStandingAmountForPlayer(gameData, standing.player)) {
-                text.append(" • Net: ₹").append(String.format("%.0f", standing.netAmount));
+                text.append(" • Net: ₹").append(String.format(Locale.getDefault(), "%.0f", standing.netAmount));
             }
             text.append("\n");
         }

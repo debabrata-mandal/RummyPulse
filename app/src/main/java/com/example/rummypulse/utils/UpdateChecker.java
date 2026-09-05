@@ -11,6 +11,8 @@ import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.lang.ref.WeakReference;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -37,7 +39,7 @@ public class UpdateChecker {
      */
     public void checkForUpdates() {
         Log.d(TAG, "Checking for app updates...");
-        new CheckUpdateTask().execute();
+        new CheckUpdateTask(this).execute();
     }
     
     /**
@@ -127,8 +129,14 @@ public class UpdateChecker {
     /**
      * AsyncTask to check for updates in background
      */
-    private class CheckUpdateTask extends AsyncTask<Void, Void, UpdateInfo> {
-        
+    private static class CheckUpdateTask extends AsyncTask<Void, Void, UpdateInfo> {
+
+        private final WeakReference<UpdateChecker> ownerRef;
+
+        CheckUpdateTask(UpdateChecker owner) {
+            this.ownerRef = new WeakReference<>(owner);
+        }
+
         @Override
         protected UpdateInfo doInBackground(Void... voids) {
             try {
@@ -171,12 +179,16 @@ public class UpdateChecker {
         
         @Override
         protected void onPostExecute(UpdateInfo updateInfo) {
+            UpdateChecker owner = ownerRef.get();
+            if (owner == null) {
+                return;
+            }
             if (updateInfo != null) {
-                String currentVersion = getCurrentVersion();
+                String currentVersion = owner.getCurrentVersion();
                 
-                if (compareVersions(currentVersion, updateInfo.version) < 0) {
+                if (owner.compareVersions(currentVersion, updateInfo.version) < 0) {
                     Log.d(TAG, "Update available: " + currentVersion + " -> " + updateInfo.version);
-                    showUpdateDialog(updateInfo.version, updateInfo.downloadUrl, updateInfo.releaseNotes);
+                    owner.showUpdateDialog(updateInfo.version, updateInfo.downloadUrl, updateInfo.releaseNotes);
                 } else {
                     Log.d(TAG, "App is up to date: " + currentVersion);
                 }

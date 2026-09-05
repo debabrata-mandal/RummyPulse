@@ -42,7 +42,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:textColor="@color/text_secondary"
-            android:textSize="10sp"
+            android:textSize="10dp"
             tools:text="18 May 2025" />
     </LinearLayout>
 

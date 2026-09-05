@@ -77,6 +77,8 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:baselineAligned="false"
             android:orientation="horizontal">
 
             <LinearLayout
@@ -90,28 +92,16 @@
                 android:orientation="vertical"
                 android:padding="12dp">
 
-                <LinearLayout
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:drawablePadding="6dp"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:contentDescription="@string/reports_stat_icon_contribution_desc"
-                        android:src="@drawable/ic_bar_chart"
-                        app:tint="@color/text_secondary" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        android:text="@string/reports_stat_total_contribution"
-                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                        android:textColor="@color/text_secondary" />
-                </LinearLayout>
+                    android:text="@string/reports_stat_total_contribution"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                    android:textColor="@color/text_secondary"
+                    app:drawableStartCompat="@drawable/ic_bar_chart"
+                    app:drawableTint="@color/text_secondary" />
 
                 <TextView
                     android:id="@+id/text_total_gst"
@@ -135,28 +125,16 @@
                 android:orientation="vertical"
                 android:padding="12dp">
 
-                <LinearLayout
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:drawablePadding="6dp"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:contentDescription="@string/reports_stat_icon_players_desc"
-                        android:src="@drawable/ic_people"
-                        app:tint="@color/text_secondary" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        android:text="@string/reports_stat_total_players"
-                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                        android:textColor="@color/text_secondary" />
-                </LinearLayout>
+                    android:text="@string/reports_stat_total_players"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                    android:textColor="@color/text_secondary"
+                    app:drawableStartCompat="@drawable/ic_people"
+                    app:drawableTint="@color/text_secondary" />
 
                 <TextView
                     android:id="@+id/text_total_players"
@@ -174,6 +152,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:baselineAligned="false"
             android:orientation="horizontal">
 
             <LinearLayout
@@ -187,28 +166,16 @@
                 android:orientation="vertical"
                 android:padding="12dp">
 
-                <LinearLayout
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:drawablePadding="6dp"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:contentDescription="@string/reports_stat_icon_contribution_desc"
-                        android:src="@drawable/ic_percent"
-                        app:tint="@color/text_secondary" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        android:text="@string/reports_stat_avg_contribution_per_game"
-                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                        android:textColor="@color/text_secondary" />
-                </LinearLayout>
+                    android:text="@string/reports_stat_avg_contribution_per_game"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                    android:textColor="@color/text_secondary"
+                    app:drawableStartCompat="@drawable/ic_percent"
+                    app:drawableTint="@color/text_secondary" />
 
                 <TextView
                     android:id="@+id/text_avg_gst"
@@ -232,28 +199,16 @@
                 android:orientation="vertical"
                 android:padding="12dp">
 
-                <LinearLayout
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:drawablePadding="6dp"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:contentDescription="@string/reports_stat_icon_players_desc"
-                        android:src="@drawable/ic_people"
-                        app:tint="@color/text_secondary" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        android:text="@string/reports_stat_avg_players_per_game"
-                        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                        android:textColor="@color/text_secondary" />
-                </LinearLayout>
+                    android:text="@string/reports_stat_avg_players_per_game"
+                    android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+                    android:textColor="@color/text_secondary"
+                    app:drawableStartCompat="@drawable/ic_people"
+                    app:drawableTint="@color/text_secondary" />
 
                 <TextView
                     android:id="@+id/text_avg_players"

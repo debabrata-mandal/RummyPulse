@@ -80,7 +80,8 @@ public class ModernToast {
             android.util.Log.d("ModernToast", "Creating overlay toast...");
             // Create overlay view
             LayoutInflater inflater = LayoutInflater.from(activity);
-            View layout = inflater.inflate(R.layout.modern_toast_layout, null);
+            FrameLayout toastRoot = new FrameLayout(activity);
+            View layout = inflater.inflate(R.layout.modern_toast_layout, toastRoot, false);
             android.util.Log.d("ModernToast", "Layout inflated successfully");
             
             // Get views
@@ -164,7 +165,8 @@ public class ModernToast {
         try {
             // Create custom toast layout
             LayoutInflater inflater = LayoutInflater.from(context);
-            View layout = inflater.inflate(R.layout.modern_toast_layout, null);
+            FrameLayout toastRoot = new FrameLayout(context);
+            View layout = inflater.inflate(R.layout.modern_toast_layout, toastRoot, false);
             
             // Get views
             TextView messageText = layout.findViewById(R.id.toast_message);
@@ -263,12 +265,7 @@ public class ModernToast {
             }
         }
 
-        int resourceId = context.getResources().getIdentifier(
-                "status_bar_height", "dimen", "android");
-        if (resourceId > 0) {
-            return context.getResources().getDimensionPixelSize(resourceId);
-        }
-        return 0;
+        return (int) (24 * context.getResources().getDisplayMetrics().density);
     }
     
     /**

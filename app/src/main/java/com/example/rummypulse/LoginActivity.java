@@ -321,6 +321,8 @@ public class LoginActivity extends AppCompatActivity {
     private static String messageForGoogleSignInFailure(int statusCode) {
         // Status codes: https://developers.google.com/android/reference/com/google/android/gms/common/api/CommonStatusCodes
         switch (statusCode) {
+            case 12500: // SIGN_IN_FAILED
+                return "Sign-in failed. Add a Google account first (Settings → Accounts → Google), then try again.";
             case 12501: // SIGN_IN_CANCELLED
                 return "Sign-in was cancelled.";
             case com.google.android.gms.common.api.CommonStatusCodes.NETWORK_ERROR:

@@ -7,6 +7,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import android.annotation.SuppressLint;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -24,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 public class ConsolidationGameAdapter extends RecyclerView.Adapter<ConsolidationGameAdapter.GameViewHolder> {
 
@@ -39,11 +41,13 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
         this.listener = listener;
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setGameItems(List<GameItem> gameItems) {
         this.gameItems = gameItems != null ? gameItems : new ArrayList<>();
         notifyDataSetChanged();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     public void setSelectedIds(Set<String> selectedIds) {
         this.selectedIds = selectedIds != null ? selectedIds : new HashSet<>();
         notifyDataSetChanged();
@@ -130,7 +134,7 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
 
     private static long parseCreationMillis(String dateTime) throws Exception {
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
             Date creationDate = sdf.parse(dateTime);
             if (creationDate != null) {
                 return creationDate.getTime();
@@ -148,7 +152,7 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
         long diffInHours = diffInMillis / (1000 * 60 * 60);
         long diffInDays = diffInMillis / (1000 * 60 * 60 * 24);
         Date creationDate = new Date(creationTime);
-        SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a");
+        SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a", Locale.getDefault());
         String actualTime = timeFormat.format(creationDate);
 
         if (diffInMinutes < 1) {
@@ -158,9 +162,9 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
         } else if (diffInHours < 24) {
             return diffInHours + " hours ago at " + actualTime;
         } else if (diffInDays < 7) {
-            return new SimpleDateFormat("MMM dd 'at' hh:mm a").format(creationDate);
+            return new SimpleDateFormat("MMM dd 'at' hh:mm a", Locale.getDefault()).format(creationDate);
         }
-        return new SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a").format(creationDate);
+        return new SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault()).format(creationDate);
     }
 
     static class GameViewHolder extends RecyclerView.ViewHolder {
