@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.rummypulse.R;
 import com.example.rummypulse.ui.dashboard.LeaderboardAmountFormatter;
 import com.example.rummypulse.ui.dashboard.LeaderboardEntry;
+import com.example.rummypulse.ui.dashboard.RankingSort;
 import com.example.rummypulse.utils.DisplayNameUtils;
 
 import java.util.ArrayList;
@@ -43,6 +44,7 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
     private final List<LeaderboardEntry> entries = new ArrayList<>();
     private double maxAbsoluteNet;
     private boolean showAmounts = true;
+    private RankingSort sort = RankingSort.NET_TOTAL;
 
     @SuppressLint("NotifyDataSetChanged")
     public void setEntries(List<LeaderboardEntry> newEntries) {
@@ -62,6 +64,19 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
     public void setShowAmounts(boolean show) {
         if (showAmounts != show) {
             showAmounts = show;
+            notifyDataSetChanged();
+        }
+    }
+
+    /**
+     * The ordering the list is currently in, so each row can spell out the figure it was ranked on.
+     * Games and win rate are always on the row; the per-game average is added only when it is what
+     * the ordering is based on, which keeps the line short the rest of the time.
+     */
+    @SuppressLint("NotifyDataSetChanged")
+    public void setSort(RankingSort newSort) {
+        if (newSort != null && sort != newSort) {
+            sort = newSort;
             notifyDataSetChanged();
         }
     }
@@ -126,8 +141,18 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
 
         String games = context.getResources().getQuantityString(
                 R.plurals.player_ranking_games, (int) entry.getGames(), entry.getGames());
-        holder.meta.setText(context.getString(
-                R.string.player_ranking_meta, games, winRatePercent(entry)));
+        holder.meta.setText(sort == RankingSort.NET_PER_GAME && showAmounts
+                ? context.getString(
+                        R.string.player_ranking_meta_avg,
+                        games,
+                        winRatePercent(entry),
+                        LeaderboardAmountFormatter.formatSigned(netPerGame(entry)))
+                : context.getString(
+                        R.string.player_ranking_meta, games, winRatePercent(entry)));
+    }
+
+    private static double netPerGame(LeaderboardEntry entry) {
+        return entry.getGames() <= 0 ? 0 : entry.getNetAmount() / entry.getGames();
     }
 
     private void bindNet(RankingViewHolder holder, Context context, LeaderboardEntry entry) {

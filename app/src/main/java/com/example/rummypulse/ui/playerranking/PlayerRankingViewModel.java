@@ -10,6 +10,7 @@ import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.PlayerLeaderboardRepository;
 import com.example.rummypulse.ui.dashboard.Leaderboard;
 import com.example.rummypulse.ui.dashboard.LeaderboardEntry;
+import com.example.rummypulse.ui.dashboard.RankingSort;
 import com.example.rummypulse.ui.dashboard.StatsPeriod;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -35,6 +36,7 @@ public class PlayerRankingViewModel extends ViewModel {
 
     private final PlayerLeaderboardRepository repository;
     private final MutableLiveData<StatsPeriod> selectedPeriod;
+    private final MutableLiveData<RankingSort> selectedSort;
     private final MutableLiveData<Map<String, String>> fullNames;
     private final MediatorLiveData<List<LeaderboardEntry>> ranking;
 
@@ -42,12 +44,14 @@ public class PlayerRankingViewModel extends ViewModel {
         repository = PlayerLeaderboardRepository.getInstance();
         repository.start();
         selectedPeriod = new MutableLiveData<>(StatsPeriod.THIS_MONTH);
+        selectedSort = new MutableLiveData<>(RankingSort.NET_TOTAL);
         fullNames = new MutableLiveData<>(Collections.emptyMap());
 
         ranking = new MediatorLiveData<>();
         ranking.setValue(Collections.emptyList());
         ranking.addSource(repository.getAllStats(), stats -> rebuild());
         ranking.addSource(selectedPeriod, period -> rebuild());
+        ranking.addSource(selectedSort, sort -> rebuild());
         ranking.addSource(fullNames, names -> rebuild());
 
         loadFullNames();
@@ -117,6 +121,16 @@ public class PlayerRankingViewModel extends ViewModel {
         }
     }
 
+    public LiveData<RankingSort> getSelectedSort() {
+        return selectedSort;
+    }
+
+    public void selectSort(RankingSort sort) {
+        if (sort != null && sort != selectedSort.getValue()) {
+            selectedSort.setValue(sort);
+        }
+    }
+
     /** Applies the period the caller arrived with, without clobbering a later user choice. */
     public void setInitialPeriod(StatsPeriod period) {
         if (period != null) {
@@ -129,7 +143,8 @@ public class PlayerRankingViewModel extends ViewModel {
         List<LeaderboardEntry> ranked = Leaderboard.rankAll(
                 repository.getAllStats().getValue(),
                 selectedPeriod.getValue(),
-                user == null ? null : user.getUid());
+                user == null ? null : user.getUid(),
+                selectedSort.getValue());
         ranking.setValue(pinCurrentUser(withFullNames(ranked, fullNames.getValue())));
     }
 

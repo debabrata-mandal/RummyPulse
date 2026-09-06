@@ -42,6 +42,7 @@ import com.example.rummypulse.utils.VersionGate;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.Observer;
 import androidx.navigation.NavController;
+import androidx.navigation.NavOptions;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
@@ -175,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
             } else if (item.getItemId() == R.id.nav_home) {
                 AppUserRoleSession.Role r = AppUserRoleSession.getInstance().peekRole();
                 if (r == AppUserRoleSession.Role.ADMIN) {
-                    boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
+                    boolean handled = navigateFromDrawer(item);
                     if (handled) {
                         drawerLayout.closeDrawers();
                     }
@@ -190,13 +191,13 @@ public class MainActivity extends AppCompatActivity {
                 }
                 return true;
             } else if (item.getItemId() == R.id.nav_user_management) {
-                boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
+                boolean handled = navigateFromDrawer(item);
                 if (handled) {
                     drawerLayout.closeDrawers();
                 }
                 return handled;
             } else {
-                boolean handled = NavigationUI.onNavDestinationSelected(item, navController);
+                boolean handled = navigateFromDrawer(item);
                 if (handled) {
                     drawerLayout.closeDrawers();
                 }
@@ -210,6 +211,35 @@ public class MainActivity extends AppCompatActivity {
 
         // Initialize permission manager and request permissions
         initializePermissions();
+    }
+
+    /**
+     * Every drawer item is a top level destination, so each tap should land on a clean stack.
+     * NavigationUI's own options save the stack above the start destination and restore it on the
+     * way back, which is meant for bottom navigation tabs. Here it means the ranking screen the
+     * dashboard leaderboard pushed on top of the dashboard gets resurrected the next time the user
+     * taps Dashboard.
+     */
+    private boolean navigateFromDrawer(MenuItem item) {
+        if (navController == null || navController.getCurrentDestination() == null) {
+            return false;
+        }
+        NavOptions options = new NavOptions.Builder()
+                .setLaunchSingleTop(true)
+                .setPopUpTo(navController.getGraph().getStartDestinationId(), false, false)
+                .setEnterAnim(androidx.navigation.ui.R.anim.nav_default_enter_anim)
+                .setExitAnim(androidx.navigation.ui.R.anim.nav_default_exit_anim)
+                .setPopEnterAnim(androidx.navigation.ui.R.anim.nav_default_pop_enter_anim)
+                .setPopExitAnim(androidx.navigation.ui.R.anim.nav_default_pop_exit_anim)
+                .build();
+        try {
+            navController.navigate(item.getItemId(), null, options);
+            item.setChecked(true);
+            return true;
+        } catch (IllegalArgumentException e) {
+            android.util.Log.w("MainActivity", "Drawer destination not reachable: " + item.getTitle(), e);
+            return false;
+        }
     }
 
 

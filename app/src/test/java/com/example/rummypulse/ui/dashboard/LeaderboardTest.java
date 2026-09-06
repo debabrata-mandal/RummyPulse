@@ -205,4 +205,90 @@ public class LeaderboardTest {
         assertTrue(Leaderboard.rankAll(
                 Collections.singletonList(player("a", "Alice", 1, 10)), null, null).isEmpty());
     }
+
+    /**
+     * Alice grinds a long profitable run, Bob has a short sharp one, Cara sits between them, so
+     * each ordering below has to produce a different table.
+     */
+    private static List<PlayerStats> mixedRecords() {
+        return Arrays.asList(
+                scored("a", "Alice", 10, 8, 1000),
+                scored("b", "Bob", 2, 1, 400),
+                scored("c", "Cara", 5, 2, 600));
+    }
+
+    private static PlayerStats scored(
+            String userId, String name, long games, long wins, double net) {
+        PlayerStats stats = new PlayerStats();
+        stats.setUserId(userId);
+        stats.setDisplayName(name);
+        stats.setAllTime(new PlayerStats.Bucket(games, wins, net, 0, 0));
+        return stats;
+    }
+
+    @Test
+    public void sortByNetTotalFavoursTheBiggestPile() {
+        assertEquals(
+                Arrays.asList("Alice", "Cara", "Bob"),
+                namesOf(Leaderboard.rankAll(
+                        mixedRecords(), StatsPeriod.ALL_TIME, null, RankingSort.NET_TOTAL)));
+    }
+
+    @Test
+    public void sortByNetPerGameFavoursTheShortStrongRun() {
+        assertEquals(
+                Arrays.asList("Bob", "Cara", "Alice"),
+                namesOf(Leaderboard.rankAll(
+                        mixedRecords(), StatsPeriod.ALL_TIME, null, RankingSort.NET_PER_GAME)));
+    }
+
+    @Test
+    public void sortByWinRateIsIndependentOfAmounts() {
+        assertEquals(
+                Arrays.asList("Alice", "Bob", "Cara"),
+                namesOf(Leaderboard.rankAll(
+                        mixedRecords(), StatsPeriod.ALL_TIME, null, RankingSort.WIN_RATE)));
+    }
+
+    @Test
+    public void sortByGamesFavoursTheMostActive() {
+        assertEquals(
+                Arrays.asList("Alice", "Cara", "Bob"),
+                namesOf(Leaderboard.rankAll(
+                        mixedRecords(), StatsPeriod.ALL_TIME, null, RankingSort.GAMES)));
+    }
+
+    @Test
+    public void rankNumbersDescribeTheChosenOrdering() {
+        List<LeaderboardEntry> ranked = Leaderboard.rankAll(
+                mixedRecords(), StatsPeriod.ALL_TIME, null, RankingSort.NET_PER_GAME);
+
+        assertEquals("Bob", ranked.get(0).getDisplayName());
+        for (int i = 0; i < ranked.size(); i++) {
+            assertEquals(i + 1, ranked.get(i).getRank());
+        }
+    }
+
+    @Test
+    public void defaultAndNullSortBothRankByNetTotal() {
+        List<String> expected = Arrays.asList("Alice", "Cara", "Bob");
+
+        assertEquals(expected,
+                namesOf(Leaderboard.rankAll(mixedRecords(), StatsPeriod.ALL_TIME, null)));
+        assertEquals(expected,
+                namesOf(Leaderboard.rankAll(mixedRecords(), StatsPeriod.ALL_TIME, null, null)));
+    }
+
+    @Test
+    public void winRateTiesBreakOnGamesPlayed() {
+        // Both won half their games; the longer sample is the stronger claim.
+        List<PlayerStats> stats = Arrays.asList(
+                scored("a", "Alice", 2, 1, 500),
+                scored("b", "Bob", 8, 4, 100));
+
+        assertEquals(
+                Arrays.asList("Bob", "Alice"),
+                namesOf(Leaderboard.rankAll(
+                        stats, StatsPeriod.ALL_TIME, null, RankingSort.WIN_RATE)));
+    }
 }

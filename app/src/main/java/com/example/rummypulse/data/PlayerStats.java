@@ -167,7 +167,7 @@ public class PlayerStats {
             this.contributionPaid = contributionPaid;
         }
 
-        /** Percentage of games finished in first place, 0 when no games are recorded. */
+        /** Percentage of completed games with a positive net settlement, 0 when no games recorded. */
         public int winRatePercent() {
             if (games <= 0) {
                 return 0;

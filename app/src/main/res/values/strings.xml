@@ -436,6 +436,11 @@
     <string name="player_ranking_amounts_hidden_notice">Amounts are hidden by an administrator</string>
     <string name="player_ranking_name_you">%1$s (You)</string>
     <string name="player_ranking_meta">%1$s · %2$d%% wins</string>
+    <string name="player_ranking_meta_avg">%1$s · %2$d%% wins · %3$s/game</string>
+    <string name="player_ranking_sort_net">Net</string>
+    <string name="player_ranking_sort_avg">Avg/game</string>
+    <string name="player_ranking_sort_win_rate">Win rate</string>
+    <string name="player_ranking_sort_games">Games</string>
 
     <!-- Layout HardcodedText fixes -->
     <string name="account_not_linked_message">Your account is not linked to a player in this game</string>

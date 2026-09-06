@@ -17,6 +17,7 @@ import com.example.rummypulse.R;
 import com.example.rummypulse.data.GameDefaultsRepository;
 import com.example.rummypulse.databinding.FragmentPlayerRankingBinding;
 import com.example.rummypulse.ui.dashboard.LeaderboardEntry;
+import com.example.rummypulse.ui.dashboard.RankingSort;
 import com.example.rummypulse.ui.dashboard.StatsPeriod;
 
 import java.util.List;
@@ -72,7 +73,13 @@ public class PlayerRankingFragment extends Fragment {
         binding.segmentThisWeek.setOnClickListener(
                 v -> viewModel.selectPeriod(StatsPeriod.THIS_WEEK));
 
+        binding.sortNet.setOnClickListener(v -> viewModel.selectSort(RankingSort.NET_TOTAL));
+        binding.sortAvg.setOnClickListener(v -> viewModel.selectSort(RankingSort.NET_PER_GAME));
+        binding.sortWinRate.setOnClickListener(v -> viewModel.selectSort(RankingSort.WIN_RATE));
+        binding.sortGames.setOnClickListener(v -> viewModel.selectSort(RankingSort.GAMES));
+
         viewModel.getSelectedPeriod().observe(getViewLifecycleOwner(), this::applyPeriodSelection);
+        viewModel.getSelectedSort().observe(getViewLifecycleOwner(), this::applySortSelection);
         viewModel.getRanking().observe(getViewLifecycleOwner(), this::renderRanking);
     }
 
@@ -119,6 +126,15 @@ public class PlayerRankingFragment extends Fragment {
         styleSegment(binding.segmentThisMonth, selected == StatsPeriod.THIS_MONTH);
         styleSegment(binding.segmentLastMonth, selected == StatsPeriod.LAST_MONTH);
         styleSegment(binding.segmentThisWeek, selected == StatsPeriod.THIS_WEEK);
+    }
+
+    private void applySortSelection(RankingSort sort) {
+        RankingSort selected = sort == null ? RankingSort.NET_TOTAL : sort;
+        styleSegment(binding.sortNet, selected == RankingSort.NET_TOTAL);
+        styleSegment(binding.sortAvg, selected == RankingSort.NET_PER_GAME);
+        styleSegment(binding.sortWinRate, selected == RankingSort.WIN_RATE);
+        styleSegment(binding.sortGames, selected == RankingSort.GAMES);
+        adapter.setSort(selected);
     }
 
     private void styleSegment(TextView segment, boolean selected) {

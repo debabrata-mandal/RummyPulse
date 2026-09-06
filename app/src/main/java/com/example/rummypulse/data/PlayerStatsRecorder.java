@@ -79,6 +79,19 @@ public final class PlayerStatsRecorder {
             String gameId,
             GameData gameData,
             Collection<String> detachedUserIds) {
+        return recordInternal(db, gameId, gameData, detachedUserIds).continueWith(task -> {
+            if (!task.isSuccessful()) {
+                Log.w(TAG, "Could not record stats for game " + gameId, task.getException());
+            }
+            return null;
+        });
+    }
+
+    private static Task<Void> recordInternal(
+            FirebaseFirestore db,
+            String gameId,
+            GameData gameData,
+            Collection<String> detachedUserIds) {
         if (db == null || TextUtils.isEmpty(gameId) || gameData == null) {
             return Tasks.forResult(null);
         }
@@ -117,11 +130,6 @@ public final class PlayerStatsRecorder {
             }
             transaction.update(dataRef, APPLIED_FIELD,
                     applied.withDeltasApplied(deltas).toFirestoreMap());
-            return null;
-        }).continueWith(task -> {
-            if (!task.isSuccessful()) {
-                Log.w(TAG, "Could not record stats for game " + gameId, task.getException());
-            }
             return null;
         });
     }
@@ -266,20 +274,13 @@ public final class PlayerStatsRecorder {
     }
 
     /**
-     * One contribution per linked user. A win is finishing on the lowest total score; ties share
-     * the win, matching how the in-game standings rank players.
+     * One contribution per linked user. A win is receiving a positive net settlement — the same
+     * rule the game UI uses when it shows a player as receiving money.
      */
     private static Map<String, Contribution> contributionsFor(GameData gameData) {
         List<Player> players = safePlayers(gameData);
         if (players.isEmpty()) {
             return Collections.emptyMap();
-        }
-
-        int lowestScore = Integer.MAX_VALUE;
-        for (Player player : players) {
-            if (player != null) {
-                lowestScore = Math.min(lowestScore, player.getTotalScore());
-            }
         }
 
         Map<String, Contribution> byUser = new LinkedHashMap<>();
@@ -298,7 +299,7 @@ public final class PlayerStatsRecorder {
                     player.getName(),
                     new PlayerStats.Bucket(
                             1L,
-                            player.getTotalScore() == lowestScore ? 1L : 0L,
+                            settlement.netAmount > 0 ? 1L : 0L,
                             settlement.netAmount,
                             settlement.grossAmount,
                             settlement.gstPaid)));

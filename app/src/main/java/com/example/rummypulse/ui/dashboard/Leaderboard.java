@@ -85,6 +85,20 @@ public class Leaderboard {
      */
     public static List<LeaderboardEntry> rankAll(
             List<PlayerStats> allStats, StatsPeriod period, String currentUserId) {
+        return rankAll(allStats, period, currentUserId, RankingSort.NET_TOTAL);
+    }
+
+    /**
+     * As {@link #rankAll(List, StatsPeriod, String)} but ordered by {@code sort}.
+     *
+     * <p>Rank is assigned after ordering, so it always describes the chosen ordering rather than a
+     * fixed net-amount position.
+     */
+    public static List<LeaderboardEntry> rankAll(
+            List<PlayerStats> allStats,
+            StatsPeriod period,
+            String currentUserId,
+            RankingSort sort) {
         if (allStats == null || allStats.isEmpty() || period == null) {
             return Collections.emptyList();
         }
@@ -104,9 +118,14 @@ public class Leaderboard {
             return Collections.emptyList();
         }
 
-        // Highest net first. Name breaks ties so the order is stable across recompositions.
+        // Best first on the chosen metric. Games and net settle ties on merit before falling back
+        // to name, which only exists to keep the order stable across recompositions.
+        final RankingSort order = sort == null ? RankingSort.NET_TOTAL : sort;
         Collections.sort(ranked, Comparator
-                .comparingDouble((Ranked r) -> r.bucket.getNetAmount()).reversed()
+                .<Ranked>comparingDouble(r -> order.keyOf(r.bucket)).reversed()
+                .thenComparing(Comparator.<Ranked>comparingLong(r -> r.bucket.getGames()).reversed())
+                .thenComparing(
+                        Comparator.<Ranked>comparingDouble(r -> r.bucket.getNetAmount()).reversed())
                 .thenComparing(r -> nameOf(r.stats)));
 
         List<LeaderboardEntry> entries = new ArrayList<>(ranked.size());
