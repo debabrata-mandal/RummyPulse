@@ -4,7 +4,13 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,6 +39,12 @@ import java.util.List;
  * they tapped, and each row carries a bar showing its share of the largest net in the period.
  */
 public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdapter.RankingViewHolder> {
+
+    /** Fill alpha for the neutral games chip. */
+    private static final int STAT_CHIP_NEUTRAL_ALPHA = 0x24;
+
+    /** Fill alpha for the win-rate chip, which carries a directional tint. */
+    private static final int STAT_CHIP_TINT_ALPHA = 0x33;
 
     /** Alpha applied to an accent colour when it fills a pill behind text. */
     private static final int PILL_ALPHA = 0x2B;
@@ -139,16 +151,99 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
                 ? context.getString(R.string.player_ranking_name_you, entry.getDisplayName())
                 : entry.getDisplayName());
 
-        String games = context.getResources().getQuantityString(
-                R.plurals.player_ranking_games, (int) entry.getGames(), entry.getGames());
-        holder.meta.setText(sort == RankingSort.NET_PER_GAME && showAmounts
-                ? context.getString(
-                        R.string.player_ranking_meta_avg,
-                        games,
-                        winRatePercent(entry),
-                        LeaderboardAmountFormatter.formatSigned(netPerGame(entry)))
-                : context.getString(
-                        R.string.player_ranking_meta, games, winRatePercent(entry)));
+        bindStatChips(holder, context, entry);
+    }
+
+    private void bindStatChips(RankingViewHolder holder, Context context, LeaderboardEntry entry) {
+        long games = entry.getGames();
+        int winRate = winRatePercent(entry);
+        int muted = ContextCompat.getColor(context, R.color.view_text_secondary);
+        int primary = ContextCompat.getColor(context, R.color.text_primary);
+
+        String gamesValue = String.valueOf(games);
+        String gamesLabel = ' ' + context.getString(R.string.player_ranking_stat_games_label);
+        bindStatChip(
+                holder.statGames,
+                gamesValue,
+                gamesLabel,
+                primary,
+                muted,
+                ColorUtils.setAlphaComponent(muted, STAT_CHIP_NEUTRAL_ALPHA));
+
+        String winsValue = context.getString(R.string.player_ranking_stat_win_rate, winRate);
+        String winsLabel = "";
+        int winTint = ContextCompat.getColor(context, winRateTintFor(entry));
+        bindStatChip(
+                holder.statWins,
+                winsValue,
+                winsLabel,
+                winTint,
+                muted,
+                ColorUtils.setAlphaComponent(winTint, STAT_CHIP_TINT_ALPHA));
+
+        if (sort == RankingSort.NET_PER_GAME && showAmounts) {
+            holder.statAvg.setVisibility(View.VISIBLE);
+            String avgValue = LeaderboardAmountFormatter.formatSigned(netPerGame(entry));
+            String avgLabel = context.getString(R.string.player_ranking_stat_per_game);
+            int avgTint = ContextCompat.getColor(context, Math.abs(entry.getNetAmount()) < 0.5
+                    ? R.color.view_text_secondary
+                    : entry.getNetAmount() > 0 ? R.color.view_mint : R.color.view_coral);
+            bindStatChip(
+                    holder.statAvg,
+                    avgValue,
+                    avgLabel,
+                    avgTint,
+                    muted,
+                    ColorUtils.setAlphaComponent(avgTint, STAT_CHIP_TINT_ALPHA));
+        } else {
+            holder.statAvg.setVisibility(View.GONE);
+        }
+    }
+
+    private static void bindStatChip(
+            TextView view,
+            String value,
+            String label,
+            @ColorInt int valueColor,
+            @ColorInt int labelColor,
+            @ColorInt int backgroundTint) {
+        SpannableStringBuilder text = new SpannableStringBuilder();
+        int valueStart = text.length();
+        text.append(value);
+        int valueEnd = text.length();
+        text.setSpan(new StyleSpan(Typeface.BOLD), valueStart, valueEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new ForegroundColorSpan(valueColor), valueStart, valueEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new RelativeSizeSpan(1.05f), valueStart, valueEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        int labelStart = text.length();
+        text.append(label);
+        text.setSpan(
+                new ForegroundColorSpan(labelColor),
+                labelStart,
+                text.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(
+                new RelativeSizeSpan(0.92f),
+                labelStart,
+                text.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        view.setText(text);
+        view.setBackgroundTintList(ColorStateList.valueOf(backgroundTint));
+    }
+
+    private static int winRateTintFor(LeaderboardEntry entry) {
+        if (entry.getGames() <= 0) {
+            return R.color.view_text_secondary;
+        }
+        int winRate = winRatePercent(entry);
+        if (winRate >= 50) {
+            return R.color.view_mint;
+        }
+        if (winRate > 0) {
+            return R.color.warning_orange;
+        }
+        return R.color.view_coral;
     }
 
     private static double netPerGame(LeaderboardEntry entry) {
@@ -162,7 +257,6 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
             holder.net.setTextColor(muted);
             holder.net.setBackgroundTintList(
                     ColorStateList.valueOf(ColorUtils.setAlphaComponent(muted, PILL_ALPHA)));
-            // The bar length is derived from the amounts, so it has to go too.
             holder.magnitudeTrack.setVisibility(View.GONE);
             return;
         }
@@ -263,7 +357,9 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
         final TextView position;
         final TextView avatar;
         final TextView name;
-        final TextView meta;
+        final TextView statGames;
+        final TextView statWins;
+        final TextView statAvg;
         final TextView net;
         final View magnitudeTrack;
         final View magnitudeFill;
@@ -274,7 +370,9 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
             position = itemView.findViewById(R.id.ranking_position);
             avatar = itemView.findViewById(R.id.ranking_avatar);
             name = itemView.findViewById(R.id.ranking_name);
-            meta = itemView.findViewById(R.id.ranking_meta);
+            statGames = itemView.findViewById(R.id.ranking_stat_games);
+            statWins = itemView.findViewById(R.id.ranking_stat_wins);
+            statAvg = itemView.findViewById(R.id.ranking_stat_avg);
             net = itemView.findViewById(R.id.ranking_net);
             magnitudeTrack = itemView.findViewById(R.id.ranking_magnitude_track);
             magnitudeFill = itemView.findViewById(R.id.ranking_magnitude_fill);

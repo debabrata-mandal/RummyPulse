@@ -437,6 +437,9 @@
     <string name="player_ranking_name_you">%1$s (You)</string>
     <string name="player_ranking_meta">%1$s · %2$d%% wins</string>
     <string name="player_ranking_meta_avg">%1$s · %2$d%% wins · %3$s/game</string>
+    <string name="player_ranking_stat_games_label">games</string>
+    <string name="player_ranking_stat_win_rate">%1$d%%</string>
+    <string name="player_ranking_stat_per_game">/game</string>
     <string name="player_ranking_sort_net">Net</string>
     <string name="player_ranking_sort_avg">Avg/game</string>
     <string name="player_ranking_sort_win_rate">Win rate</string>

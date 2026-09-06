@@ -67,16 +67,63 @@
                 android:textStyle="bold"
                 tools:text="Avijit Das" />
 
-            <TextView
-                android:id="@+id/ranking_meta"
+            <LinearLayout
+                android:id="@+id/ranking_stats_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="@color/view_text_secondary"
-                android:textSize="10sp"
-                tools:text="7 games · 43% wins" />
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/ranking_stat_games"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_ranking_pill"
+                    android:ellipsize="end"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:paddingStart="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="3dp"
+                    android:textSize="10sp"
+                    tools:text="8 games" />
+
+                <TextView
+                    android:id="@+id/ranking_stat_wins"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_ranking_pill"
+                    android:ellipsize="end"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:paddingStart="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="3dp"
+                    android:textSize="10sp"
+                    tools:text="67%" />
+
+                <TextView
+                    android:id="@+id/ranking_stat_avg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_ranking_pill"
+                    android:ellipsize="end"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:paddingStart="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="3dp"
+                    android:textSize="10sp"
+                    android:visibility="gone"
+                    tools:text="+₹127/game"
+                    tools:visibility="visible" />
+            </LinearLayout>
         </LinearLayout>
 
         <TextView
