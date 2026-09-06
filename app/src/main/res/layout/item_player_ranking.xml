@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One ranked player. Two lines rather than columns, so full names have room and each number
+     labels itself; the magnitude strip along the bottom shows the player's share of the largest
+     net in the period. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/ranking_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="8dp"
+    android:background="@drawable/bg_leaderboard_row"
+    android:orientation="vertical"
+    android:paddingStart="12dp"
+    android:paddingTop="11dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="10dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- Background is built in the adapter: the podium is a solid medal, everyone else an
+             outlined ring, and a tint list alone cannot express both. -->
+        <TextView
+            android:id="@+id/ranking_position"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/text_dark"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            tools:background="@drawable/bg_ranking_avatar"
+            tools:text="1" />
+
+        <TextView
+            android:id="@+id/ranking_avatar"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_ranking_avatar"
+            android:gravity="center"
+            android:textColor="@color/text_dark"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="AD" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="11dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/ranking_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                tools:text="Avijit Das" />
+
+            <TextView
+                android:id="@+id/ranking_meta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/view_text_secondary"
+                android:textSize="10sp"
+                tools:text="7 games · 43% wins" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/ranking_net"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_ranking_pill"
+            android:gravity="center"
+            android:minWidth="72dp"
+            android:paddingStart="10dp"
+            android:paddingTop="5dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="5dp"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="+₹1,118" />
+    </LinearLayout>
+
+    <!-- Relative magnitude. Hidden along with the figures when amounts are masked, since its
+         length would otherwise reveal them. -->
+    <LinearLayout
+        android:id="@+id/ranking_magnitude_track"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_marginStart="2dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="2dp"
+        android:orientation="horizontal">
+
+        <View
+            android:id="@+id/ranking_magnitude_fill"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_ranking_pill" />
+
+        <View
+            android:id="@+id/ranking_magnitude_rest"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="0" />
+    </LinearLayout>
+</LinearLayout>

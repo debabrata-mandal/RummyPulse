@@ -61,8 +61,32 @@ public class Leaderboard {
      */
     public static Leaderboard from(
             List<PlayerStats> allStats, StatsPeriod period, String currentUserId) {
-        if (allStats == null || allStats.isEmpty() || period == null) {
+        List<LeaderboardEntry> ranked = rankAll(allStats, period, currentUserId);
+        if (ranked.isEmpty()) {
             return EMPTY;
+        }
+
+        int total = ranked.size();
+        int topCount = Math.min(SIZE, total);
+        int bottomCount = Math.min(SIZE, total - topCount);
+
+        List<LeaderboardEntry> topEntries = new ArrayList<>(ranked.subList(0, topCount));
+        List<LeaderboardEntry> bottomEntries =
+                new ArrayList<>(ranked.subList(total - bottomCount, total));
+
+        return new Leaderboard(topEntries, bottomEntries, total);
+    }
+
+    /**
+     * Every qualifying player for the period, best net first, each carrying its rank in this list.
+     *
+     * <p>This is the whole table the donut samples the ends of, and what the player ranking screen
+     * shows in full. Returns an empty list rather than null when nothing qualifies.
+     */
+    public static List<LeaderboardEntry> rankAll(
+            List<PlayerStats> allStats, StatsPeriod period, String currentUserId) {
+        if (allStats == null || allStats.isEmpty() || period == null) {
+            return Collections.emptyList();
         }
 
         List<Ranked> ranked = new ArrayList<>();
@@ -77,7 +101,7 @@ public class Leaderboard {
             ranked.add(new Ranked(stats, bucket));
         }
         if (ranked.isEmpty()) {
-            return EMPTY;
+            return Collections.emptyList();
         }
 
         // Highest net first. Name breaks ties so the order is stable across recompositions.
@@ -85,21 +109,11 @@ public class Leaderboard {
                 .comparingDouble((Ranked r) -> r.bucket.getNetAmount()).reversed()
                 .thenComparing(r -> nameOf(r.stats)));
 
-        int total = ranked.size();
-        int topCount = Math.min(SIZE, total);
-        int bottomCount = Math.min(SIZE, total - topCount);
-
-        List<LeaderboardEntry> topEntries = new ArrayList<>(topCount);
-        for (int i = 0; i < topCount; i++) {
-            topEntries.add(toEntry(ranked.get(i), i + 1, currentUserId));
+        List<LeaderboardEntry> entries = new ArrayList<>(ranked.size());
+        for (int i = 0; i < ranked.size(); i++) {
+            entries.add(toEntry(ranked.get(i), i + 1, currentUserId));
         }
-
-        List<LeaderboardEntry> bottomEntries = new ArrayList<>(bottomCount);
-        for (int i = total - bottomCount; i < total; i++) {
-            bottomEntries.add(toEntry(ranked.get(i), i + 1, currentUserId));
-        }
-
-        return new Leaderboard(topEntries, bottomEntries, total);
+        return entries;
     }
 
     private static LeaderboardEntry toEntry(Ranked ranked, int rank, String currentUserId) {

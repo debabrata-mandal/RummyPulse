@@ -30,6 +30,19 @@
         tools:layout="@layout/fragment_player_consolidation" />
 
     <fragment
+        android:id="@+id/nav_player_ranking"
+        android:name="com.example.rummypulse.ui.playerranking.PlayerRankingFragment"
+        android:label="@string/player_ranking_title"
+        tools:layout="@layout/fragment_player_ranking">
+        <!-- Absent when opened from the drawer, in which case the screen defaults to this month. -->
+        <argument
+            android:name="period"
+            android:defaultValue="@null"
+            app:argType="string"
+            app:nullable="true" />
+    </fragment>
+
+    <fragment
         android:id="@+id/nav_user_management"
         android:name="com.example.rummypulse.ui.usermanagement.UserManagementFragment"
         android:label="Users"

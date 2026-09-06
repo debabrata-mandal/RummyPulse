@@ -45,4 +45,34 @@ public class DisplayNameUtilsTest {
     public void firstName_singleWordNoAtNoSpace_returnsWord() {
         assertEquals("Charlie", DisplayNameUtils.firstName("Charlie"));
     }
+
+    @Test
+    public void initials_null_returnsQuestionMark() {
+        assertEquals("?", DisplayNameUtils.initials(null));
+    }
+
+    @Test
+    public void initials_blank_returnsQuestionMark() {
+        assertEquals("?", DisplayNameUtils.initials("   "));
+    }
+
+    @Test
+    public void initials_fullName_returnsFirstAndLastInitial() {
+        assertEquals("JD", DisplayNameUtils.initials("John Doe"));
+    }
+
+    @Test
+    public void initials_threeTokens_skipsTheMiddleName() {
+        assertEquals("JD", DisplayNameUtils.initials("John Michael Doe"));
+    }
+
+    @Test
+    public void initials_singleToken_returnsOneLetter() {
+        assertEquals("C", DisplayNameUtils.initials("charlie"));
+    }
+
+    @Test
+    public void initials_paddedWhitespace_isTrimmed() {
+        assertEquals("AB", DisplayNameUtils.initials("  alice   brown  "));
+    }
 }

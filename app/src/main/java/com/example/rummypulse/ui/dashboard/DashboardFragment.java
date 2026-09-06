@@ -29,6 +29,7 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.fragment.NavHostFragment;
 import androidx.transition.AutoTransition;
 import androidx.transition.TransitionManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -41,6 +42,7 @@ import com.example.rummypulse.data.PlayerStats;
 import com.example.rummypulse.databinding.FragmentDashboardBinding;
 import com.example.rummypulse.service.GroqGameNameService;
 import com.example.rummypulse.ui.home.GameItem;
+import com.example.rummypulse.ui.playerranking.PlayerRankingFragment;
 import com.example.rummypulse.utils.DisplayNameUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -343,7 +345,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             return;
         }
         binding.cardLeaderboard.setVisibility(View.VISIBLE);
-        showLeaderboardAmounts = defaults.isShowDashboardLeaderboardAmountsEnabled();
+        showLeaderboardAmounts = defaults.isLeaderboardAmountsVisible();
 
         Leaderboard board = leaderboard == null ? Leaderboard.empty() : leaderboard;
         boolean empty = board.isEmpty();
@@ -351,6 +353,12 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         binding.textLeaderboardEmpty.setVisibility(empty ? View.VISIBLE : View.GONE);
         binding.groupLeaderboardChart.setVisibility(empty ? View.GONE : View.VISIBLE);
         binding.containerLeaderboardLegend.setVisibility(empty ? View.GONE : View.VISIBLE);
+        binding.textLeaderboardOpenRanking.setVisibility(empty ? View.GONE : View.VISIBLE);
+
+        // The donut shows only the four extremes, so both it and the hint open the full table.
+        View.OnClickListener openRanking = v -> openPlayerRanking();
+        binding.groupLeaderboardChart.setOnClickListener(openRanking);
+        binding.textLeaderboardOpenRanking.setOnClickListener(openRanking);
         binding.textLeaderboardSummary.setText(empty
                 ? ""
                 : getResources().getQuantityString(
@@ -380,6 +388,16 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
         binding.textLeaderboardCenterName.setText(entries.get(0).getDisplayName());
         bindLeaderboardLegend(entries, colors);
+    }
+
+    /** Opens the full ranking on the period the dashboard is currently showing. */
+    private void openPlayerRanking() {
+        StatsPeriod period = dashboardViewModel.getSelectedPeriod().getValue();
+        Bundle args = new Bundle();
+        args.putString(
+                PlayerRankingFragment.ARG_PERIOD,
+                (period == null ? StatsPeriod.THIS_MONTH : period).name());
+        NavHostFragment.findNavController(this).navigate(R.id.nav_player_ranking, args);
     }
 
     /** Greens for the winning slices, reds for the losing ones, brightest at each extreme. */
@@ -525,14 +543,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     private static String formatSignedAmount(double value) {
-        long rounded = Math.round(value);
-        if (rounded > 0) {
-            return String.format(Locale.getDefault(), "+₹%,d", rounded);
-        }
-        if (rounded < 0) {
-            return String.format(Locale.getDefault(), "-₹%,d", Math.abs(rounded));
-        }
-        return "₹0";
+        return LeaderboardAmountFormatter.formatSigned(value);
     }
 
     private static double parseAmount(CharSequence text) {

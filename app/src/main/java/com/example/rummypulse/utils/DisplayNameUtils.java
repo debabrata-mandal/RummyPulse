@@ -1,5 +1,7 @@
 package com.example.rummypulse.utils;
 
+import java.util.Locale;
+
 /**
  * Helpers for shortening Firebase display names for in-game player labels.
  */
@@ -30,5 +32,26 @@ public final class DisplayNameUtils {
             return t;
         }
         return t.substring(0, sp);
+    }
+
+    /**
+     * Avatar initials: first and last token initials, or just the first for a single token.
+     *
+     * @return one or two uppercase letters, or {@code "?"} when there is no usable name
+     */
+    public static String initials(String name) {
+        if (name == null) {
+            return "?";
+        }
+        String trimmed = name.trim();
+        if (trimmed.isEmpty()) {
+            return "?";
+        }
+        String[] parts = trimmed.split("\\s+");
+        String first = parts[0].substring(0, 1);
+        String last = parts.length > 1
+                ? parts[parts.length - 1].substring(0, 1)
+                : "";
+        return (first + last).toUpperCase(Locale.ROOT);
     }
 }

@@ -69,6 +69,8 @@ public class LayoutInflationCompatTest {
             // the custom donut view, which is only ever constructed from XML.
             R.layout.fragment_dashboard,
             R.layout.item_leaderboard_legend,
+            R.layout.fragment_player_ranking,
+            R.layout.item_player_ranking,
     };
 
     @Test

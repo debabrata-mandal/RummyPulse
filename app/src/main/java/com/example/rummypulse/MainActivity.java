@@ -32,6 +32,7 @@ import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameRepository;
+import com.example.rummypulse.data.PlayerLeaderboardRepository;
 import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.ModernUpdateChecker;
@@ -137,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
         // menu should be considered as top level destinations.
         mAppBarConfiguration = new AppBarConfiguration.Builder(
                 R.id.nav_dashboard, R.id.nav_home, R.id.nav_reports, R.id.nav_game_defaults,
-                R.id.nav_player_consolidation)
+                R.id.nav_player_consolidation, R.id.nav_player_ranking)
                 .setOpenableLayout(drawerLayout)
                 .build();
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
@@ -589,6 +590,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void signOut() {
         AppUserRoleSession.getInstance().stop();
+        PlayerLeaderboardRepository.getInstance().stop();
         AuthStateManager.getInstance(this).clearAuthState();
 
         mAuth.signOut();

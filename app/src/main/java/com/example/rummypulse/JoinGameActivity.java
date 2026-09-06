@@ -2987,15 +2987,7 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private String initialsForName(String name) {
-        if (TextUtils.isEmpty(name)) {
-            return "?";
-        }
-        String[] parts = name.trim().split("\\s+");
-        String first = parts[0].substring(0, 1);
-        String last = parts.length > 1
-                ? parts[parts.length - 1].substring(0, 1)
-                : "";
-        return (first + last).toUpperCase(Locale.ROOT);
+        return DisplayNameUtils.initials(name);
     }
 
     private void refreshPlayerAvatars() {

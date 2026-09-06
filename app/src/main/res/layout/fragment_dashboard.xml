@@ -369,12 +369,16 @@
                             android:textSize="12sp"
                             android:visibility="gone" />
 
-                        <!-- One ring for every ranked player; slice size is the net magnitude. -->
+                        <!-- One ring for every ranked player; slice size is the net magnitude.
+                             Tapping opens the full ranking. -->
                         <FrameLayout
                             android:id="@+id/group_leaderboard_chart"
                             android:layout_width="match_parent"
                             android:layout_height="204dp"
-                            android:layout_marginTop="10dp">
+                            android:layout_marginTop="10dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackground">
 
                             <com.example.rummypulse.ui.dashboard.LeaderboardDonutView
                                 android:id="@+id/view_leaderboard_donut"
@@ -419,6 +423,19 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:orientation="vertical" />
+
+                        <TextView
+                            android:id="@+id/text_leaderboard_open_ranking"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:text="@string/dashboard_leaderboard_open_ranking"
+                            android:textColor="@color/view_mint"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

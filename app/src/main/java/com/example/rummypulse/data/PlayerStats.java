@@ -109,7 +109,6 @@ public class PlayerStats {
         private double netAmount;
         private double grossAmount;
         private double contributionPaid;
-        private long totalScore;
 
         public Bucket() {
             // Default constructor required for Firestore
@@ -120,14 +119,12 @@ public class PlayerStats {
                 long wins,
                 double netAmount,
                 double grossAmount,
-                double contributionPaid,
-                long totalScore) {
+                double contributionPaid) {
             this.games = games;
             this.wins = wins;
             this.netAmount = netAmount;
             this.grossAmount = grossAmount;
             this.contributionPaid = contributionPaid;
-            this.totalScore = totalScore;
         }
 
         public long getGames() {
@@ -170,14 +167,6 @@ public class PlayerStats {
             this.contributionPaid = contributionPaid;
         }
 
-        public long getTotalScore() {
-            return totalScore;
-        }
-
-        public void setTotalScore(long totalScore) {
-            this.totalScore = totalScore;
-        }
-
         /** Percentage of games finished in first place, 0 when no games are recorded. */
         public int winRatePercent() {
             if (games <= 0) {
@@ -193,7 +182,6 @@ public class PlayerStats {
             map.put("netAmount", netAmount);
             map.put("grossAmount", grossAmount);
             map.put("contributionPaid", contributionPaid);
-            map.put("totalScore", totalScore);
             return map;
         }
     }

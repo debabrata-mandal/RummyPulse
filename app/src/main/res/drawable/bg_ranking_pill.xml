@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fully rounded pill, tinted at bind time. Shared by the rank badge, the net amount pill and
+     the magnitude bar so all three keep the same corner treatment. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="999dp" />
+    <solid android:color="@android:color/white" />
+</shape>

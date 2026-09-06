@@ -87,6 +87,11 @@ public class GameDefaultsRepository {
         return cachedResolved.isShowDashboardLeaderboardAmounts();
     }
 
+    /** See {@link GameDefaults#isLeaderboardAmountsVisible()}: both switches must be on. */
+    public boolean isLeaderboardAmountsVisible() {
+        return cachedResolved.isLeaderboardAmountsVisible();
+    }
+
     public void setShowDashboardLeaderboardCached(boolean enabled) {
         cachedResolved.setShowDashboardLeaderboard(enabled);
     }

@@ -19,7 +19,7 @@ public class LeaderboardTest {
         PlayerStats stats = new PlayerStats();
         stats.setUserId(userId);
         stats.setDisplayName(name);
-        stats.setAllTime(new PlayerStats.Bucket(games, 0, net, 0, 0, 0));
+        stats.setAllTime(new PlayerStats.Bucket(games, 0, net, 0, 0));
         return stats;
     }
 
@@ -147,5 +147,62 @@ public class LeaderboardTest {
         List<PlayerStats> stats = Collections.singletonList(player("a", "Alice", 4, 250));
 
         assertTrue(Leaderboard.from(stats, StatsPeriod.THIS_WEEK, null).isEmpty());
+    }
+
+    @Test
+    public void rankAllKeepsTheMiddleThatTheDonutDiscards() {
+        List<PlayerStats> stats = Arrays.asList(
+                player("a", "Alice", 5, 300),
+                player("b", "Bob", 5, -200),
+                player("c", "Cara", 5, 900),
+                player("d", "Dan", 5, 50),
+                player("e", "Eve", 5, -750));
+
+        List<LeaderboardEntry> ranked = Leaderboard.rankAll(stats, StatsPeriod.ALL_TIME, null);
+
+        assertEquals(Arrays.asList("Cara", "Alice", "Dan", "Bob", "Eve"), namesOf(ranked));
+        for (int i = 0; i < ranked.size(); i++) {
+            assertEquals(i + 1, ranked.get(i).getRank());
+        }
+    }
+
+    @Test
+    public void rankAllExcludesPlayersWithNoGamesInPeriod() {
+        List<PlayerStats> stats = Arrays.asList(
+                player("a", "Alice", 3, 100),
+                player("b", "Bob", 0, 0));
+
+        assertEquals(Collections.singletonList("Alice"),
+                namesOf(Leaderboard.rankAll(stats, StatsPeriod.ALL_TIME, null)));
+    }
+
+    @Test
+    public void rankAllTiesBreakByName() {
+        List<PlayerStats> stats = Arrays.asList(
+                player("b", "Bob", 1, 100),
+                player("a", "Alice", 1, 100));
+
+        assertEquals(Arrays.asList("Alice", "Bob"),
+                namesOf(Leaderboard.rankAll(stats, StatsPeriod.ALL_TIME, null)));
+    }
+
+    @Test
+    public void rankAllFlagsTheSignedInUser() {
+        List<PlayerStats> stats = Arrays.asList(
+                player("a", "Alice", 1, 300),
+                player("b", "Bob", 1, 200));
+
+        List<LeaderboardEntry> ranked = Leaderboard.rankAll(stats, StatsPeriod.ALL_TIME, "b");
+
+        assertFalse(ranked.get(0).isCurrentUser());
+        assertTrue(ranked.get(1).isCurrentUser());
+    }
+
+    @Test
+    public void rankAllReturnsEmptyRatherThanNull() {
+        assertTrue(Leaderboard.rankAll(null, StatsPeriod.ALL_TIME, null).isEmpty());
+        assertTrue(Leaderboard.rankAll(new ArrayList<>(), StatsPeriod.ALL_TIME, null).isEmpty());
+        assertTrue(Leaderboard.rankAll(
+                Collections.singletonList(player("a", "Alice", 1, 10)), null, null).isEmpty());
     }
 }

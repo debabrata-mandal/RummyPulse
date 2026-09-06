@@ -427,6 +427,15 @@
     <string name="dashboard_leaderboard_legend_detail">Rank #%1$d</string>
     <string name="dashboard_leaderboard_legend_you">%1$s (You)</string>
     <string name="dashboard_leaderboard_empty">No ranked players in this period yet</string>
+    <string name="dashboard_leaderboard_open_ranking">See full ranking</string>
+
+    <!-- Player ranking screen -->
+    <string name="menu_player_ranking">Ranking</string>
+    <string name="player_ranking_title">Player Ranking</string>
+    <string name="player_ranking_empty">No ranked players in this period yet</string>
+    <string name="player_ranking_amounts_hidden_notice">Amounts are hidden by an administrator</string>
+    <string name="player_ranking_name_you">%1$s (You)</string>
+    <string name="player_ranking_meta">%1$s · %2$d%% wins</string>
 
     <!-- Layout HardcodedText fixes -->
     <string name="account_not_linked_message">Your account is not linked to a player in this game</string>
@@ -585,6 +594,10 @@
     <plurals name="dashboard_leaderboard_summary">
         <item quantity="one">1 player ranked</item>
         <item quantity="other">%d players ranked</item>
+    </plurals>
+    <plurals name="player_ranking_games">
+        <item quantity="one">1 game</item>
+        <item quantity="other">%d games</item>
     </plurals>
     <plurals name="standing_score_points">
         <item quantity="one">%d point</item>

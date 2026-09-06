@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorOnSurface">
+
+    <!-- Winner's podium: distinct from the report and bar-chart icons, which are flat columns. -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M9,4h6v16h-6zM3,10h5v10h-5zM16,13h5v7h-5z" />
+</vector>

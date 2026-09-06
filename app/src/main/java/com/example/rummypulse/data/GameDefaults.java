@@ -1,6 +1,7 @@
 package com.example.rummypulse.data;
 
 import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.Exclude;
 
 /**
  * System-wide defaults stored at {@code gameDefaults_v2/config} in Firestore.
@@ -92,6 +93,19 @@ public class GameDefaults {
 
     public void setShowDashboardLeaderboardAmounts(Boolean showDashboardLeaderboardAmounts) {
         this.showDashboardLeaderboardAmounts = showDashboardLeaderboardAmounts;
+    }
+
+    /**
+     * Whether ranked net amounts may be shown anywhere, on the dashboard donut or the player
+     * ranking screen.
+     *
+     * <p>Both switches must be on. The amounts switch is disabled in the admin UI while the
+     * leaderboard switch is off, so it can be left stranded at {@code true}; honouring it alone
+     * would show figures an admin believes are switched off.
+     */
+    @Exclude
+    public boolean isLeaderboardAmountsVisible() {
+        return isShowDashboardLeaderboard() && isShowDashboardLeaderboardAmounts();
     }
 
     public Timestamp getUpdatedAt() {

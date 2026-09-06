@@ -92,4 +92,8 @@
     <color name="view_mint">#FF00E676</color>
     <color name="view_gold">#FFFFD600</color>
     <color name="view_coral">#FFFF1744</color>
+
+    <!-- Player ranking medals. Gold reuses view_gold. -->
+    <color name="ranking_medal_silver">#FFC6CEDB</color>
+    <color name="ranking_medal_bronze">#FFCE8946</color>
 </resources>

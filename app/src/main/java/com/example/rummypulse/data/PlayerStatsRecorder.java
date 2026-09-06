@@ -301,8 +301,7 @@ public final class PlayerStatsRecorder {
                             player.getTotalScore() == lowestScore ? 1L : 0L,
                             settlement.netAmount,
                             settlement.grossAmount,
-                            settlement.gstPaid,
-                            player.getTotalScore())));
+                            settlement.gstPaid)));
         }
         return byUser;
     }
@@ -350,8 +349,7 @@ public final class PlayerStatsRecorder {
                 base.getWins() + delta.getWins(),
                 base.getNetAmount() + delta.getNetAmount(),
                 base.getGrossAmount() + delta.getGrossAmount(),
-                base.getContributionPaid() + delta.getContributionPaid(),
-                base.getTotalScore() + delta.getTotalScore());
+                base.getContributionPaid() + delta.getContributionPaid());
     }
 
     private static PlayerStats.Bucket subtract(
@@ -363,14 +361,12 @@ public final class PlayerStatsRecorder {
                 left.getWins() - right.getWins(),
                 left.getNetAmount() - right.getNetAmount(),
                 left.getGrossAmount() - right.getGrossAmount(),
-                left.getContributionPaid() - right.getContributionPaid(),
-                left.getTotalScore() - right.getTotalScore());
+                left.getContributionPaid() - right.getContributionPaid());
     }
 
     private static boolean isZero(PlayerStats.Bucket bucket) {
         return bucket.getGames() == 0
                 && bucket.getWins() == 0
-                && bucket.getTotalScore() == 0
                 && Math.abs(bucket.getNetAmount()) < 0.005
                 && Math.abs(bucket.getGrossAmount()) < 0.005
                 && Math.abs(bucket.getContributionPaid()) < 0.005;
@@ -438,8 +434,7 @@ public final class PlayerStatsRecorder {
                     longOf(map.get("wins")),
                     doubleOf(map.get("netAmount")),
                     doubleOf(map.get("grossAmount")),
-                    doubleOf(map.get("contributionPaid")),
-                    longOf(map.get("totalScore")));
+                    doubleOf(map.get("contributionPaid")));
         }
 
         /** The new record after {@code deltas} land, dropping users who no longer contribute. */

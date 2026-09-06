@@ -118,7 +118,7 @@ public class DashboardViewModel extends ViewModel {
         gameRepository = GameRepository.getDashboardInstance();
         playerStatsRepository = new PlayerStatsRepository();
         playerStatsRepository.start();
-        leaderboardRepository = new PlayerLeaderboardRepository();
+        leaderboardRepository = PlayerLeaderboardRepository.getInstance();
         leaderboardRepository.start();
         showAllGames = new MutableLiveData<>(gameRepository.isShowingAllGames());
         selectedPeriod = new MutableLiveData<>(StatsPeriod.THIS_MONTH);
@@ -652,7 +652,8 @@ public class DashboardViewModel extends ViewModel {
         super.onCleared();
         cancelCreationSlowNotice();
         playerStatsRepository.stop();
-        leaderboardRepository.stop();
+        // The leaderboard listener is shared with the player ranking screen, so navigating there
+        // must not tear it down. Sign-out stops it in MainActivity.
         // Clean up listeners when ViewModel is destroyed
         if (gameRepository != null) {
             gameRepository.removeListeners();

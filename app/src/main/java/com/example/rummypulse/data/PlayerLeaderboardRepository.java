@@ -21,12 +21,29 @@ import java.util.List;
  */
 public class PlayerLeaderboardRepository {
 
+    private static volatile PlayerLeaderboardRepository instance;
+
     private final FirebaseFirestore db;
     private final MutableLiveData<List<PlayerStats>> allStats = new MutableLiveData<>();
     private ListenerRegistration registration;
 
-    public PlayerLeaderboardRepository() {
+    private PlayerLeaderboardRepository() {
         this.db = FirebaseFirestore.getInstance();
+    }
+
+    /**
+     * Shared across every screen that ranks players, so the dashboard and the player ranking
+     * screen attach to one listener instead of each paying a read per player.
+     */
+    public static PlayerLeaderboardRepository getInstance() {
+        if (instance == null) {
+            synchronized (PlayerLeaderboardRepository.class) {
+                if (instance == null) {
+                    instance = new PlayerLeaderboardRepository();
+                }
+            }
+        }
+        return instance;
     }
 
     public LiveData<List<PlayerStats>> getAllStats() {
