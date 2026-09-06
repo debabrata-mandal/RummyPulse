@@ -491,6 +491,8 @@
     <string name="update_available_whats_new">What’s new</string>
     <string name="user_management_error_loading">Error loading users</string>
     <string name="user_management_no_users">No users found</string>
+    <string name="user_management_no_search_results">No users match your search</string>
+    <string name="user_management_search_hint">Search by name or email</string>
 
     <!-- SetTextI18n / PluralsCandidate (Java) -->
     <string name="format_rupee_amount">₹%1$s</string>
@@ -548,6 +550,20 @@
     <string name="user_management_delete_user_message">This permanently removes the user from RummyPulse. This action cannot be undone.</string>
     <string name="user_management_keep_user">Keep user</string>
     <string name="user_management_delete_user_confirm">Delete user</string>
+    <string name="user_management_hidden_badge">Hidden</string>
+    <string name="user_management_hide_user">Hide user</string>
+    <string name="user_management_unhide_user">Unhide user</string>
+    <string name="user_management_hide_user_title">Hide user?</string>
+    <string name="user_management_hide_user_message">Hidden users stay in the system but no longer appear when mapping players in game edit.</string>
+    <string name="user_management_hide_user_confirm">Hide user</string>
+    <string name="user_management_unhide_user_title">Unhide user?</string>
+    <string name="user_management_unhide_user_message">This user will appear again when mapping players in game edit.</string>
+    <string name="user_management_unhide_user_confirm">Unhide user</string>
+    <string name="user_management_hidden_success">User hidden from player mapping</string>
+    <string name="user_management_unhidden_success">User visible for player mapping again</string>
+    <string name="user_management_action_promote">Promote to admin</string>
+    <string name="user_management_action_demote">Demote to regular user</string>
+    <string name="user_management_self_actions_note">These admin actions are not available on your own account.</string>
 
     <string name="player_consolidation_continue_placeholder">Continue</string>
 

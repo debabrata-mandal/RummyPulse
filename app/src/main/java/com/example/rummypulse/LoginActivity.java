@@ -24,6 +24,7 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.example.rummypulse.utils.AccountSignOut;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.VersionGate;
 
@@ -32,6 +33,8 @@ public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
     private static final int RC_SIGN_IN = 9001;
     private static final long SIGN_IN_SLOW_NETWORK_MS = 15_000L;
+    /** When true, always show the sign-in screen even if Firebase still has a cached user. */
+    public static final String EXTRA_REQUIRE_LOGIN = "require_login";
 
     private ActivityLoginBinding binding;
     private FirebaseAuth mAuth;
@@ -93,24 +96,31 @@ public class LoginActivity extends AppCompatActivity {
         });
         binding.retryButton.setOnClickListener(v -> retrySignIn());
 
-        // Check if user is already signed in with better logging
+        // After an explicit sign-out, always show the login screen and let the user pick an account.
+        boolean requireLogin = getIntent().getBooleanExtra(EXTRA_REQUIRE_LOGIN, false);
         FirebaseUser currentUser = mAuth.getCurrentUser();
         AuthStateManager authStateManager = AuthStateManager.getInstance(this);
-        
-        if (currentUser != null) {
+
+        if (requireLogin) {
+            if (currentUser != null) {
+                Log.w(TAG, "Sign-out requested but Firebase still has a user; clearing session");
+                AccountSignOut.signOut(this);
+            }
+            Log.d(TAG, "Login required after sign-out");
+        } else if (currentUser != null) {
             Log.d(TAG, "User already signed in: " + currentUser.getEmail());
             authStateManager.saveAuthState(currentUser);
             startMainActivity();
         } else {
             Log.d(TAG, "No user currently signed in");
-            
+
             // Check if user should be authenticated (might be force stop issue)
             if (authStateManager.shouldBeAuthenticated()) {
                 Log.w(TAG, "User should be authenticated but isn't - possible force stop issue");
                 Log.w(TAG, "Expected user: " + authStateManager.getBackedUpUserEmail());
-                
+
                 // Show message about session interruption
-                com.example.rummypulse.utils.ModernToast.warning(this, 
+                com.example.rummypulse.utils.ModernToast.warning(this,
                     "Your session was interrupted. Please sign in again.");
             }
         }
@@ -129,8 +139,11 @@ public class LoginActivity extends AppCompatActivity {
         binding.loginStatus.setVisibility(View.VISIBLE);
         binding.retryButton.setVisibility(View.GONE);
         
-        Intent signInIntent = mGoogleSignInClient.getSignInIntent();
-        startActivityForResult(signInIntent, RC_SIGN_IN);
+        // Clear the cached Google account so the user can pick a different one after sign-out.
+        mGoogleSignInClient.signOut().addOnCompleteListener(task -> {
+            Intent signInIntent = mGoogleSignInClient.getSignInIntent();
+            startActivityForResult(signInIntent, RC_SIGN_IN);
+        });
     }
 
     @Override

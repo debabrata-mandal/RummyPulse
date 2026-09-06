@@ -238,6 +238,27 @@ public class AppUserRepository {
     }
 
     /**
+     * Hides or restores a user in the directory. Hidden users stay in Firestore but are omitted
+     * from player-mapping pickers. Clears the cached user directory on success.
+     */
+    public void updateUserHidden(String userId, boolean hidden, AppUserCallback callback) {
+        db.collection(FirestoreCollections.APP_USER).document(userId)
+                .update("hidden", hidden)
+                .addOnSuccessListener(unused -> {
+                    invalidateUserDirectoryCache();
+                    Log.d(TAG, "User hidden flag updated with operations: reads=0 writes=1 for "
+                            + userId + " hidden=" + hidden);
+                    AppUser updated = new AppUser();
+                    updated.setUserId(userId);
+                    updated.setHidden(hidden);
+                    if (callback != null) {
+                        callback.onSuccess(updated);
+                    }
+                })
+                .addOnFailureListener(exception -> notifyFailure(callback, exception));
+    }
+
+    /**
      * Loads a bounded page ordered by document ID. Passing a null cursor starts a fresh listing.
      */
     public void getUsersPage(
@@ -383,6 +404,8 @@ public class AppUserRepository {
         appUser.setPhotoUrl(document.getString("photoUrl"));
         appUser.setCreatedAt(document.getDate("createdAt"));
         appUser.setLastLoginAt(document.getDate("lastLoginAt"));
+        Boolean hidden = document.getBoolean("hidden");
+        appUser.setHidden(hidden != null && hidden);
         return appUser;
     }
 
@@ -446,6 +469,19 @@ public class AppUserRepository {
         synchronized (DIRECTORY_LOCK) {
             cachedUserDirectory = null;
             cachedUserDirectoryAt = 0;
+        }
+    }
+
+    /** Clears process-wide user-directory and sync caches on sign-out. */
+    public static void clearSessionCaches() {
+        synchronized (SYNC_LOCK) {
+            RECENT_SYNCS.clear();
+            IN_FLIGHT_SYNCS.clear();
+        }
+        synchronized (DIRECTORY_LOCK) {
+            cachedUserDirectory = null;
+            cachedUserDirectoryAt = 0;
+            inFlightDirectoryCallbacks = null;
         }
     }
 

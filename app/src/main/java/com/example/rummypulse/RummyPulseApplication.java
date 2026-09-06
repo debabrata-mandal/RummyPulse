@@ -10,6 +10,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.utils.AuthStateManager;
+import com.example.rummypulse.utils.SessionCacheCleaner;
 
 /**
  * Custom Application class to initialize Firebase and configure authentication persistence
@@ -72,14 +73,10 @@ public class RummyPulseApplication extends Application {
                             .refreshFromServer(null);
                 } else {
                     Log.d(TAG, "Global auth state: User is signed out");
-                    AppUserRoleSession.getInstance().stop();
-                    // Check if this is unexpected (user should be authenticated)
+                    SessionCacheCleaner.clearAll(RummyPulseApplication.this);
                     if (authStateManager.shouldBeAuthenticated()) {
                         Log.w(TAG, "Unexpected sign out detected - user should be authenticated");
                         Log.w(TAG, "This might be due to force stop or other issues");
-                    } else {
-                        // Expected sign out, clear backup
-                        authStateManager.clearAuthState();
                     }
                 }
             }

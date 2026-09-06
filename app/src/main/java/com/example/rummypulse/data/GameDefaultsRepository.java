@@ -58,6 +58,11 @@ public class GameDefaultsRepository {
         return cachedResolved;
     }
 
+    /** Resets in-memory defaults so the next account does not inherit the previous org settings. */
+    public void clearSessionCache() {
+        cachedResolved = GameDefaults.resolvedFromFirestoreBean(null);
+    }
+
     public long getMidGameIncrementOrFallback() {
         return cachedResolved.getDefaultMidGameNewPlayerScoreIncrement();
     }

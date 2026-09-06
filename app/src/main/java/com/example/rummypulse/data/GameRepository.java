@@ -281,6 +281,27 @@ public class GameRepository {
         gameDataListeners.clear();
     }
 
+    /** Drops listeners and every in-memory dashboard row so the next account starts clean. */
+    public void clearSessionState() {
+        removeListeners();
+        for (String gameId : new ArrayList<>(gameIdsOrder)) {
+            invalidateDashboardUpdates(gameId);
+        }
+        gameItemsMap.clear();
+        gameIdsOrder.clear();
+        myViewApprovalStatusByGame.clear();
+        localDashboardUpdatedAtMs.clear();
+        latestDashboardVersions.clear();
+        dashboardUpdateTokens.clear();
+        seenGameIds.clear();
+        showAllGames = false;
+        gameItemsLiveData.postValue(new ArrayList<>());
+        errorLiveData.postValue(null);
+        totalApprovedGstLiveData.postValue(0.0);
+        approvedGamesCountLiveData.postValue(0);
+        reportsSummariesLiveData.postValue(new ArrayList<>());
+    }
+
     /**
      * Clears in-memory game list state when the games collection has no documents (one-shot query / Review).
      * Prevents stale in-flight {@link #fetchGameData} callbacks from repopulating the UI from old {@link #gameIdsOrder}.

@@ -35,6 +35,8 @@ import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.PlayerLeaderboardRepository;
 import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.utils.AuthStateManager;
+import com.example.rummypulse.utils.AccountSignOut;
+import com.example.rummypulse.utils.SessionCacheCleaner;
 import com.example.rummypulse.utils.ModernUpdateChecker;
 import com.example.rummypulse.utils.PermissionManager;
 import com.example.rummypulse.utils.VersionGate;
@@ -94,8 +96,11 @@ public class MainActivity extends AppCompatActivity {
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 if (user == null) {
                     android.util.Log.d("MainActivity", "User signed out, redirecting to login");
-                    AppUserRoleSession.getInstance().stop();
-                    startActivity(new Intent(MainActivity.this, LoginActivity.class));
+                    SessionCacheCleaner.clearAll(MainActivity.this);
+                    Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
+                    loginIntent.putExtra(LoginActivity.EXTRA_REQUIRE_LOGIN, true);
+                    loginIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(loginIntent);
                     finish();
                 }
             }
@@ -619,19 +624,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void signOut() {
-        AppUserRoleSession.getInstance().stop();
-        PlayerLeaderboardRepository.getInstance().stop();
-        AuthStateManager.getInstance(this).clearAuthState();
-
-        mAuth.signOut();
-        
-        android.util.Log.d("MainActivity", "User signed out manually");
-        
-        // Redirect to login activity
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
+        AccountSignOut.signOut(this).addOnCompleteListener(task -> {
+            SessionCacheCleaner.clearAll(MainActivity.this);
+            android.util.Log.d("MainActivity", "User signed out manually");
+            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+            intent.putExtra(LoginActivity.EXTRA_REQUIRE_LOGIN, true);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+        });
     }
 
     /**

@@ -1,5 +1,7 @@
 package com.example.rummypulse.ui.usermanagement;
 
+import android.content.res.TypedArray;
+import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,40 +17,38 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.RequestOptions;
 import com.example.rummypulse.R;
 import com.example.rummypulse.data.AppUser;
-import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.data.UserRole;
-import com.google.android.material.button.MaterialButton;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * RecyclerView adapter for displaying users in the User Management screen
+ * RecyclerView adapter for displaying users in the User Management screen.
+ *
+ * <p>Admin actions open from a card tap rather than inline buttons on every row.
  */
 public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAdapter.UserViewHolder> {
 
     private List<AppUser> users;
-    private OnRoleChangeClickListener roleChangeClickListener;
-    private OnDeleteClickListener deleteClickListener;
+    private final OnUserClickListener userClickListener;
+    private boolean adminActionsEnabled;
 
-    public interface OnRoleChangeClickListener {
-        void onRoleChangeClicked(AppUser user);
+    public interface OnUserClickListener {
+        void onUserClicked(AppUser user);
     }
 
-    public interface OnDeleteClickListener {
-        void onDeleteClicked(AppUser user);
-    }
-
-    public UserManagementAdapter(
-            List<AppUser> users,
-            OnRoleChangeClickListener roleChangeListener,
-            OnDeleteClickListener deleteListener) {
+    public UserManagementAdapter(List<AppUser> users, OnUserClickListener userClickListener) {
         this.users = users;
-        this.roleChangeClickListener = roleChangeListener;
-        this.deleteClickListener = deleteListener;
+        this.userClickListener = userClickListener;
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setAdminActionsEnabled(boolean enabled) {
+        if (adminActionsEnabled != enabled) {
+            adminActionsEnabled = enabled;
+            notifyDataSetChanged();
+        }
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -68,7 +68,7 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
     @Override
     public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
         AppUser user = users.get(position);
-        holder.bind(user, roleChangeClickListener, deleteClickListener);
+        holder.bind(user, adminActionsEnabled, userClickListener);
     }
 
     @Override
@@ -83,8 +83,6 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
         private final TextView roleTextView;
         private final TextView providerTextView;
         private final TextView lastLoginTextView;
-        private final MaterialButton roleChangeButton;
-        private final MaterialButton deleteButton;
 
         public UserViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -94,15 +92,12 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
             roleTextView = itemView.findViewById(R.id.textViewUserRole);
             providerTextView = itemView.findViewById(R.id.textViewUserProvider);
             lastLoginTextView = itemView.findViewById(R.id.textViewLastLogin);
-            roleChangeButton = itemView.findViewById(R.id.buttonChangeRole);
-            deleteButton = itemView.findViewById(R.id.buttonDeleteUser);
         }
 
         public void bind(
                 AppUser user,
-                OnRoleChangeClickListener roleListener,
-                OnDeleteClickListener deleteListener) {
-            // Load profile image with Glide
+                boolean adminActionsEnabled,
+                OnUserClickListener listener) {
             if (user.getPhotoUrl() != null && !user.getPhotoUrl().isEmpty()) {
                 Glide.with(itemView.getContext())
                     .load(user.getPhotoUrl())
@@ -120,8 +115,6 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
             emailTextView.setText(user.getEmail() != null ? user.getEmail() : "No Email");
 
             String roleText = user.getRole().getDisplayName();
-            roleTextView.setText(roleText);
-
             if (user.getRole() == UserRole.ADMIN_USER) {
                 roleTextView.setTextColor(itemView.getContext().getColor(R.color.admin_role_color));
                 roleTextView.setText(itemView.getContext().getString(
@@ -132,9 +125,17 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
                         R.string.user_management_role_user_prefix, roleText));
             }
 
-            providerTextView.setText(itemView.getContext().getString(
-                    R.string.user_management_provider,
-                    user.getProvider() != null ? user.getProvider() : "Unknown"));
+            itemView.setAlpha(user.isHidden() ? 0.72f : 1f);
+
+            providerTextView.setText(user.isHidden()
+                    ? itemView.getContext().getString(
+                            R.string.user_management_provider,
+                            user.getProvider() != null ? user.getProvider() : "Unknown")
+                            + " · "
+                            + itemView.getContext().getString(R.string.user_management_hidden_badge)
+                    : itemView.getContext().getString(
+                            R.string.user_management_provider,
+                            user.getProvider() != null ? user.getProvider() : "Unknown"));
 
             if (user.getLastLoginAt() != null) {
                 SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault());
@@ -145,78 +146,20 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
                         R.string.user_management_last_login_never));
             }
 
-            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-            boolean isCurrentUser = currentUser != null
-                    && currentUser.getUid().equals(user.getUserId());
-
-            AppUserManager.getInstance().isCurrentUserAdmin(new AppUserManager.AdminCheckCallback() {
-                @Override
-                public void onResult(boolean isAdmin) {
-                    if (!isAdmin) {
-                        roleChangeButton.setVisibility(View.GONE);
-                        deleteButton.setVisibility(View.GONE);
-                        return;
-                    }
-
-                    roleChangeButton.setVisibility(View.VISIBLE);
-                    configureRoleChangeButton(user, isCurrentUser, roleListener);
-                    configureDeleteButton(isCurrentUser, user, deleteListener);
-                }
-            });
-        }
-
-        private void configureRoleChangeButton(
-                AppUser user,
-                boolean isCurrentUser,
-                OnRoleChangeClickListener listener) {
-            if (isCurrentUser) {
-                roleChangeButton.setText(itemView.getContext().getString(
-                        R.string.user_management_current_user));
-                roleChangeButton.setEnabled(false);
-                roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    itemView.getContext().getColor(R.color.neutral_gray)));
-                roleChangeButton.setTextColor(itemView.getContext().getColor(R.color.text_secondary));
-                roleChangeButton.setOnClickListener(null);
-                return;
-            }
-
-            String buttonText = user.getRole() == UserRole.ADMIN_USER ? "Demote" : "Promote";
-            roleChangeButton.setText(buttonText);
-            roleChangeButton.setEnabled(true);
-
-            if (user.getRole() == UserRole.ADMIN_USER) {
-                roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    itemView.getContext().getColor(R.color.demote_button_color)));
+            boolean clickable = adminActionsEnabled && listener != null;
+            itemView.setClickable(clickable);
+            itemView.setFocusable(clickable);
+            if (clickable) {
+                TypedArray attrs = itemView.getContext().obtainStyledAttributes(
+                        new int[] {android.R.attr.selectableItemBackground});
+                Drawable ripple = attrs.getDrawable(0);
+                attrs.recycle();
+                itemView.setForeground(ripple);
+                itemView.setOnClickListener(v -> listener.onUserClicked(user));
             } else {
-                roleChangeButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    itemView.getContext().getColor(R.color.promote_button_color)));
+                itemView.setForeground(null);
+                itemView.setOnClickListener(null);
             }
-
-            roleChangeButton.setTextColor(itemView.getContext().getColor(R.color.text_white));
-            roleChangeButton.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onRoleChangeClicked(user);
-                }
-            });
-        }
-
-        private void configureDeleteButton(
-                boolean isCurrentUser,
-                AppUser user,
-                OnDeleteClickListener listener) {
-            if (isCurrentUser) {
-                deleteButton.setVisibility(View.GONE);
-                deleteButton.setOnClickListener(null);
-                return;
-            }
-
-            deleteButton.setVisibility(View.VISIBLE);
-            deleteButton.setEnabled(true);
-            deleteButton.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onDeleteClicked(user);
-                }
-            });
         }
     }
 }

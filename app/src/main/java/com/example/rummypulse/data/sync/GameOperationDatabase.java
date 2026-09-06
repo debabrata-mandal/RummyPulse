@@ -36,4 +36,15 @@ public abstract class GameOperationDatabase extends RoomDatabase {
         }
         return current;
     }
+
+    /** Deletes the local operation queue so pending writes from the signed-out user are not replayed. */
+    public static void clearSessionData(Context context) {
+        synchronized (GameOperationDatabase.class) {
+            if (instance != null) {
+                instance.close();
+                instance = null;
+            }
+        }
+        context.getApplicationContext().deleteDatabase("rummy-pulse-operations.db");
+    }
 }

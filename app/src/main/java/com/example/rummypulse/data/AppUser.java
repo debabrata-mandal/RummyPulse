@@ -18,6 +18,8 @@ public class AppUser {
     private Date createdAt;
     @ServerTimestamp
     private Date lastLoginAt;
+    /** When true, the account stays in the directory but is omitted from player-mapping pickers. */
+    private boolean hidden;
 
     // Default constructor required for Firestore
     public AppUser() {}
@@ -102,6 +104,14 @@ public class AppUser {
 
     public void setLastLoginAt(Date lastLoginAt) {
         this.lastLoginAt = lastLoginAt;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 
     @Override

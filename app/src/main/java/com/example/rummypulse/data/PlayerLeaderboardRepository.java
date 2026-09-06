@@ -88,4 +88,10 @@ public class PlayerLeaderboardRepository {
             registration = null;
         }
     }
+
+    /** Detaches the stats listener and clears cached values on sign-out. */
+    public void clearSessionState() {
+        stop();
+        allStats.postValue(new ArrayList<>());
+    }
 }

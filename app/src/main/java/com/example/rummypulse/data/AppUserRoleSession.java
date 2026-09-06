@@ -250,6 +250,18 @@ public final class AppUserRoleSession {
     }
 
     /**
+     * Clears the active session and every cached role entry. Used on sign-out so the next account
+     * does not inherit admin UI state.
+     */
+    public synchronized void clearSessionData() {
+        stop();
+        SharedPreferences cache = preferences;
+        if (cache != null) {
+            cache.edit().clear().apply();
+        }
+    }
+
+    /**
      * Forces the next start to bind the current account again.
      */
     public synchronized void resetBinding() {

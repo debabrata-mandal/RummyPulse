@@ -31,6 +31,7 @@ import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.rummypulse.data.AppUser;
+import com.example.rummypulse.data.AppUserDirectoryFilter;
 import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.AppUserRoleSession;
@@ -2632,6 +2633,10 @@ public class JoinGameActivity extends AppCompatActivity {
         return sorted;
     }
 
+    private List<AppUser> mappingDirectoryUsers(List<AppUser> users) {
+        return sortDirectoryUsers(AppUserDirectoryFilter.forPlayerMapping(users));
+    }
+
     private void bindMapPlayerButton(TextView button, com.example.rummypulse.data.Player player) {
         if (button == null || player == null) {
             return;
@@ -2727,7 +2732,7 @@ public class JoinGameActivity extends AppCompatActivity {
                     bindUserDirectory(dialog, playerId, player, gameData,
                             mapButton, playerNameView,
                             search, list, progress, empty, currentMapping,
-                            cachedDirectoryUsers);
+                            cachedDirectoryUsers, mappingDirectoryUsers(users));
                 }
             }
 
@@ -2754,8 +2759,9 @@ public class JoinGameActivity extends AppCompatActivity {
             ProgressBar progress,
             TextView empty,
             TextView currentMapping,
-            List<AppUser> allUsers) {
-        List<AppUser> visibleUsers = new ArrayList<>(allUsers);
+            List<AppUser> allUsers,
+            List<AppUser> mappingUsers) {
+        List<AppUser> visibleUsers = new ArrayList<>(mappingUsers);
         ArrayAdapter<AppUser> adapter = new ArrayAdapter<AppUser>(
                 this, R.layout.item_map_user, R.id.text_user_name, visibleUsers) {
             @Override
@@ -2806,7 +2812,7 @@ public class JoinGameActivity extends AppCompatActivity {
             @Override public void afterTextChanged(android.text.Editable editable) {
                 String query = editable.toString().trim().toLowerCase(Locale.ROOT);
                 visibleUsers.clear();
-                for (AppUser user : allUsers) {
+                for (AppUser user : mappingUsers) {
                     String haystack = (userDisplayName(user) + " "
                             + (user.getEmail() == null ? "" : user.getEmail()))
                             .toLowerCase(Locale.ROOT);

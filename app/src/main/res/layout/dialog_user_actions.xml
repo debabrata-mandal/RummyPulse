@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/dialog_background"
+    android:orientation="vertical"
+    android:paddingStart="18dp"
+    android:paddingTop="18dp"
+    android:paddingEnd="18dp"
+    android:paddingBottom="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/image_user_actions_profile"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:contentDescription="@string/cd_user_profile_photo"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_person"
+            tools:src="@drawable/ic_person" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/text_user_actions_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                tools:text="John Doe" />
+
+            <TextView
+                android:id="@+id/text_user_actions_email"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                tools:text="john.doe@example.com" />
+
+            <TextView
+                android:id="@+id/text_user_actions_meta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                tools:text="Admin user · Google · Last login: Sep 6" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/text_user_actions_self_note"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:text="@string/user_management_self_actions_note"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_user_action_change_role"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:minHeight="48dp"
+        android:textAllCaps="false"
+        android:textColor="@color/text_white"
+        app:cornerRadius="10dp"
+        tools:text="Promote to admin" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_user_action_hide"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:minHeight="48dp"
+        android:textAllCaps="false"
+        android:textColor="@color/warning_orange"
+        app:cornerRadius="10dp"
+        app:strokeColor="@color/warning_orange"
+        tools:text="Hide user" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_user_action_delete"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:minHeight="48dp"
+        android:text="@string/user_management_delete_user_confirm"
+        android:textAllCaps="false"
+        android:textColor="@color/error_red"
+        app:cornerRadius="10dp"
+        app:icon="@drawable/ic_delete"
+        app:iconGravity="textStart"
+        app:iconPadding="6dp"
+        app:iconSize="16dp"
+        app:iconTint="@color/error_red"
+        app:strokeColor="@color/error_red" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_user_action_close"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:minHeight="48dp"
+        android:text="@string/dialog_cancel"
+        android:textAllCaps="false"
+        android:textColor="@color/text_primary"
+        app:cornerRadius="10dp"
+        app:strokeColor="@color/divider_color"
+        app:strokeWidth="1dp" />
+
+</LinearLayout>

@@ -148,4 +148,28 @@ public class UserManagementViewModelTest {
         assertEquals(UserRole.REGULAR_USER, list.get(3).getRole());
         assertEquals("Bob", list.get(3).getDisplayName());
     }
+
+    @Test
+    public void filterUsers_matchesNameEmailProviderOrRole() {
+        AppUser match = regular("Alice");
+        match.setEmail("alice@example.com");
+        match.setProvider("Google");
+        AppUser hidden = regular("Bob");
+        hidden.setEmail("bob@example.com");
+
+        List<AppUser> filtered = UserManagementViewModel.filterUsers(
+                Arrays.asList(match, hidden), "alice@");
+
+        assertEquals(1, filtered.size());
+        assertEquals("Alice", filtered.get(0).getDisplayName());
+    }
+
+    @Test
+    public void filterUsers_emptyQueryReturnsAll() {
+        List<AppUser> source = Arrays.asList(regular("Alice"), regular("Bob"));
+
+        assertEquals(2, UserManagementViewModel.filterUsers(source, "").size());
+        assertEquals(2, UserManagementViewModel.filterUsers(source, "   ").size());
+        assertEquals(2, UserManagementViewModel.filterUsers(source, null).size());
+    }
 }
