@@ -69,6 +69,7 @@ import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -1783,7 +1784,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
         title.setText(isViewModeSelfPlayer(gameData, focusPlayer)
                 ? getString(R.string.my_performance_title)
-                : buildPlayerPerformanceTitle(focusPlayer.getName()));
+                : buildPlayerPerformanceTitle(formatPlayerDisplayName(focusPlayer)));
         balanceLabel.setText(getString(R.string.standing_balance));
         positionView.setText(focusPosition > 0
                 ? getString(R.string.standing_position_of, focusPosition, standings.size())
@@ -1828,8 +1829,10 @@ public class JoinGameActivity extends AppCompatActivity {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null && !TextUtils.isEmpty(user.getDisplayName())
                 && !TextUtils.isEmpty(player.getName())) {
-            return DisplayNameUtils.firstName(user.getDisplayName())
-                    .equalsIgnoreCase(player.getName());
+            return DisplayNameUtils.firstNameLastInitial(user.getDisplayName())
+                    .equalsIgnoreCase(formatPlayerDisplayName(player))
+                    || DisplayNameUtils.firstName(user.getDisplayName())
+                            .equalsIgnoreCase(player.getName());
         }
         return false;
     }
@@ -1919,17 +1922,16 @@ public class JoinGameActivity extends AppCompatActivity {
             row.setBackgroundResource(isSelected
                     ? R.drawable.bg_view_player_row_current : R.drawable.bg_view_player_row);
             ((TextView) row.findViewById(R.id.view_settlement_rank)).setText(String.valueOf(i + 1));
+            String displayName = formatPlayerDisplayName(standing.player);
             ((TextView) row.findViewById(R.id.view_settlement_name)).setText(isCurrentPlayer
-                    ? standing.player.getName() + "  ·  You" : standing.player.getName());
+                    ? displayName + "  ·  You" : displayName);
             ((TextView) row.findViewById(R.id.view_settlement_score)).setText(
                     getResources().getQuantityString(
                             R.plurals.standing_score_points,
                             standing.totalScore,
                             standing.totalScore));
             TextView avatar = row.findViewById(R.id.view_settlement_avatar);
-            String playerName = standing.player.getName();
-            avatar.setText(TextUtils.isEmpty(playerName)
-                    ? "?" : playerName.substring(0, 1).toUpperCase(Locale.getDefault()));
+            avatar.setText(DisplayNameUtils.initials(displayName));
             TextView direction = row.findViewById(R.id.view_settlement_direction);
             TextView amount = row.findViewById(R.id.view_settlement_amount);
             if (!amountVisible) {
@@ -2012,8 +2014,12 @@ public class JoinGameActivity extends AppCompatActivity {
             }
             String creatorName = auth.getCreatorName();
             if (!TextUtils.isEmpty(creatorName)) {
+                String shortCreatorName = DisplayNameUtils.firstNameLastInitial(creatorName);
                 for (Player player : gameData.getPlayers()) {
-                    if (creatorName.equalsIgnoreCase(player.getName())) {
+                    if (shortCreatorName.equalsIgnoreCase(player.getName())
+                            || DisplayNameUtils.firstName(creatorName)
+                                    .equalsIgnoreCase(player.getName())
+                            || creatorName.equalsIgnoreCase(player.getName())) {
                         return player;
                     }
                 }
@@ -2065,7 +2071,7 @@ public class JoinGameActivity extends AppCompatActivity {
         boolean isCurrentPlayer = isViewModeSelfPlayer(gameData, displayPlayer);
         title.setText(isCurrentPlayer
                 ? getString(R.string.my_round_scores_title)
-                : displayPlayer.getName() + "'s Scores");
+                : formatPlayerDisplayName(displayPlayer) + "'s Scores");
         subtitle.setText(getString(R.string.players_round_scores_subtitle));
         int currentRound = calculateCurrentRound(gameData);
         LinearLayout row = null;
@@ -2406,7 +2412,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
         EditText playerName = playerCardView.findViewById(R.id.text_player_name);
         TextView mapPlayerButton = playerCardView.findViewById(R.id.btn_map_player);
-        playerName.setText(player.getName());
+        playerName.setText(formatPlayerDisplayName(player));
         applyMappedPlayerNameLock(playerName, player);
 
         playerName.addTextChangedListener(new android.text.TextWatcher() {
@@ -2452,7 +2458,7 @@ public class JoinGameActivity extends AppCompatActivity {
             if (!hasFocus) {
                 String currentText = playerName.getText().toString().trim();
                 if (currentText.isEmpty()) {
-                    playerName.setText(player.getName());
+                    playerName.setText(formatPlayerDisplayName(player));
                 }
             }
         });
@@ -2593,10 +2599,11 @@ public class JoinGameActivity extends AppCompatActivity {
                 return;
             }
             EditText name = card.findViewById(R.id.text_player_name);
+            String displayName = formatPlayerDisplayName(player);
             if (!name.hasFocus()
-                    && !player.getName().contentEquals(name.getText())) {
+                    && !displayName.contentEquals(name.getText())) {
                 suppressPlayerNamePersistence = true;
-                name.setText(player.getName());
+                name.setText(displayName);
                 suppressPlayerNamePersistence = false;
             }
             applyMappedPlayerNameLock(name, player);
@@ -2616,6 +2623,15 @@ public class JoinGameActivity extends AppCompatActivity {
             public void onSuccess(List<AppUser> users) {
                 cachedDirectoryUsers = sortDirectoryUsers(users);
                 refreshPlayerAvatars();
+                com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+                if (gameData != null) {
+                    Boolean editAccess = viewModel.getEditAccessGranted().getValue();
+                    if (Boolean.TRUE.equals(editAccess)) {
+                        renderPlayerCardsFromState(gameData);
+                    } else {
+                        updateViewMode(gameData);
+                    }
+                }
             }
 
             @Override
@@ -2970,12 +2986,33 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private String userPlayerFirstName(AppUser user) {
-        String displayName = userDisplayName(user).trim();
-        String firstToken = displayName.split("\\s+", 2)[0];
-        int emailSeparator = firstToken.indexOf('@');
-        return emailSeparator > 0
-                ? firstToken.substring(0, emailSeparator)
-                : firstToken;
+        return DisplayNameUtils.firstNameLastInitial(userDisplayName(user));
+    }
+
+    private String formatPlayerDisplayName(com.example.rummypulse.data.Player player) {
+        if (player == null) {
+            return "";
+        }
+        return DisplayNameUtils.playerLabel(
+                player.getName(), player.getUserId(), indexCachedUserDisplayNames());
+    }
+
+    private Map<String, String> indexCachedUserDisplayNames() {
+        Map<String, String> byUserId = new HashMap<>();
+        if (cachedDirectoryUsers == null) {
+            return byUserId;
+        }
+        for (AppUser user : cachedDirectoryUsers) {
+            if (user == null || TextUtils.isEmpty(user.getUserId())) {
+                continue;
+            }
+            String name = userDisplayName(user);
+            if (!TextUtils.isEmpty(name)
+                    && !name.equals(getString(R.string.unknown_user))) {
+                byUserId.put(user.getUserId(), name);
+            }
+        }
+        return byUserId;
     }
 
     private String playerAvatarInitials(com.example.rummypulse.data.Player player) {
@@ -3346,8 +3383,8 @@ public class JoinGameActivity extends AppCompatActivity {
 
             String playerName = TextUtils.isEmpty(player.getName())
                     ? getString(R.string.dialog_enter_round_score_section_player)
-                    : player.getName().trim();
-            avatar.setText(playerName.substring(0, 1).toUpperCase(Locale.getDefault()));
+                    : formatPlayerDisplayName(player);
+            avatar.setText(DisplayNameUtils.initials(playerName));
             name.setText(playerName);
             int currentScore = 0;
             if (player.getScores() != null
@@ -3850,7 +3887,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 ? R.string.dialog_correct_round_score_subtitle
                 : R.string.dialog_enter_round_score_subtitle));
         bindMapPlayerButton(avatarView, player);
-        nameView.setText(player.getName());
+        nameView.setText(formatPlayerDisplayName(player));
         int numPlayers = gameData.getPlayers().size();
         progressView.setText(getString(R.string.dialog_enter_round_score_player_progress, playerIndex + 1, numPlayers));
         progressBar.setMax(numPlayers);
@@ -4399,7 +4436,7 @@ public class JoinGameActivity extends AppCompatActivity {
         LinearLayout rows = binding.getRoot().findViewById(
                 R.id.edit_player_round_sheet_rows);
         String playerName = TextUtils.isEmpty(player.getName())
-                ? "Player" : player.getName().trim();
+                ? "Player" : formatPlayerDisplayName(player);
         title.setText(getString(R.string.edit_player_round_sheet_title, playerName));
         total.setText(getString(
                 R.string.edit_player_round_sheet_total, player.getTotalScore()));
@@ -4549,7 +4586,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
             // Set player name
             TextView playerName = standingsRowView.findViewById(R.id.text_player_name);
-            playerName.setText(standing.player.getName());
+            playerName.setText(formatPlayerDisplayName(standing.player));
 
             // Player ID is hidden (not displayed in standings)
             // TextView playerIdText = standingsRowView.findViewById(R.id.text_player_id);

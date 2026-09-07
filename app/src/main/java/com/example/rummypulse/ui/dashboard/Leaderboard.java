@@ -1,11 +1,15 @@
 package com.example.rummypulse.ui.dashboard;
 
+import androidx.annotation.Nullable;
+
 import com.example.rummypulse.data.PlayerStats;
+import com.example.rummypulse.utils.DisplayNameUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Top and bottom performers for one reporting period, ranked by net amount.
@@ -75,6 +79,25 @@ public class Leaderboard {
                 new ArrayList<>(ranked.subList(total - bottomCount, total));
 
         return new Leaderboard(topEntries, bottomEntries, total);
+    }
+
+    /**
+     * Replaces visible names with the in-game short label ({@code FirstName L}), preferring the
+     * account directory when a mapped user id is available.
+     */
+    public static Leaderboard withShortDisplayNames(
+            Leaderboard board,
+            @Nullable Map<String, String> accountDisplayNameByUserId) {
+        if (board == null || board.isEmpty()) {
+            return board == null ? empty() : board;
+        }
+        Map<String, String> byUserId = accountDisplayNameByUserId == null
+                ? Collections.emptyMap()
+                : accountDisplayNameByUserId;
+        return new Leaderboard(
+                withShortDisplayNames(board.getTop(), byUserId),
+                withShortDisplayNames(board.getBottom(), byUserId),
+                board.getRankedPlayers());
     }
 
     /**
@@ -150,6 +173,26 @@ public class Leaderboard {
     private static String nameOf(PlayerStats stats) {
         String name = stats.getDisplayName();
         return name == null || name.trim().isEmpty() ? "Player" : name.trim();
+    }
+
+    private static List<LeaderboardEntry> withShortDisplayNames(
+            List<LeaderboardEntry> entries,
+            Map<String, String> accountDisplayNameByUserId) {
+        List<LeaderboardEntry> remapped = new ArrayList<>(entries.size());
+        for (LeaderboardEntry entry : entries) {
+            remapped.add(new LeaderboardEntry(
+                    entry.getUserId(),
+                    DisplayNameUtils.playerLabel(
+                            entry.getDisplayName(),
+                            entry.getUserId(),
+                            accountDisplayNameByUserId),
+                    entry.getNetAmount(),
+                    entry.getGames(),
+                    entry.getWins(),
+                    entry.getRank(),
+                    entry.isCurrentUser()));
+        }
+        return remapped;
     }
 
     private static final class Ranked {

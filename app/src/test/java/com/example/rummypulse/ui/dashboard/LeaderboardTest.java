@@ -11,7 +11,9 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class LeaderboardTest {
 
@@ -290,5 +292,19 @@ public class LeaderboardTest {
                 Arrays.asList("Bob", "Alice"),
                 namesOf(Leaderboard.rankAll(
                         stats, StatsPeriod.ALL_TIME, null, RankingSort.WIN_RATE)));
+    }
+
+    @Test
+    public void withShortDisplayNames_prefersAccountDirectoryName() {
+        Leaderboard board = Leaderboard.from(
+                Collections.singletonList(scored("uid-1", "Debabrata", 3, 2, 500)),
+                StatsPeriod.ALL_TIME,
+                null);
+        Map<String, String> accountNames = new HashMap<>();
+        accountNames.put("uid-1", "Debabrata Mandal");
+
+        Leaderboard shortBoard = Leaderboard.withShortDisplayNames(board, accountNames);
+
+        assertEquals("Debabrata M", shortBoard.getTop().get(0).getDisplayName());
     }
 }

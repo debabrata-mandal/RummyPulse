@@ -7,15 +7,19 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.example.rummypulse.data.AppUser;
+import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.Player;
 import com.example.rummypulse.ui.home.GameItem;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -35,6 +39,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
             new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<Boolean> mappingsConfirmed =
             new MutableLiveData<>(false);
+    private final AppUserRepository appUserRepository = new AppUserRepository();
+    private Map<String, String> displayNameByUserId = new HashMap<>();
 
     private boolean consolidationInitialized;
     private String lastInitializedGameKey = "";
@@ -51,10 +57,12 @@ public class PlayerConsolidationViewModel extends ViewModel {
         gameRepository = new GameRepository();
         // Cross-game settlement spans every game, not just the ones this user plays in.
         gameRepository.setShowAllGames(true);
+        loadAccountDisplayNames();
     }
 
     PlayerConsolidationViewModel(GameRepository gameRepository) {
         this.gameRepository = gameRepository;
+        loadAccountDisplayNames();
     }
 
     public LiveData<List<GameItem>> getGameItems() {
@@ -181,7 +189,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
             publishDerivedLists(playerGroups.getValue());
             return;
         }
-        List<ConsolidatedPlayerGroup> groups = PlayerConsolidationEngine.buildInitialGroups(selectedGames);
+        List<ConsolidatedPlayerGroup> groups =
+                PlayerConsolidationEngine.buildInitialGroups(selectedGames, displayNameByUserId);
         consolidationInitialized = true;
         lastInitializedGameKey = gameKey;
         lastSelectedGamesContentHash = computeSelectedGamesContentHash(selectedGames);
@@ -443,7 +452,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
             }
         }
         selectedGameIds.setValue(validSelectedIds);
-        List<ConsolidatedPlayerGroup> groups = PlayerConsolidationEngine.buildInitialGroups(selectedGames);
+        List<ConsolidatedPlayerGroup> groups =
+                PlayerConsolidationEngine.buildInitialGroups(selectedGames, displayNameByUserId);
         selectedEntryIds.setValue(new HashSet<>());
         groupSelectionOrder.clear();
         balanceAdjustments.setValue(new ArrayList<>());
@@ -469,7 +479,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
         List<ConsolidatedPlayerGroup> currentGroups = playerGroups.getValue();
         PlayerConsolidationEngine.RefreshResult result =
-                PlayerConsolidationEngine.refreshGroupsFromGames(currentGroups, selectedGames);
+                PlayerConsolidationEngine.refreshGroupsFromGames(
+                        currentGroups, selectedGames, displayNameByUserId);
         lastSelectedGamesContentHash = contentHash;
         mappingsConfirmed.setValue(false);
         publishDerivedLists(result.getGroups());
@@ -529,6 +540,52 @@ public class PlayerConsolidationViewModel extends ViewModel {
                 .sorted()
                 .collect(Collectors.toList());
         return TextUtils.join(",", ids);
+    }
+
+    private void loadAccountDisplayNames() {
+        appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
+            @Override
+            public void onSuccess(List<AppUser> users) {
+                displayNameByUserId = indexDisplayNamesByUserId(users);
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                // Keep formatting from stored player names only.
+            }
+        });
+    }
+
+    private static Map<String, String> indexDisplayNamesByUserId(List<AppUser> users) {
+        Map<String, String> byUserId = new HashMap<>();
+        if (users == null) {
+            return byUserId;
+        }
+        for (AppUser user : users) {
+            if (user == null || user.getUserId() == null) {
+                continue;
+            }
+            String displayName = preferredAccountName(user);
+            if (displayName != null) {
+                byUserId.put(user.getUserId(), displayName);
+            }
+        }
+        return byUserId;
+    }
+
+    @Nullable
+    private static String preferredAccountName(AppUser user) {
+        String displayName = user.getDisplayName();
+        if (displayName != null && !displayName.trim().isEmpty()) {
+            return displayName.trim();
+        }
+        String email = user.getEmail();
+        if (email == null || email.trim().isEmpty()) {
+            return null;
+        }
+        String trimmed = email.trim();
+        int at = trimmed.indexOf('@');
+        return at > 0 ? trimmed.substring(0, at) : trimmed;
     }
 
     @Override
