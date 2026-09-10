@@ -26,7 +26,43 @@ import java.util.stream.Collectors;
 
 public class PlayerConsolidationViewModel extends ViewModel {
 
+    interface AccountDisplayNameCallback {
+        void onLoaded(Map<String, String> displayNamesByUserId);
+    }
+
+    interface AccountDisplayNameLoader {
+        void load(AccountDisplayNameCallback callback);
+    }
+
+    private static final class AppUserAccountDisplayNameLoader implements AccountDisplayNameLoader {
+        private final AppUserRepository appUserRepository;
+
+        AppUserAccountDisplayNameLoader() {
+            this(new AppUserRepository());
+        }
+
+        AppUserAccountDisplayNameLoader(AppUserRepository appUserRepository) {
+            this.appUserRepository = appUserRepository;
+        }
+
+        @Override
+        public void load(AccountDisplayNameCallback callback) {
+            appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
+                @Override
+                public void onSuccess(List<AppUser> users) {
+                    callback.onLoaded(indexDisplayNamesByUserId(users));
+                }
+
+                @Override
+                public void onFailure(Exception exception) {
+                    callback.onLoaded(new HashMap<>());
+                }
+            });
+        }
+    }
+
     private final GameRepository gameRepository;
+    private final AccountDisplayNameLoader accountDisplayNameLoader;
     private final MutableLiveData<Set<String>> selectedGameIds = new MutableLiveData<>(new HashSet<>());
     private final MutableLiveData<List<ConsolidatedPlayerGroup>> playerGroups = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<Set<String>> selectedEntryIds = new MutableLiveData<>(new HashSet<>());
@@ -39,7 +75,6 @@ public class PlayerConsolidationViewModel extends ViewModel {
             new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<Boolean> mappingsConfirmed =
             new MutableLiveData<>(false);
-    private final AppUserRepository appUserRepository = new AppUserRepository();
     private Map<String, String> displayNameByUserId = new HashMap<>();
 
     private boolean consolidationInitialized;
@@ -54,14 +89,18 @@ public class PlayerConsolidationViewModel extends ViewModel {
     }
 
     public PlayerConsolidationViewModel() {
-        gameRepository = new GameRepository();
-        // Cross-game settlement spans every game, not just the ones this user plays in.
-        gameRepository.setShowAllGames(true);
-        loadAccountDisplayNames();
+        this(createConfiguredGameRepository(), new AppUserAccountDisplayNameLoader());
     }
 
     PlayerConsolidationViewModel(GameRepository gameRepository) {
+        this(gameRepository, new AppUserAccountDisplayNameLoader());
+    }
+
+    PlayerConsolidationViewModel(
+            GameRepository gameRepository,
+            AccountDisplayNameLoader accountDisplayNameLoader) {
         this.gameRepository = gameRepository;
+        this.accountDisplayNameLoader = accountDisplayNameLoader;
         loadAccountDisplayNames();
     }
 
@@ -542,16 +581,17 @@ public class PlayerConsolidationViewModel extends ViewModel {
         return TextUtils.join(",", ids);
     }
 
-    private void loadAccountDisplayNames() {
-        appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
-            @Override
-            public void onSuccess(List<AppUser> users) {
-                displayNameByUserId = indexDisplayNamesByUserId(users);
-            }
+    private static GameRepository createConfiguredGameRepository() {
+        GameRepository gameRepository = new GameRepository();
+        // Cross-game settlement spans every game, not just the ones this user plays in.
+        gameRepository.setShowAllGames(true);
+        return gameRepository;
+    }
 
-            @Override
-            public void onFailure(Exception exception) {
-                // Keep formatting from stored player names only.
+    private void loadAccountDisplayNames() {
+        accountDisplayNameLoader.load(displayNamesByUserId -> {
+            if (displayNamesByUserId != null) {
+                PlayerConsolidationViewModel.this.displayNameByUserId = displayNamesByUserId;
             }
         });
     }
