@@ -23,6 +23,9 @@ import java.util.Set;
 
 public class PlayerConsolidationViewModelTest {
 
+    private static final PlayerConsolidationViewModel.AccountDisplayNameLoader NO_OP_DISPLAY_NAME_LOADER =
+            callback -> callback.onLoaded(Collections.emptyMap());
+
     @Rule
     public InstantTaskExecutorRule instantTaskExecutorRule = new InstantTaskExecutorRule();
 
@@ -31,7 +34,7 @@ public class PlayerConsolidationViewModelTest {
     @Before
     public void setUp() {
         GameRepository mockRepo = mock(GameRepository.class);
-        viewModel = new PlayerConsolidationViewModel(mockRepo);
+        viewModel = new PlayerConsolidationViewModel(mockRepo, NO_OP_DISPLAY_NAME_LOADER);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
