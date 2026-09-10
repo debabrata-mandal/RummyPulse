@@ -8,6 +8,8 @@ import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.example.rummypulse.data.AppUser;
+import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.utils.DisplayNameUtils;
 import com.example.rummypulse.data.GameRepository;
@@ -24,6 +26,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +38,10 @@ public class DashboardViewModel extends ViewModel {
     private final GameRepository gameRepository;
     private final PlayerStatsRepository playerStatsRepository;
     private final PlayerLeaderboardRepository leaderboardRepository;
+    private final AppUserRepository appUserRepository = new AppUserRepository();
     private final MediatorLiveData<Leaderboard> leaderboard;
+    private final MutableLiveData<Map<String, String>> accountDisplayNames =
+            new MutableLiveData<>(Collections.emptyMap());
     private final MutableLiveData<Boolean> showAllGames;
     private final MutableLiveData<StatsPeriod> selectedPeriod;
     private final MutableLiveData<List<GameItem>> mInProgressGames;
@@ -129,6 +135,8 @@ public class DashboardViewModel extends ViewModel {
         leaderboard.addSource(
                 leaderboardRepository.getAllStats(), stats -> rebuildLeaderboard());
         leaderboard.addSource(selectedPeriod, period -> rebuildLeaderboard());
+        leaderboard.addSource(accountDisplayNames, names -> rebuildLeaderboard());
+        loadAccountDisplayNames();
         mInProgressGames = new MutableLiveData<>();
         mCompletedGames = new MutableLiveData<>();
         mActiveGamesCount = new MutableLiveData<>();
@@ -297,10 +305,57 @@ public class DashboardViewModel extends ViewModel {
 
     private void rebuildLeaderboard() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        leaderboard.setValue(Leaderboard.from(
+        Leaderboard board = Leaderboard.from(
                 leaderboardRepository.getAllStats().getValue(),
                 selectedPeriod.getValue(),
-                user == null ? null : user.getUid()));
+                user == null ? null : user.getUid());
+        Map<String, String> accountNames = accountDisplayNames.getValue();
+        leaderboard.setValue(Leaderboard.withShortDisplayNames(board, accountNames));
+    }
+
+    private void loadAccountDisplayNames() {
+        appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
+            @Override
+            public void onSuccess(List<AppUser> users) {
+                accountDisplayNames.setValue(indexAccountDisplayNames(users));
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                // Stats-only fallback still shortens multi-word names where possible.
+            }
+        });
+    }
+
+    private static Map<String, String> indexAccountDisplayNames(List<AppUser> users) {
+        Map<String, String> byUserId = new HashMap<>();
+        if (users == null) {
+            return byUserId;
+        }
+        for (AppUser user : users) {
+            if (user == null || user.getUserId() == null) {
+                continue;
+            }
+            String displayName = preferredAccountName(user);
+            if (displayName != null) {
+                byUserId.put(user.getUserId(), displayName);
+            }
+        }
+        return byUserId;
+    }
+
+    private static String preferredAccountName(AppUser user) {
+        String displayName = user.getDisplayName();
+        if (displayName != null && !displayName.trim().isEmpty()) {
+            return displayName.trim();
+        }
+        String email = user.getEmail();
+        if (email == null || email.trim().isEmpty()) {
+            return null;
+        }
+        String trimmed = email.trim();
+        int at = trimmed.indexOf('@');
+        return at > 0 ? trimmed.substring(0, at) : trimmed;
     }
 
     public LiveData<Boolean> getShowAllGames() {
@@ -420,7 +475,7 @@ public class DashboardViewModel extends ViewModel {
         Map<String, Object> creatorPlayer = new HashMap<>();
         String creatorPlayerId = java.util.UUID.randomUUID().toString();
         creatorPlayer.put("playerId", creatorPlayerId);
-        String creatorPlayerName = DisplayNameUtils.firstName(request.creatorName);
+        String creatorPlayerName = DisplayNameUtils.firstNameLastInitial(request.creatorName);
         if (creatorPlayerName.isEmpty()) {
             creatorPlayerName = "You";
         }

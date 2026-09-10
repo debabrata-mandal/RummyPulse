@@ -2,6 +2,10 @@ package com.example.rummypulse.utils;
 
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.Assert.assertEquals;
 
 public class DisplayNameUtilsTest {
@@ -74,5 +78,39 @@ public class DisplayNameUtilsTest {
     @Test
     public void initials_paddedWhitespace_isTrimmed() {
         assertEquals("AB", DisplayNameUtils.initials("  alice   brown  "));
+    }
+
+    @Test
+    public void firstNameLastInitial_fullName_returnsFirstNameAndLastInitial() {
+        assertEquals("Debabrata M", DisplayNameUtils.firstNameLastInitial("Debabrata Mandal"));
+    }
+
+    @Test
+    public void firstNameLastInitial_threeTokens_usesLastTokenInitial() {
+        assertEquals("John D", DisplayNameUtils.firstNameLastInitial("John Michael Doe"));
+    }
+
+    @Test
+    public void firstNameLastInitial_singleToken_returnsToken() {
+        assertEquals("Charlie", DisplayNameUtils.firstNameLastInitial("Charlie"));
+    }
+
+    @Test
+    public void firstNameLastInitial_email_returnsLocalPartBeforeDot() {
+        assertEquals("john", DisplayNameUtils.firstNameLastInitial("john.doe@example.com"));
+    }
+
+    @Test
+    public void playerLabel_mappedUser_prefersAccountDisplayName() {
+        Map<String, String> byUserId = new HashMap<>();
+        byUserId.put("uid-1", "Debabrata Mandal");
+        assertEquals(
+                "Debabrata M",
+                DisplayNameUtils.playerLabel("Debabrata", "uid-1", byUserId));
+    }
+
+    @Test
+    public void playerLabel_unmappedUser_formatsStoredName() {
+        assertEquals("John D", DisplayNameUtils.playerLabel("John Doe", null, Collections.emptyMap()));
     }
 }

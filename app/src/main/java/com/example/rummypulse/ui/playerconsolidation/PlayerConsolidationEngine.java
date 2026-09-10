@@ -1,7 +1,10 @@
 package com.example.rummypulse.ui.playerconsolidation;
 
+import androidx.annotation.Nullable;
+
 import com.example.rummypulse.data.Player;
 import com.example.rummypulse.ui.home.GameItem;
+import com.example.rummypulse.utils.DisplayNameUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +42,13 @@ public final class PlayerConsolidationEngine {
     }
 
     public static List<ConsolidatedPlayerGroup> buildInitialGroups(List<GameItem> games) {
-        List<GamePlayerEntry> allEntries = flattenPlayers(games);
+        return buildInitialGroups(games, null);
+    }
+
+    public static List<ConsolidatedPlayerGroup> buildInitialGroups(
+            List<GameItem> games,
+            @Nullable Map<String, String> displayNameByUserId) {
+        List<GamePlayerEntry> allEntries = flattenPlayers(games, displayNameByUserId);
         Map<String, List<GamePlayerEntry>> entriesByIdentity = new LinkedHashMap<>();
         for (GamePlayerEntry entry : allEntries) {
             String identityKey = isEmpty(entry.getUserId())
@@ -60,11 +69,18 @@ public final class PlayerConsolidationEngine {
     public static RefreshResult refreshGroupsFromGames(
             List<ConsolidatedPlayerGroup> currentGroups,
             List<GameItem> games) {
+        return refreshGroupsFromGames(currentGroups, games, null);
+    }
+
+    public static RefreshResult refreshGroupsFromGames(
+            List<ConsolidatedPlayerGroup> currentGroups,
+            List<GameItem> games,
+            @Nullable Map<String, String> displayNameByUserId) {
         if (currentGroups == null || currentGroups.isEmpty()) {
-            return new RefreshResult(buildInitialGroups(games), false);
+            return new RefreshResult(buildInitialGroups(games, displayNameByUserId), false);
         }
 
-        List<GamePlayerEntry> freshEntries = flattenPlayers(games);
+        List<GamePlayerEntry> freshEntries = flattenPlayers(games, displayNameByUserId);
         Map<String, GamePlayerEntry> freshById = new HashMap<>();
         Map<String, List<GamePlayerEntry>> freshByGameId = new LinkedHashMap<>();
         for (GamePlayerEntry entry : freshEntries) {
@@ -290,6 +306,12 @@ public final class PlayerConsolidationEngine {
     }
 
     private static List<GamePlayerEntry> flattenPlayers(List<GameItem> games) {
+        return flattenPlayers(games, null);
+    }
+
+    private static List<GamePlayerEntry> flattenPlayers(
+            List<GameItem> games,
+            @Nullable Map<String, String> displayNameByUserId) {
         List<GamePlayerEntry> entries = new ArrayList<>();
         if (games == null) {
             return entries;
@@ -306,6 +328,9 @@ public final class PlayerConsolidationEngine {
                 String playerName = player.getName();
                 if (isEmpty(playerName)) {
                     playerName = UNKNOWN_PLAYER;
+                } else {
+                    playerName = DisplayNameUtils.playerLabel(
+                            playerName, player.getUserId(), displayNameByUserId);
                 }
                 String entryId = buildEntryId(gameId, player, i);
                 PlayerSettlementCalculator.PlayerSettlement settlement =
