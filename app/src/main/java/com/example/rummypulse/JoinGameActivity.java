@@ -52,6 +52,7 @@ import com.example.rummypulse.data.sync.GameOperationProjector;
 import com.example.rummypulse.data.sync.GameOperationRepository;
 import com.example.rummypulse.data.sync.GameOperationType;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
+import com.example.rummypulse.ui.join.PlayerNameEditController;
 import com.example.rummypulse.ui.join.PlayerRoundStatistics;
 import com.example.rummypulse.ui.join.PlayerRoundStatisticsCalculator;
 import com.example.rummypulse.utils.DisplayNameUtils;
@@ -162,9 +163,6 @@ public class JoinGameActivity extends AppCompatActivity {
             new java.util.HashSet<>();
     private final java.util.Map<java.util.UUID, androidx.work.WorkInfo.State>
             observedOperationWorkStates = new java.util.HashMap<>();
-
-    /** Prevents a programmatic mapped-name update from scheduling a second game-data write. */
-    private boolean suppressPlayerNamePersistence;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -2318,6 +2316,9 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void generatePlayerCards(com.example.rummypulse.data.GameData gameData) {
+        if (isDragging) {
+            return;
+        }
         if (gameData == null || gameData.getPlayers() == null) {
             return;
         }
@@ -2412,33 +2413,22 @@ public class JoinGameActivity extends AppCompatActivity {
 
         EditText playerName = playerCardView.findViewById(R.id.text_player_name);
         TextView mapPlayerButton = playerCardView.findViewById(R.id.btn_map_player);
-        playerName.setText(formatPlayerDisplayName(player));
+        PlayerNameEditController nameEditController =
+                new PlayerNameEditController(stablePlayerId);
+        playerName.setTag(nameEditController);
+        nameEditController.bind(() -> playerName.setText(formatPlayerDisplayName(player)));
         applyMappedPlayerNameLock(playerName, player);
 
         playerName.addTextChangedListener(new android.text.TextWatcher() {
-            private String previousName = player.getName();
-
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                previousName = s.toString();
-            }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
 
             @Override
             public void afterTextChanged(android.text.Editable s) {
-                if (suppressPlayerNamePersistence) {
-                    return;
-                }
-                String newName = s.toString().trim();
-                if (!newName.isEmpty()) {
-                    enqueueGameOperation(
-                            GameOperationType.RENAME_PLAYER,
-                            stablePlayerId,
-                            GameOperationPayload.rename(newName),
-                            null);
-                }
+                nameEditController.onTextChanged();
             }
         });
 
@@ -2456,10 +2446,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
         playerName.setOnFocusChangeListener((v, hasFocus) -> {
             if (!hasFocus) {
-                String currentText = playerName.getText().toString().trim();
-                if (currentText.isEmpty()) {
-                    playerName.setText(formatPlayerDisplayName(player));
-                }
+                finishPlayerNameEdit(playerName, nameEditController);
             }
         });
 
@@ -2508,7 +2495,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 && playerIndex >= 0;
         if (dragEnabled) {
             dragHandle.setVisibility(View.VISIBLE);
-            setupDragAndDrop(playerCardView, playerIndex, gameData);
+            setupDragAndDrop(playerCardView, stablePlayerId);
         } else {
             dragHandle.setVisibility(View.GONE);
         }
@@ -2525,46 +2512,38 @@ public class JoinGameActivity extends AppCompatActivity {
         if (gameData == null || gameData.getPlayers() == null) {
             return true;
         }
-        if (countPlayerCardsInContainer() != gameData.getPlayers().size()) {
+        java.util.List<String> renderedPlayerIds = renderedPlayerCardIds();
+        if (renderedPlayerIds.size() != gameData.getPlayers().size()) {
             return true;
         }
+        java.util.List<com.example.rummypulse.data.Player> expectedPlayers;
         if (playerListSortMode == PlayerListSortMode.GAME_ORDER) {
-            for (int index = 0; index < gameData.getPlayers().size(); index++) {
-                View child = binding.playersContainer.getChildAt(index);
-                if (!REAL_PLAYER_CARD_TAG.equals(child.getTag())) {
-                    return true;
-                }
-                Object renderedId = child.getTag(R.id.text_player_id);
-                if (!gameData.getPlayers().get(index).getPlayerId().equals(renderedId)) {
-                    return true;
-                }
-            }
-            return false;
+            expectedPlayers = gameData.getPlayers();
+        } else {
+            expectedPlayers = getSettlementOrderedPlayers(
+                    gameData, buildStandingsByPlayerId(gameData));
         }
-        java.util.List<com.example.rummypulse.data.Player> ordered =
-                getSettlementOrderedPlayers(gameData, buildStandingsByPlayerId(gameData));
-        for (int index = 0; index < ordered.size(); index++) {
-            View child = binding.playersContainer.getChildAt(index);
-            if (!REAL_PLAYER_CARD_TAG.equals(child.getTag())) {
-                return true;
-            }
-            Object renderedId = child.getTag(R.id.text_player_id);
-            if (!ordered.get(index).getPlayerId().equals(renderedId)) {
+        for (int index = 0; index < expectedPlayers.size(); index++) {
+            if (!expectedPlayers.get(index).getPlayerId().equals(renderedPlayerIds.get(index))) {
                 return true;
             }
         }
         return false;
     }
 
-    private int countPlayerCardsInContainer() {
-        int count = 0;
+    private java.util.List<String> renderedPlayerCardIds() {
+        java.util.List<String> playerIds = new java.util.ArrayList<>();
         for (int index = 0; index < binding.playersContainer.getChildCount(); index++) {
-            if (REAL_PLAYER_CARD_TAG.equals(
-                    binding.playersContainer.getChildAt(index).getTag())) {
-                count++;
+            View child = binding.playersContainer.getChildAt(index);
+            if (!REAL_PLAYER_CARD_TAG.equals(child.getTag())) {
+                continue;
+            }
+            Object renderedId = child.getTag(R.id.text_player_id);
+            if (renderedId instanceof String) {
+                playerIds.add((String) renderedId);
             }
         }
-        return count;
+        return playerIds;
     }
 
     private View findPlayerCardById(String playerId) {
@@ -2586,6 +2565,9 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void renderPlayerCardsFromState(
             com.example.rummypulse.data.GameData gameData) {
+        if (isDragging) {
+            return;
+        }
         if (shouldRegeneratePlayerCards(gameData)) {
             generatePlayerCards(gameData);
             return;
@@ -2602,9 +2584,14 @@ public class JoinGameActivity extends AppCompatActivity {
             String displayName = formatPlayerDisplayName(player);
             if (!name.hasFocus()
                     && !displayName.contentEquals(name.getText())) {
-                suppressPlayerNamePersistence = true;
-                name.setText(displayName);
-                suppressPlayerNamePersistence = false;
+                Object controller = name.getTag();
+                if (controller instanceof PlayerNameEditController) {
+                    ((PlayerNameEditController) controller).bind(
+                            () -> name.setText(displayName));
+                } else {
+                    generatePlayerCards(gameData);
+                    return;
+                }
             }
             applyMappedPlayerNameLock(name, player);
             bindMapPlayerButton(card.findViewById(R.id.btn_map_player), player);
@@ -2615,6 +2602,33 @@ public class JoinGameActivity extends AppCompatActivity {
                             ? View.VISIBLE
                             : View.GONE);
         }
+    }
+
+    private void finishPlayerNameEdit(
+            EditText playerName, PlayerNameEditController nameEditController) {
+        com.example.rummypulse.data.GameData latestGameData =
+                viewModel.getGameData().getValue();
+        boolean renameEnqueued = nameEditController.commit(
+                latestGameData,
+                playerName.getText(),
+                (playerId, normalizedName) -> enqueueGameOperation(
+                        GameOperationType.RENAME_PLAYER,
+                        playerId,
+                        GameOperationPayload.rename(normalizedName),
+                        null));
+        if (renameEnqueued) {
+            return;
+        }
+        com.example.rummypulse.data.Player latestPlayer =
+                GameDataSchema.findPlayer(latestGameData, nameEditController.getPlayerId());
+        if (latestPlayer == null) {
+            return;
+        }
+        String canonicalDisplayName = formatPlayerDisplayName(latestPlayer);
+        if (!canonicalDisplayName.contentEquals(playerName.getText())) {
+            nameEditController.bind(() -> playerName.setText(canonicalDisplayName));
+        }
+        applyMappedPlayerNameLock(playerName, latestPlayer);
     }
 
     private void prefetchPlayerDirectory() {
@@ -3038,17 +3052,14 @@ public class JoinGameActivity extends AppCompatActivity {
         if (gameData == null || gameData.getPlayers() == null) {
             return;
         }
-        int count = Math.min(
-                binding.playersContainer.getChildCount(),
-                gameData.getPlayers().size());
-        for (int index = 0; index < count; index++) {
-            View card = binding.playersContainer.getChildAt(index);
-            if (!REAL_PLAYER_CARD_TAG.equals(card.getTag())) {
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            View card = findPlayerCardById(player.getPlayerId());
+            if (card == null) {
                 continue;
             }
             TextView avatar = card.findViewById(R.id.btn_map_player);
             if (avatar != null) {
-                bindMapPlayerButton(avatar, gameData.getPlayers().get(index));
+                bindMapPlayerButton(avatar, player);
             }
         }
     }
@@ -3193,13 +3204,8 @@ public class JoinGameActivity extends AppCompatActivity {
                 || playerIndex < 0 || playerIndex >= gameData.getPlayers().size()) {
             return;
         }
-        if (playerIndex >= binding.playersContainer.getChildCount()) {
-            return;
-        }
         com.example.rummypulse.data.Player player = gameData.getPlayers().get(playerIndex);
-        View playerCard = playerListSortMode == PlayerListSortMode.GAME_ORDER
-                ? binding.playersContainer.getChildAt(playerIndex)
-                : findPlayerCardById(player.getPlayerId());
+        View playerCard = findPlayerCardById(player.getPlayerId());
         if (playerCard == null || !REAL_PLAYER_CARD_TAG.equals(playerCard.getTag())) {
             generatePlayerCards(gameData);
             return;
@@ -3220,9 +3226,7 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         for (int index = 0; index < gameData.getPlayers().size(); index++) {
             com.example.rummypulse.data.Player player = gameData.getPlayers().get(index);
-            View card = playerListSortMode == PlayerListSortMode.GAME_ORDER
-                    ? binding.playersContainer.getChildAt(index)
-                    : findPlayerCardById(player.getPlayerId());
+            View card = findPlayerCardById(player.getPlayerId());
             if (card == null) {
                 generatePlayerCards(gameData);
                 return;
@@ -3433,22 +3437,29 @@ public class JoinGameActivity extends AppCompatActivity {
     private boolean isDragging = false;
 
     @android.annotation.SuppressLint("ClickableViewAccessibility")
-    private void setupDragAndDrop(View playerCardView, int playerIndex, com.example.rummypulse.data.GameData gameData) {
+    private void setupDragAndDrop(View playerCardView, String stablePlayerId) {
         ImageView dragHandle = playerCardView.findViewById(R.id.drag_handle);
         
         // Set up touch listener on drag handle
         dragHandle.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, android.view.MotionEvent event) {
-                return handleDragTouch(playerCardView, playerIndex, gameData, event, v);
+                return handleDragTouch(playerCardView, stablePlayerId, event);
             }
         });
     }
     
     @android.annotation.SuppressLint("ClickableViewAccessibility")
-    private boolean handleDragTouch(View playerCardView, int playerIndex, com.example.rummypulse.data.GameData gameData, android.view.MotionEvent event, View touchView) {
+    private boolean handleDragTouch(
+            View playerCardView,
+            String stablePlayerId,
+            android.view.MotionEvent event) {
         switch (event.getAction()) {
             case android.view.MotionEvent.ACTION_DOWN:
+                if (isDragging || findPlayerCardById(stablePlayerId) != playerCardView) {
+                    return false;
+                }
+                finishActivePlayerNameEdit();
                 // Request parent to not intercept touch events
                 if (playerCardView.getParent() != null) {
                     playerCardView.getParent().requestDisallowInterceptTouchEvent(true);
@@ -3456,12 +3467,8 @@ public class JoinGameActivity extends AppCompatActivity {
                 
                 // Start drag
                 draggedView = playerCardView;
-                draggedIndex = playerIndex;
-                draggedPlayerId = playerIndex >= 0
-                        && gameData.getPlayers() != null
-                        && playerIndex < gameData.getPlayers().size()
-                        ? gameData.getPlayers().get(playerIndex).getPlayerId()
-                        : null;
+                draggedIndex = binding.playersContainer.indexOfChild(playerCardView);
+                draggedPlayerId = stablePlayerId;
                 dragStartY = event.getRawY();
                 isDragging = true;
                 
@@ -3478,7 +3485,7 @@ public class JoinGameActivity extends AppCompatActivity {
                     public boolean onTouch(View v, android.view.MotionEvent e) {
                         // Only handle if we're already dragging this card
                         if (isDragging && draggedView == playerCardView) {
-                            return handleDragTouch(playerCardView, playerIndex, gameData, e, v);
+                            return handleDragTouch(playerCardView, stablePlayerId, e);
                         }
                         return false;
                     }
@@ -3500,7 +3507,6 @@ public class JoinGameActivity extends AppCompatActivity {
                 return true;
                 
             case android.view.MotionEvent.ACTION_UP:
-            case android.view.MotionEvent.ACTION_CANCEL:
                 // Allow parent to intercept touch events again
                 if (playerCardView.getParent() != null) {
                     playerCardView.getParent().requestDisallowInterceptTouchEvent(false);
@@ -3510,8 +3516,17 @@ public class JoinGameActivity extends AppCompatActivity {
                 playerCardView.setOnTouchListener(null);
                 
                 if (isDragging && draggedView == playerCardView) {
-                    // Complete drag
-                    completeDrag(gameData);
+                    completeDrag();
+                }
+                return true;
+
+            case android.view.MotionEvent.ACTION_CANCEL:
+                if (playerCardView.getParent() != null) {
+                    playerCardView.getParent().requestDisallowInterceptTouchEvent(false);
+                }
+                playerCardView.setOnTouchListener(null);
+                if (isDragging && draggedView == playerCardView) {
+                    cancelDrag();
                 }
                 return true;
         }
@@ -3608,58 +3623,101 @@ public class JoinGameActivity extends AppCompatActivity {
         }
     }
 
-    private void completeDrag(com.example.rummypulse.data.GameData gameData) {
-        if (draggedView == null) return;
-        
-        // Get target index from placeholder position
-        int targetIndex = draggedIndex; // Default to original position
-        if (placeholderView != null) {
-            int placeholderIndex = binding.playersContainer.indexOfChild(placeholderView);
-            if (placeholderIndex >= 0) {
-                // Calculate actual target index in players list
-                // The placeholder shows where the dragged view should go
-                // We need to account for the fact that dragged view is still in the list
-                if (placeholderIndex < draggedIndex) {
-                    // Moving up: target is the placeholder index
-                    targetIndex = placeholderIndex;
-                } else if (placeholderIndex > draggedIndex) {
-                    // Moving down: target is placeholder index - 1 (because dragged view is still counted)
-                    targetIndex = placeholderIndex - 1;
-                }
-                // If placeholderIndex == draggedIndex, no change needed
+    private void completeDrag() {
+        com.example.rummypulse.data.GameData latestGameData =
+                viewModel.getGameData().getValue();
+        java.util.List<String> order = buildPlayerOrderFromDragLayout(latestGameData);
+        clearDragVisuals();
+        if (latestGameData == null || order == null) {
+            finishDragAndRender();
+            return;
+        }
+        GameDataSchema.normalize(latestGameData);
+        if (order.equals(latestGameData.getPlayerOrder())) {
+            finishDragAndRender();
+            return;
+        }
+        enqueueGameOperation(
+                GameOperationType.SET_PLAYER_ORDER,
+                null,
+                GameOperationPayload.order(order),
+                this::finishDragAndRender,
+                this::finishDragAndRender);
+    }
+
+    private java.util.List<String> buildPlayerOrderFromDragLayout(
+            com.example.rummypulse.data.GameData latestGameData) {
+        if (latestGameData == null || latestGameData.getPlayers() == null
+                || draggedPlayerId == null || placeholderView == null) {
+            return null;
+        }
+        java.util.List<String> order = new java.util.ArrayList<>();
+        for (int index = 0; index < binding.playersContainer.getChildCount(); index++) {
+            View child = binding.playersContainer.getChildAt(index);
+            if (child == placeholderView) {
+                order.add(draggedPlayerId);
+                continue;
             }
-            // Remove placeholder
+            if (child == draggedView || !REAL_PLAYER_CARD_TAG.equals(child.getTag())) {
+                continue;
+            }
+            Object playerId = child.getTag(R.id.text_player_id);
+            if (playerId instanceof String) {
+                order.add((String) playerId);
+            }
+        }
+        java.util.Set<String> expected = new java.util.HashSet<>();
+        for (com.example.rummypulse.data.Player player : latestGameData.getPlayers()) {
+            expected.add(player.getPlayerId());
+        }
+        if (order.size() != expected.size()
+                || !expected.equals(new java.util.HashSet<>(order))) {
+            return null;
+        }
+        return order;
+    }
+
+    private void finishActivePlayerNameEdit() {
+        for (int index = 0; index < binding.playersContainer.getChildCount(); index++) {
+            View card = binding.playersContainer.getChildAt(index);
+            if (!REAL_PLAYER_CARD_TAG.equals(card.getTag())) {
+                continue;
+            }
+            EditText playerName = card.findViewById(R.id.text_player_name);
+            if (playerName != null && playerName.hasFocus()) {
+                playerName.clearFocus();
+                return;
+            }
+        }
+    }
+
+    private void cancelDrag() {
+        clearDragVisuals();
+        finishDragAndRender();
+    }
+
+    private void clearDragVisuals() {
+        if (placeholderView != null && placeholderView.getParent() == binding.playersContainer) {
             binding.playersContainer.removeView(placeholderView);
-            placeholderView = null;
         }
-        
-        // Restore dragged view appearance
-        draggedView.setAlpha(1.0f);
-        draggedView.setElevation(2f);
-        
-        // Reorder if position changed
-        if (targetIndex != draggedIndex && targetIndex >= 0
-                && targetIndex < gameData.getPlayers().size()
-                && draggedPlayerId != null) {
-            GameDataSchema.normalize(gameData);
-            java.util.List<String> order =
-                    new java.util.ArrayList<>(gameData.getPlayerOrder());
-            if (order.remove(draggedPlayerId)) {
-                order.add(Math.min(targetIndex, order.size()), draggedPlayerId);
-                enqueueGameOperation(
-                        GameOperationType.SET_PLAYER_ORDER,
-                        null,
-                        GameOperationPayload.order(order),
-                        null);
-            }
+        placeholderView = null;
+        if (draggedView != null) {
+            draggedView.setAlpha(1.0f);
+            draggedView.setElevation(2f);
         }
-        
-        // Reset drag state
+    }
+
+    private void finishDragAndRender() {
         draggedView = null;
         draggedIndex = -1;
         draggedPlayerId = null;
         dragStartY = 0;
         isDragging = false;
+        com.example.rummypulse.data.GameData latestGameData =
+                viewModel.getGameData().getValue();
+        if (latestGameData != null) {
+            renderPlayerCardsFromState(latestGameData);
+        }
     }
 
     /**
@@ -5424,9 +5482,21 @@ public class JoinGameActivity extends AppCompatActivity {
             String playerId,
             GameOperationPayload payload,
             Runnable onStored) {
+        enqueueGameOperation(type, playerId, payload, onStored, null);
+    }
+
+    private void enqueueGameOperation(
+            GameOperationType type,
+            String playerId,
+            GameOperationPayload payload,
+            Runnable onStored,
+            Runnable onError) {
         com.example.rummypulse.data.GameData current = viewModel.getGameData().getValue();
         if (operationRepository == null || currentGameId == null || current == null) {
             ModernToast.error(this, "Game state is unavailable.");
+            if (onError != null) {
+                onError.run();
+            }
             return;
         }
         GameDataSchema.normalize(current);
@@ -5452,6 +5522,9 @@ public class JoinGameActivity extends AppCompatActivity {
                     @Override
                     public void onError(String message) {
                         ModernToast.error(JoinGameActivity.this, message);
+                        if (onError != null) {
+                            onError.run();
+                        }
                     }
                 });
     }

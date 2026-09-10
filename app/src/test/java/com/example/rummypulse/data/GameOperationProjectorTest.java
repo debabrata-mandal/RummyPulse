@@ -27,10 +27,17 @@ public class GameOperationProjectorTest {
                 GameOperationPayload.order(Arrays.asList("p2", "p1")));
 
         assertEquals("p2", reordered.getPlayers().get(0).getPlayerId());
+        assertEquals("Lebu", reordered.getPlayers().get(0).getName());
         assertEquals("u2", reordered.getPlayers().get(0).getUserId());
         assertEquals(Integer.valueOf(20), reordered.getPlayers().get(0).getScores().get(0));
+        assertEquals(Integer.valueOf(22), reordered.getPlayers().get(0).getRandomNumber());
+        assertEquals(Boolean.FALSE, reordered.getPlayers().get(0).getIsCreator());
         assertEquals("p1", reordered.getPlayers().get(1).getPlayerId());
+        assertEquals("Debu", reordered.getPlayers().get(1).getName());
         assertEquals("u1", reordered.getPlayers().get(1).getUserId());
+        assertEquals(Integer.valueOf(10), reordered.getPlayers().get(1).getScores().get(0));
+        assertEquals(Integer.valueOf(11), reordered.getPlayers().get(1).getRandomNumber());
+        assertEquals(Boolean.TRUE, reordered.getPlayers().get(1).getIsCreator());
     }
 
     @Test
@@ -95,6 +102,10 @@ public class GameOperationProjectorTest {
     private static GameData game() {
         Player first = player("p1", "Debu", "u1", 10);
         Player second = player("p2", "Lebu", "u2", 20);
+        first.setRandomNumber(11);
+        first.setIsCreator(true);
+        second.setRandomNumber(22);
+        second.setIsCreator(false);
         GameData game = new GameData();
         game.setPlayers(new ArrayList<>(Arrays.asList(first, second)));
         game.setNumPlayers(2);

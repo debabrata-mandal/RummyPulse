@@ -1,13 +1,19 @@
 package com.example.rummypulse.ui;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import android.os.Parcelable;
+import android.util.SparseArray;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -104,6 +110,46 @@ public class LayoutInflationCompatTest {
         assertTrue(
                 "Expected at least " + EXPECTED_TINTED_VIEWS + " tinted views, found " + tinted[0],
                 tinted[0] >= EXPECTED_TINTED_VIEWS);
+    }
+
+    @Test
+    public void regeneratedPlayerCardsKeepDistinctCanonicalNamesAfterStateRestore() {
+        try (ActivityScenario<MinimumVersionActivity> scenario =
+                     ActivityScenario.launch(MinimumVersionActivity.class)) {
+            scenario.onActivity(activity -> {
+                LinearLayout original = new LinearLayout(activity);
+                View originalFirst = activity.getLayoutInflater().inflate(
+                        R.layout.item_player_card, original, false);
+                View originalSecond = activity.getLayoutInflater().inflate(
+                        R.layout.item_player_card, original, false);
+                ((EditText) originalFirst.findViewById(R.id.text_player_name))
+                        .setText("Restored first");
+                ((EditText) originalSecond.findViewById(R.id.text_player_name))
+                        .setText("Restored second");
+                original.addView(originalFirst);
+                original.addView(originalSecond);
+                SparseArray<Parcelable> savedState = new SparseArray<>();
+                original.saveHierarchyState(savedState);
+
+                LinearLayout regenerated = new LinearLayout(activity);
+                View regeneratedFirst = activity.getLayoutInflater().inflate(
+                        R.layout.item_player_card, regenerated, false);
+                View regeneratedSecond = activity.getLayoutInflater().inflate(
+                        R.layout.item_player_card, regenerated, false);
+                EditText firstName = regeneratedFirst.findViewById(R.id.text_player_name);
+                EditText secondName = regeneratedSecond.findViewById(R.id.text_player_name);
+                firstName.setText("Debu");
+                secondName.setText("Lebu");
+                regenerated.addView(regeneratedFirst);
+                regenerated.addView(regeneratedSecond);
+                regenerated.restoreHierarchyState(savedState);
+
+                assertFalse(firstName.isSaveEnabled());
+                assertFalse(secondName.isSaveEnabled());
+                assertEquals("Debu", firstName.getText().toString());
+                assertEquals("Lebu", secondName.getText().toString());
+            });
+        }
     }
 
     private void inspect(View view, String layout, List<String> failures, int[] tinted) {
