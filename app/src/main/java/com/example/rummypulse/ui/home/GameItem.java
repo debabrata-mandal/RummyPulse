@@ -20,6 +20,8 @@ public class GameItem {
     private String creatorUserId;
     private String editorName;
     private String editorUserId;
+    /** True when {@code games_v2.activeEditorUserId} is currently set (someone actively holds edit access). */
+    private boolean hasActiveEditor;
     /** From {@code games_v2.displayName}; may be empty. */
     private String gameDisplayName;
     /** Current user's view approval for this game: requested, approved, rejected, or null. */
@@ -120,6 +122,7 @@ public class GameItem {
         return displayEditorId != null && displayEditorId.equals(creatorUserId)
                 ? creatorPhotoUrl : null;
     }
+    public boolean hasActiveEditor() { return hasActiveEditor; }
     public String getGameDisplayName() { return gameDisplayName; }
     public String getMyViewAccessStatus() { return myViewAccessStatus; }
     public int getPendingViewRequestCount() { return pendingViewRequestCount; }
@@ -162,6 +165,7 @@ public class GameItem {
     public void setCreatorUserId(String creatorUserId) { this.creatorUserId = creatorUserId; }
     public void setEditorName(String editorName) { this.editorName = editorName; }
     public void setEditorUserId(String editorUserId) { this.editorUserId = editorUserId; }
+    public void setHasActiveEditor(boolean hasActiveEditor) { this.hasActiveEditor = hasActiveEditor; }
     public void setGameDisplayName(String gameDisplayName) { this.gameDisplayName = gameDisplayName; }
     public void setMyViewAccessStatus(String myViewAccessStatus) { this.myViewAccessStatus = myViewAccessStatus; }
     public void setPendingViewRequestCount(int pendingViewRequestCount) { this.pendingViewRequestCount = Math.max(0, pendingViewRequestCount); }

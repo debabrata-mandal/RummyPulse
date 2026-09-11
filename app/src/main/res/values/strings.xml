@@ -84,7 +84,7 @@
     <string name="exit_dialog_transfer_leave">Transfer &amp; leave</string>
     <string name="exit_dialog_icon_description">Leave game</string>
     <string name="exit_dialog_transfer_icon_description">Transfer edit access</string>
-    <string name="edit_access_transferred_offline">Edit access was transferred while you were offline. Your unsaved changes were discarded.</string>
+    <string name="edit_access_transferred_offline">Your edit access on this game has changed. Any unsaved changes were discarded and you\'re now viewing read-only.</string>
     <string name="round_saved_offline_pending_sync">Round saved offline — pending sync.</string>
     <string name="dialog_correct_round_score_save">Save change</string>
     <string name="dialog_correct_player_title">Choose a player</string>
@@ -176,6 +176,12 @@
     <string name="review_edit_economics_subtitle">Changes apply to this game and refresh contribution totals. Same rules as creating a game.</string>
     <string name="review_edit_economics_save">Save</string>
     <string name="review_edit_economics_saved">Game economics updated</string>
+    <string name="review_kick_editor">Kick out editor</string>
+    <string name="review_kick_editor_title">Kick out editor?</string>
+    <string name="review_kick_editor_subtitle">End %1$s\'s edit session on this game</string>
+    <string name="review_kick_editor_message">A new PIN will be generated. %1$s will be moved to read-only immediately and any further changes from them will be rejected.</string>
+    <string name="review_kick_editor_success">Editor removed. A new PIN has been generated.</string>
+    <string name="review_operation_kicking_editor">Removing editor…</string>
     <string name="cd_decrease_point_value">Decrease point value</string>
     <string name="cd_increase_point_value">Increase point value</string>
     <string name="dialog_game_name_hint">Name</string>

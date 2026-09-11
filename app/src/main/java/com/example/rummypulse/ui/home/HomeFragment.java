@@ -337,6 +337,47 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 });
     }
 
+    @Override
+    public void onKickOutEditor(GameItem game, int position) {
+        if (!isAdded() || getContext() == null || game == null) {
+            return;
+        }
+        String editorName = game.getEditorName();
+        String displayName = (editorName == null || editorName.trim().isEmpty())
+                ? "the current editor" : editorName;
+
+        showReviewActionDialog(
+                R.drawable.ic_lock,
+                getString(R.string.review_kick_editor_title),
+                getString(R.string.review_kick_editor_subtitle, displayName),
+                getString(R.string.review_kick_editor_message, displayName),
+                getString(R.string.review_kick_editor),
+                true,
+                () -> {
+                    beginReviewOperation(getString(R.string.review_operation_kicking_editor));
+                    homeViewModel.kickOutEditor(
+                            game.getGameId(),
+                            () -> {
+                                if (!isAdded() || getContext() == null) {
+                                    return;
+                                }
+                                endReviewOperation();
+                                com.example.rummypulse.utils.ModernToast.success(
+                                        getContext(),
+                                        getString(R.string.review_kick_editor_success));
+                            },
+                            error -> {
+                                if (!isAdded()) {
+                                    return;
+                                }
+                                endReviewOperation();
+                                if (getContext() != null && error != null) {
+                                    com.example.rummypulse.utils.ModernToast.warning(getContext(), error);
+                                }
+                            });
+                });
+    }
+
     private void updateSelectionControls(int selectedCount, boolean allSelected) {
         if (binding == null || tableAdapter == null) {
             return;

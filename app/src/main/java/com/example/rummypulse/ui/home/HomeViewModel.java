@@ -176,7 +176,18 @@ public class HomeViewModel extends ViewModel {
         }
         gameRepository.updateGameEconomics(gameId, pointValue, gstPercent, onSuccess);
     }
-    
+
+    public void kickOutEditor(
+            String gameId,
+            Runnable onSuccess,
+            java.util.function.Consumer<String> onError) {
+        if (AppUserRoleSession.getInstance().peekRole() != AppUserRoleSession.Role.ADMIN) {
+            mError.setValue("Administrator access required to remove the active editor");
+            return;
+        }
+        gameRepository.kickOutEditor(gameId, onSuccess, onError);
+    }
+
     @Override
     protected void onCleared() {
         super.onCleared();

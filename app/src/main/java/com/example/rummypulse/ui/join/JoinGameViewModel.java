@@ -123,6 +123,7 @@ public class JoinGameViewModel extends AndroidViewModel {
     private final MutableLiveData<String> pendingViewRequestsError = new MutableLiveData<>();
 
     private ListenerRegistration pendingViewRequestsListener;
+    private ListenerRegistration editGuardListener;
 
     /** {@code pinGeneration} held when edit access was last claimed on this device. */
     private long activeEditGeneration;
@@ -340,6 +341,20 @@ public class JoinGameViewModel extends AndroidViewModel {
                 fetchGameData(gameId);
                 return;
             }
+            if (cachedGeneration > 0 && cachedAuth != null
+                    && isCachedEditSessionStale(cachedAuth, cachedGeneration)) {
+                // This is an automatic reconnect using a PIN/generation saved from a previous
+                // session, and the server no longer recognizes it (e.g. an admin kicked this
+                // device out, or access was transferred while this device was away). Don't retry
+                // the claim with a PIN already known to be stale - that produces a confusing
+                // "Incorrect PIN" toast for something the user never typed. Fall back to
+                // view-only; editSessionStale's existing handling clears the local PIN cache.
+                activeEditGeneration = 0;
+                editAccessGranted.setValue(false);
+                editSessionStale.setValue(true);
+                fetchGameData(gameId);
+                return;
+            }
             claimEditAccess(gameId, enteredPin, new ClaimCallback() {
                 @Override
                 public void onSuccess(String pin, long pinGeneration) {
@@ -368,6 +383,19 @@ public class JoinGameViewModel extends AndroidViewModel {
         }
 
         fetchGameData(gameId);
+    }
+
+    /** True when a locally cached pin/generation no longer matches the freshly fetched server state. */
+    private static boolean isCachedEditSessionStale(GameAuth auth, long cachedGeneration) {
+        long remoteGen = auth.getPinGenerationOrDefault();
+        String activeEditor = auth.getActiveEditorUserId();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String myUid = user != null ? user.getUid() : null;
+        boolean generationStale = cachedGeneration > 0 && cachedGeneration != remoteGen;
+        boolean editorMismatch = activeEditor != null
+                && myUid != null
+                && !activeEditor.equals(myUid);
+        return generationStale || editorMismatch;
     }
 
     private void restoreCachedEditorSessionAndLoad(
@@ -511,6 +539,7 @@ public class JoinGameViewModel extends AndroidViewModel {
     protected void onCleared() {
         super.onCleared();
         stopPendingViewRequestsListener();
+        stopEditGuardListener();
     }
 
     private void applyGameAuthMetadata(DocumentSnapshot documentSnapshot) {
@@ -690,9 +719,6 @@ public class JoinGameViewModel extends AndroidViewModel {
             return;
         }
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String myUid = user != null ? user.getUid() : null;
-
         db.collection(FirestoreCollections.GAMES).document(gameId)
                 .get(Source.SERVER)
                 .addOnSuccessListener(documentSnapshot -> {
@@ -704,14 +730,7 @@ public class JoinGameViewModel extends AndroidViewModel {
                         return;
                     }
 
-                    long remoteGen = auth.getPinGenerationOrDefault();
-                    String activeEditor = auth.getActiveEditorUserId();
-                    boolean generationStale = localPinGeneration > 0 && localPinGeneration != remoteGen;
-                    boolean editorMismatch = activeEditor != null
-                            && myUid != null
-                            && !activeEditor.equals(myUid);
-
-                    if (generationStale || editorMismatch) {
+                    if (isCachedEditSessionStale(auth, localPinGeneration)) {
                         activeEditGeneration = 0;
                         editAccessGranted.setValue(false);
                         editSessionStale.setValue(true);
@@ -719,6 +738,48 @@ public class JoinGameViewModel extends AndroidViewModel {
                         onStillValid.run();
                     }
                 });
+    }
+
+    /**
+     * Watches {@code games_v2/{gameId}} in real time while this device holds edit access, so a
+     * remote change to {@code activeEditorUserId}/{@code pinGeneration} (e.g. an admin kicking this
+     * editor out) is reflected immediately instead of only on the next save attempt or resume.
+     * Deliberately does not touch {@code gameData_v2} - that listener is intentionally disabled in
+     * edit mode elsewhere to avoid interfering with score updates; this only watches the auth doc.
+     */
+    public void startEditGuardListener(String gameId) {
+        stopEditGuardListener();
+        if (TextUtils.isEmpty(gameId)) {
+            return;
+        }
+
+        editGuardListener = db.collection(FirestoreCollections.GAMES).document(gameId)
+                .addSnapshotListener((documentSnapshot, error) -> {
+                    if (error != null || documentSnapshot == null || !documentSnapshot.exists()) {
+                        return;
+                    }
+                    Boolean granted = editAccessGranted.getValue();
+                    if (granted == null || !granted) {
+                        return;
+                    }
+                    GameAuth auth = documentSnapshot.toObject(GameAuth.class);
+                    if (auth == null) {
+                        return;
+                    }
+
+                    if (isCachedEditSessionStale(auth, activeEditGeneration)) {
+                        activeEditGeneration = 0;
+                        editAccessGranted.setValue(false);
+                        editSessionStale.setValue(true);
+                    }
+                });
+    }
+
+    public void stopEditGuardListener() {
+        if (editGuardListener != null) {
+            editGuardListener.remove();
+            editGuardListener = null;
+        }
     }
 
     private void fetchGameData(String gameId) {
