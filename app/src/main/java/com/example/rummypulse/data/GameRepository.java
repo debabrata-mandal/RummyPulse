@@ -17,6 +17,7 @@ import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.Source;
 import com.google.firebase.firestore.WriteBatch;
 import com.example.rummypulse.ui.home.GameItem;
+import com.example.rummypulse.utils.PinUtils;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -1336,6 +1337,8 @@ public class GameRepository {
         if (item != null && auth != null) {
             item.setEditorName(auth.getDisplayEditorName());
             item.setEditorUserId(auth.getDisplayEditorUserId());
+            String activeEditorUserId = auth.getActiveEditorUserId();
+            item.setHasActiveEditor(activeEditorUserId != null && !activeEditorUserId.trim().isEmpty());
         }
         return item;
     }
@@ -1690,6 +1693,73 @@ public class GameRepository {
             if (onSuccess != null) onSuccess.run();
         }).addOnFailureListener(e -> errorLiveData.setValue(
                 "Failed to update game: " + e.getMessage()));
+    }
+
+    /**
+     * Admin action: forcibly ends the current active editor's session on a game so someone else
+     * can claim edit access. Mirrors {@code JoinGameViewModel.transferEditAccess} (rotates the PIN
+     * and bumps {@code pinGeneration}/{@code editGeneration}), but is callable by an admin rather
+     * than requiring the caller to already be the active editor.
+     */
+    public void kickOutEditor(String gameId, Runnable onSuccess, Consumer<String> onError) {
+        if (gameId == null || gameId.isEmpty()) {
+            if (onError != null) onError.accept("Cannot update game: missing game id");
+            return;
+        }
+        DocumentReference gameRef = db.collection(FirestoreCollections.GAMES).document(gameId);
+        DocumentReference gameDataRef = db.collection(FirestoreCollections.GAME_DATA).document(gameId);
+
+        db.runTransaction(transaction -> {
+            // Firestore transactions require every read before any write, so both documents are
+            // fetched up front (mirrors JoinGameViewModel.transferEditAccess).
+            DocumentSnapshot snapshot = transaction.get(gameRef);
+            DocumentSnapshot dataSnapshot = transaction.get(gameDataRef);
+            if (!snapshot.exists()) {
+                throw new IllegalStateException("Game is no longer available.");
+            }
+            GameAuth auth = snapshot.toObject(GameAuth.class);
+            String activeEditorUserId = auth != null ? auth.getActiveEditorUserId() : null;
+            if (activeEditorUserId == null || activeEditorUserId.trim().isEmpty()) {
+                throw new IllegalStateException("No active editor to remove.");
+            }
+
+            long currentGen = auth.getPinGenerationOrDefault();
+            long newGen = currentGen + 1;
+            String newPin = PinUtils.generatePin();
+
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("pin", newPin);
+            updates.put("pinGeneration", newGen);
+            updates.put("lastEditorUserId", auth.getActiveEditorUserId());
+            updates.put("lastEditorName", auth.getActiveEditorName());
+            updates.put("activeEditorUserId", com.google.firebase.firestore.FieldValue.delete());
+            updates.put("activeEditorName", com.google.firebase.firestore.FieldValue.delete());
+            transaction.update(gameRef, updates);
+
+            if (dataSnapshot.exists()) {
+                // Firestore rules only allow this admin write to gameData_v2 when it also bumps
+                // "revision" by exactly 1 (see isAdminGameMetadataUpdate in firestore.rules),
+                // the same requirement updateGameEconomics already satisfies above.
+                Long revision = dataSnapshot.getLong("revision");
+                transaction.update(gameDataRef,
+                        "editGeneration", newGen,
+                        "revision", (revision == null ? 0L : revision) + 1L);
+            }
+            return null;
+        }).addOnSuccessListener(ignored -> {
+            loadAllGames();
+            if (onSuccess != null) onSuccess.run();
+        }).addOnFailureListener(e -> {
+            String message = e.getMessage();
+            if (message == null || message.isEmpty()) {
+                message = "Failed to remove editor. Please try again.";
+            }
+            if (onError != null) {
+                onError.accept(message);
+            } else {
+                errorLiveData.setValue(message);
+            }
+        });
     }
 
     public void approveGame(GameItem gameItem) {

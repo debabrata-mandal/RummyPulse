@@ -903,6 +903,7 @@ public class JoinGameActivity extends AppCompatActivity {
             gameDefaultsListener = null;
         }
         viewModel.stopPendingViewRequestsListener();
+        viewModel.stopEditGuardListener();
 
         // Unregister network callback
         if (networkCallback != null) {
@@ -1417,12 +1418,19 @@ public class JoinGameActivity extends AppCompatActivity {
                 } else {
                     System.out.println("EDIT ACCESS GRANTED - No listener to remove (already in edit mode or listener was not active)");
                 }
+
+                // Watch the games_v2 doc (not gameData_v2) so a remote kick-out is reflected
+                // immediately instead of only on the next save attempt or app resume.
+                if (currentGameId != null) {
+                    viewModel.startEditGuardListener(currentGameId);
+                }
             } else {
                 applyScreenMode(false);
                 binding.btnCorrectPastRound.setVisibility(View.GONE);
                 // In view mode - set up real-time listener for game data updates
                 System.out.println("EDIT ACCESS DENIED - Setting up real-time listener for view mode");
                 setupRealtimeListener();
+                viewModel.stopEditGuardListener();
                 // Hide online/offline indicators in view mode
                 if (binding.editOnlineIndicator != null && binding.editOfflineIndicator != null) {
                     binding.editOnlineIndicator.setVisibility(View.GONE);

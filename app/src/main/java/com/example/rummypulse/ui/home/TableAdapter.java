@@ -42,6 +42,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         void onApproveGst(GameItem game, int position);
         void onDeleteGame(GameItem game, int position);
         void onEditGameEconomics(GameItem game, int position);
+        void onKickOutEditor(GameItem game, int position);
     }
 
     public interface OnSelectionChangedListener {
@@ -232,7 +233,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             
             holder.btnApproveGst.setEnabled(actionsEnabled && isGameCompleted);
             holder.btnDeleteGame.setEnabled(actionsEnabled);
-            
+
             // Set up button click listeners
             holder.btnApproveGst.setOnClickListener(v -> {
                 if (actionListener != null && actionsEnabled && isGameCompleted) {
@@ -246,7 +247,23 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                     actionListener.onDeleteGame(item, position);
                 }
             });
-            
+
+            // Surface the kick control only when someone currently holds edit access; who last
+            // touched the game is already shown in the created/edited-by summary line above.
+            if (holder.btnKickEditor != null) {
+                if (item.hasActiveEditor()) {
+                    holder.btnKickEditor.setVisibility(android.view.View.VISIBLE);
+                    holder.btnKickEditor.setEnabled(actionsEnabled);
+                    holder.btnKickEditor.setOnClickListener(v -> {
+                        if (actionListener != null && actionsEnabled) {
+                            actionListener.onKickOutEditor(item, position);
+                        }
+                    });
+                } else {
+                    holder.btnKickEditor.setVisibility(android.view.View.GONE);
+                    holder.btnKickEditor.setOnClickListener(null);
+                }
+            }
         }
 
     @Override
@@ -517,7 +534,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         public static class TableViewHolder extends RecyclerView.ViewHolder {
             TextView gameIdHeaderText, gameCreatedSummaryText, gamePinText, pointValueText, playersText, gstPercentageText, gstAmountText, ageText, statusText;
             ImageView iconViewPin;
-            View btnApproveGst, btnDeleteGame;
+            View btnApproveGst, btnDeleteGame, btnKickEditor;
             MaterialCheckBox selectGameCheckBox;
 
             public TableViewHolder(@NonNull View itemView) {
@@ -535,6 +552,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 iconViewPin = itemView.findViewById(R.id.icon_view_pin);
                 btnApproveGst = itemView.findViewById(R.id.btn_approve_gst);
                 btnDeleteGame = itemView.findViewById(R.id.btn_delete_game);
+                btnKickEditor = itemView.findViewById(R.id.btn_kick_editor);
             }
         }
 }
