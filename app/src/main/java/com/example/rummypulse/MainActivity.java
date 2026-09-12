@@ -1,10 +1,12 @@
 package com.example.rummypulse;
 
 import android.app.AlertDialog;
-import android.content.res.ColorStateList;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -762,6 +764,7 @@ public class MainActivity extends AppCompatActivity {
             android.widget.TextView textDate = dialog.findViewById(R.id.text_date);
             android.widget.TextView textUpdateStatus = dialog.findViewById(R.id.text_update_status);
             View btnClose = dialog.findViewById(R.id.btn_close);
+            MaterialButton btnPrivacyPolicy = dialog.findViewById(R.id.btn_privacy_policy);
             MaterialButton btnCheckUpdates = dialog.findViewById(R.id.btn_check_updates);
             
             // Set values
@@ -774,6 +777,18 @@ public class MainActivity extends AppCompatActivity {
             
             // Set button listeners
             btnClose.setOnClickListener(v -> dialog.dismiss());
+
+            btnPrivacyPolicy.setOnClickListener(v -> {
+                Intent privacyPolicyIntent = new Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse(getString(R.string.app_info_privacy_policy_url)));
+                try {
+                    startActivity(privacyPolicyIntent);
+                } catch (ActivityNotFoundException e) {
+                    com.example.rummypulse.utils.ModernToast.error(
+                            this, getString(R.string.app_info_privacy_policy_open_error));
+                }
+            });
             
             btnCheckUpdates.setOnClickListener(v -> {
                 dialog.dismiss();

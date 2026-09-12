@@ -31,6 +31,9 @@
     <string name="app_info_update_status_release">Automatic checks enabled</string>
     <string name="app_info_check_updates">Check for updates</string>
     <string name="app_info_details_section_title">App details</string>
+    <string name="app_info_privacy_policy">Privacy Policy</string>
+    <string name="app_info_privacy_policy_url" translatable="false">https://debabrata-mandal.github.io/RummyPulse/privacy-policy.html</string>
+    <string name="app_info_privacy_policy_open_error">Unable to open the Privacy Policy</string>
     <string name="voice_announcements_language_section_title">Announcement language</string>
     <string name="voice_announcements_language_section_subtitle">Choose the voice language for score callouts.</string>
     <string name="voice_announcements_language_bengali">বাংলা (Bengali)</string>
