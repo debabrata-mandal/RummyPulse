@@ -112,11 +112,29 @@
     </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_privacy_policy"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:minHeight="48dp"
+        android:text="@string/app_info_privacy_policy"
+        android:textAllCaps="false"
+        android:textColor="@color/view_text_primary"
+        app:cornerRadius="10dp"
+        app:icon="@drawable/ic_shield"
+        app:iconGravity="textStart"
+        app:iconPadding="8dp"
+        app:iconTint="@color/view_violet_light"
+        app:strokeColor="@color/view_stroke"
+        app:strokeWidth="1dp" />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_check_updates"
         style="@style/Widget.MaterialComponents.Button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
+        android:layout_marginTop="10dp"
         android:background="@drawable/bg_view_primary_button"
         android:minHeight="48dp"
         android:text="@string/app_info_check_updates"
