@@ -108,7 +108,7 @@ public class LoginActivity extends AppCompatActivity {
             }
             Log.d(TAG, "Login required after sign-out");
         } else if (currentUser != null) {
-            Log.d(TAG, "User already signed in: " + currentUser.getEmail());
+            Log.d(TAG, "User already signed in");
             authStateManager.saveAuthState(currentUser);
             startMainActivity();
         } else {
@@ -117,7 +117,7 @@ public class LoginActivity extends AppCompatActivity {
             // Check if user should be authenticated (might be force stop issue)
             if (authStateManager.shouldBeAuthenticated()) {
                 Log.w(TAG, "User should be authenticated but isn't - possible force stop issue");
-                Log.w(TAG, "Expected user: " + authStateManager.getBackedUpUserEmail());
+                Log.w(TAG, "Previous authentication state found");
 
                 // Show message about session interruption
                 com.example.rummypulse.utils.ModernToast.warning(this,
@@ -159,7 +159,7 @@ public class LoginActivity extends AppCompatActivity {
             try {
                 // Google Sign In was successful, authenticate with Firebase
                 GoogleSignInAccount account = task.getResult(ApiException.class);
-                Log.d(TAG, "firebaseAuthWithGoogle:" + account.getId());
+                Log.d(TAG, "Google account selected");
                 String idToken = account.getIdToken();
                 if (idToken == null || idToken.isEmpty()) {
                     Log.e(TAG, "Google account has no ID token (check Web client / SHA-1 in Firebase).");
@@ -210,7 +210,7 @@ public class LoginActivity extends AppCompatActivity {
             Log.d(TAG, "signInWithCredential:success");
             FirebaseUser user = mAuth.getCurrentUser();
             if (user != null) {
-                Log.d(TAG, "Firebase Auth successful for user: " + user.getEmail());
+                Log.d(TAG, "Firebase authentication successful");
                 AuthStateManager.getInstance(LoginActivity.this).saveAuthState(user);
                 com.example.rummypulse.utils.ModernToast.success(
                         LoginActivity.this,

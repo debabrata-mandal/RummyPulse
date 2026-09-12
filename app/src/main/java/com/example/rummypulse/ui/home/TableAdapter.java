@@ -156,11 +156,11 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             if (pointValue == null || pointValue.isEmpty()) {
                 holder.pointValueText.setText(
                         holder.itemView.getContext().getString(R.string.format_rupee_amount_zero));
-                System.out.println("Point value is null/empty for game " + item.getGameId() + ", setting to ₹0.00");
+                System.out.println("Point value is null/empty, using zero");
             } else {
                 holder.pointValueText.setText(
                         holder.itemView.getContext().getString(R.string.format_rupee_amount, pointValue));
-                System.out.println("Setting point value for game " + item.getGameId() + ": ₹" + pointValue);
+                System.out.println("Setting game point value");
             }
 
             holder.pointValueText.setOnClickListener(v -> {
@@ -187,7 +187,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         
         // Set GST Amount with currency symbol and null handling
         String gstAmount = item.getGstAmount();
-        System.out.println("TableAdapter: Game " + item.getGameId() + " - gstAmount = '" + gstAmount + "'");
+        System.out.println("TableAdapter: Binding game contribution amount");
         System.out.println("TableAdapter: holder.gstAmountText is " + (holder.gstAmountText == null ? "NULL" : "NOT NULL"));
         
         if (holder.gstAmountText != null) {
@@ -196,7 +196,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 holder.gstAmountText.setText("₹0");
                 holder.gstAmountText.setVisibility(android.view.View.VISIBLE);
             } else {
-                System.out.println("TableAdapter: Setting gstAmount to ₹" + gstAmount);
+                System.out.println("TableAdapter: Setting contribution amount");
                 holder.gstAmountText.setText(
                         holder.itemView.getContext().getString(R.string.format_rupee_amount, gstAmount));
                 holder.gstAmountText.setVisibility(android.view.View.VISIBLE);
@@ -501,7 +501,6 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             Bitmap bitmap = barcodeEncoder.encodeBitmap(gameItem.getGameId(), BarcodeFormat.QR_CODE, 300, 300);
             qrCodeImage.setImageBitmap(bitmap);
         } catch (WriterException e) {
-            e.printStackTrace();
             com.example.rummypulse.utils.ModernToast.error(context, "❌ Failed to generate QR code");
             return;
         }

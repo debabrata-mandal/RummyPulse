@@ -86,7 +86,7 @@ public class HomeViewModel extends ViewModel {
         
         // Observe errors from repository
         gameRepository.getError().observeForever(error -> {
-            System.out.println("HomeViewModel: Error occurred: " + error);
+            System.out.println("HomeViewModel: Game loading failed");
             mError.setValue(error);
         });
         

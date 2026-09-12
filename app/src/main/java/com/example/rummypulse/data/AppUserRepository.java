@@ -78,7 +78,7 @@ public class AppUserRepository {
                     displayName,
                     photoUrl,
                     nowMillis).hasUpdates()) {
-                Log.d(TAG, "Skipping repeated appUser initialization for " + userId);
+                Log.d(TAG, "Skipping repeated appUser initialization");
                 if (callback != null) {
                     callback.onSuccess(recent.appUser);
                 }
@@ -90,7 +90,7 @@ public class AppUserRepository {
                 if (callback != null) {
                     waiting.add(callback);
                 }
-                Log.d(TAG, "Joining in-flight appUser synchronization for " + userId);
+                Log.d(TAG, "Joining in-flight appUser synchronization");
                 return;
             }
 
@@ -164,13 +164,12 @@ public class AppUserRepository {
                     return new SyncResult(existing, !updates.isEmpty(), false);
                 })
                 .addOnSuccessListener(result -> {
-                    Log.d(TAG, "appUser sync complete for " + userId
-                            + " operations: reads=1 writes=" + (result.wrote ? 1 : 0)
+                    Log.d(TAG, "appUser sync complete: reads=1 writes=" + (result.wrote ? 1 : 0)
                             + " created=" + result.created);
                     completeSyncSuccess(userId, result.appUser);
                 })
                 .addOnFailureListener(exception -> {
-                    Log.e(TAG, "appUser create/update failed for " + userId, exception);
+                    Log.e(TAG, "appUser create/update failed", exception);
                     if (exception instanceof FirebaseFirestoreException) {
                         Log.e(TAG, "Firestore error code: "
                                 + ((FirebaseFirestoreException) exception).getCode());
@@ -211,7 +210,7 @@ public class AppUserRepository {
                 .delete()
                 .addOnSuccessListener(unused -> {
                     invalidateUserDirectoryCache();
-                    Log.d(TAG, "User deleted with operations: reads=0 writes=1 for " + userId);
+                    Log.d(TAG, "User deleted with operations: reads=0 writes=1");
                     if (callback != null) {
                         callback.onSuccess();
                     }
@@ -226,7 +225,7 @@ public class AppUserRepository {
         db.collection(FirestoreCollections.APP_USER).document(userId)
                 .update("role", newRole.getValue())
                 .addOnSuccessListener(unused -> {
-                    Log.d(TAG, "User role updated with operations: reads=0 writes=1 for " + userId);
+                    Log.d(TAG, "User role updated with operations: reads=0 writes=1");
                     AppUser updated = new AppUser();
                     updated.setUserId(userId);
                     updated.setRole(newRole);
@@ -246,8 +245,8 @@ public class AppUserRepository {
                 .update("hidden", hidden)
                 .addOnSuccessListener(unused -> {
                     invalidateUserDirectoryCache();
-                    Log.d(TAG, "User hidden flag updated with operations: reads=0 writes=1 for "
-                            + userId + " hidden=" + hidden);
+                    Log.d(TAG, "User hidden flag updated with operations: reads=0 writes=1"
+                            + " hidden=" + hidden);
                     AppUser updated = new AppUser();
                     updated.setUserId(userId);
                     updated.setHidden(hidden);
@@ -379,7 +378,7 @@ public class AppUserRepository {
             try {
                 users.add(documentToAppUser(document));
             } catch (Exception exception) {
-                Log.e(TAG, "Error converting appUser " + document.getId(), exception);
+                Log.e(TAG, "Error converting appUser document", exception);
             }
         }
         DocumentSnapshot nextCursor = documents.isEmpty()

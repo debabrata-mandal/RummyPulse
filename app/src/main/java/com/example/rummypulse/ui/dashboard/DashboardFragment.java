@@ -234,8 +234,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         // Observe game creation event (only for games created by others)
         dashboardViewModel.getGameCreationEvent().observe(getViewLifecycleOwner(), gameCreationData -> {
             if (gameCreationData != null && getContext() != null) {
-                android.util.Log.d("DashboardFragment", "📱 Received game creation event for game: " + 
-                    gameCreationData.gameId + " by " + gameCreationData.creatorName);
+                android.util.Log.d("DashboardFragment", "Received game creation event");
                 
                 dashboardViewModel.clearGameCreationEvent();
             }

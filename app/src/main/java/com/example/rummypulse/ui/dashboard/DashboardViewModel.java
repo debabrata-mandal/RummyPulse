@@ -165,8 +165,7 @@ public class DashboardViewModel extends ViewModel {
                         
                         // Check if this is a new game that the current user did NOT create
                         if (!seenGameIds.contains(game.getGameId())) {
-                            android.util.Log.d("DashboardViewModel", "New game detected: " + game.getGameId() + 
-                                " created by: " + game.getCreatorName() + " (ID: " + game.getCreatorUserId() + ")");
+                            android.util.Log.d("DashboardViewModel", "New game detected");
                             
                             // Mark as seen
                             seenGameIds.add(game.getGameId());
@@ -189,8 +188,8 @@ public class DashboardViewModel extends ViewModel {
                                 String creatorName = game.getCreatorName() != null ? game.getCreatorName() : "Someone";
                                 double pointValue = parsePointValue(game.getPointValue());
                                 
-                                android.util.Log.d("DashboardViewModel", "New game from another user: " + game.getGameId() + 
-                                    " created by " + creatorName + " (Reason: " + reason + ")");
+                                android.util.Log.d("DashboardViewModel",
+                                        "New game from another user: " + reason);
                                 
                                 gameCreationEvent.setValue(new GameCreationData(
                                     game.getGameId(), 
@@ -198,8 +197,8 @@ public class DashboardViewModel extends ViewModel {
                                     pointValue
                                 ));
                             } else {
-                                android.util.Log.d("DashboardViewModel", "Game created by current user - " + reason + ". " +
-                                    "Current user: " + currentUserId + ", Creator: " + game.getCreatorUserId());
+                                android.util.Log.d("DashboardViewModel",
+                                        "Game created by current user: " + reason);
                             }
                         }
                     }
@@ -630,8 +629,7 @@ public class DashboardViewModel extends ViewModel {
         newGameCreated.setValue(request.gameId);
         gameCreationEvent.setValue(new GameCreationData(
                 request.gameId, request.creatorName, request.pointValue));
-        android.util.Log.d("GameCreation", "Atomic game creation committed: "
-                + request.gameId);
+        android.util.Log.d("GameCreation", "Atomic game creation committed");
     }
 
     private void handleCreationFailure(CreationRequest request, Exception error) {

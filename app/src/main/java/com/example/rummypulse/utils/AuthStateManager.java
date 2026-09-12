@@ -49,7 +49,7 @@ public class AuthStateManager {
         editor.putBoolean(KEY_IS_AUTHENTICATED, true);
         editor.apply();
         
-        Log.d(TAG, "Authentication state backed up for user: " + user.getEmail());
+        Log.d(TAG, "Authentication state backed up");
     }
     
     /**
@@ -128,7 +128,7 @@ public class AuthStateManager {
         
         if (firebaseUser == null && shouldBeAuthenticated()) {
             Log.w(TAG, "Authentication state lost after force stop - user should be authenticated");
-            Log.w(TAG, "Expected user: " + getBackedUpUserEmail());
+            Log.w(TAG, "Previous authentication state found");
             // In this case, we should redirect to login but show a message
             // that the session was restored
         } else if (firebaseUser != null) {

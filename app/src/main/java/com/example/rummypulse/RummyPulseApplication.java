@@ -65,7 +65,7 @@ public class RummyPulseApplication extends Application {
             public void onAuthStateChanged(@NonNull FirebaseAuth auth) {
                 com.google.firebase.auth.FirebaseUser user = auth.getCurrentUser();
                 if (user != null) {
-                    Log.d(TAG, "Global auth state: User is signed in - " + user.getEmail());
+                    Log.d(TAG, "Global auth state: User is signed in");
                     // Save authentication state as backup
                     authStateManager.saveAuthState(user);
                     gameRepository.startDashboardListener();

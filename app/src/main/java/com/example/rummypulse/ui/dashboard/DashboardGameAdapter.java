@@ -350,7 +350,6 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             Bitmap bitmap = barcodeEncoder.encodeBitmap(gameItem.getGameId(), BarcodeFormat.QR_CODE, 300, 300);
             qrCodeImage.setImageBitmap(bitmap);
         } catch (WriterException e) {
-            e.printStackTrace();
             com.example.rummypulse.utils.ModernToast.error(context, "❌ Failed to generate QR code");
             return;
         }

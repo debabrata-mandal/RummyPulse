@@ -55,7 +55,7 @@ public class GameOperationSyncWorker extends Worker {
                     GameOperationStatus.IN_FLIGHT.name(),
                     1,
                     null);
-            Log.i(TAG, "Synchronizing " + operation.type + " for game " + gameId);
+            Log.i(TAG, "Synchronizing game operation: " + operation.type);
             try {
                 GameOperationRemoteApplier.Result remote = Tasks.await(
                         GameOperationRemoteApplier.apply(
@@ -74,14 +74,14 @@ public class GameOperationSyncWorker extends Worker {
                     dao.deleteOperation(operation.operationId);
                 });
                 recordPlayerStats(gameId, remote);
-                Log.i(TAG, "Synchronized " + operation.type + " for game " + gameId);
+                Log.i(TAG, "Synchronized game operation: " + operation.type);
             } catch (TimeoutException timeout) {
                 dao.updateOperationState(
                         operation.operationId,
                         GameOperationStatus.PENDING.name(),
                         0,
                         "Cloud sync timed out. Waiting to retry.");
-                Log.w(TAG, "Cloud sync timed out for game " + gameId);
+                Log.w(TAG, "Cloud game sync timed out");
                 return Result.retry();
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
@@ -136,7 +136,7 @@ public class GameOperationSyncWorker extends Worker {
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
         } catch (Exception failure) {
-            Log.w(TAG, "Could not update player stats for game " + gameId, failure);
+            Log.w(TAG, "Could not update player stats", failure);
         }
     }
 

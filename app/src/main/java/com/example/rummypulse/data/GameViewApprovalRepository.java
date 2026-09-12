@@ -224,8 +224,7 @@ public class GameViewApprovalRepository {
                 .document(gameId)
                 .addSnapshotListener((snapshot, error) -> {
                     if (error != null) {
-                        android.util.Log.e("GameViewApproval", "Game doc pending listener: "
-                                + error.getMessage());
+                        android.util.Log.e("GameViewApproval", "Game doc pending listener failed");
                         gameDocFailed[0] = true;
                         emit.run();
                         return;
@@ -240,8 +239,8 @@ public class GameViewApprovalRepository {
                 .whereEqualTo("gameId", gameId)
                 .addSnapshotListener((snapshots, error) -> {
                     if (error != null) {
-                        android.util.Log.w("GameViewApproval", "Collection pending listener: "
-                                + error.getMessage());
+                        android.util.Log.w("GameViewApproval",
+                                "Collection pending listener failed");
                         collectionFailed[0] = true;
                         fromCollection[0] = new ArrayList<>();
                         emit.run();
@@ -297,7 +296,7 @@ public class GameViewApprovalRepository {
                     finish.run();
                 })
                 .addOnFailureListener(e -> {
-                    android.util.Log.e("GameViewApproval", "Game doc pending fetch: " + e.getMessage());
+                    android.util.Log.e("GameViewApproval", "Game doc pending fetch failed");
                     gameDocFailed[0] = true;
                     pending[0]--;
                     finish.run();
@@ -314,7 +313,7 @@ public class GameViewApprovalRepository {
                     finish.run();
                 })
                 .addOnFailureListener(e -> {
-                    android.util.Log.w("GameViewApproval", "Collection pending fetch: " + e.getMessage());
+                    android.util.Log.w("GameViewApproval", "Collection pending fetch failed");
                     collectionFailed[0] = true;
                     fromCollection[0] = new ArrayList<>();
                     pending[0]--;
@@ -337,7 +336,7 @@ public class GameViewApprovalRepository {
                 .document(gameId)
                 .update(update)
                 .addOnFailureListener(e -> android.util.Log.w("GameViewApproval",
-                        "Failed to mirror pending request on game doc: " + e.getMessage()));
+                        "Failed to mirror pending request on game doc"));
     }
 
     private void syncViewRequestStatusOnGameDoc(@NonNull String gameId,
@@ -353,7 +352,7 @@ public class GameViewApprovalRepository {
                 .document(gameId)
                 .update(update)
                 .addOnFailureListener(e -> android.util.Log.w("GameViewApproval",
-                        "Failed to sync view request status on game doc: " + e.getMessage()));
+                        "Failed to sync view request status on game doc"));
     }
 
     @NonNull
@@ -522,7 +521,7 @@ public class GameViewApprovalRepository {
                 .document(gameId)
                 .update(clearPending)
                 .addOnFailureListener(e -> android.util.Log.w("GameViewApproval",
-                        "Failed to clear pending requests on game doc: " + e.getMessage()));
+                        "Failed to clear pending requests on game doc"));
 
         db.collection(FirestoreCollections.GAME_VIEW_APPROVALS)
                 .whereEqualTo("gameId", gameId)
@@ -607,7 +606,8 @@ public class GameViewApprovalRepository {
                         if (attempt < 1) {
                             cleanupAfterGamesRemoved(gameIds, attempt + 1);
                         } else {
-                            android.util.Log.w("GameViewApproval", message);
+                            android.util.Log.w("GameViewApproval",
+                                    "View-approval cleanup failed");
                         }
                     }
                 });
@@ -618,7 +618,7 @@ public class GameViewApprovalRepository {
                 if (attempt < 1) {
                     cleanupAfterGamesRemoved(gameIds, attempt + 1);
                 } else {
-                    android.util.Log.w("GameViewApproval", message);
+                    android.util.Log.w("GameViewApproval", "View-approval cleanup failed");
                 }
             }
         });
