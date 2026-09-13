@@ -1,11 +1,19 @@
 package com.example.rummypulse.ui.usermanagement;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.UserRole;
+import com.example.rummypulse.data.AppUserRepository;
+import com.example.rummypulse.service.AccountDeletionGateway;
 
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -13,6 +21,10 @@ import java.util.Arrays;
 import java.util.List;
 
 public class UserManagementViewModelTest {
+
+    @Rule
+    public final InstantTaskExecutorRule instantTaskExecutorRule =
+            new InstantTaskExecutorRule();
 
     private static AppUser admin(String displayName) {
         return new AppUser(
@@ -171,5 +183,37 @@ public class UserManagementViewModelTest {
         assertEquals(2, UserManagementViewModel.filterUsers(source, "").size());
         assertEquals(2, UserManagementViewModel.filterUsers(source, "   ").size());
         assertEquals(2, UserManagementViewModel.filterUsers(source, null).size());
+    }
+
+    @Test
+    public void deleteUser_usesProtectedGatewayAndPublishesSuccess() {
+        FakeDeletionGateway gateway = new FakeDeletionGateway();
+        UserManagementViewModel viewModel = new UserManagementViewModel(
+                mock(AppUserRepository.class), gateway);
+
+        viewModel.deleteUser("target-user");
+
+        assertEquals("target-user", gateway.requestedUserId);
+        assertTrue(Boolean.TRUE.equals(viewModel.getLoading().getValue()));
+        gateway.callback.onSuccess();
+        assertFalse(Boolean.TRUE.equals(viewModel.getLoading().getValue()));
+        assertTrue(Boolean.TRUE.equals(viewModel.getDeleteSuccess().getValue()));
+        assertFalse(Boolean.TRUE.equals(viewModel.getDeleteFailure().getValue()));
+    }
+
+    private static final class FakeDeletionGateway implements AccountDeletionGateway {
+        String requestedUserId;
+        Callback callback;
+
+        @Override
+        public void deleteMyAccount(Callback callback) {
+            this.callback = callback;
+        }
+
+        @Override
+        public void deleteUserAsAdmin(String userId, Callback callback) {
+            requestedUserId = userId;
+            this.callback = callback;
+        }
     }
 }

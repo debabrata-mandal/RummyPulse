@@ -1,13 +1,24 @@
 "use strict";
 
 const {initializeApp} = require("firebase-admin/app");
-const {getFirestore, Timestamp} = require("firebase-admin/firestore");
+const {getAuth} = require("firebase-admin/auth");
+const {getFirestore, FieldPath, FieldValue, Timestamp} =
+  require("firebase-admin/firestore");
 const {createHash} = require("node:crypto");
 const {defineSecret} = require("firebase-functions/params");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {logger} = require("firebase-functions");
 const {extractGroqName} = require("./lib/game-name");
 const {nextFixedCounter, nextRollingCounter} = require("./lib/rate-limit");
+const {
+  ACCOUNT_DELETION_CALLABLE_OPTIONS,
+  anonymizeApprovedGame,
+  anonymizeGameAuth,
+  anonymizeGameDataDocument,
+  isAdministratorProfile,
+  isRecentGoogleAuthentication,
+  isValidUid,
+} = require("./lib/account-deletion");
 
 initializeApp();
 
@@ -19,6 +30,7 @@ const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const GLOBAL_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 10;
 const MAX_GLOBAL_REQUESTS_PER_DAY = 200;
+const DELETE_PAGE_SIZE = 200;
 const PROMPT =
   "Generate one short, catchy English name for a rummy or card game app. " +
   "Use one or two words in title case, with no numbers or punctuation. " +
@@ -75,6 +87,196 @@ exports.suggestGameName = onCall({
     throw new HttpsError("internal", "Name generation returned an invalid response.");
   }
 });
+
+exports.deleteMyAccount = onCall(
+    ACCOUNT_DELETION_CALLABLE_OPTIONS,
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Sign-in is required.");
+      }
+      if (!isRecentGoogleAuthentication(request.auth.token)) {
+        throw new HttpsError(
+            "failed-precondition",
+            "Sign in again before deleting your account.",
+        );
+      }
+
+      const counts = await completeAccountDeletion(request.auth.uid);
+      logger.info("Self-service account deletion completed", counts);
+      return {status: "deleted"};
+    });
+
+exports.adminDeleteAccount = onCall(
+    ACCOUNT_DELETION_CALLABLE_OPTIONS,
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Sign-in is required.");
+      }
+      const targetUid = request.data && request.data.userId;
+      if (!isValidUid(targetUid)) {
+        throw new HttpsError("invalid-argument", "A valid user is required.");
+      }
+      if (targetUid === request.auth.uid) {
+        throw new HttpsError(
+            "failed-precondition",
+            "Use self-service deletion for your own account.",
+        );
+      }
+
+      const database = getFirestore();
+      const adminSnapshot = await database.collection("appUser_v2")
+          .doc(request.auth.uid).get();
+      if (!adminSnapshot.exists ||
+          !isAdministratorProfile(adminSnapshot.data())) {
+        throw new HttpsError(
+            "permission-denied",
+            "Administrator access is required.",
+        );
+      }
+
+      const counts = await completeAccountDeletion(targetUid);
+      logger.info("Administrator account deletion completed", counts);
+      return {status: "deleted"};
+    });
+
+async function completeAccountDeletion(uid) {
+  const counts = await cleanupAccountData(uid);
+  await deleteAuthenticationUser(uid);
+  await getFirestore().collection("appUser_v2").doc(uid).delete();
+  return counts;
+}
+
+async function cleanupAccountData(uid) {
+  const database = getFirestore();
+  const counts = {
+    activeGamesUpdated: 0,
+    approvedGamesUpdated: 0,
+    approvalsDeleted: 0,
+    historyEventsUpdated: 0,
+  };
+
+  await scanCollection(database.collection("games_v2"), async (gameSnapshot) => {
+    const updated = await database.runTransaction(async (transaction) => {
+      const gameRef = gameSnapshot.ref;
+      const gameDataRef = database.collection("gameData_v2").doc(gameSnapshot.id);
+      const game = await transaction.get(gameRef);
+      const gameData = await transaction.get(gameDataRef);
+      if (!game.exists) {
+        return false;
+      }
+
+      const authResult = anonymizeGameAuth(game.data(), uid);
+      const dataResult = gameData.exists ?
+        anonymizeGameDataDocument(gameData.data(), uid) :
+        {changed: false};
+      if (authResult.changed) {
+        transaction.set(gameRef, authResult.data);
+      }
+      if (gameData.exists && dataResult.changed) {
+        transaction.set(gameDataRef, dataResult.data);
+      }
+      return authResult.changed || dataResult.changed;
+    });
+    if (updated) {
+      counts.activeGamesUpdated++;
+    }
+  });
+
+  // Repair orphaned/legacy game-data documents that have no corresponding games_v2 row.
+  await scanCollection(database.collection("gameData_v2"), async (snapshot) => {
+    await database.runTransaction(async (transaction) => {
+      const current = await transaction.get(snapshot.ref);
+      if (!current.exists) {
+        return;
+      }
+      const result = anonymizeGameDataDocument(current.data(), uid);
+      if (result.changed) {
+        transaction.set(snapshot.ref, result.data);
+      }
+    });
+  });
+
+  await scanCollection(database.collection("approvedGames_v2"), async (snapshot) => {
+    const result = anonymizeApprovedGame(snapshot.data(), uid);
+    if (result.changed) {
+      await snapshot.ref.set(result.data);
+      counts.approvedGamesUpdated++;
+    }
+  });
+
+  counts.approvalsDeleted = await deleteQueryMatches(
+      database.collection("gameViewApprovals_v2").where("userId", "==", uid));
+  counts.historyEventsUpdated = await removeHistoryEditorIdentity(database, uid);
+
+  const rateLimitKey = createHash("sha256").update(uid).digest("hex");
+  await Promise.all([
+    database.collection("playerStats_v2").doc(uid).delete(),
+    database.collection(RATE_LIMIT_COLLECTION).doc("groqGameNames")
+        .collection("users").doc(rateLimitKey).delete(),
+  ]);
+  return counts;
+}
+
+async function scanCollection(collection, visitor) {
+  let cursor = null;
+  do {
+    let query = collection.orderBy(FieldPath.documentId()).limit(DELETE_PAGE_SIZE);
+    if (cursor) {
+      query = query.startAfter(cursor);
+    }
+    const page = await query.get();
+    for (const snapshot of page.docs) {
+      await visitor(snapshot);
+    }
+    cursor = page.empty ? null : page.docs[page.docs.length - 1];
+    if (page.size < DELETE_PAGE_SIZE) {
+      break;
+    }
+  } while (cursor);
+}
+
+async function deleteQueryMatches(query) {
+  let deleted = 0;
+  while (true) {
+    const page = await query.limit(DELETE_PAGE_SIZE).get();
+    if (page.empty) {
+      return deleted;
+    }
+    const batch = getFirestore().batch();
+    for (const snapshot of page.docs) {
+      batch.delete(snapshot.ref);
+    }
+    await batch.commit();
+    deleted += page.size;
+  }
+}
+
+async function removeHistoryEditorIdentity(database, uid) {
+  let updated = 0;
+  const query = database.collectionGroup("events").where("editorUserId", "==", uid);
+  while (true) {
+    const page = await query.limit(DELETE_PAGE_SIZE).get();
+    if (page.empty) {
+      return updated;
+    }
+    const batch = database.batch();
+    for (const snapshot of page.docs) {
+      batch.update(snapshot.ref, "editorUserId", FieldValue.delete());
+    }
+    await batch.commit();
+    updated += page.size;
+  }
+}
+
+async function deleteAuthenticationUser(uid) {
+  try {
+    await getAuth().deleteUser(uid);
+  } catch (error) {
+    if (!error || error.code !== "auth/user-not-found") {
+      throw error;
+    }
+  }
+}
 
 async function enforceRequestQuotas(uid) {
   const database = getFirestore();

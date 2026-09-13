@@ -240,4 +240,26 @@ public class PlayerSettlementCalculatorTest {
         // numPlayers falls back to players.size()=3: gross = round((60-10*3)*2) = 60
         assertSettlement(result, 10, 60.0, 0.0, 60.0);
     }
+
+    @Test
+    public void compute_identityAnonymization_doesNotChangeAnySettlement() {
+        Player alice = player("Alice", 10, 20);
+        alice.setUserId("user-a");
+        List<Player> players = Arrays.asList(
+                alice,
+                player("Bob", 30, 40),
+                player("Charlie", 5, 15));
+        GameItem game = makeGame("2.0", "10", "3", players);
+
+        PlayerSettlementCalculator.PlayerSettlement before =
+                PlayerSettlementCalculator.compute(game, alice);
+        alice.setUserId(null);
+        alice.setName("Deleted player");
+        PlayerSettlementCalculator.PlayerSettlement after =
+                PlayerSettlementCalculator.compute(game, alice);
+
+        assertSettlement(after, before.playerScore, before.grossAmount,
+                before.gstPaid, before.netAmount);
+        assertEquals(3, game.getPlayers().size());
+    }
 }

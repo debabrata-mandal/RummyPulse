@@ -147,7 +147,15 @@ public class UserManagementFragment extends Fragment {
 
         userManagementViewModel.getDeleteSuccess().observe(getViewLifecycleOwner(), success -> {
             if (success != null && success) {
-                com.example.rummypulse.utils.ModernToast.success(getContext(), "User deleted successfully");
+                com.example.rummypulse.utils.ModernToast.success(
+                        getContext(), getString(R.string.user_management_delete_success));
+            }
+        });
+
+        userManagementViewModel.getDeleteFailure().observe(getViewLifecycleOwner(), failure -> {
+            if (Boolean.TRUE.equals(failure)) {
+                com.example.rummypulse.utils.ModernToast.error(
+                        getContext(), getString(R.string.user_management_delete_failed));
             }
         });
 
@@ -398,7 +406,7 @@ public class UserManagementFragment extends Fragment {
                         .create();
         cancel.setOnClickListener(v -> dialog.dismiss());
         confirm.setOnClickListener(v -> {
-            Log.d(TAG, "Deleting user account record");
+            Log.d(TAG, "Requesting permanent account deletion");
             userManagementViewModel.deleteUser(user.getUserId());
             dialog.dismiss();
         });

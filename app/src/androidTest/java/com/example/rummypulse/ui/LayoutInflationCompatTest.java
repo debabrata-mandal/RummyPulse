@@ -46,6 +46,8 @@ public class LayoutInflationCompatTest {
             R.layout.activity_join_game,
             R.layout.content_game_view_mode,
             R.layout.dialog_action_confirmation,
+            R.layout.dialog_account_name_confirmation,
+            R.layout.dialog_account_deletion_progress,
             R.layout.dialog_announcements,
             R.layout.dialog_app_info,
             R.layout.dialog_confirm_add_player,
