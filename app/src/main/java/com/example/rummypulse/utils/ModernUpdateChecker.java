@@ -664,6 +664,13 @@ public class ModernUpdateChecker {
      */
     private void startApkDownload(String downloadUrl) {
         try {
+            if (!isSecureHttpsUrl(downloadUrl)) {
+                Log.w(TAG, "Rejected non-HTTPS update download URL");
+                showDownloadError(
+                        appContext.getString(R.string.update_download_failed_subtitle), false);
+                return;
+            }
+
             if (useDownloadUi()) {
                 startApkDownloadStreaming(downloadUrl);
                 return;
@@ -743,6 +750,14 @@ public class ModernUpdateChecker {
             Log.e(TAG, "Error starting download", e);
             showDownloadError("Failed to start download: " + e.getMessage(), true);
         }
+    }
+
+    private static boolean isSecureHttpsUrl(String url) {
+        if (url == null) {
+            return false;
+        }
+        Uri uri = Uri.parse(url.trim());
+        return "https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null;
     }
 
     private static int readDownloadStatus(Cursor cursor) {
