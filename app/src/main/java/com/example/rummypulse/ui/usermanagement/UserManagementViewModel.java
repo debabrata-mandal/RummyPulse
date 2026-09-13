@@ -10,6 +10,8 @@ import androidx.lifecycle.ViewModel;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.UserRole;
+import com.example.rummypulse.service.AccountDeletionGateway;
+import com.example.rummypulse.service.FirebaseAccountDeletionService;
 import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.util.ArrayList;
@@ -27,7 +29,8 @@ public class UserManagementViewModel extends ViewModel {
 
     private static final String TAG = "UserManagementViewModel";
 
-    private final AppUserRepository appUserRepository = new AppUserRepository();
+    private final AppUserRepository appUserRepository;
+    private final AccountDeletionGateway accountDeletionGateway;
     private final MutableLiveData<List<AppUser>> users = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<String> searchQuery = new MutableLiveData<>("");
     private final MediatorLiveData<List<AppUser>> displayedUsers = new MediatorLiveData<>();
@@ -36,6 +39,7 @@ public class UserManagementViewModel extends ViewModel {
     private final MutableLiveData<String> error = new MutableLiveData<>();
     private final MutableLiveData<Boolean> roleUpdateSuccess = new MutableLiveData<>();
     private final MutableLiveData<Boolean> deleteSuccess = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> deleteFailure = new MutableLiveData<>();
     private final MutableLiveData<Boolean> hiddenUpdateSuccess = new MutableLiveData<>();
 
     private DocumentSnapshot nextCursor;
@@ -45,6 +49,14 @@ public class UserManagementViewModel extends ViewModel {
     private boolean fullDirectoryRequestInProgress;
 
     public UserManagementViewModel() {
+        this(new AppUserRepository(), new FirebaseAccountDeletionService());
+    }
+
+    UserManagementViewModel(
+            AppUserRepository appUserRepository,
+            AccountDeletionGateway accountDeletionGateway) {
+        this.appUserRepository = appUserRepository;
+        this.accountDeletionGateway = accountDeletionGateway;
         displayedUsers.addSource(users, ignored -> publishDisplayedUsers());
         displayedUsers.addSource(searchQuery, ignored -> publishDisplayedUsers());
     }
@@ -75,6 +87,10 @@ public class UserManagementViewModel extends ViewModel {
 
     public LiveData<Boolean> getDeleteSuccess() {
         return deleteSuccess;
+    }
+
+    public LiveData<Boolean> getDeleteFailure() {
+        return deleteFailure;
     }
 
     public LiveData<Boolean> getHiddenUpdateSuccess() {
@@ -230,30 +246,30 @@ public class UserManagementViewModel extends ViewModel {
         });
     }
 
-    /**
-     * Deletes the user document and removes the row from the current list without a full reload.
-     */
+    /** Permanently deletes the selected account through the protected backend. */
     public void deleteUser(String userId) {
         loading.setValue(true);
         error.setValue(null);
         deleteSuccess.setValue(false);
+        deleteFailure.setValue(false);
 
-        appUserRepository.deleteUser(userId, new AppUserRepository.VoidCallback() {
+        accountDeletionGateway.deleteUserAsAdmin(userId, new AccountDeletionGateway.Callback() {
             @Override
             public void onSuccess() {
                 List<AppUser> updatedList = new ArrayList<>(safeUsers());
                 updatedList.removeIf(user -> userId.equals(user.getUserId()));
                 users.setValue(updatedList);
+                AppUserRepository.clearSessionCaches();
                 loading.setValue(false);
                 deleteSuccess.setValue(true);
-                Log.d(TAG, "Removed deleted user locally");
             }
 
             @Override
             public void onFailure(Exception exception) {
-                error.setValue("Failed to delete user: " + exception.getMessage());
                 loading.setValue(false);
                 deleteSuccess.setValue(false);
+                deleteFailure.setValue(true);
+                Log.w(TAG, "Permanent account deletion failed");
             }
         });
     }

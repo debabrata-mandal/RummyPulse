@@ -184,7 +184,9 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated();
-      allow delete: if isAdmin();
+      // Account deletion must use the App Check-protected callable functions so Firebase Auth
+      // and associated account data are cleaned consistently. Admin SDK writes bypass these rules.
+      allow delete: if false;
     }
 
     match /gameDefaults_v2/{docId} {

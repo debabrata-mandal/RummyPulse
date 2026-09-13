@@ -32,12 +32,12 @@ val validateReleaseSigning by tasks.registering {
 
 android {
     namespace = "com.example.rummypulse"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.rummypulse"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 102
         versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

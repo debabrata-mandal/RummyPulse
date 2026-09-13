@@ -16,6 +16,10 @@ games, and produce monthly contribution reports from one Android app.
 ·
 [View all releases](https://github.com/debabrata-mandal/RummyPulse/releases)
 
+[Privacy Policy](https://debabrata-mandal.github.io/RummyPulse/privacy-policy.html)
+·
+[Account deletion](https://debabrata-mandal.github.io/RummyPulse/delete-account.html)
+
 </div>
 
 ## App preview

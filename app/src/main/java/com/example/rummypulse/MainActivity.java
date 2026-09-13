@@ -10,8 +10,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.text.Editable;
 import android.text.SpannableString;
 import android.text.Spanned;
+import android.text.TextWatcher;
 import android.text.style.ForegroundColorSpan;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -28,21 +30,35 @@ import com.bumptech.glide.request.RequestOptions;
 import com.example.rummypulse.utils.LanguagePreferenceManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.GoogleAuthProvider;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.PlayerLeaderboardRepository;
 import com.example.rummypulse.ui.home.GameItem;
+import com.example.rummypulse.service.AccountDeletionGateway;
+import com.example.rummypulse.service.FirebaseAccountDeletionService;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.AccountSignOut;
 import com.example.rummypulse.utils.SessionCacheCleaner;
+import com.example.rummypulse.utils.ModernToast;
 import com.example.rummypulse.utils.ModernUpdateChecker;
 import com.example.rummypulse.utils.VersionGate;
 
 import androidx.annotation.NonNull;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.lifecycle.Observer;
 import androidx.navigation.NavController;
 import androidx.navigation.NavOptions;
@@ -71,6 +87,15 @@ public class MainActivity extends AppCompatActivity {
     private boolean reviewNeedsAttention = false;
     private boolean initialAppUserSyncCompleted;
     private boolean hasStartedOnce;
+    private boolean accountDeletionInProgress;
+    private GoogleSignInClient accountDeletionGoogleClient;
+    private androidx.appcompat.app.AlertDialog accountDeletionProgressDialog;
+    private final AccountDeletionGateway accountDeletionGateway =
+            new FirebaseAccountDeletionService();
+    private final ActivityResultLauncher<Intent> accountDeletionReauthLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    result -> handleAccountDeletionReauthentication(result.getData()));
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,6 +120,9 @@ public class MainActivity extends AppCompatActivity {
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 if (user == null) {
+                    if (accountDeletionInProgress) {
+                        return;
+                    }
                     android.util.Log.d("MainActivity", "User signed out, redirecting to login");
                     SessionCacheCleaner.clearAll(MainActivity.this);
                     Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
@@ -401,9 +429,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void configureNavigationFooter() {
         TextView signOutFooter = findViewById(R.id.nav_footer_sign_out);
+        TextView deleteAccountFooter = findViewById(R.id.nav_footer_delete_account);
         TextView versionFooter = findViewById(R.id.nav_footer_version);
         if (signOutFooter != null) {
             signOutFooter.setOnClickListener(v -> signOut());
+        }
+        if (deleteAccountFooter != null) {
+            deleteAccountFooter.setOnClickListener(v -> showDeleteAccountConfirmation());
         }
         if (versionFooter != null) {
             versionFooter.setText(getString(R.string.nav_app_version, getAppVersionName()));
@@ -554,6 +586,229 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         });
+    }
+
+    private void showDeleteAccountConfirmation() {
+        if (accountDeletionInProgress) {
+            return;
+        }
+        View dialogView = getLayoutInflater().inflate(
+                R.layout.dialog_action_confirmation, null, false);
+        ImageView icon = dialogView.findViewById(R.id.image_action_dialog_icon);
+        TextView title = dialogView.findViewById(R.id.text_action_dialog_title);
+        TextView subtitle = dialogView.findViewById(R.id.text_action_dialog_subtitle);
+        TextView message = dialogView.findViewById(R.id.text_action_dialog_message);
+        com.google.android.material.card.MaterialCardView messageCard =
+                dialogView.findViewById(R.id.card_action_dialog_message);
+        MaterialButton cancel = dialogView.findViewById(R.id.btn_action_dialog_cancel);
+        MaterialButton confirm = dialogView.findViewById(R.id.btn_action_dialog_confirm);
+
+        int red = ContextCompat.getColor(this, R.color.error_red);
+        icon.setImageResource(R.drawable.ic_delete);
+        icon.setBackgroundResource(R.drawable.view_access_icon_rejected_background);
+        icon.setImageTintList(ColorStateList.valueOf(red));
+        title.setText(R.string.account_delete_title);
+        subtitle.setText(R.string.account_delete_subtitle);
+        message.setText(R.string.account_delete_message);
+        androidx.core.widget.TextViewCompat.setCompoundDrawableTintList(
+                message, ColorStateList.valueOf(red));
+        messageCard.setStrokeColor(red);
+        cancel.setText(R.string.account_delete_keep);
+        confirm.setText(R.string.account_delete_confirm);
+        confirm.setBackgroundTintList(ColorStateList.valueOf(red));
+
+        androidx.appcompat.app.AlertDialog dialog =
+                new androidx.appcompat.app.AlertDialog.Builder(this, R.style.DarkDialogTheme)
+                        .setView(dialogView)
+                        .setCancelable(true)
+                        .create();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        confirm.setOnClickListener(v -> {
+            dialog.dismiss();
+            beginAccountDeletionReauthentication();
+        });
+        dialog.show();
+    }
+
+    private void beginAccountDeletionReauthentication() {
+        FirebaseUser user = mAuth != null ? mAuth.getCurrentUser() : null;
+        if (user == null) {
+            ModernToast.error(this, getString(R.string.account_delete_reauthenticate_failed));
+            return;
+        }
+        accountDeletionInProgress = true;
+        GoogleSignInOptions options = new GoogleSignInOptions.Builder(
+                GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(R.string.default_web_client_id))
+                .requestEmail()
+                .build();
+        accountDeletionGoogleClient = GoogleSignIn.getClient(this, options);
+        accountDeletionGoogleClient.signOut().addOnCompleteListener(task -> {
+            try {
+                accountDeletionReauthLauncher.launch(
+                        accountDeletionGoogleClient.getSignInIntent());
+            } catch (ActivityNotFoundException exception) {
+                accountDeletionInProgress = false;
+                ModernToast.error(
+                        this, getString(R.string.account_delete_google_unavailable));
+            }
+        });
+    }
+
+    private void handleAccountDeletionReauthentication(Intent data) {
+        if (!accountDeletionInProgress) {
+            return;
+        }
+        try {
+            GoogleSignInAccount account = GoogleSignIn
+                    .getSignedInAccountFromIntent(data)
+                    .getResult(ApiException.class);
+            if (account == null || account.getIdToken() == null) {
+                throw new IllegalStateException("Google identity token was unavailable");
+            }
+            FirebaseUser user = mAuth.getCurrentUser();
+            if (user == null) {
+                throw new IllegalStateException("Firebase user was unavailable");
+            }
+            String googleDisplayName = account.getDisplayName();
+            String expectedFullName = googleDisplayName != null
+                    && !googleDisplayName.trim().isEmpty()
+                    ? googleDisplayName.trim()
+                    : user.getDisplayName();
+            AuthCredential credential = GoogleAuthProvider.getCredential(
+                    account.getIdToken(), null);
+            user.reauthenticate(credential)
+                    .addOnSuccessListener(unused ->
+                            showAccountNameConfirmation(expectedFullName))
+                    .addOnFailureListener(error -> failAccountDeletion(
+                            R.string.account_delete_reauthenticate_failed));
+        } catch (Exception exception) {
+            accountDeletionInProgress = false;
+            ModernToast.info(this, getString(R.string.account_delete_cancelled));
+        }
+    }
+
+    private void showAccountNameConfirmation(String expectedFullName) {
+        String verifiedName = expectedFullName == null ? "" : expectedFullName.trim();
+        if (verifiedName.isEmpty()) {
+            failAccountDeletion(R.string.account_delete_name_unavailable);
+            return;
+        }
+
+        View dialogView = getLayoutInflater().inflate(
+                R.layout.dialog_account_name_confirmation, null, false);
+        TextView expectedName = dialogView.findViewById(
+                R.id.text_account_delete_expected_name);
+        TextInputLayout nameLayout = dialogView.findViewById(
+                R.id.layout_account_delete_name);
+        TextInputEditText nameInput = dialogView.findViewById(
+                R.id.edit_account_delete_name);
+        MaterialButton cancel = dialogView.findViewById(
+                R.id.btn_account_delete_name_cancel);
+        MaterialButton confirm = dialogView.findViewById(
+                R.id.btn_account_delete_name_confirm);
+
+        expectedName.setText(getString(
+                R.string.account_delete_name_confirmation_expected, verifiedName));
+        confirm.setEnabled(false);
+
+        androidx.appcompat.app.AlertDialog dialog =
+                new androidx.appcompat.app.AlertDialog.Builder(this, R.style.DarkDialogTheme)
+                        .setView(dialogView)
+                        .setCancelable(false)
+                        .create();
+
+        nameInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence text, int start, int count, int after) {
+                // No-op.
+            }
+
+            @Override
+            public void onTextChanged(CharSequence text, int start, int before, int count) {
+                boolean matches = verifiedName.equals(text.toString().trim());
+                confirm.setEnabled(matches);
+                nameLayout.setError(text.length() > 0 && !matches
+                        ? getString(R.string.account_delete_name_mismatch)
+                        : null);
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                // No-op.
+            }
+        });
+        cancel.setOnClickListener(v -> {
+            accountDeletionInProgress = false;
+            dialog.dismiss();
+            ModernToast.info(this, getString(R.string.account_delete_cancelled));
+        });
+        confirm.setOnClickListener(v -> {
+            if (!verifiedName.equals(String.valueOf(nameInput.getText()).trim())) {
+                return;
+            }
+            confirm.setEnabled(false);
+            dialog.dismiss();
+            deleteReauthenticatedAccount();
+        });
+        dialog.show();
+        nameInput.requestFocus();
+    }
+
+    private void deleteReauthenticatedAccount() {
+        showAccountDeletionProgress();
+        accountDeletionGateway.deleteMyAccount(new AccountDeletionGateway.Callback() {
+            @Override
+            public void onSuccess() {
+                if (accountDeletionProgressDialog != null) {
+                    accountDeletionProgressDialog.dismiss();
+                }
+                if (accountDeletionGoogleClient != null) {
+                    accountDeletionGoogleClient.revokeAccess()
+                            .addOnCompleteListener(task -> finishDeletedAccountLocally());
+                } else {
+                    finishDeletedAccountLocally();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Exception exception) {
+                failAccountDeletion(R.string.account_delete_failed);
+            }
+        });
+    }
+
+    private void showAccountDeletionProgress() {
+        View progress = getLayoutInflater().inflate(
+                R.layout.dialog_account_deletion_progress, null, false);
+        accountDeletionProgressDialog =
+                new androidx.appcompat.app.AlertDialog.Builder(this, R.style.DarkDialogTheme)
+                        .setView(progress)
+                        .setCancelable(false)
+                        .create();
+        accountDeletionProgressDialog.show();
+    }
+
+    private void failAccountDeletion(int messageResource) {
+        if (accountDeletionProgressDialog != null) {
+            accountDeletionProgressDialog.dismiss();
+            accountDeletionProgressDialog = null;
+        }
+        accountDeletionInProgress = false;
+        ModernToast.error(this, getString(messageResource));
+    }
+
+    private void finishDeletedAccountLocally() {
+        if (mAuth != null) {
+            mAuth.signOut();
+        }
+        SessionCacheCleaner.clearAll(this);
+        ModernToast.success(this, getString(R.string.account_delete_success));
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.putExtra(LoginActivity.EXTRA_REQUIRE_LOGIN, true);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     /**
