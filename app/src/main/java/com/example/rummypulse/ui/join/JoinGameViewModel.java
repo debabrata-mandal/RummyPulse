@@ -554,7 +554,7 @@ public class JoinGameViewModel extends AndroidViewModel {
                 gamePin.setValue(gameAuth.getPin());
             }
         } catch (Exception e) {
-            System.out.println("Error extracting game auth metadata: " + e.getMessage());
+            System.out.println("Error extracting game authorization metadata");
         }
     }
 

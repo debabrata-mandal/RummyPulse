@@ -163,12 +163,12 @@ public final class AppUserRoleSession {
                 if (force) {
                     forceRefreshQueued = true;
                 }
-                Log.d(TAG, "Role refresh already in progress for " + uid);
+                Log.d(TAG, "Role refresh already in progress");
                 return;
             }
             if (!force && lastRefreshStartedAt > 0L
                     && elapsed >= 0 && elapsed < MIN_REFRESH_INTERVAL_MS) {
-                Log.d(TAG, "Skipping duplicate role refresh for " + uid);
+                Log.d(TAG, "Skipping duplicate role refresh");
                 return;
             }
 
@@ -208,7 +208,7 @@ public final class AppUserRoleSession {
                     } else {
                         DocumentSnapshot snapshot = task.getResult();
                         if (snapshot == null || !snapshot.exists()) {
-                            Log.w(TAG, "No appUser document found for " + uid);
+                            Log.w(TAG, "No appUser document found for authenticated user");
                             if (readCachedRole(uid) == null) {
                                 publishRole(Role.UNKNOWN);
                             }

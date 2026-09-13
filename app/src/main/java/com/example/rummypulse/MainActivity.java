@@ -116,8 +116,8 @@ public class MainActivity extends AppCompatActivity {
             // Check if this might be due to force stop
             if (authStateManager.shouldBeAuthenticated()) {
                 android.util.Log.w("MainActivity", "User should be authenticated but Firebase Auth shows null");
-                android.util.Log.w("MainActivity", "This might be due to force stop - expected user: " +
-                    authStateManager.getBackedUpUserEmail());
+                android.util.Log.w("MainActivity",
+                        "This might be due to force stop or an interrupted session");
 
                 // Show a toast to inform user about session restoration
                 com.example.rummypulse.utils.ModernToast.warning(this,
@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
             finish();
             return;
         } else {
-            android.util.Log.d("MainActivity", "User authenticated: " + currentUser.getEmail());
+            android.util.Log.d("MainActivity", "User authenticated");
             authStateManager.saveAuthState(currentUser);
             AppUserRoleSession.getInstance().startForCurrentUser(false);
             ensureAppUserDocument(currentUser);
@@ -343,7 +343,7 @@ public class MainActivity extends AppCompatActivity {
         repo.createOrUpdateUser(user, provider, new AppUserRepository.AppUserCallback() {
             @Override
             public void onSuccess(AppUser appUser) {
-                android.util.Log.d("MainActivity", "appUser document synced: " + appUser.getUserId());
+                android.util.Log.d("MainActivity", "appUser document synced");
                 initialAppUserSyncCompleted = true;
                 AppUserRoleSession.getInstance()
                         .applyVerifiedRole(appUser.getUserId(), appUser.getRole());

@@ -47,8 +47,7 @@ public class PlayerStatsRepository {
                 .document(user.getUid())
                 .addSnapshotListener((snapshot, error) -> {
                     if (error != null) {
-                        System.out.println(
-                                "PlayerStatsRepository: Failed to load stats: " + error.getMessage());
+                        System.out.println("PlayerStatsRepository: Failed to load stats");
                         return;
                     }
                     if (snapshot == null || !snapshot.exists()) {

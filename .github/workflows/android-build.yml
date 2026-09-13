@@ -67,6 +67,7 @@ jobs:
   build:
     name: Build Release APK
     needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
@@ -86,8 +87,19 @@ jobs:
       run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
 
     - name: Setup release keystore from secrets
+      env:
+        RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
       run: |
-        echo '${{ secrets.RELEASE_KEYSTORE_BASE64 }}' | base64 -d > app/release.keystore
+        if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
+          echo "::error::RELEASE_KEYSTORE_BASE64 is not configured."
+          exit 1
+        fi
+        umask 077
+        printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > app/release.keystore
+        if [ ! -s app/release.keystore ]; then
+          echo "::error::Decoded release keystore is empty."
+          exit 1
+        fi
 
     - name: Determine Version for Build
       id: build_version
@@ -162,16 +174,13 @@ jobs:
         # Verify the changes
         grep -E "(versionName|versionCode)" app/build.gradle.kts
 
-    # Groq: optional secrets GROQ_API_KEY / GROQ_MODEL_ID passed as env (same names as local Gradle builds).
     - name: Build release APK
       env:
-        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        GROQ_MODEL_ID: ${{ secrets.GROQ_MODEL_ID }}
-      run: |
-        if [ -z "$GROQ_API_KEY" ]; then
-          echo "GROQ_API_KEY secret not set — create-game name generation will be skipped in this APK."
-        fi
-        ./gradlew assembleRelease
+        RELEASE_STORE_FILE: app/release.keystore
+        RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+        RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+      run: ./gradlew assembleRelease
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4

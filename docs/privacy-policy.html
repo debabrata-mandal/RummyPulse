@@ -26,8 +26,8 @@
     <li><strong>Google Sign-In information:</strong> your name, email address, and profile photo (if available) from the Google account you select. Firebase Authentication assigns your account a Firebase user identifier (UID).</li>
     <li><strong>Account information:</strong> account creation and last-login timestamps, authentication provider, and application role.</li>
     <li><strong>RummyPulse data:</strong> player names or mappings, game participation, rounds, scores, game status, point values, settlements, reports, and related timestamps.</li>
-    <li><strong>App and device information:</strong> Firebase Analytics may automatically collect app interactions and information such as app version, device type, operating system, approximate region, and app-instance or similar identifiers. This information helps us understand app usage and maintain the service.</li>
-    <li><strong>Technical information:</strong> information necessary for authentication, synchronisation, application updates, troubleshooting, and maintaining app security. RummyPulse does not request access to Gmail, Google Drive, Google Contacts, or Calendar, and does not receive your Google password.</li>
+    <li><strong>Technical and security information:</strong> Firebase and Google services may process information such as IP address, app and Firebase identifiers, device and app metadata, authentication information, and App Check integrity information as necessary to authenticate users, synchronise data, operate backend functions, prevent abuse, and maintain security.</li>
+    <li>RummyPulse does not request access to Gmail, Google Drive, Google Contacts, or Calendar, and does not receive your Google password.</li>
   </ul>
 
   <h2>How we use information</h2>
@@ -40,8 +40,8 @@
   </ul>
 
   <h2>Services we use</h2>
-  <p>RummyPulse uses Google Firebase services, including Firebase Authentication, Cloud Firestore, Remote Config, and Firebase Analytics. These services process information on our behalf to provide sign-in, cloud storage, synchronisation, configuration, and usage measurement. Google and Firebase process this information under their applicable terms and privacy policies.</p>
-  <p>The app is currently distributed through GitHub Releases and may contact GitHub-hosted release resources when checking for or downloading updates. If the optional automatic game-name suggestion is enabled, RummyPulse sends a fixed, generic card-game naming prompt to Groq and receives a suggested name. The prompt does not intentionally include your account or game information.</p>
+  <p>RummyPulse uses Google Sign-In and Google Firebase services, including Firebase Authentication, Cloud Firestore, Remote Config, Cloud Functions, and App Check with Play Integrity. These services process information on our behalf to provide sign-in, cloud storage, synchronisation, configuration, backend functions, and protection against abuse. Google and Firebase process this information under their applicable terms and privacy policies.</p>
+  <p>The app is currently distributed through GitHub Releases and may contact GitHub-hosted release resources when checking for or downloading updates. If the optional automatic game-name suggestion is enabled, an authenticated Firebase function uses a one-way hash of your Firebase UID only to enforce per-user and service-wide request limits, then sends a fixed, generic card-game naming prompt to Groq and receives a suggested name. Groq does not receive your UID, account information, player information, game data, or user-entered text through this feature.</p>
 
   <h2>Sharing</h2>
   <p>We do not sell your personal information. Information is shared with Google and Firebase, and with GitHub or Groq for the limited functions described above, only as needed to operate RummyPulse. Some player and game information may be visible to other authorised RummyPulse users when it is needed for shared games, scoring, settlement, review, or reporting. We may also disclose information when required by law or when reasonably necessary to protect users, the app, or others.</p>

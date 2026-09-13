@@ -131,7 +131,7 @@ public class UserManagementFragment extends Fragment {
 
         userManagementViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
-                Log.e(TAG, "Error: " + error);
+                Log.e(TAG, "User management operation failed");
                 if (adapter.getItemCount() == 0) {
                     showError(error);
                 }
@@ -343,8 +343,7 @@ public class UserManagementFragment extends Fragment {
         confirm.setOnClickListener(v -> {
             UserRole targetRole = user.getRole() == UserRole.ADMIN_USER
                     ? UserRole.REGULAR_USER : UserRole.ADMIN_USER;
-            Log.d(TAG, "Changing role for user: " + user.getDisplayName()
-                    + " to " + targetRole.getDisplayName());
+            Log.d(TAG, "Changing user role to " + targetRole.getDisplayName());
             userManagementViewModel.updateUserRole(user.getUserId(), targetRole);
             dialog.dismiss();
         });
@@ -399,7 +398,7 @@ public class UserManagementFragment extends Fragment {
                         .create();
         cancel.setOnClickListener(v -> dialog.dismiss());
         confirm.setOnClickListener(v -> {
-            Log.d(TAG, "Deleting user: " + user.getDisplayName());
+            Log.d(TAG, "Deleting user account record");
             userManagementViewModel.deleteUser(user.getUserId());
             dialog.dismiss();
         });
@@ -457,7 +456,7 @@ public class UserManagementFragment extends Fragment {
         cancel.setOnClickListener(v -> dialog.dismiss());
         confirm.setOnClickListener(v -> {
             pendingHiddenToast = !hidden;
-            Log.d(TAG, (pendingHiddenToast ? "Hiding" : "Unhiding") + " user: " + user.getDisplayName());
+            Log.d(TAG, pendingHiddenToast ? "Hiding user" : "Unhiding user");
             userManagementViewModel.updateUserHidden(user.getUserId(), pendingHiddenToast);
             dialog.dismiss();
         });

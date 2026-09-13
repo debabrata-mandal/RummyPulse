@@ -45,7 +45,6 @@ public class ModernToast {
         
         // Debug logging
         android.util.Log.d("ModernToast", "=== TOAST REQUEST ===");
-        android.util.Log.d("ModernToast", "Message: " + message);
         android.util.Log.d("ModernToast", "Type: " + type);
         android.util.Log.d("ModernToast", "Context: " + context.getClass().getSimpleName());
         android.util.Log.d("ModernToast", "Android Version: " + Build.VERSION.SDK_INT);
@@ -213,7 +212,7 @@ public class ModernToast {
             toast.show();
             
             // Also log for debugging
-            android.util.Log.d("ModernToast", "Showing toast: " + styledMessage);
+            android.util.Log.d("ModernToast", "Showing toast");
             
         } catch (Exception e) {
             // Last resort - basic toast

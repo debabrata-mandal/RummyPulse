@@ -555,7 +555,7 @@ public class JoinGameActivity extends AppCompatActivity {
         String scoreKey = "player_" + playerIndex + "_round_" + round;
         Integer lastAnnouncedScore = lastAnnouncedScores.get(scoreKey);
         if (lastAnnouncedScore != null && lastAnnouncedScore == score) {
-            System.out.println("TTS: Skipping duplicate announcement for " + playerName + " round " + round + " score " + score);
+            System.out.println("TTS: Skipping duplicate announcement");
             return;
         }
         
@@ -603,7 +603,7 @@ public class JoinGameActivity extends AppCompatActivity {
         announcementRunnables.put(key, announcementRunnable);
         ttsHandler.postDelayed(announcementRunnable, debounceDelay);
         
-        System.out.println("TTS: Scheduled announcement for " + playerName + " round " + round + " with " + debounceDelay + "ms delay");
+        System.out.println("TTS: Scheduled score announcement with " + debounceDelay + "ms delay");
     }
     
     /**
@@ -646,7 +646,7 @@ public class JoinGameActivity extends AppCompatActivity {
             
             android.os.Bundle params = new android.os.Bundle();
             textToSpeech.speak(announcement, android.speech.tts.TextToSpeech.QUEUE_FLUSH, params, utteranceId);
-            System.out.println("TTS Speaking: " + announcement);
+            System.out.println("TTS: Speaking announcement");
         });
     }
     
@@ -834,7 +834,7 @@ public class JoinGameActivity extends AppCompatActivity {
             
             // Queue the announcement (don't speak directly)
             final String announcementText = announcement.toString();
-            System.out.println("TTS Game Completion: " + announcementText);
+            System.out.println("TTS: Speaking game completion announcement");
             
             queueAnnouncement(() -> {
                 String utteranceId = "game_completion_" + (utteranceIdCounter++);
@@ -913,7 +913,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 try {
                     connectivityManager.unregisterNetworkCallback(networkCallback);
                 } catch (Exception e) {
-                    System.err.println("Error unregistering network callback: " + e.getMessage());
+                    System.err.println("Error unregistering network callback");
                 }
             }
         }
@@ -1487,7 +1487,7 @@ public class JoinGameActivity extends AppCompatActivity {
         String savedPin = getSavedPin(gameId);
         if (savedPin != null) {
             // User had edit access before, try to restore it
-            System.out.println("Restoring edit access for game: " + gameId);
+            System.out.println("Restoring edit access for game");
             viewModel.joinGameWithCachedEditSession(
                     gameId, savedPin, getSavedPinGeneration(gameId));
         } else {
@@ -5190,7 +5190,7 @@ public class JoinGameActivity extends AppCompatActivity {
             }
             
         } catch (Exception e) {
-            System.out.println("Error updating settlement explanation: " + e.getMessage());
+            System.out.println("Error updating settlement explanation");
         }
     }
 
@@ -5265,7 +5265,7 @@ public class JoinGameActivity extends AppCompatActivity {
                     .start();
             }
         } catch (Exception e) {
-            System.out.println("Error applying blur effect: " + e.getMessage());
+            System.out.println("Error applying blur effect");
         }
     }
     
@@ -5614,7 +5614,6 @@ public class JoinGameActivity extends AppCompatActivity {
             Bitmap bitmap = barcodeEncoder.encodeBitmap(gameId, BarcodeFormat.QR_CODE, 300, 300);
             qrCodeImage.setImageBitmap(bitmap);
         } catch (WriterException e) {
-            e.printStackTrace();
             ModernToast.error(this, "❌ Failed to generate QR code");
             return;
         }
@@ -5686,11 +5685,11 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Don't create duplicate listeners
         if (gameDataListener != null) {
-            System.out.println("Real-time listener already exists for game: " + currentGameId);
+            System.out.println("Real-time listener already exists for game");
             return;
         }
         
-        System.out.println("Setting up real-time listener for game: " + currentGameId);
+        System.out.println("Setting up real-time game listener");
         
         // Set up Firestore listener with metadata changes to track cache vs server data
         com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
@@ -5698,7 +5697,7 @@ public class JoinGameActivity extends AppCompatActivity {
             .document(currentGameId)
             .addSnapshotListener(com.google.firebase.firestore.MetadataChanges.INCLUDE, (documentSnapshot, error) -> {
                 if (error != null) {
-                    System.err.println("Error listening to game data: " + error.getMessage());
+                    System.err.println("Error listening to game data");
                     return;
                 }
                 
@@ -5707,8 +5706,8 @@ public class JoinGameActivity extends AppCompatActivity {
                         // Check if data is from cache or server
                         boolean hasPendingWrites = documentSnapshot.getMetadata().hasPendingWrites();
                         String dataSource = documentSnapshot.getMetadata().isFromCache() ? "LOCAL CACHE" : "SERVER";
-                        System.out.println("Real-time update received for game: " + currentGameId + " [Source: " + dataSource + "]");
-                        System.out.println("Raw document data keys: " + documentSnapshot.getData().keySet());
+                        System.out.println("Real-time game update received [Source: " + dataSource + "]");
+                        System.out.println("Game document data received");
                         if (hasPendingWrites) {
                             System.out.println("Skipping local pending write snapshot - waiting for committed data...");
                             return;
@@ -5833,11 +5832,10 @@ public class JoinGameActivity extends AppCompatActivity {
                             System.err.println("Data field is not a Map or is null");
                         }
                     } catch (Exception e) {
-                        System.err.println("Error parsing game data: " + e.getMessage());
-                        e.printStackTrace();
+                        System.err.println("Error parsing game data");
                     }
                 } else {
-                    System.out.println("Game document does not exist: " + currentGameId);
+                    System.out.println("Game document does not exist");
                 }
             });
     }
@@ -5995,7 +5993,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 Boolean editAccess = viewModel.getEditAccessGranted().getValue();
                 if (editAccess == null || !editAccess) {
                     // View mode - reconnect listener
-                    System.out.println("Reconnecting Firebase listener for game: " + currentGameId + " (VIEW MODE)");
+                    System.out.println("Reconnecting Firebase game listener (VIEW MODE)");
                     
                     // Force fetch fresh data from server first
                     fetchFreshGameData();
@@ -6355,15 +6353,14 @@ public class JoinGameActivity extends AppCompatActivity {
                             });
                         }
                     } catch (Exception e) {
-                        System.err.println("Error parsing fresh game data: " + e.getMessage());
-                        e.printStackTrace();
+                        System.err.println("Error parsing fresh game data");
                     }
                 } else {
                     System.err.println("Fresh data fetch: document does not exist");
                 }
             })
             .addOnFailureListener(e -> {
-                System.err.println("Failed to fetch fresh data from server: " + e.getMessage());
+                System.err.println("Failed to fetch fresh data from server");
             });
     }
     
@@ -6425,7 +6422,7 @@ public class JoinGameActivity extends AppCompatActivity {
             GameDataSchema.normalize(gameData);
             return gameData;
         } catch (Exception e) {
-            System.err.println("Error in parseGameDataFromMap: " + e.getMessage());
+            System.err.println("Error parsing game data map");
             return null;
         }
     }

@@ -4,234 +4,132 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import com.example.rummypulse.BuildConfig;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.functions.FirebaseFunctions;
+import com.google.firebase.functions.FirebaseFunctionsException;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.Map;
 
 /**
- * Calls <a href="https://console.groq.com/">Groq</a> OpenAI-compatible {@code /chat/completions} API.
- * <p>
- * Not an {@link android.app.Service}. At <strong>build time</strong>, Gradle reads {@code GROQ_API_KEY} and
- * {@code GROQ_MODEL_ID} at Gradle build time into {@link com.example.rummypulse.BuildConfig} (see README:
- * env, Gradle properties, or gitignored {@code local.properties}).
- * Groq is often usable where other providers are region- or org-blocked (e.g. many India setups).
+ * Requests an AI-generated game name from an authenticated Firebase callable function.
+ * The Groq credential and prompt live only in the backend and are never packaged in the APK.
  */
 public final class GroqGameNameService {
 
     private static final String TAG = "GroqGameNameService";
+    private static final String FUNCTIONS_REGION = "asia-south1";
+    private static final String FUNCTION_NAME = "suggestGameName";
+    private static final int MAX_NAME_ATTEMPTS = 3;
+    private static final long RETRY_DELAY_MS = 400L;
 
-    private static final String API_URL = "https://api.groq.com/openai/v1/chat/completions";
-
-    private static final Executor IO = Executors.newCachedThreadPool();
+    private static final FirebaseFunctions FUNCTIONS =
+            FirebaseFunctions.getInstance(FUNCTIONS_REGION);
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
-
-    private static final String PROMPT =
-            "Generate one short, catchy English name for a rummy / card game app. "
-                    + "One or two words, title case, no numbers, no punctuation except spaces. "
-                    + "Reply with only that name, nothing else.";
 
     public interface Callback {
         void onSuccess(String name);
 
-        void onError(String message);
+        void onError(String errorCode);
     }
 
-    /**
-     * Delivers a trimmed name or {@code ""} after up to {@link #MAX_NAME_ATTEMPTS} tries (initial + 2 retries).
-     * Runs on a background thread; callback is always invoked on the main thread.
-     */
+    /** Receives a trimmed name, or an empty string when generation is unavailable. */
     public interface NameResultCallback {
         void onComplete(String displayName);
     }
-
-    private static final int MAX_NAME_ATTEMPTS = 3;
-
-    private static final long RETRY_DELAY_MS = 400L;
 
     private GroqGameNameService() {
     }
 
     public static boolean isConfigured() {
-        return BuildConfig.GROQ_API_KEY != null && !BuildConfig.GROQ_API_KEY.isEmpty();
+        return FirebaseAuth.getInstance().getCurrentUser() != null;
     }
 
-    /**
-     * Up to three attempts with short delay between failures. {@link NameResultCallback#onComplete} receives
-     * a non-null string: trimmed model output, or {@code ""} if Groq is not configured, misconfigured, or all attempts fail.
-     */
     public static void suggestNameWithRetries(NameResultCallback callback) {
         if (!isConfigured()) {
-            Log.w(TAG, "Game name generation skipped: BuildConfig.GROQ_API_KEY is empty (add GROQ_API_KEY to local.properties or Gradle env; GitHub secrets only on CI).");
+            Log.w(TAG, "Game name generation skipped because no user is signed in");
             MAIN.post(() -> callback.onComplete(""));
             return;
         }
-        String modelId = BuildConfig.GROQ_MODEL_ID;
-        if (modelId == null || modelId.isEmpty()) {
-            Log.e(TAG, "Groq model id is not configured.");
-            MAIN.post(() -> callback.onComplete(""));
-            return;
-        }
+        requestWithRetries(1, callback);
+    }
 
-        IO.execute(() -> {
-            String apiKey = BuildConfig.GROQ_API_KEY;
-            for (int attempt = 1; attempt <= MAX_NAME_ATTEMPTS; attempt++) {
-                if (attempt > 1) {
-                    try {
-                        Thread.sleep(RETRY_DELAY_MS);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        MAIN.post(() -> callback.onComplete(""));
+    private static void requestWithRetries(int attempt, NameResultCallback callback) {
+        requestName(
+                callback::onComplete,
+                errorCode -> {
+                    Log.w(TAG, "Game name request attempt " + attempt + "/"
+                            + MAX_NAME_ATTEMPTS + " failed: " + errorCode);
+                    if (attempt >= MAX_NAME_ATTEMPTS || !isRetryable(errorCode)) {
+                        callback.onComplete("");
                         return;
                     }
-                }
-                try {
-                    String name = requestNameSync(modelId, apiKey);
-                    if (name != null && !name.trim().isEmpty()) {
-                        String trimmed = name.trim();
-                        MAIN.post(() -> callback.onComplete(trimmed));
-                        return;
-                    }
-                } catch (Exception e) {
-                    String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-                    Log.w(TAG, "Groq name attempt " + attempt + "/" + MAX_NAME_ATTEMPTS + " failed: " + msg);
-                }
-            }
-            Log.w(TAG, "Groq name generation exhausted after " + MAX_NAME_ATTEMPTS + " attempts.");
-            MAIN.post(() -> callback.onComplete(""));
-        });
+                    MAIN.postDelayed(
+                            () -> requestWithRetries(attempt + 1, callback),
+                            RETRY_DELAY_MS);
+                });
     }
 
     public static void suggestName(Callback callback) {
         if (!isConfigured()) {
-            Log.w(TAG, "Game name generation skipped: BuildConfig.GROQ_API_KEY is empty (add GROQ_API_KEY to local.properties or Gradle env; GitHub secrets only on CI).");
-            MAIN.post(() -> callback.onError(
-                    "No Groq key in this APK. GitHub secrets only apply to CI-built APKs. "
-                            + "Easiest: add GROQ_API_KEY=... to project local.properties (same folder as sdk.dir), "
-                            + "then Sync/Rebuild. Or use ~/.gradle/gradle.properties or GROQ_API_KEY env var."));
+            MAIN.post(() -> callback.onError("unauthenticated"));
             return;
         }
-        String modelId = BuildConfig.GROQ_MODEL_ID;
-        if (modelId == null || modelId.isEmpty()) {
-            MAIN.post(() -> callback.onError("Groq model id is not configured."));
-            return;
-        }
-
-        IO.execute(() -> {
-            try {
-                String name = requestNameSync(modelId, BuildConfig.GROQ_API_KEY);
-                MAIN.post(() -> callback.onSuccess(name));
-            } catch (Exception e) {
-                String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-                Log.e(TAG, "Groq request failed: " + msg);
-                MAIN.post(() -> callback.onError(msg));
-            }
-        });
+        requestName(callback::onSuccess, callback::onError);
     }
 
-    private static String requestNameSync(String modelId, String apiKey) throws Exception {
-        HttpURLConnection conn = (HttpURLConnection) URI.create(API_URL).toURL().openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-        conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-        conn.setDoOutput(true);
-        conn.setConnectTimeout(30_000);
-        conn.setReadTimeout(60_000);
-
-        JSONObject userMessage = new JSONObject();
-        userMessage.put("role", "user");
-        userMessage.put("content", PROMPT);
-
-        JSONObject body = createRequestBody(modelId, userMessage);
-
-        byte[] bodyBytes = body.toString().getBytes(StandardCharsets.UTF_8);
-        conn.setFixedLengthStreamingMode(bodyBytes.length);
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(bodyBytes);
-        }
-
-        int code = conn.getResponseCode();
-        String response = readStream(code >= 400 ? conn.getErrorStream() : conn.getInputStream());
-        conn.disconnect();
-
-        if (code < 200 || code >= 300) {
-            throw new IOException(parseErrorMessage(response, code));
-        }
-
-        return parseNameFromChatResponse(response);
+    private static void requestName(SuccessCallback success, ErrorCallback error) {
+        FUNCTIONS.getHttpsCallable(FUNCTION_NAME)
+                .call()
+                .addOnSuccessListener(result -> {
+                    try {
+                        success.onSuccess(extractName(result.getData()));
+                    } catch (Exception exception) {
+                        Log.w(TAG, "Game name function returned an invalid response");
+                        error.onError("invalid-response");
+                    }
+                })
+                .addOnFailureListener(exception -> error.onError(errorCode(exception)));
     }
 
-    static JSONObject createRequestBody(String modelId, JSONObject userMessage) throws Exception {
-        JSONObject body = new JSONObject();
-        body.put("model", modelId);
-        body.put("messages", new JSONArray().put(userMessage));
-        body.put("temperature", 0.6);
-        body.put("max_completion_tokens", 128);
-        body.put("reasoning_effort", "low");
-        body.put("include_reasoning", false);
-        return body;
+    static String extractName(Object data) throws IOException {
+        if (!(data instanceof Map)) {
+            throw new IOException("Response was not an object");
+        }
+        Object value = ((Map<?, ?>) data).get("name");
+        if (!(value instanceof String)) {
+            throw new IOException("Response did not contain a name");
+        }
+        String name = ((String) value).trim();
+        if (name.length() < 3 || name.length() > 32
+                || !name.matches("[A-Za-z]+(?: [A-Za-z]+)?")) {
+            throw new IOException("Response name was invalid");
+        }
+        return name;
     }
 
-    private static String parseErrorMessage(String json, int code) {
-        try {
-            JSONObject root = new JSONObject(json);
-            if (root.has("error")) {
-                Object errObj = root.get("error");
-                if (errObj instanceof JSONObject) {
-                    JSONObject err = (JSONObject) errObj;
-                    return "HTTP " + code + ": " + err.optString("message", json);
-                }
-                return "HTTP " + code + ": " + errObj.toString();
-            }
-        } catch (Exception ignored) {
+    private static String errorCode(Exception exception) {
+        if (exception instanceof FirebaseFunctionsException) {
+            FirebaseFunctionsException functionsException =
+                    (FirebaseFunctionsException) exception;
+            return functionsException.getCode().name().toLowerCase();
         }
-        return "HTTP " + code + ": " + json;
+        return "unavailable";
     }
 
-    private static String parseNameFromChatResponse(String json) throws Exception {
-        JSONObject root = new JSONObject(json);
-        JSONArray choices = root.optJSONArray("choices");
-        if (choices == null || choices.length() == 0) {
-            throw new IOException("No choices in response.");
-        }
-        JSONObject message = choices.getJSONObject(0).optJSONObject("message");
-        if (message == null) {
-            throw new IOException("No message in response.");
-        }
-        String text = message.optString("content", "").trim();
-        if (text.isEmpty()) {
-            throw new IOException("Empty model text.");
-        }
-        int newline = text.indexOf('\n');
-        if (newline >= 0) {
-            text = text.substring(0, newline).trim();
-        }
-        return text;
+    private static boolean isRetryable(String errorCode) {
+        return "aborted".equals(errorCode)
+                || "deadline_exceeded".equals(errorCode)
+                || "internal".equals(errorCode)
+                || "unavailable".equals(errorCode)
+                || "unknown".equals(errorCode);
     }
 
-    private static String readStream(InputStream stream) throws IOException {
-        if (stream == null) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-        }
-        return sb.toString();
+    private interface SuccessCallback {
+        void onSuccess(String name);
+    }
+
+    private interface ErrorCallback {
+        void onError(String errorCode);
     }
 }

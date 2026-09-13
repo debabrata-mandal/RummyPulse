@@ -154,7 +154,7 @@ public class GameRepository {
 
         gamesListener = query.addSnapshotListener((querySnapshot, error) -> {
                     if (error != null) {
-                        System.out.println("GameRepository: Error listening to games collection: " + error.getMessage());
+                        System.out.println("GameRepository: Error listening to games collection");
                         if (scopedToMyGames) {
                             // Most likely the composite index is still building. Fall back to the
                             // unfiltered listener so the dashboard is never empty.
@@ -228,11 +228,11 @@ public class GameRepository {
         gamesQuery.get(Source.SERVER)
                 .addOnSuccessListener(this::applyGamesQuerySnapshotForReview)
                 .addOnFailureListener(error -> {
-                    System.out.println("GameRepository: Server games fetch failed, falling back to default: " + error.getMessage());
+                    System.out.println("GameRepository: Server games fetch failed; using fallback");
                     gamesQuery.get()
                             .addOnSuccessListener(this::applyGamesQuerySnapshotForReview)
                             .addOnFailureListener(e2 -> {
-                                System.out.println("GameRepository: Error fetching games collection: " + e2.getMessage());
+                                System.out.println("GameRepository: Error fetching games collection");
                                 errorLiveData.setValue("Failed to load games: " + e2.getMessage());
                             });
                 });
@@ -360,7 +360,7 @@ public class GameRepository {
                 gameItemsMap.remove(entry.getKey());
                 latestDashboardVersions.remove(entry.getKey());
                 invalidateDashboardUpdates(entry.getKey());
-                System.out.println("Removed listener and data for gameData: " + entry.getKey());
+                System.out.println("Removed listener and cached game data");
             }
         }
 
@@ -515,8 +515,7 @@ public class GameRepository {
                             .addOnSuccessListener(snapshot ->
                                     applyGameDataRefreshSnapshot(gameId, snapshot))
                             .addOnFailureListener(e2 ->
-                                    System.out.println("Dashboard row refresh failed for "
-                                            + gameId + ": " + e2.getMessage()));
+                                    System.out.println("Dashboard row refresh failed"));
                 });
     }
 
@@ -534,7 +533,7 @@ public class GameRepository {
         long updateToken = beginDashboardRemoteUpdate(
                 gameId, wrapper.getData(), wrapper.getLastUpdated(), snapshot);
         if (updateToken < 0) {
-            System.out.println("Skipping stale dashboard server refresh for " + gameId);
+            System.out.println("Skipping stale dashboard server refresh");
             return;
         }
         upgradeDashboardItemFromGameData(
@@ -836,8 +835,7 @@ public class GameRepository {
                 .document(gameId)
                 .update(summary)
                 .addOnFailureListener(e ->
-                        System.out.println("Failed to sync dashboard summary for " + gameId + ": "
-                                + e.getMessage()));
+                        System.out.println("Failed to sync dashboard summary"));
     }
 
     /**
@@ -918,16 +916,16 @@ public class GameRepository {
     }
 
     private void fetchGameData(String gameId) {
-        System.out.println("Fetching game data for: " + gameId);
+        System.out.println("Fetching game data");
         com.google.firebase.firestore.DocumentReference dataRef = db.collection(FirestoreCollections.GAME_DATA).document(gameId);
         dataRef.get(Source.SERVER)
                 .addOnSuccessListener(snapshot -> onGameDataSnapshotForReviewFetch(gameId, snapshot))
                 .addOnFailureListener(error -> {
-                    System.out.println("GameData server fetch failed for " + gameId + ", fallback: " + error.getMessage());
+                    System.out.println("Game data server fetch failed; using fallback");
                     dataRef.get()
                             .addOnSuccessListener(snapshot -> onGameDataSnapshotForReviewFetch(gameId, snapshot))
                             .addOnFailureListener(error2 ->
-                                    System.out.println("Error fetching gameData for " + gameId + ": " + error2.getMessage()));
+                                    System.out.println("Error fetching game data"));
                 });
     }
 
@@ -936,7 +934,7 @@ public class GameRepository {
             return;
         }
         if (documentSnapshot == null || !documentSnapshot.exists()) {
-            System.out.println("GameData document doesn't exist for " + gameId);
+            System.out.println("Game data document does not exist");
             removeStaleGameRowForReview(gameId);
             return;
         }
@@ -949,8 +947,7 @@ public class GameRepository {
             GameData gameData = gameDataWrapper.getData();
             attachReviewGameAuthFetch(gameId, gameDataWrapper, gameData);
         } catch (Exception e) {
-            System.out.println("Error deserializing game data for " + gameId + ": " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("Error deserializing game data");
         }
     }
 
@@ -961,7 +958,7 @@ public class GameRepository {
                 .addOnFailureListener(e -> authRef.get()
                         .addOnSuccessListener(authSnapshot -> onAuthSnapshotForReviewFetch(gameId, gameDataWrapper, gameData, authSnapshot))
                         .addOnFailureListener(e2 ->
-                                System.out.println("Error fetching games auth for " + gameId + ": " + e2.getMessage())));
+                                System.out.println("Error fetching game authorization")));
     }
 
     private void onAuthSnapshotForReviewFetch(String gameId, GameDataWrapper gameDataWrapper, GameData gameData,
@@ -1024,17 +1021,17 @@ public class GameRepository {
     private void setupGameDataListener(String gameId) {
         // If listener already exists, don't create duplicate
         if (gameDataListeners.containsKey(gameId)) {
-            System.out.println("Listener already exists for gameData: " + gameId);
+            System.out.println("Game data listener already exists");
             return;
         }
         
-        System.out.println("Setting up real-time listener for gameData: " + gameId);
+        System.out.println("Setting up real-time game data listener");
         
         com.google.firebase.firestore.ListenerRegistration listener = db.collection(FirestoreCollections.GAME_DATA)
                 .document(gameId)
                 .addSnapshotListener((documentSnapshot, error) -> {
                     if (error != null) {
-                        System.out.println("Error listening to gameData for " + gameId + ": " + error.getMessage());
+                        System.out.println("Error listening to game data");
                         db.collection(FirestoreCollections.GAMES)
                                 .document(gameId)
                                 .get()
@@ -1057,7 +1054,7 @@ public class GameRepository {
                                         gameId, gameData, gameDataWrapper.getLastUpdated(),
                                         documentSnapshot);
                                 if (updateToken < 0) {
-                                    System.out.println("Skipping stale dashboard listener snapshot for " + gameId);
+                                    System.out.println("Skipping stale dashboard listener snapshot");
                                     return;
                                 }
                                 // Also get the auth data for PIN
@@ -1135,11 +1132,10 @@ public class GameRepository {
                                         });
                             }
                         } catch (Exception e) {
-                            System.out.println("Error deserializing game data for " + gameId + ": " + e.getMessage());
-                            e.printStackTrace();
+                            System.out.println("Error deserializing game data");
                         }
                     } else {
-                        System.out.println("GameData document doesn't exist yet for " + gameId);
+                        System.out.println("Game data document does not exist yet");
                     }
                 });
         
@@ -1409,13 +1405,12 @@ public class GameRepository {
         
         // Check if this is a new game we haven't seen before
         if (!seenGameIds.contains(game.getGameId())) {
-            android.util.Log.d("GameRepository", "New game detected in repository: " + game.getGameId() + 
-                " created by: " + game.getCreatorName() + " (ID: " + game.getCreatorUserId() + ")");
+            android.util.Log.d("GameRepository", "New game detected in repository");
             
             // Mark as seen
             seenGameIds.add(game.getGameId());
             
-            android.util.Log.d("GameRepository", "New game detected: " + game.getGameId());
+            android.util.Log.d("GameRepository", "New game marked as seen");
         }
     }
     
@@ -2031,7 +2026,7 @@ public class GameRepository {
         approvedGamesListener = db.collection(FirestoreCollections.APPROVED_GAMES)
                 .addSnapshotListener((querySnapshot, error) -> {
                     if (error != null) {
-                        System.out.println("GameRepository: Error listening to approved games: " + error.getMessage());
+                        System.out.println("GameRepository: Error listening to approved games");
                         errorLiveData.setValue("Failed to load approved games: " + error.getMessage());
                         totalApprovedGstLiveData.setValue(0.0);
                         approvedGamesCountLiveData.setValue(0);
@@ -2049,12 +2044,12 @@ public class GameRepository {
                                     approvedCount++;
                                 }
                             } catch (Exception e) {
-                                System.out.println("Error parsing approved game: " + e.getMessage());
+                                System.out.println("Error parsing approved game");
                             }
                         }
                         totalApprovedGstLiveData.setValue(totalGst);
                         approvedGamesCountLiveData.setValue(approvedCount);
-                        System.out.println("Total approved GST amount: ₹" + String.format(Locale.getDefault(), "%.0f", totalGst));
+                        System.out.println("Calculated total approved contribution amount");
                         System.out.println("Total approved games count: " + approvedCount);
                     }
                 });
@@ -2081,17 +2076,17 @@ public class GameRepository {
                                     approvedCount++;
                                 }
                             } catch (Exception e) {
-                                System.out.println("Error parsing approved game: " + e.getMessage());
+                                System.out.println("Error parsing approved game");
                             }
                         }
                         totalApprovedGstLiveData.setValue(totalGst);
                         approvedGamesCountLiveData.setValue(approvedCount);
-                        System.out.println("Total approved GST amount: ₹" + String.format(Locale.getDefault(), "%.0f", totalGst));
+                        System.out.println("Calculated total approved contribution amount");
                         System.out.println("Total approved games count: " + approvedCount);
                     }
                 })
                 .addOnFailureListener(error -> {
-                    System.out.println("GameRepository: Error fetching approved games: " + error.getMessage());
+                    System.out.println("GameRepository: Error fetching approved games");
                     errorLiveData.setValue("Failed to load approved games: " + error.getMessage());
                     totalApprovedGstLiveData.setValue(0.0);
                     approvedGamesCountLiveData.setValue(0);
@@ -2113,7 +2108,7 @@ public class GameRepository {
                                 tagged.add(new Pair<>(document.getId(), month.toMonthlyPointValueReport()));
                             }
                         } catch (Exception e) {
-                            System.out.println("Error parsing approvedGamesReport doc: " + e.getMessage());
+                            System.out.println("Error parsing approved-games report document");
                         }
                     }
                     tagged.sort((a, b) -> b.first.compareTo(a.first));
@@ -2155,7 +2150,7 @@ public class GameRepository {
                                 monthGames.add(g);
                             }
                         } catch (Exception e) {
-                            System.out.println("Error parsing approved game: " + e.getMessage());
+                            System.out.println("Error parsing approved game");
                         }
                     }
                     MonthlyPointValueReport report = ReportAggregator.buildMonthlyPointValueReport(yyyyMm, monthGames);
@@ -2209,7 +2204,7 @@ public class GameRepository {
                                 all.add(g);
                             }
                         } catch (Exception e) {
-                            System.out.println("Error parsing approved game: " + e.getMessage());
+                            System.out.println("Error parsing approved game");
                         }
                     }
                     Map<String, List<ApprovedGameData>> byMonth = new HashMap<>();

@@ -81,7 +81,7 @@ public final class PlayerStatsRecorder {
             Collection<String> detachedUserIds) {
         return recordInternal(db, gameId, gameData, detachedUserIds).continueWith(task -> {
             if (!task.isSuccessful()) {
-                Log.w(TAG, "Could not record stats for game " + gameId, task.getException());
+                Log.w(TAG, "Could not record game stats", task.getException());
             }
             return null;
         });

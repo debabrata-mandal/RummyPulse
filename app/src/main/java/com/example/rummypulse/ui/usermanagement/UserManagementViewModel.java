@@ -218,7 +218,7 @@ public class UserManagementViewModel extends ViewModel {
                 }
                 loading.setValue(false);
                 roleUpdateSuccess.setValue(true);
-                Log.d(TAG, "Applied role update locally for " + userId);
+                Log.d(TAG, "Applied role update locally");
             }
 
             @Override
@@ -246,7 +246,7 @@ public class UserManagementViewModel extends ViewModel {
                 users.setValue(updatedList);
                 loading.setValue(false);
                 deleteSuccess.setValue(true);
-                Log.d(TAG, "Removed deleted user locally: " + userId);
+                Log.d(TAG, "Removed deleted user locally");
             }
 
             @Override
@@ -284,7 +284,7 @@ public class UserManagementViewModel extends ViewModel {
                 }
                 loading.setValue(false);
                 hiddenUpdateSuccess.setValue(true);
-                Log.d(TAG, "Applied hidden flag locally for " + userId + " hidden=" + hidden);
+                Log.d(TAG, "Applied hidden flag locally: hidden=" + hidden);
             }
 
             @Override

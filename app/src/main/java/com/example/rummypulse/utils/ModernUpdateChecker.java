@@ -281,7 +281,7 @@ public class ModernUpdateChecker {
         } catch (java.net.SocketTimeoutException e) {
             Log.e(TAG, "Connection timeout while checking for updates", e);
         } catch (Exception e) {
-            Log.e(TAG, "Error checking for updates: " + e.getMessage(), e);
+            Log.e(TAG, "Error checking for updates", e);
         }
         
         return null;
@@ -664,6 +664,13 @@ public class ModernUpdateChecker {
      */
     private void startApkDownload(String downloadUrl) {
         try {
+            if (!isSecureHttpsUrl(downloadUrl)) {
+                Log.w(TAG, "Rejected non-HTTPS update download URL");
+                showDownloadError(
+                        appContext.getString(R.string.update_download_failed_subtitle), false);
+                return;
+            }
+
             if (useDownloadUi()) {
                 startApkDownloadStreaming(downloadUrl);
                 return;
@@ -743,6 +750,14 @@ public class ModernUpdateChecker {
             Log.e(TAG, "Error starting download", e);
             showDownloadError("Failed to start download: " + e.getMessage(), true);
         }
+    }
+
+    private static boolean isSecureHttpsUrl(String url) {
+        if (url == null) {
+            return false;
+        }
+        Uri uri = Uri.parse(url.trim());
+        return "https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null;
     }
 
     private static int readDownloadStatus(Cursor cursor) {
@@ -1205,7 +1220,7 @@ public class ModernUpdateChecker {
             }
 
             if (apkUri == null) {
-                Log.e(TAG, "Could not resolve install URI for: " + localUri);
+                Log.e(TAG, "Could not resolve install URI");
                 if (useDownloadUi()) {
                     postToUi(() -> downloadUiCallbacks.onError(
                         "Could not open the downloaded APK. Try opening the download page.", true));
@@ -1311,7 +1326,7 @@ public class ModernUpdateChecker {
                 if (args == null) {
                     return;
                 }
-                Log.w(TAG, "Session install status=" + status + " msg=" + message + "; opening VIEW installer");
+                Log.w(TAG, "Session install requires fallback; status=" + status);
                 postToUi(() -> startViewPackageInstaller(args.fallbackUri, args.fileToDelete));
             }
         };
@@ -1459,7 +1474,7 @@ public class ModernUpdateChecker {
                         .remove(PREF_LAST_APK_PATH)
                         .apply();
                 } else {
-                    Log.w(TAG, "Failed to delete APK file: " + toDelete.getPath());
+                    Log.w(TAG, "Failed to delete APK file");
                 }
             } catch (InterruptedException e) {
                 Log.w(TAG, "Sleep interrupted", e);

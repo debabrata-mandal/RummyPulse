@@ -63,8 +63,7 @@ public class PlayerLeaderboardRepository {
         registration = db.collection(FirestoreCollections.PLAYER_STATS)
                 .addSnapshotListener((snapshot, error) -> {
                     if (error != null) {
-                        System.out.println("PlayerLeaderboardRepository: Failed to load stats: "
-                                + error.getMessage());
+                        System.out.println("PlayerLeaderboardRepository: Failed to load stats");
                         return;
                     }
                     if (snapshot == null) {

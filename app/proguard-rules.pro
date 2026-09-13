@@ -9,6 +9,22 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
+# Production builds must not emit application logs. Besides reducing noise, this prevents
+# account, game, and user-entered data from reaching logcat through future log statements.
+-assumenosideeffects class android.util.Log {
+    public static boolean isLoggable(java.lang.String, int);
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+    public static int w(...);
+    public static int e(...);
+}
+
+-assumenosideeffects class java.io.PrintStream {
+    public void print(...);
+    public void println(...);
+}
+
 # Required for Firestore toObject() to resolve generic List<T> field types at runtime
 # Without this, R8 strips generic signatures and Firestore deserializes List<Player>
 # as List<LinkedTreeMap>, causing ClassCastException in release builds only.

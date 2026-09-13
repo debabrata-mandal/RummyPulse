@@ -1,0 +1,16 @@
+{
+  "name": "rummypulse-functions",
+  "private": true,
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check index.js && node --check lib/game-name.js && node --check lib/rate-limit.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^7.3.2"
+  }
+}
