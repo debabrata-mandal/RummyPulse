@@ -40,7 +40,6 @@ import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.AccountSignOut;
 import com.example.rummypulse.utils.SessionCacheCleaner;
 import com.example.rummypulse.utils.ModernUpdateChecker;
-import com.example.rummypulse.utils.PermissionManager;
 import com.example.rummypulse.utils.VersionGate;
 
 import androidx.annotation.NonNull;
@@ -65,7 +64,6 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener mAuthListener;
     private ModernUpdateChecker updateChecker;
-    private PermissionManager permissionManager;
     private NavigationView navigationView;
     private DrawerLayout drawerLayout;
     private NavController navController;
@@ -216,8 +214,8 @@ public class MainActivity extends AppCompatActivity {
         updateNavigationHeader(navigationView, currentUser);
         updateNavigationRoleBadge(AppUserRoleSession.getInstance().peekRole());
 
-        // Initialize permission manager and request permissions
-        initializePermissions();
+        // Check for GitHub-distributed updates without requiring installer access at startup.
+        initializeUpdateChecker();
     }
 
     /**
@@ -264,36 +262,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        // Check if permissions were granted while in settings
-        if (permissionManager != null && !permissionManager.areAllPermissionsGranted()) {
-            android.util.Log.d("MainActivity", "Checking permissions on resume...");
-            // Re-check permissions in case user granted them in settings
-            permissionManager.checkAndRequestAllPermissions(new PermissionManager.PermissionCallback() {
-                @Override
-                public void onPermissionsGranted() {
-                    android.util.Log.d("MainActivity", "✅ Permissions granted on resume - initializing app");
-                    if (updateChecker == null) {
-                        initializeUpdateChecker();
-                    }
-                }
-
-                @Override
-                public void onPermissionsDenied(List<String> deniedPermissions) {
-                    android.util.Log.w("MainActivity", "🚫 Permissions still denied on resume: " + deniedPermissions);
-                    // PermissionManager will handle this
-                }
-
-                @Override
-                public void onPermissionsExplained() {
-                    // Already explained
-                }
-            });
-        }
-    }
-
-    @Override
     protected void onStop() {
         super.onStop();
         // Remove auth listener when activity stops to prevent memory leaks
@@ -308,26 +276,6 @@ public class MainActivity extends AppCompatActivity {
         // Clean up update checker resources
         if (updateChecker != null) {
             updateChecker.cleanup();
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        
-        // Forward to permission manager
-        if (permissionManager != null) {
-            permissionManager.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        
-        // Forward to permission manager
-        if (permissionManager != null) {
-            permissionManager.onActivityResult(requestCode, resultCode, data);
         }
     }
 
@@ -571,35 +519,6 @@ public class MainActivity extends AppCompatActivity {
                 attentionLabel.length(),
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         return title;
-    }
-
-    /**
-     * Initialize permissions and request them if needed
-     */
-    private void initializePermissions() {
-        permissionManager = new PermissionManager(this);
-        
-        // Check and request all necessary permissions (MANDATORY)
-        permissionManager.checkAndRequestAllPermissions(new PermissionManager.PermissionCallback() {
-            @Override
-            public void onPermissionsGranted() {
-                android.util.Log.d("MainActivity", "✅ All MANDATORY permissions granted - App ready to start");
-                // Initialize update checker after permissions are granted
-                initializeUpdateChecker();
-            }
-
-            @Override
-            public void onPermissionsDenied(List<String> deniedPermissions) {
-                android.util.Log.e("MainActivity", "🚫 CRITICAL: Mandatory permissions denied: " + deniedPermissions);
-                // Do NOT initialize the app - permissions are mandatory
-                // The PermissionManager will handle showing error dialogs and exit options
-            }
-
-            @Override
-            public void onPermissionsExplained() {
-                android.util.Log.d("MainActivity", "📋 Mandatory permissions explained to user");
-            }
-        });
     }
 
     /**
