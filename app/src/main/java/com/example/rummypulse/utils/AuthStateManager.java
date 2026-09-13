@@ -10,16 +10,16 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
 /**
- * Utility class to manage authentication state persistence
- * Provides backup mechanisms for authentication state in case Firebase Auth state is lost
+ * Tracks a non-identifying hint that a Firebase session recently existed.
+ * Firebase Authentication remains the only source of truth for authentication.
  */
 public class AuthStateManager {
     
     private static final String TAG = "AuthStateManager";
     private static final String PREF_NAME = "auth_state_backup";
-    private static final String KEY_USER_ID = "user_id";
-    private static final String KEY_USER_EMAIL = "user_email";
-    private static final String KEY_USER_NAME = "user_name";
+    private static final String LEGACY_KEY_USER_ID = "user_id";
+    private static final String LEGACY_KEY_USER_EMAIL = "user_email";
+    private static final String LEGACY_KEY_USER_NAME = "user_name";
     private static final String KEY_LAST_LOGIN = "last_login";
     private static final String KEY_IS_AUTHENTICATED = "is_authenticated";
     
@@ -28,6 +28,7 @@ public class AuthStateManager {
     
     private AuthStateManager(Context context) {
         this.prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        removeLegacyPersonalData();
     }
     
     public static synchronized AuthStateManager getInstance(Context context) {
@@ -38,18 +39,24 @@ public class AuthStateManager {
     }
     
     /**
-     * Save authentication state as backup
+     * Save a non-identifying recent-session hint.
      */
     public void saveAuthState(@NonNull FirebaseUser user) {
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(KEY_USER_ID, user.getUid());
-        editor.putString(KEY_USER_EMAIL, user.getEmail());
-        editor.putString(KEY_USER_NAME, user.getDisplayName());
+        // Do not duplicate the Firebase UID, email address, or display name in preferences.
         editor.putLong(KEY_LAST_LOGIN, System.currentTimeMillis());
         editor.putBoolean(KEY_IS_AUTHENTICATED, true);
         editor.apply();
         
         Log.d(TAG, "Authentication state backed up");
+    }
+
+    private void removeLegacyPersonalData() {
+        prefs.edit()
+                .remove(LEGACY_KEY_USER_ID)
+                .remove(LEGACY_KEY_USER_EMAIL)
+                .remove(LEGACY_KEY_USER_NAME)
+                .apply();
     }
     
     /**
@@ -76,48 +83,6 @@ public class AuthStateManager {
         
         Log.d(TAG, "Should be authenticated: " + isAuthenticated + ", Recent: " + isRecent);
         return isAuthenticated && isRecent;
-    }
-    
-    /**
-     * Get backed up user email
-     */
-    public String getBackedUpUserEmail() {
-        return prefs.getString(KEY_USER_EMAIL, null);
-    }
-    
-    /**
-     * Get backed up user ID
-     */
-    public String getBackedUpUserId() {
-        return prefs.getString(KEY_USER_ID, null);
-    }
-    
-    /**
-     * Check authentication state consistency
-     * Returns true if Firebase Auth and backup state are consistent
-     */
-    public boolean isAuthStateConsistent() {
-        FirebaseUser firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
-        boolean firebaseAuthenticated = firebaseUser != null;
-        boolean backupAuthenticated = shouldBeAuthenticated();
-        
-        Log.d(TAG, "Firebase authenticated: " + firebaseAuthenticated + 
-                   ", Backup authenticated: " + backupAuthenticated);
-        
-        if (firebaseAuthenticated && backupAuthenticated) {
-            // Both indicate authenticated - check if they match
-            String backupUserId = getBackedUpUserId();
-            boolean userMatches = firebaseUser.getUid().equals(backupUserId);
-            Log.d(TAG, "User IDs match: " + userMatches);
-            return userMatches;
-        } else if (!firebaseAuthenticated && !backupAuthenticated) {
-            // Both indicate not authenticated - consistent
-            return true;
-        } else {
-            // Inconsistent state
-            Log.w(TAG, "Inconsistent authentication state detected");
-            return false;
-        }
     }
     
     /**
