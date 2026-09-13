@@ -98,6 +98,8 @@ dependencies {
     implementation(libs.room.runtime)
     annotationProcessor("androidx.room:room-compiler:2.8.4")
     implementation(libs.work.runtime)
+    // WorkManager's Java API exposes ListenableFuture; declare its existing Guava runtime directly.
+    implementation("com.google.guava:guava:32.1.3-android")
     implementation(libs.gson)
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     testImplementation(libs.junit)
@@ -116,7 +118,6 @@ dependencies {
     // Firebase dependencies
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-firestore")
-    implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-config")
     implementation("com.google.firebase:firebase-functions")
