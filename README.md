@@ -241,6 +241,14 @@ Required repository secrets:
 
 - `GOOGLE_SERVICES_JSON`
 - `RELEASE_KEYSTORE_BASE64`
+- `RELEASE_STORE_PASSWORD`
+- `RELEASE_KEY_ALIAS`
+- `RELEASE_KEY_PASSWORD`
+
+Release signing never falls back to the debug certificate. The workflow writes
+the decoded keystore to `app/release.keystore`, supplies its path through
+`RELEASE_STORE_FILE`, and fails the release build if any required signing input
+is missing.
 
 `GROQ_API_KEY` is a Firebase Functions secret, not a GitHub Actions or Android
 build secret.

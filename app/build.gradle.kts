@@ -3,6 +3,33 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+val releaseStoreFilePath = providers.environmentVariable("RELEASE_STORE_FILE").orNull
+val releaseStorePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
+val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").orNull
+
+val validateReleaseSigning by tasks.registering {
+    group = "verification"
+    description = "Fails when production release-signing inputs are unavailable."
+
+    doLast {
+        val missingInputs = buildList {
+            if (releaseStoreFilePath.isNullOrBlank()) add("RELEASE_STORE_FILE")
+            if (releaseStorePassword.isNullOrBlank()) add("RELEASE_STORE_PASSWORD")
+            if (releaseKeyAlias.isNullOrBlank()) add("RELEASE_KEY_ALIAS")
+            if (releaseKeyPassword.isNullOrBlank()) add("RELEASE_KEY_PASSWORD")
+        }
+
+        check(missingInputs.isEmpty()) {
+            "Release signing is not configured. Missing environment variables: ${missingInputs.joinToString()}."
+        }
+
+        check(rootProject.file(releaseStoreFilePath!!).isFile) {
+            "Release keystore file does not exist at RELEASE_STORE_FILE."
+        }
+    }
+}
+
 android {
     namespace = "com.example.rummypulse"
     compileSdk = 34
@@ -19,18 +46,12 @@ android {
 
     signingConfigs {
         create("release") {
-            // Use release keystore if it exists (CI), otherwise use debug keystore (local dev)
-            if (file("release.keystore").exists()) {
-                storeFile = file("release.keystore")
-                storePassword = "rummypulse123"
-                keyAlias = "rummypulse-release"
-                keyPassword = "rummypulse123"
-            } else {
-                storeFile = file("debug.keystore")
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
+            releaseStoreFilePath?.takeIf { it.isNotBlank() }?.let {
+                storeFile = rootProject.file(it)
             }
+            storePassword = releaseStorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
         }
     }
 
@@ -56,6 +77,12 @@ android {
         unitTests.all {
             it.jvmArgs("-Dnet.bytebuddy.experimental=true")
         }
+    }
+}
+
+tasks.configureEach {
+    if (name == "preReleaseBuild" || name == "validateSigningRelease") {
+        dependsOn(validateReleaseSigning)
     }
 }
 
