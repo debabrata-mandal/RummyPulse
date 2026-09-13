@@ -1,37 +1,6 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     id("com.google.gms.google-services")
-}
-
-fun escapeForBuildConfig(value: String): String =
-    value.replace("\\", "\\\\").replace("\"", "\\\"")
-
-fun readGroqFromLocalProperties(key: String): String {
-    val f = rootProject.file("local.properties")
-    if (!f.isFile) return ""
-    return runCatching {
-        val p = Properties()
-        f.reader(Charsets.UTF_8).use { reader -> p.load(reader) }
-        p.getProperty(key)?.trim().orEmpty()
-    }.getOrDefault("")
-}
-
-/**
- * Groq for BuildConfig (first match wins):
- * 1. Gradle property (project `gradle.properties` or `~/.gradle/gradle.properties` or `-P`)
- * 2. OS environment (CI / VS Code task / shell)
- * 3. Root `local.properties` (gitignored; reliable when Android Studio does not pass env to Gradle)
- */
-fun groqConfig(propAndEnvName: String, default: String = ""): String {
-    val fromProp = project.findProperty(propAndEnvName)?.toString()?.trim()
-    if (!fromProp.isNullOrBlank()) return fromProp
-    val fromEnv = System.getenv(propAndEnvName)?.trim()
-    if (!fromEnv.isNullOrBlank()) return fromEnv
-    val fromLocal = readGroqFromLocalProperties(propAndEnvName)
-    if (fromLocal.isNotBlank()) return fromLocal
-    return default
 }
 
 android {
@@ -46,13 +15,6 @@ android {
         versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Groq: see groqConfig() — properties, env, or local.properties (not committed).
-        val groqKey = escapeForBuildConfig(groqConfig("GROQ_API_KEY"))
-        val groqModel = escapeForBuildConfig(
-            groqConfig("GROQ_MODEL_ID", "openai/gpt-oss-20b"),
-        )
-        buildConfigField("String", "GROQ_API_KEY", "\"$groqKey\"")
-        buildConfigField("String", "GROQ_MODEL_ID", "\"$groqModel\"")
     }
 
     signingConfigs {
@@ -130,6 +92,10 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-config")
+    implementation("com.google.firebase:firebase-functions")
+    implementation("com.google.firebase:firebase-appcheck")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
+    releaseImplementation("com.google.firebase:firebase-appcheck-playintegrity")
     
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.3.0")

@@ -190,7 +190,7 @@
     <string name="dialog_game_name_hint">Name</string>
     <string name="dialog_game_name_generating">Generating…</string>
     <string name="cd_generate_game_name">Generate game name</string>
-    <string name="dialog_game_name_groq_missing">Add GROQ_API_KEY in local.properties (or Gradle env), then rebuild, to generate names.</string>
+    <string name="dialog_game_name_groq_missing">Sign in to generate game names.</string>
     <string name="dialog_game_name_generate_failed">Could not generate a name. Try again.</string>
 
     <!-- Sequential round score entry (edit mode) -->

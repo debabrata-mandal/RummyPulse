@@ -1,12 +1,14 @@
 package com.example.rummypulse.service;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -14,22 +16,23 @@ import org.junit.runner.RunWith;
 public class GroqGameNameServiceTest {
 
     @Test
-    public void createRequestBody_usesGptOssReasoningSettings() throws Exception {
-        JSONObject message = new JSONObject();
-        message.put("role", "user");
-        message.put("content", "Generate a name");
+    public void extractName_acceptsValidCallableResponse() throws Exception {
+        Map<String, Object> response = new HashMap<>();
+        response.put("name", "  Royal Rummy  ");
 
-        JSONObject body = GroqGameNameService.createRequestBody("openai/gpt-oss-20b", message);
+        assertEquals("Royal Rummy", GroqGameNameService.extractName(response));
+    }
 
-        assertEquals("openai/gpt-oss-20b", body.getString("model"));
-        assertEquals(0.6, body.getDouble("temperature"), 0.0);
-        assertEquals(128, body.getInt("max_completion_tokens"));
-        assertEquals("low", body.getString("reasoning_effort"));
-        assertFalse(body.getBoolean("include_reasoning"));
-        assertFalse(body.has("max_tokens"));
+    @Test
+    public void extractName_rejectsMissingName() {
+        assertThrows(IOException.class,
+                () -> GroqGameNameService.extractName(Collections.emptyMap()));
+    }
 
-        JSONArray messages = body.getJSONArray("messages");
-        assertEquals(1, messages.length());
-        assertEquals("Generate a name", messages.getJSONObject(0).getString("content"));
+    @Test
+    public void extractName_rejectsUnexpectedCharacters() {
+        assertThrows(IOException.class,
+                () -> GroqGameNameService.extractName(
+                        Collections.singletonMap("name", "Rummy! 123")));
     }
 }

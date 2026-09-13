@@ -148,22 +148,41 @@ mandatory-update gate.
 
 ## Optional AI game names
 
-The create-game dialog can suggest short names through Groq. The feature is
-optional; builds work without a key.
+The create-game dialog requests short names through the authenticated
+`suggestGameName` Firebase callable function. The Android app contains no Groq
+credential and sends no account, player, or game content to Groq. The backend
+holds the credential in Firebase Secret Manager, requires Firebase
+Authentication and App Check, limits each UID to 10 requests per hour, limits
+the entire service to 200 requests per UTC day, and caps function instances to
+limit abuse and cost.
 
-Configuration is resolved in this order:
+Backend setup requires Node.js 22, the Firebase CLI, and a Firebase project on
+the Blaze plan. Use a newly rotated Groq key if an older APK ever contained the
+current key:
 
-1. Gradle property
-2. Environment variable
-3. Root `local.properties`
-
-```properties
-GROQ_API_KEY=gsk_your_key_here
-GROQ_MODEL_ID=openai/gpt-oss-20b
+```shell
+firebase login
+firebase use --add
+firebase functions:secrets:set GROQ_API_KEY
 ```
 
-> The key is compiled into the APK and can be extracted. Use a backend proxy
-> before distributing the app to an untrusted audience.
+In Firebase Console, register both debug and release app signing certificates
+for the Android app, then enable App Check:
+
+- Register the emulator's debug App Check token shown in Logcat.
+- Use the Play Integrity provider for release builds.
+- For APKs distributed outside Google Play, configure advanced settings so
+  `PLAY_RECOGNIZED` and `LICENSED` are not required and device integrity is the
+  minimum accepted level.
+
+After App Check is configured, deploy the protected function:
+
+```shell
+firebase deploy --only functions:suggestGameName
+```
+
+The function is deployed to `asia-south1`; keep that region aligned with
+`GroqGameNameService.FUNCTIONS_REGION` if it is changed.
 
 ## Architecture
 
@@ -176,7 +195,7 @@ Android Views + Material Components
               │
           Repositories
               │
-Firebase Auth · Firestore · Remote Config
+Firebase Auth · Firestore · Remote Config · Callable Functions
 ```
 
 ```text
@@ -199,7 +218,7 @@ app/src/main/java/com/example/rummypulse/
 |---|---|
 | UI | Android Views, ViewBinding, Material Components |
 | State | MVVM, ViewModel, LiveData |
-| Backend | Firebase Authentication, Firestore, Remote Config |
+| Backend | Firebase Authentication, Firestore, Remote Config, Cloud Functions |
 | Navigation | Navigation Component and navigation drawer |
 | Build | Gradle Kotlin DSL, Android Gradle Plugin 8.13 |
 | Tests | JUnit 4 |
@@ -222,7 +241,9 @@ Required repository secrets:
 
 - `GOOGLE_SERVICES_JSON`
 - `RELEASE_KEYSTORE_BASE64`
-- `GROQ_API_KEY` and `GROQ_MODEL_ID` (optional)
+
+`GROQ_API_KEY` is a Firebase Functions secret, not a GitHub Actions or Android
+build secret.
 
 ## License
 
