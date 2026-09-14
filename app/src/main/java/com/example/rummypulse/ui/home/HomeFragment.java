@@ -197,26 +197,26 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         }
 
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_edit_game_economics, null);
-        TextInputLayout layoutPoint = dialogView.findViewById(R.id.layout_edit_review_point_value);
-        TextInputEditText editPoint = dialogView.findViewById(R.id.edit_review_point_value);
-        TextInputLayout layoutContribution = dialogView.findViewById(R.id.layout_edit_review_contribution);
-        TextInputEditText editContribution = dialogView.findViewById(R.id.edit_review_contribution);
+        TextInputLayout layoutPoint = dialogView.findViewById(R.id.layout_edit_review_game_point_factor);
+        TextInputEditText editPoint = dialogView.findViewById(R.id.edit_review_game_point_factor);
+        TextInputLayout layoutBoardAdjustment = dialogView.findViewById(R.id.layout_edit_review_board_adjustment);
+        TextInputEditText editBoardAdjustment = dialogView.findViewById(R.id.edit_review_board_adjustment);
         com.google.android.material.button.MaterialButton cancel =
                 dialogView.findViewById(R.id.btn_edit_economics_cancel);
         com.google.android.material.button.MaterialButton save =
                 dialogView.findViewById(R.id.btn_edit_economics_save);
 
-        String pv = game.getPointValue();
+        String pv = game.getGamePointFactor();
         if (pv == null || pv.isEmpty()) {
             editPoint.setText("");
         } else {
-            editPoint.setText(formatPlainDecimalForField(parsePointValueForDisplay(pv)));
+            editPoint.setText(formatPlainDecimalForField(parseGamePointFactorForDisplay(pv)));
         }
-        String gst = game.getGstPercentage();
-        if (gst == null) {
-            gst = "";
+        String boardAdjustment = game.getBoardAdjustmentPercentage();
+        if (boardAdjustment == null) {
+            boardAdjustment = "";
         }
-        editContribution.setText(gst.replace("%", "").trim());
+        editBoardAdjustment.setText(boardAdjustment.replace("%", "").trim());
 
         AlertDialog dialog = new AlertDialog.Builder(getContext(), R.style.DarkDialogTheme)
                 .setView(dialogView)
@@ -225,8 +225,8 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
 
         cancel.setOnClickListener(v -> dialog.dismiss());
         save.setOnClickListener(v -> {
-            Double point = parseAndClampPointValue(layoutPoint, editPoint);
-            Integer contrib = parseContributionPercent(layoutContribution, editContribution);
+            Double point = parseAndClampGamePointFactor(layoutPoint, editPoint);
+            Integer contrib = parseBoardAdjustmentPercent(layoutBoardAdjustment, editBoardAdjustment);
             if (point == null || contrib == null) {
                 return;
             }
@@ -281,7 +281,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
     }
 
     @Override
-    public void onApproveGst(GameItem game, int position) {
+    public void onApproveBoardAdjustment(GameItem game, int position) {
         if (!"Completed".equals(game.getGameStatus())) {
             com.example.rummypulse.utils.ModernToast.warning(getContext(), "Game must be completed before approval");
             return;
@@ -580,7 +580,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         return Math.round(value * 20.0) / 20.0;
     }
 
-    private static double clampPointValue(double value) {
+    private static double clampGamePointFactor(double value) {
         double s = snapToFivePaise(value);
         if (s < 0.05) {
             return 0.05;
@@ -591,54 +591,54 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         return s;
     }
 
-    private static double parsePointValueForDisplay(String pointValueStr) {
-        if (pointValueStr == null || pointValueStr.isEmpty()) {
+    private static double parseGamePointFactorForDisplay(String gamePointFactorStr) {
+        if (gamePointFactorStr == null || gamePointFactorStr.isEmpty()) {
             return 0.05;
         }
         try {
-            return Double.parseDouble(pointValueStr.trim());
+            return Double.parseDouble(gamePointFactorStr.trim());
         } catch (NumberFormatException e) {
             return 0.05;
         }
     }
 
-    private Double parseAndClampPointValue(TextInputLayout layout, TextInputEditText edit) {
+    private Double parseAndClampGamePointFactor(TextInputLayout layout, TextInputEditText edit) {
         String s = edit.getText() != null ? edit.getText().toString().trim() : "";
         if (TextUtils.isEmpty(s)) {
-            layout.setError(getString(R.string.dialog_point_value_required));
+            layout.setError(getString(R.string.dialog_game_point_factor_required));
             return null;
         }
         try {
             double raw = Double.parseDouble(s);
             if (raw <= 0 || raw > 100) {
-                layout.setError(getString(R.string.dialog_point_value_invalid));
+                layout.setError(getString(R.string.dialog_game_point_factor_invalid));
                 return null;
             }
-            double clamped = clampPointValue(raw);
+            double clamped = clampGamePointFactor(raw);
             layout.setError(null);
             return clamped;
         } catch (NumberFormatException e) {
-            layout.setError(getString(R.string.dialog_point_value_invalid));
+            layout.setError(getString(R.string.dialog_game_point_factor_invalid));
             return null;
         }
     }
 
-    private Integer parseContributionPercent(TextInputLayout layout, TextInputEditText edit) {
+    private Integer parseBoardAdjustmentPercent(TextInputLayout layout, TextInputEditText edit) {
         String s = edit.getText() != null ? edit.getText().toString().trim() : "";
         if (TextUtils.isEmpty(s)) {
-            layout.setError(getString(R.string.dialog_contribution_required));
+            layout.setError(getString(R.string.dialog_board_adjustment_required));
             return null;
         }
         try {
             int value = Integer.parseInt(s);
             if (value < 0 || value > 100) {
-                layout.setError(getString(R.string.dialog_contribution_invalid));
+                layout.setError(getString(R.string.dialog_board_adjustment_invalid));
                 return null;
             }
             layout.setError(null);
             return value;
         } catch (NumberFormatException e) {
-            layout.setError(getString(R.string.dialog_contribution_invalid));
+            layout.setError(getString(R.string.dialog_board_adjustment_invalid));
             return null;
         }
     }

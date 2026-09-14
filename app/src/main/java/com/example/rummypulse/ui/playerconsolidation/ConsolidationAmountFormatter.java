@@ -25,7 +25,7 @@ public final class ConsolidationAmountFormatter {
         return "0 GP";
     }
 
-    public static String formatContribution(double amount) {
+    public static String formatBoardAdjustment(double amount) {
         return formatAmount(amount);
     }
 
@@ -45,7 +45,7 @@ public final class ConsolidationAmountFormatter {
         return ContextCompat.getColor(context, R.color.text_secondary);
     }
 
-    public static int getContributionColor(Context context, double amount) {
+    public static int getBoardAdjustmentColor(Context context, double amount) {
         if (amount > 0) {
             return ContextCompat.getColor(context, R.color.warning_orange);
         }

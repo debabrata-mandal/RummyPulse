@@ -67,6 +67,13 @@
     <string name="safe_play_retry">Retry</string>
     <string name="safe_play_load_error">RummyPulse must verify this confirmation online before you can continue. Check your connection and retry, or sign out.</string>
     <string name="safe_play_acceptance_error">Your confirmation could not be saved. Check your connection and try again.</string>
+    <string name="schema_gate_title">RummyPulse maintenance</string>
+    <string name="schema_gate_checking">Checking whether the Game Points data upgrade is ready…</string>
+    <string name="schema_gate_pending">The Game Points data upgrade is still in progress. Please try again later.</string>
+    <string name="schema_gate_check_error">RummyPulse could not verify the data upgrade. Check your connection and try again.</string>
+    <string name="schema_gate_cache_error">RummyPulse could not safely clear older game data on this device. Close the app and try again.</string>
+    <string name="schema_gate_retry">Try again</string>
+    <string name="schema_gate_exit">Exit</string>
     <string name="voice_announcements_language_section_title">Announcement language</string>
     <string name="voice_announcements_language_section_subtitle">Choose the voice language for score callouts.</string>
     <string name="voice_announcements_language_bengali">বাংলা (Bengali)</string>
@@ -90,8 +97,8 @@
     <string name="reports_rebuild_month_month_label">Month</string>
     <string name="reports_rebuild_month_year_label">Year</string>
     <string name="reports_rebuild_month_confirm">Rebuild</string>
-    <string name="reports_stat_total_contribution">Total Board Points</string>
-    <string name="reports_stat_avg_contribution_per_game">Avg Board Points / game</string>
+    <string name="reports_stat_total_board_points">Total Board Points</string>
+    <string name="reports_stat_avg_board_adjustment_per_game">Avg Board Points / game</string>
     <string name="reports_stat_total_players">Total players</string>
     <string name="reports_stat_avg_players_per_game">Avg players / game</string>
 
@@ -170,18 +177,18 @@
     <string name="dialog_create_game_retry">Retry</string>
     <string name="dialog_create_game_offline">You’re offline. Connect to the internet to create this game.</string>
     <string name="dialog_create_game_subtitle">Set the game name and Game Point rules.</string>
-    <string name="dialog_point_value_section_title">Game Point Factor</string>
+    <string name="dialog_game_point_factor_section_title">Game Point Factor</string>
     <string name="dialog_game_name_section_title">✨ Game name</string>
     <string name="dialog_game_name_section_subtitle">Tap ✨ to refresh.</string>
-    <string name="dialog_point_value_subtitle">Multiplier used to calculate Game Points.</string>
-    <string name="dialog_contribution_section_title">Board Adjustment</string>
-    <string name="dialog_contribution_subtitle">Percentage moved from positive Base Points to the Board.</string>
-    <string name="dialog_point_value_field_hint">Factor (for example 0.15)</string>
-    <string name="dialog_contribution_field_hint">Board Adjustment (%)</string>
-    <string name="dialog_point_value_required">Enter a Game Point Factor</string>
-    <string name="dialog_point_value_invalid">Enter a valid factor (maximum 100)</string>
-    <string name="dialog_contribution_required">Enter Board Adjustment %</string>
-    <string name="dialog_contribution_invalid">Enter a whole number from 0 to 100</string>
+    <string name="dialog_game_point_factor_subtitle">Multiplier used to calculate Game Points.</string>
+    <string name="dialog_board_adjustment_section_title">Board Adjustment</string>
+    <string name="dialog_board_adjustment_subtitle">Percentage moved from positive Base Points to the Board.</string>
+    <string name="dialog_game_point_factor_field_hint">Factor (for example 0.15)</string>
+    <string name="dialog_board_adjustment_field_hint">Board Adjustment (%)</string>
+    <string name="dialog_game_point_factor_required">Enter a Game Point Factor</string>
+    <string name="dialog_game_point_factor_invalid">Enter a valid factor (maximum 100)</string>
+    <string name="dialog_board_adjustment_required">Enter Board Adjustment %</string>
+    <string name="dialog_board_adjustment_invalid">Enter a whole number from 0 to 100</string>
     <string name="review_screen_title">Game review</string>
     <string name="review_screen_subtitle">Approve completed games or remove entries awaiting review</string>
     <string name="review_metric_completed">Completed</string>
@@ -192,10 +199,10 @@
     <string name="review_pin_label">PIN</string>
     <string name="review_age_label">Age</string>
     <string name="review_show_pin">Show PIN</string>
-    <string name="review_point_value_label">GP FACTOR</string>
+    <string name="review_game_point_factor_label">GP FACTOR</string>
     <string name="review_players_label">PLAYERS</string>
-    <string name="review_contribution_pct_label">BOARD %</string>
-    <string name="review_contribution_amt_label">BOARD PTS</string>
+    <string name="review_board_adjustment_pct_label">BOARD %</string>
+    <string name="review_board_adjustment_amt_label">BOARD PTS</string>
     <string name="review_approve">Approve</string>
     <string name="review_delete">Delete</string>
     <string name="review_select_game">Select game</string>
@@ -219,8 +226,8 @@
     <string name="review_kick_editor_message">A new PIN will be generated. %1$s will be moved to read-only immediately and any further changes from them will be rejected.</string>
     <string name="review_kick_editor_success">Editor removed. A new PIN has been generated.</string>
     <string name="review_operation_kicking_editor">Removing editor…</string>
-    <string name="cd_decrease_point_value">Decrease Game Point Factor</string>
-    <string name="cd_increase_point_value">Increase Game Point Factor</string>
+    <string name="cd_decrease_game_point_factor">Decrease Game Point Factor</string>
+    <string name="cd_increase_game_point_factor">Increase Game Point Factor</string>
     <string name="dialog_game_name_hint">Name</string>
     <string name="dialog_game_name_generating">Generating…</string>
     <string name="cd_generate_game_name">Generate game name</string>
@@ -253,11 +260,11 @@
     <string name="standing_total_score">Total Score</string>
     <string name="standing_last_round">Last Round</string>
     <string name="standing_balance">Game Points</string>
-    <string name="edit_settlement_direction_receives">Positive</string>
-    <string name="edit_settlement_direction_pays">Negative</string>
-    <string name="edit_settlement_direction_even">Even</string>
+    <string name="edit_game_points_direction_receives">Positive</string>
+    <string name="edit_game_points_direction_pays">Negative</string>
+    <string name="edit_game_points_direction_even">Even</string>
     <string name="edit_player_sort_game_order">Game order</string>
-    <string name="edit_player_sort_settlement_order">Game Point order</string>
+    <string name="edit_player_sort_game_points_order">Game Point order</string>
     <string name="correct_past_round_none">No past rounds to correct yet.</string>
 
     <!-- Add player confirmation when scores already exist -->
@@ -288,7 +295,7 @@
     <string name="player_consolidation_table_player">PLAYER</string>
     <string name="player_consolidation_table_games">GAMES</string>
     <string name="player_consolidation_table_gross">BASE</string>
-    <string name="player_consolidation_table_contribution">BOARD</string>
+    <string name="player_consolidation_table_board_adjustment">BOARD</string>
     <string name="player_consolidation_table_net">FINAL</string>
     <string name="player_consolidation_table_adjustment">CORRECT.</string>
     <string name="player_consolidation_table_final">RESULT</string>
@@ -330,12 +337,12 @@
     <string name="player_consolidation_adjustment_route">%1$s: −%3$s · %2$s: +%3$s</string>
     <string name="player_consolidation_adjustment_no_reason">Game Point correction</string>
     <string name="player_consolidation_final_balance">Game Point result</string>
-    <string name="player_consolidation_contribution_column">BOARD</string>
-    <string name="player_consolidation_contribution_collected">Board Points</string>
-    <string name="player_consolidation_contribution_info">Virtual points retained by the Board across these games</string>
+    <string name="player_consolidation_board_adjustment_column">BOARD</string>
+    <string name="player_consolidation_board_adjustment_collected">Board Points</string>
+    <string name="player_consolidation_board_adjustment_info">Virtual points retained by the Board across these games</string>
     <string name="player_consolidation_sitting_summary">Game Point totals</string>
     <string name="player_consolidation_total_gross">Positive Base</string>
-    <string name="player_consolidation_total_contribution">Board Points</string>
+    <string name="player_consolidation_total_board_points">Board Points</string>
     <string name="player_consolidation_net_player_balance">Player Final total</string>
     <string name="player_consolidation_started">Started %1$s</string>
     <string name="player_consolidation_creator_photo">Game creator photo</string>
@@ -345,15 +352,15 @@
     <string name="game_defaults_section_values">Default values</string>
     <string name="game_defaults_section_audit">Update record</string>
     <string name="game_defaults_point_hint">Default Game Point Factor</string>
-    <string name="game_defaults_contribution_hint">Default Board Adjustment %</string>
-    <string name="game_defaults_contribution_admin_only_helper">Admins only.</string>
-    <string name="cd_game_defaults_contribution_locked">Board Adjustment percent locked. Admins only.</string>
+    <string name="game_defaults_board_adjustment_hint">Default Board Adjustment %</string>
+    <string name="game_defaults_board_adjustment_admin_only_helper">Admins only.</string>
+    <string name="cd_game_defaults_board_adjustment_locked">Board Adjustment percent locked. Admins only.</string>
     <string name="game_defaults_display_intermediate_title">Show live Game Points</string>
     <string name="game_defaults_display_intermediate_admin_only_helper">Admins only.</string>
     <string name="cd_game_defaults_display_intermediate_locked">Show live Game Points locked. Admins only.</string>
     <string name="game_defaults_show_dashboard_approval_counts_title">Show dashboard request counts</string>
     <string name="game_defaults_show_dashboard_leaderboard_title">Show dashboard leaderboard</string>
-    <string name="game_defaults_show_dashboard_leaderboard_amounts_title">Show leaderboard Game Points</string>
+    <string name="game_defaults_show_dashboard_leaderboard_game_points_title">Show leaderboard Game Points</string>
     <string name="game_defaults_leaderboard_admin_only_helper">Admins only.</string>
     <string name="game_defaults_leaderboard_amounts_off_helper">Turn the leaderboard on to show Game Points.</string>
     <string name="cd_game_defaults_leaderboard_locked">Leaderboard settings locked. Admins only.</string>
@@ -483,34 +490,34 @@
     <string name="amounts_hidden_label">GAME POINTS HIDDEN</string>
     <string name="login_welcome_message">Welcome to RummyPulse!\n\nSign in with your Google account to access review and analytics.</string>
     <string name="login_security_message">🔒 Your data is secure and protected.\nWe only use your Google account for authentication.</string>
-    <string name="settlement_how_it_works_title">💡 How Game Points Work</string>
-    <string name="settlement_example_title">💡 Example:</string>
+    <string name="game_points_how_it_works_title">💡 How Game Points Work</string>
+    <string name="game_points_example_title">💡 Example:</string>
     <string name="full_hand_label">Full Hand</string>
     <string name="sign_in_with_google">Sign in with Google</string>
     <string name="loading_game_data">Loading game data\u2026</string>
     <string name="made_game_label">Made Game</string>
     <string name="my_performance_title">My Performance</string>
-    <string name="net_amount_label">Final Points</string>
+    <string name="final_game_points_label">Final Points</string>
     <string name="no_negative_balances">No negative Game Points</string>
     <string name="no_positive_balances">No positive Game Points</string>
     <string name="packed_label">Packed</string>
     <string name="player_performance_title">Player Performance</string>
     <string name="players_round_scores_subtitle">Performance across all ten rounds</string>
     <string name="players_round_scores_title">Player\'s Round Scores</string>
-    <string name="point_value_label">Game Point Factor</string>
+    <string name="game_point_factor_label">Game Point Factor</string>
     <string name="position_label">Position</string>
     <string name="qr_code_scan_hint">Scan to open this game instantly.</string>
     <string name="qr_code_share_hint">Share this code with players, or tap it to copy the game ID.</string>
     <string name="qr_code_title">Game QR code</string>
     <string name="score_label">Score</string>
-    <string name="settlement_contribution_description">Board Adjustment: a percentage of positive Base Points becomes Board Points</string>
-    <string name="settlement_example_formula">Base Points = (Total of all 4 scores - 25 × 4) × 0.15</string>
-    <string name="settlement_example_intro">Example for a score of 25 in a 4-player game with a 0.15 factor:</string>
-    <string name="settlement_formula_description">Base Points = (Total All Scores - Your Score × 4) × Game Point Factor</string>
-    <string name="settlement_losers_description">Negative results keep their full Base Points</string>
-    <string name="settlement_net_amount_description">Final Points = Base Points - Board Adjustment Points</string>
-    <string name="settlement_overview_title">Game Point Overview</string>
-    <string name="settlement_winners_description">Positive results contribute the configured percentage to Board Points</string>
+    <string name="game_points_board_adjustment_description">Board Adjustment: a percentage of positive Base Points becomes Board Points</string>
+    <string name="game_points_example_formula">Base Points = (Total of all 4 scores - 25 × 4) × 0.15</string>
+    <string name="game_points_example_intro">Example for a score of 25 in a 4-player game with a 0.15 factor:</string>
+    <string name="game_points_formula_description">Base Points = (Total All Scores - Your Score × 4) × Game Point Factor</string>
+    <string name="game_points_losers_description">Negative results keep their full Base Points</string>
+    <string name="game_points_final_game_points_description">Final Points = Base Points - Board Adjustment Points</string>
+    <string name="game_points_overview_title">Game Point Overview</string>
+    <string name="game_points_winners_description">Positive results contribute the configured percentage to Board Points</string>
     <string name="sign_out">Sign Out</string>
     <string name="standings_title">Standings</string>
     <string name="tap_to_enter_name_hint">Tap to enter name</string>
@@ -568,10 +575,10 @@
     <string name="error_with_message">Error: %1$s</string>
     <string name="game_round_status_complete">Complete · Round %1$d of %2$d</string>
     <string name="game_round_status_live">Live · Round %1$d of %2$d</string>
-    <string name="settlement_winners_rule_dynamic">Positive results: %1$s becomes Board Points</string>
-    <string name="settlement_formula_description_dynamic">Formula: (Total All Scores - Your Score × %1$d) × %2$s</string>
-    <string name="settlement_contribution_rule_dynamic">Board Adjustment: %1$s of positive Base Points</string>
-    <string name="settlement_example_intro_dynamic">If you score 25 points in a %1$d-player game with a %2$s factor:</string>
+    <string name="game_points_winners_rule_dynamic">Positive results: %1$s becomes Board Points</string>
+    <string name="game_points_formula_description_dynamic">Formula: (Total All Scores - Your Score × %1$d) × %2$s</string>
+    <string name="game_points_board_adjustment_rule_dynamic">Board Adjustment: %1$s of positive Base Points</string>
+    <string name="game_points_example_intro_dynamic">If you score 25 points in a %1$d-player game with a %2$s factor:</string>
     <string name="format_game_points_zero">0 GP</string>
     <string name="dashboard_percent_format">%1$d%%</string>
     <string name="review_access_restricted_combined">%1$s\n\n%2$s</string>
@@ -683,7 +690,7 @@
         <item quantity="one">%d point</item>
         <item quantity="other">%d points</item>
     </plurals>
-    <plurals name="settlement_example_formula_dynamic">
+    <plurals name="game_points_example_formula_dynamic">
         <item quantity="one">Base Points = (Total of all %d score - 25 × %2$d) × %3$s</item>
         <item quantity="other">Base Points = (Total of all %d scores - 25 × %2$d) × %3$s</item>
     </plurals>
@@ -692,7 +699,7 @@
         <item quantity="one">%d Game</item>
         <item quantity="other">%d Games</item>
     </plurals>
-    <plurals name="report_point_values_count">
+    <plurals name="report_game_point_factors_count">
         <item quantity="one">%d Game Point Factor</item>
         <item quantity="other">%d Game Point Factors</item>
     </plurals>
@@ -727,7 +734,7 @@
     <string name="cd_toggle_completed_games">Toggle completed games section</string>
     <string name="cd_toggle_players_section">Toggle players section</string>
     <string name="cd_toggle_standings_section">Toggle standings section</string>
-    <string name="cd_toggle_settlement_section">Toggle Game Point summary section</string>
+    <string name="cd_toggle_game_points_section">Toggle Game Point summary section</string>
     <string name="cd_create_new_game">Create New Game</string>
     <string name="cd_game_creator_profile_photo">Game creator profile photo</string>
     <string name="cd_delete_player">Delete Player</string>

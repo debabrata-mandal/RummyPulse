@@ -8,12 +8,12 @@ public class GameItem {
     private String gameId;
     private String gamePin;
     private String totalScore;
-    private String pointValue;
+    private String gamePointFactor;
     private String creationDateTime;
     private String gameStatus;
     private String numberOfPlayers;
-    private String gstPercentage;
-    private String gstAmount;
+    private String boardAdjustmentPercentage;
+    private String boardPoints;
     private String age;
     private String creatorName;
     private String creatorPhotoUrl;
@@ -35,61 +35,65 @@ public class GameItem {
         // Default constructor for Firebase
     }
 
-    public GameItem(String gameId, String gamePin, String totalScore, String pointValue, String creationDateTime, String gameStatus, 
-                   String numberOfPlayers, String gstPercentage, String gstAmount) {
+    public GameItem(String gameId, String gamePin, String totalScore, String gamePointFactor,
+                   String creationDateTime, String gameStatus,
+                   String numberOfPlayers, String boardAdjustmentPercentage, String boardPoints) {
         this.gameId = gameId;
         this.gamePin = gamePin;
         this.totalScore = totalScore;
-        this.pointValue = pointValue;
+        this.gamePointFactor = gamePointFactor;
         this.creationDateTime = creationDateTime;
         this.gameStatus = gameStatus;
         this.numberOfPlayers = numberOfPlayers;
-        this.gstPercentage = gstPercentage;
-        this.gstAmount = gstAmount;
+        this.boardAdjustmentPercentage = boardAdjustmentPercentage;
+        this.boardPoints = boardPoints;
         this.age = calculateAge(creationDateTime);
     }
 
-    public GameItem(String gameId, String gamePin, String totalScore, String pointValue, String creationDateTime, String gameStatus, 
-                   String numberOfPlayers, String gstPercentage, String gstAmount, String creatorName) {
+    public GameItem(String gameId, String gamePin, String totalScore, String gamePointFactor,
+                   String creationDateTime, String gameStatus,
+                   String numberOfPlayers, String boardAdjustmentPercentage, String boardPoints, String creatorName) {
         this.gameId = gameId;
         this.gamePin = gamePin;
         this.totalScore = totalScore;
-        this.pointValue = pointValue;
+        this.gamePointFactor = gamePointFactor;
         this.creationDateTime = creationDateTime;
         this.gameStatus = gameStatus;
         this.numberOfPlayers = numberOfPlayers;
-        this.gstPercentage = gstPercentage;
-        this.gstAmount = gstAmount;
+        this.boardAdjustmentPercentage = boardAdjustmentPercentage;
+        this.boardPoints = boardPoints;
         this.creatorName = creatorName;
         this.age = calculateAge(creationDateTime);
     }
 
-    public GameItem(String gameId, String gamePin, String totalScore, String pointValue, String creationDateTime, String gameStatus, 
-                   String numberOfPlayers, String gstPercentage, String gstAmount, List<Player> players) {
+    public GameItem(String gameId, String gamePin, String totalScore, String gamePointFactor,
+                   String creationDateTime, String gameStatus,
+                   String numberOfPlayers, String boardAdjustmentPercentage, String boardPoints, List<Player> players) {
         this.gameId = gameId;
         this.gamePin = gamePin;
         this.totalScore = totalScore;
-        this.pointValue = pointValue;
+        this.gamePointFactor = gamePointFactor;
         this.creationDateTime = creationDateTime;
         this.gameStatus = gameStatus;
         this.numberOfPlayers = numberOfPlayers;
-        this.gstPercentage = gstPercentage;
-        this.gstAmount = gstAmount;
+        this.boardAdjustmentPercentage = boardAdjustmentPercentage;
+        this.boardPoints = boardPoints;
         this.players = players;
         this.age = calculateAge(creationDateTime);
     }
 
-    public GameItem(String gameId, String gamePin, String totalScore, String pointValue, String creationDateTime, String gameStatus, 
-                   String numberOfPlayers, String gstPercentage, String gstAmount, String creatorName, List<Player> players) {
+    public GameItem(String gameId, String gamePin, String totalScore, String gamePointFactor,
+                   String creationDateTime, String gameStatus,
+                   String numberOfPlayers, String boardAdjustmentPercentage, String boardPoints, String creatorName, List<Player> players) {
         this.gameId = gameId;
         this.gamePin = gamePin;
         this.totalScore = totalScore;
-        this.pointValue = pointValue;
+        this.gamePointFactor = gamePointFactor;
         this.creationDateTime = creationDateTime;
         this.gameStatus = gameStatus;
         this.numberOfPlayers = numberOfPlayers;
-        this.gstPercentage = gstPercentage;
-        this.gstAmount = gstAmount;
+        this.boardAdjustmentPercentage = boardAdjustmentPercentage;
+        this.boardPoints = boardPoints;
         this.creatorName = creatorName;
         this.players = players;
         this.age = calculateAge(creationDateTime);
@@ -99,12 +103,12 @@ public class GameItem {
     public String getGameId() { return gameId; }
     public String getGamePin() { return gamePin; }
     public String getTotalScore() { return totalScore; }
-    public String getPointValue() { return pointValue; }
+    public String getGamePointFactor() { return gamePointFactor; }
     public String getCreationDateTime() { return creationDateTime; }
     public String getGameStatus() { return gameStatus; }
     public String getNumberOfPlayers() { return numberOfPlayers; }
-    public String getGstPercentage() { return gstPercentage; }
-    public String getGstAmount() { return gstAmount; }
+    public String getBoardAdjustmentPercentage() { return boardAdjustmentPercentage; }
+    public String getBoardPoints() { return boardPoints; }
     public String getAge() { return age; }
     public String getCreatorName() { return creatorName; }
     public String getCreatorPhotoUrl() { return creatorPhotoUrl; }
@@ -153,12 +157,12 @@ public class GameItem {
     public void setGameId(String gameId) { this.gameId = gameId; }
     public void setGamePin(String gamePin) { this.gamePin = gamePin; }
     public void setTotalScore(String totalScore) { this.totalScore = totalScore; }
-    public void setPointValue(String pointValue) { this.pointValue = pointValue; }
+    public void setGamePointFactor(String gamePointFactor) { this.gamePointFactor = gamePointFactor; }
     public void setCreationDateTime(String creationDateTime) { this.creationDateTime = creationDateTime; }
     public void setGameStatus(String gameStatus) { this.gameStatus = gameStatus; }
     public void setNumberOfPlayers(String numberOfPlayers) { this.numberOfPlayers = numberOfPlayers; }
-    public void setGstPercentage(String gstPercentage) { this.gstPercentage = gstPercentage; }
-    public void setGstAmount(String gstAmount) { this.gstAmount = gstAmount; }
+    public void setBoardAdjustmentPercentage(String boardAdjustmentPercentage) { this.boardAdjustmentPercentage = boardAdjustmentPercentage; }
+    public void setBoardPoints(String boardPoints) { this.boardPoints = boardPoints; }
     public void setAge(String age) { this.age = age; }
     public void setCreatorName(String creatorName) { this.creatorName = creatorName; }
     public void setCreatorPhotoUrl(String creatorPhotoUrl) { this.creatorPhotoUrl = creatorPhotoUrl; }
@@ -188,17 +192,17 @@ public class GameItem {
         }
     }
 
-    public double getPointValueAsDouble() {
+    public double getGamePointFactorAsDouble() {
         try {
-            return Double.parseDouble(pointValue);
+            return Double.parseDouble(gamePointFactor);
         } catch (NumberFormatException e) {
             return 0.0;
         }
     }
 
-    public double getGstAmountAsDouble() {
+    public double getBoardPointsAsDouble() {
         try {
-            return Double.parseDouble(gstAmount);
+            return Double.parseDouble(boardPoints);
         } catch (NumberFormatException e) {
             return 0.0;
         }

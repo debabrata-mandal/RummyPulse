@@ -22,6 +22,7 @@ public class PlayerStats {
     /** Weeks retained in {@link #weeks} before the oldest are pruned. */
     public static final int WEEK_RETENTION = 12;
 
+    private Integer schemaVersion;
     private String userId;
     private String displayName;
     private Bucket allTime;
@@ -31,6 +32,14 @@ public class PlayerStats {
 
     public PlayerStats() {
         // Default constructor required for Firestore
+    }
+
+    public Integer getSchemaVersion() {
+        return schemaVersion;
+    }
+
+    public void setSchemaVersion(Integer schemaVersion) {
+        this.schemaVersion = schemaVersion;
     }
 
     public String getUserId() {
@@ -106,9 +115,9 @@ public class PlayerStats {
     public static class Bucket {
         private long games;
         private long wins;
-        private double netAmount;
-        private double grossAmount;
-        private double contributionPaid;
+        private double finalGamePoints;
+        private double baseGamePoints;
+        private double boardAdjustmentPoints;
 
         public Bucket() {
             // Default constructor required for Firestore
@@ -117,14 +126,14 @@ public class PlayerStats {
         public Bucket(
                 long games,
                 long wins,
-                double netAmount,
-                double grossAmount,
-                double contributionPaid) {
+                double finalGamePoints,
+                double baseGamePoints,
+                double boardAdjustmentPoints) {
             this.games = games;
             this.wins = wins;
-            this.netAmount = netAmount;
-            this.grossAmount = grossAmount;
-            this.contributionPaid = contributionPaid;
+            this.finalGamePoints = finalGamePoints;
+            this.baseGamePoints = baseGamePoints;
+            this.boardAdjustmentPoints = boardAdjustmentPoints;
         }
 
         public long getGames() {
@@ -143,28 +152,28 @@ public class PlayerStats {
             this.wins = wins;
         }
 
-        public double getNetAmount() {
-            return netAmount;
+        public double getFinalGamePoints() {
+            return finalGamePoints;
         }
 
-        public void setNetAmount(double netAmount) {
-            this.netAmount = netAmount;
+        public void setFinalGamePoints(double finalGamePoints) {
+            this.finalGamePoints = finalGamePoints;
         }
 
-        public double getGrossAmount() {
-            return grossAmount;
+        public double getBaseGamePoints() {
+            return baseGamePoints;
         }
 
-        public void setGrossAmount(double grossAmount) {
-            this.grossAmount = grossAmount;
+        public void setBaseGamePoints(double baseGamePoints) {
+            this.baseGamePoints = baseGamePoints;
         }
 
-        public double getContributionPaid() {
-            return contributionPaid;
+        public double getBoardAdjustmentPoints() {
+            return boardAdjustmentPoints;
         }
 
-        public void setContributionPaid(double contributionPaid) {
-            this.contributionPaid = contributionPaid;
+        public void setBoardAdjustmentPoints(double boardAdjustmentPoints) {
+            this.boardAdjustmentPoints = boardAdjustmentPoints;
         }
 
         /** Percentage of approved games with positive final Game Points, or 0 when none exist. */
@@ -179,9 +188,9 @@ public class PlayerStats {
             Map<String, Object> map = new HashMap<>();
             map.put("games", games);
             map.put("wins", wins);
-            map.put("netAmount", netAmount);
-            map.put("grossAmount", grossAmount);
-            map.put("contributionPaid", contributionPaid);
+            map.put("finalGamePoints", finalGamePoints);
+            map.put("baseGamePoints", baseGamePoints);
+            map.put("boardAdjustmentPoints", boardAdjustmentPoints);
             return map;
         }
     }

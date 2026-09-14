@@ -54,11 +54,12 @@ public class PlayerStatsRecorderTest {
         assertEquals(2, batch.get("user-a").size());
         Map<String, Object> document = PlayerStatsRecorder.buildStatsDocument(
                 null, "user-a", batch.get("user-a"));
+        assertEquals(3, document.get("schemaVersion"));
         @SuppressWarnings("unchecked")
         Map<String, Object> allTime = (Map<String, Object>) document.get("allTime");
         assertEquals(2L, allTime.get("games"));
         assertEquals(1L, allTime.get("wins"));
-        assertEquals(-6.0, (Double) allTime.get("netAmount"), 0.001);
+        assertEquals(-6.0, (Double) allTime.get("finalGamePoints"), 0.001);
     }
 
     @Test
@@ -84,7 +85,7 @@ public class PlayerStatsRecorderTest {
         Map<String, Object> months = (Map<String, Object>) document.get("months");
         assertEquals(4L, allTime.get("games"));
         assertEquals(2L, allTime.get("wins"));
-        assertEquals(79.0, (Double) allTime.get("netAmount"), 0.001);
+        assertEquals(79.0, (Double) allTime.get("finalGamePoints"), 0.001);
         assertEquals(new PlayerStats.Bucket(3, 1, 25, 30, 5).toFirestoreMap(),
                 months.get("2026-08"));
         assertEquals("Updated name", document.get("displayName"));
@@ -117,8 +118,8 @@ public class PlayerStatsRecorderTest {
     private static GameData game(Player... players) {
         GameData data = new GameData();
         data.setNumPlayers(players.length);
-        data.setPointValue(2.0);
-        data.setGstPercent(10.0);
+        data.setGamePointFactor(2.0);
+        data.setBoardAdjustmentPercent(10.0);
         data.setGameStatus("Completed");
         data.setPlayers(new ArrayList<>(Arrays.asList(players)));
         return data;
@@ -139,8 +140,8 @@ public class PlayerStatsRecorderTest {
             double boardAdjustmentPoints) {
         assertEquals(games, delta.bucket.getGames());
         assertEquals(wins, delta.bucket.getWins());
-        assertEquals(finalGamePoints, delta.bucket.getNetAmount(), 0.001);
-        assertEquals(baseGamePoints, delta.bucket.getGrossAmount(), 0.001);
-        assertEquals(boardAdjustmentPoints, delta.bucket.getContributionPaid(), 0.001);
+        assertEquals(finalGamePoints, delta.bucket.getFinalGamePoints(), 0.001);
+        assertEquals(baseGamePoints, delta.bucket.getBaseGamePoints(), 0.001);
+        assertEquals(boardAdjustmentPoints, delta.bucket.getBoardAdjustmentPoints(), 0.001);
     }
 }

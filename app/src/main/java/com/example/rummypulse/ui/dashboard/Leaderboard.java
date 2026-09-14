@@ -148,7 +148,7 @@ public class Leaderboard {
                 .<Ranked>comparingDouble(r -> order.keyOf(r.bucket)).reversed()
                 .thenComparing(Comparator.<Ranked>comparingLong(r -> r.bucket.getGames()).reversed())
                 .thenComparing(
-                        Comparator.<Ranked>comparingDouble(r -> r.bucket.getNetAmount()).reversed())
+                        Comparator.<Ranked>comparingDouble(r -> r.bucket.getFinalGamePoints()).reversed())
                 .thenComparing(r -> nameOf(r.stats)));
 
         List<LeaderboardEntry> entries = new ArrayList<>(ranked.size());
@@ -163,7 +163,7 @@ public class Leaderboard {
         return new LeaderboardEntry(
                 userId,
                 nameOf(ranked.stats),
-                ranked.bucket.getNetAmount(),
+                ranked.bucket.getFinalGamePoints(),
                 ranked.bucket.getGames(),
                 ranked.bucket.getWins(),
                 rank,
@@ -186,7 +186,7 @@ public class Leaderboard {
                             entry.getDisplayName(),
                             entry.getUserId(),
                             accountDisplayNameByUserId),
-                    entry.getNetAmount(),
+                    entry.getFinalGamePoints(),
                     entry.getGames(),
                     entry.getWins(),
                     entry.getRank(),

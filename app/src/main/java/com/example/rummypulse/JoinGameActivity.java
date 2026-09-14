@@ -120,7 +120,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private enum PlayerListSortMode {
         GAME_ORDER,
-        SETTLEMENT_ORDER
+        GAME_POINTS_ORDER
     }
 
     private PlayerListSortMode playerListSortMode = PlayerListSortMode.GAME_ORDER;
@@ -150,7 +150,7 @@ public class JoinGameActivity extends AppCompatActivity {
     private boolean roomDraftLoaded;
     private String cachedRoomDraft;
     private Runnable pendingRoundAfterSync;
-    /** Player selected from the read-only settlement board for round-score details. */
+    /** Player selected from the read-only gamePoints board for round-score details. */
     private String selectedViewRoundPlayerKey;
     /** Player whose round details are currently expanded from an edit-mode card. */
     private String selectedEditRoundPlayerId;
@@ -766,8 +766,8 @@ public class JoinGameActivity extends AppCompatActivity {
             // Calculate standings
             java.util.List<PlayerStanding> standings = calculateStandings(gameData);
             
-            // Calculate total contribution
-            double totalContribution = calculateTotalContribution(gameData);
+            // Calculate total boardAdjustment
+            double totalBoardPoints = calculateTotalBoardPoints(gameData);
             
             // Sort by total score (ascending - lower is better)
             standings.sort((a, b) -> Integer.compare(a.totalScore, b.totalScore));
@@ -781,7 +781,7 @@ public class JoinGameActivity extends AppCompatActivity {
                     : R.string.game_completion_intro_en));
             for (PlayerStanding standing : standings) {
                 String result = String.format(
-                        Locale.getDefault(), "%+.0f", standing.netAmount);
+                        Locale.getDefault(), "%+.0f", standing.finalGamePoints);
                 announcement.append(getString(
                         bengali
                                 ? R.string.game_completion_player_bn
@@ -790,9 +790,9 @@ public class JoinGameActivity extends AppCompatActivity {
                         standing.totalScore,
                         result));
             }
-            if (totalContribution > 0) {
+            if (totalBoardPoints > 0) {
                 String boardPoints = String.format(
-                        Locale.getDefault(), "%.0f", totalContribution);
+                        Locale.getDefault(), "%.0f", totalBoardPoints);
                 announcement.append(getString(
                         bengali
                                 ? R.string.game_completion_board_bn
@@ -1050,8 +1050,8 @@ public class JoinGameActivity extends AppCompatActivity {
             scoreText.setText("0");
 
             // Set zero final points only (simplified display)
-            TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
-            applyStandingNetAmountPlaceholder(netAmountText);
+            TextView finalGamePointsText = standingsRowView.findViewById(R.id.text_final_game_points);
+            applyStandingFinalGamePointsPlaceholder(finalGamePointsText);
 
             populateLoadingLastCompletedRound(standingsRowView);
 
@@ -1169,8 +1169,8 @@ public class JoinGameActivity extends AppCompatActivity {
             if (!isChecked) {
                 return;
             }
-            PlayerListSortMode selectedMode = checkedId == R.id.btn_sort_settlement_order
-                    ? PlayerListSortMode.SETTLEMENT_ORDER
+            PlayerListSortMode selectedMode = checkedId == R.id.btn_sort_game_points_order
+                    ? PlayerListSortMode.GAME_POINTS_ORDER
                     : PlayerListSortMode.GAME_ORDER;
             if (selectedMode == playerListSortMode) {
                 return;
@@ -1639,8 +1639,8 @@ public class JoinGameActivity extends AppCompatActivity {
         // Hide admin mode initially
         binding.textAdminMode.setVisibility(View.GONE);
         
-        // Update settlement explanation with dynamic values
-        updateSettlementExplanation(gameData);
+        // Update gamePoints explanation with dynamic values
+        updateGamePointsExplanation(gameData);
         if (editAccess == null || !editAccess) {
             updateViewMode(gameData);
         }
@@ -1677,13 +1677,13 @@ public class JoinGameActivity extends AppCompatActivity {
         TextView gameId = root.findViewById(R.id.view_mode_game_id);
         TextView roundStatus = root.findViewById(R.id.view_mode_round_status);
         ProgressBar progress = root.findViewById(R.id.view_mode_round_progress);
-        TextView settlementStatus = root.findViewById(R.id.view_mode_settlement_status);
+        TextView gamePointsStatus = root.findViewById(R.id.view_mode_game_points_status);
         TextView playerPosition = root.findViewById(R.id.view_mode_player_position);
         TextView playerBalance = root.findViewById(R.id.view_mode_player_balance);
         TextView balanceLabel = root.findViewById(R.id.view_mode_balance_label);
-        TextView contributionSummary = root.findViewById(R.id.view_mode_contribution_summary);
+        TextView boardAdjustmentSummary = root.findViewById(R.id.view_mode_board_adjustment_summary);
         TextView totalPlayers = root.findViewById(R.id.view_mode_total_players);
-        TextView pointValue = root.findViewById(R.id.view_mode_point_value);
+        TextView gamePointFactor = root.findViewById(R.id.view_mode_game_point_factor);
 
         String displayName = viewModel.getGameDisplayName().getValue();
         title.setText(TextUtils.isEmpty(displayName) ? "Rummy Game" : displayName);
@@ -1700,16 +1700,16 @@ public class JoinGameActivity extends AppCompatActivity {
         progress.setProgress(completedRounds);
         totalPlayers.setText(String.valueOf(
                 gameData.getPlayers() == null ? 0 : gameData.getPlayers().size()));
-        pointValue.setText(getString(
+        gamePointFactor.setText(getString(
                 R.string.format_game_point_factor,
-                formatPointValue(gameData.getPointValue())));
-        contributionSummary.setText(getString(
+                formatGamePointFactor(gameData.getGamePointFactor())));
+        boardAdjustmentSummary.setText(getString(
                 R.string.format_board_points_summary,
-                gameData.getGstPercent(),
-                Math.round(calculateTotalContribution(gameData))));
-        renderCurrentPlayerPerformance(gameData, settlementStatus,
+                gameData.getBoardAdjustmentPercent(),
+                Math.round(calculateTotalBoardPoints(gameData))));
+        renderCurrentPlayerPerformance(gameData, gamePointsStatus,
                 playerPosition, balanceLabel, playerBalance);
-        renderViewModeSettlementRows(gameData);
+        renderViewModeGamePointsRows(gameData);
         renderViewModeRoundRows(gameData);
     }
 
@@ -1771,15 +1771,15 @@ public class JoinGameActivity extends AppCompatActivity {
                 || !shouldShowStandingAmountForPlayer(gameData, focusStanding.player)) {
             balanceView.setText(getString(R.string.game_view_amount_hidden));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
-        } else if (focusStanding.netAmount > 0) {
+        } else if (focusStanding.finalGamePoints > 0) {
             balanceView.setText(getString(
                     R.string.format_game_points_positive,
-                    String.format(Locale.getDefault(), "%.0f", focusStanding.netAmount)));
+                    String.format(Locale.getDefault(), "%.0f", focusStanding.finalGamePoints)));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
-        } else if (focusStanding.netAmount < 0) {
+        } else if (focusStanding.finalGamePoints < 0) {
             balanceView.setText(getString(
                     R.string.format_game_points_negative,
-                    String.format(Locale.getDefault(), "%.0f", Math.abs(focusStanding.netAmount))));
+                    String.format(Locale.getDefault(), "%.0f", Math.abs(focusStanding.finalGamePoints))));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
         } else {
             balanceView.setText(R.string.game_points_zero);
@@ -1853,16 +1853,16 @@ public class JoinGameActivity extends AppCompatActivity {
                 .setText(String.valueOf(statistics.getFullHandCount()));
     }
 
-    private void renderViewModeSettlementRows(com.example.rummypulse.data.GameData gameData) {
+    private void renderViewModeGamePointsRows(com.example.rummypulse.data.GameData gameData) {
         View viewRoot = binding.viewModeContent.getRoot();
         LinearLayout positiveRows = viewRoot.findViewById(R.id.view_mode_positive_rows);
         LinearLayout negativeRows = viewRoot.findViewById(R.id.view_mode_negative_rows);
         LinearLayout hiddenRows = viewRoot.findViewById(R.id.view_mode_hidden_rows);
-        View hiddenSection = viewRoot.findViewById(R.id.view_mode_hidden_settlements);
+        View hiddenSection = viewRoot.findViewById(R.id.view_mode_hidden_game_points);
         TextView positiveEmpty = viewRoot.findViewById(R.id.view_mode_positive_empty);
         TextView negativeEmpty = viewRoot.findViewById(R.id.view_mode_negative_empty);
-        TextView receivesCount = viewRoot.findViewById(R.id.view_mode_receives_count);
-        TextView paysCount = viewRoot.findViewById(R.id.view_mode_pays_count);
+        TextView positiveCountView = viewRoot.findViewById(R.id.view_mode_receives_count);
+        TextView negativeCountView = viewRoot.findViewById(R.id.view_mode_pays_count);
         positiveRows.removeAllViews();
         negativeRows.removeAllViews();
         hiddenRows.removeAllViews();
@@ -1882,10 +1882,10 @@ public class JoinGameActivity extends AppCompatActivity {
             PlayerStanding standing = standings.get(i);
             boolean amountVisible = shouldShowStandingAmountForPlayer(gameData, standing.player);
             LinearLayout targetRows;
-            // The settlement direction is safe to expose because scores are already
+            // The gamePoints direction is safe to expose because scores are already
             // visible. Keep restricted amounts hidden, but still place each player in
             // the correct positive/negative column using the internally calculated result.
-            if (standing.netAmount < 0) {
+            if (standing.finalGamePoints < 0) {
                 targetRows = negativeRows;
                 negativeCount++;
             } else {
@@ -1893,66 +1893,66 @@ public class JoinGameActivity extends AppCompatActivity {
                 positiveCount++;
             }
             View row = LayoutInflater.from(this).inflate(
-                    R.layout.item_view_settlement_row, targetRows, false);
+                    R.layout.item_view_game_points_row, targetRows, false);
             boolean isCurrentPlayer = isViewModeSelfPlayer(gameData, standing.player);
             String selectionKey = viewPlayerSelectionKey(standing.player);
             boolean isSelected = selectionKey.equals(selectedViewRoundPlayerKey);
             row.setBackgroundResource(isSelected
                     ? R.drawable.bg_view_player_row_current : R.drawable.bg_view_player_row);
-            ((TextView) row.findViewById(R.id.view_settlement_rank)).setText(String.valueOf(i + 1));
+            ((TextView) row.findViewById(R.id.view_game_points_rank)).setText(String.valueOf(i + 1));
             String displayName = formatPlayerDisplayName(standing.player);
-            ((TextView) row.findViewById(R.id.view_settlement_name)).setText(isCurrentPlayer
+            ((TextView) row.findViewById(R.id.view_game_points_name)).setText(isCurrentPlayer
                     ? displayName + "  ·  You" : displayName);
-            ((TextView) row.findViewById(R.id.view_settlement_score)).setText(
+            ((TextView) row.findViewById(R.id.view_game_points_score)).setText(
                     getResources().getQuantityString(
                             R.plurals.standing_score_points,
                             standing.totalScore,
                             standing.totalScore));
-            TextView avatar = row.findViewById(R.id.view_settlement_avatar);
+            TextView avatar = row.findViewById(R.id.view_game_points_avatar);
             avatar.setText(DisplayNameUtils.initials(displayName));
-            TextView direction = row.findViewById(R.id.view_settlement_direction);
-            TextView amount = row.findViewById(R.id.view_settlement_amount);
+            TextView direction = row.findViewById(R.id.view_game_points_direction);
+            TextView amount = row.findViewById(R.id.view_game_points_amount);
             if (!amountVisible) {
-                applyStandingNetAmountPlaceholder(amount);
+                applyStandingFinalGamePointsPlaceholder(amount);
                 amount.setBackgroundResource(R.drawable.bg_view_amount_neutral);
-                if (standing.netAmount > 0) {
-                    direction.setText(getString(R.string.edit_settlement_direction_receives));
-                } else if (standing.netAmount < 0) {
-                    direction.setText(getString(R.string.edit_settlement_direction_pays));
+                if (standing.finalGamePoints > 0) {
+                    direction.setText(getString(R.string.edit_game_points_direction_receives));
+                } else if (standing.finalGamePoints < 0) {
+                    direction.setText(getString(R.string.edit_game_points_direction_pays));
                 } else {
-                    direction.setText(getString(R.string.edit_settlement_direction_even));
+                    direction.setText(getString(R.string.edit_game_points_direction_even));
                 }
-            } else if (standing.netAmount > 0) {
+            } else if (standing.finalGamePoints > 0) {
                 amount.setText(getString(
                         R.string.format_game_points_positive,
-                        String.format(Locale.getDefault(), "%.0f", standing.netAmount)));
+                        String.format(Locale.getDefault(), "%.0f", standing.finalGamePoints)));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_receive);
-                direction.setText(getString(R.string.edit_settlement_direction_receives));
-            } else if (standing.netAmount < 0) {
+                direction.setText(getString(R.string.edit_game_points_direction_receives));
+            } else if (standing.finalGamePoints < 0) {
                 amount.setText(getString(
                         R.string.format_game_points_negative,
-                        String.format(Locale.getDefault(), "%.0f", Math.abs(standing.netAmount))));
+                        String.format(Locale.getDefault(), "%.0f", Math.abs(standing.finalGamePoints))));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_pay);
-                direction.setText(getString(R.string.edit_settlement_direction_pays));
+                direction.setText(getString(R.string.edit_game_points_direction_pays));
             } else {
                 amount.setText(getString(R.string.format_game_points_rounded, 0));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_neutral);
-                direction.setText(getString(R.string.edit_settlement_direction_even));
+                direction.setText(getString(R.string.edit_game_points_direction_even));
             }
             row.setClickable(true);
             row.setFocusable(true);
             row.setOnClickListener(v -> {
                 selectedViewRoundPlayerKey = selectionKey;
-                renderViewModeSettlementRows(gameData);
+                renderViewModeGamePointsRows(gameData);
                 renderViewModeRoundRows(gameData);
             });
             targetRows.addView(row);
         }
-        receivesCount.setText(String.valueOf(positiveCount));
-        paysCount.setText(String.valueOf(negativeCount));
+        positiveCountView.setText(String.valueOf(positiveCount));
+        negativeCountView.setText(String.valueOf(negativeCount));
         positiveEmpty.setVisibility(positiveCount == 0 ? View.VISIBLE : View.GONE);
         negativeEmpty.setVisibility(negativeCount == 0 ? View.VISIBLE : View.GONE);
         hiddenSection.setVisibility(View.GONE);
@@ -2101,7 +2101,7 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void updateGameInfoHeader(com.example.rummypulse.data.GameData gameData) {
         // This is the legacy edit-mode header. The dedicated read-only surface has
-        // its own settlement hero and must never render this card over it.
+        // its own gamePoints hero and must never render this card over it.
         boolean editMode = Boolean.TRUE.equals(viewModel.getEditAccessGranted().getValue());
         binding.gameInfoHeader.setVisibility(editMode ? View.VISIBLE : View.GONE);
         
@@ -2111,9 +2111,9 @@ public class JoinGameActivity extends AppCompatActivity {
         });
         
         // Update Point Value
-        binding.textHeaderPointValue.setText(getString(
+        binding.textHeaderGamePointFactor.setText(getString(
                 R.string.format_game_point_factor,
-                formatPointValue(gameData.getPointValue())));
+                formatGamePointFactor(gameData.getGamePointFactor())));
         
         // Update Number of Players
         int numberOfPlayers = gameData.getPlayers() != null ? gameData.getPlayers().size() : 0;
@@ -2130,14 +2130,14 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.editHeaderRoundProgress.setMax(10);
         binding.editHeaderRoundProgress.setProgress(completedRounds);
         
-        // Update Contribution %
-        binding.textHeaderContribution.setText(String.format(
-                Locale.getDefault(), "%.0f%% · ", gameData.getGstPercent()));
+        // Update BoardAdjustment %
+        binding.textHeaderBoardAdjustment.setText(String.format(
+                Locale.getDefault(), "%.0f%% · ", gameData.getBoardAdjustmentPercent()));
         
-        // Update Total Contribution Amount (rounded, no decimals)
-        double totalContribution = calculateTotalContribution(gameData);
-        binding.textHeaderTotalContribution.setText(getString(
-                R.string.format_game_points_rounded, Math.round(totalContribution)));
+        // Update Total BoardAdjustment Amount (rounded, no decimals)
+        double totalBoardPoints = calculateTotalBoardPoints(gameData);
+        binding.textHeaderTotalBoardPoints.setText(getString(
+                R.string.format_game_points_rounded, Math.round(totalBoardPoints)));
 
         renderEditHeaderPerformance(gameData);
         
@@ -2184,16 +2184,16 @@ public class JoinGameActivity extends AppCompatActivity {
                     getString(R.string.game_view_amount_hidden));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_text_muted));
-        } else if (mappedStanding.netAmount > 0) {
+        } else if (mappedStanding.finalGamePoints > 0) {
             binding.editHeaderPlayerBalance.setText(getString(
                     R.string.format_game_points_positive,
-                    String.format(Locale.getDefault(), "%.0f", mappedStanding.netAmount)));
+                    String.format(Locale.getDefault(), "%.0f", mappedStanding.finalGamePoints)));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_mint));
-        } else if (mappedStanding.netAmount < 0) {
+        } else if (mappedStanding.finalGamePoints < 0) {
             binding.editHeaderPlayerBalance.setText(getString(
                     R.string.format_game_points_negative,
-                    String.format(Locale.getDefault(), "%.0f", Math.abs(mappedStanding.netAmount))));
+                    String.format(Locale.getDefault(), "%.0f", Math.abs(mappedStanding.finalGamePoints))));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_coral));
         } else {
@@ -2267,7 +2267,7 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.headerPinDivider.setVisibility(View.GONE);
     }
     
-    private double calculateTotalContribution(com.example.rummypulse.data.GameData gameData) {
+    private double calculateTotalBoardPoints(com.example.rummypulse.data.GameData gameData) {
         if (gameData == null || gameData.getPlayers() == null) {
             return 0.0;
         }
@@ -2285,8 +2285,8 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         return GamePointsCalculator.calculate(
                 playerScores,
-                gameData != null ? gameData.getPointValue() : 0,
-                gameData != null ? gameData.getGstPercent() : 0,
+                gameData != null ? gameData.getGamePointFactor() : 0,
+                gameData != null ? gameData.getBoardAdjustmentPercent() : 0,
                 gameData != null ? gameData.getNumPlayers() : 0);
     }
 
@@ -2302,8 +2302,8 @@ public class JoinGameActivity extends AppCompatActivity {
         java.util.Map<String, PlayerStanding> standingsByPlayerId =
                 buildStandingsByPlayerId(gameData);
 
-        if (playerListSortMode == PlayerListSortMode.SETTLEMENT_ORDER) {
-            generateSettlementOrderedPlayerCards(gameData, standingsByPlayerId);
+        if (playerListSortMode == PlayerListSortMode.GAME_POINTS_ORDER) {
+            generateGamePointsOrderedPlayerCards(gameData, standingsByPlayerId);
         } else {
             generateGameOrderedPlayerCards(gameData, standingsByPlayerId);
         }
@@ -2323,11 +2323,11 @@ public class JoinGameActivity extends AppCompatActivity {
         }
     }
 
-    private void generateSettlementOrderedPlayerCards(
+    private void generateGamePointsOrderedPlayerCards(
             com.example.rummypulse.data.GameData gameData,
             java.util.Map<String, PlayerStanding> standingsByPlayerId) {
         for (com.example.rummypulse.data.Player player :
-                getSettlementOrderedPlayers(gameData, standingsByPlayerId)) {
+                getGamePointsOrderedPlayers(gameData, standingsByPlayerId)) {
             binding.playersContainer.addView(
                     createPlayerCardView(
                             player,
@@ -2337,11 +2337,11 @@ public class JoinGameActivity extends AppCompatActivity {
         }
     }
 
-    private java.util.List<com.example.rummypulse.data.Player> getSettlementOrderedPlayers(
+    private java.util.List<com.example.rummypulse.data.Player> getGamePointsOrderedPlayers(
             com.example.rummypulse.data.GameData gameData,
             java.util.Map<String, PlayerStanding> standingsByPlayerId) {
-        java.util.List<PlayerStanding> receivers = new java.util.ArrayList<>();
-        java.util.List<PlayerStanding> payers = new java.util.ArrayList<>();
+        java.util.List<PlayerStanding> positive = new java.util.ArrayList<>();
+        java.util.List<PlayerStanding> negative = new java.util.ArrayList<>();
         java.util.List<PlayerStanding> even = new java.util.ArrayList<>();
         for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
             PlayerStanding standing = standingsByPlayerId.get(player.getPlayerId());
@@ -2351,24 +2351,24 @@ public class JoinGameActivity extends AppCompatActivity {
                 even.add(placeholder);
                 continue;
             }
-            if (standing.netAmount > 0) {
-                receivers.add(standing);
-            } else if (standing.netAmount < 0) {
-                payers.add(standing);
+            if (standing.finalGamePoints > 0) {
+                positive.add(standing);
+            } else if (standing.finalGamePoints < 0) {
+                negative.add(standing);
             } else {
                 even.add(standing);
             }
         }
         Comparator<PlayerStanding> byRank = Comparator.comparingInt(s -> s.rank);
-        receivers.sort(byRank);
-        payers.sort(byRank);
+        positive.sort(byRank);
+        negative.sort(byRank);
         even.sort(byRank);
 
         java.util.List<com.example.rummypulse.data.Player> ordered = new java.util.ArrayList<>();
-        for (PlayerStanding standing : receivers) {
+        for (PlayerStanding standing : positive) {
             ordered.add(standing.player);
         }
-        for (PlayerStanding standing : payers) {
+        for (PlayerStanding standing : negative) {
             ordered.add(standing.player);
         }
         for (PlayerStanding standing : even) {
@@ -2495,7 +2495,7 @@ public class JoinGameActivity extends AppCompatActivity {
         if (playerListSortMode == PlayerListSortMode.GAME_ORDER) {
             expectedPlayers = gameData.getPlayers();
         } else {
-            expectedPlayers = getSettlementOrderedPlayers(
+            expectedPlayers = getGamePointsOrderedPlayers(
                     gameData, buildStandingsByPlayerId(gameData));
         }
         for (int index = 0; index < expectedPlayers.size(); index++) {
@@ -3090,12 +3090,12 @@ public class JoinGameActivity extends AppCompatActivity {
         TextView position = playerCard.findViewById(R.id.text_player_position);
         TextView total = playerCard.findViewById(R.id.text_player_total_score);
         TextView direction = playerCard.findViewById(R.id.text_net_direction);
-        TextView amount = playerCard.findViewById(R.id.text_net_amount);
+        TextView amount = playerCard.findViewById(R.id.text_final_game_points);
         if (standing == null) {
             position.setText("—");
             total.setText("—");
             applyStandingDirectionPlaceholder(direction);
-            applyStandingNetAmountPlaceholder(amount);
+            applyStandingFinalGamePointsPlaceholder(amount);
             applyPlayerCardRoleStyle(playerCard, null);
             populateLastCompletedRound(playerCard, player, gameData);
             return;
@@ -3105,7 +3105,7 @@ public class JoinGameActivity extends AppCompatActivity {
         styleTotalScoreTextView(total, standing.totalScore);
         populateLastCompletedRound(playerCard, player, gameData);
         applyStandingDirectionDisplay(direction, standing, gameData);
-        applyStandingNetAmountDisplay(amount, standing, gameData);
+        applyStandingFinalGamePointsDisplay(amount, standing, gameData);
         applyPlayerCardRoleStyle(playerCard, standing);
 
         String playerKey = player.getPlayerId();
@@ -3134,7 +3134,7 @@ public class JoinGameActivity extends AppCompatActivity {
             }
             return;
         }
-        if (standing.netAmount > 0) {
+        if (standing.finalGamePoints > 0) {
             if (stripe != null) {
                 stripe.setVisibility(View.VISIBLE);
                 stripe.setBackgroundColor(ContextCompat.getColor(this, R.color.view_mint));
@@ -3142,7 +3142,7 @@ public class JoinGameActivity extends AppCompatActivity {
             if (avatar != null) {
                 avatar.setBackgroundResource(R.drawable.bg_view_avatar_receive);
             }
-        } else if (standing.netAmount < 0) {
+        } else if (standing.finalGamePoints < 0) {
             if (stripe != null) {
                 stripe.setVisibility(View.VISIBLE);
                 stripe.setBackgroundColor(ContextCompat.getColor(this, R.color.view_coral));
@@ -4223,7 +4223,7 @@ public class JoinGameActivity extends AppCompatActivity {
             com.example.rummypulse.data.GameData gameData,
             com.example.rummypulse.data.Player player) {
         String playerUserId = player == null ? null : player.getUserId();
-        return com.example.rummypulse.data.GameAmountVisibilityPolicy.shouldShowPlayerAmount(
+        return com.example.rummypulse.data.GamePointVisibilityPolicy.shouldShowPlayerGamePoints(
                 isLiveAmountDisplayEnabled(),
                 gameData != null && isGameCompleted(gameData),
                 playerUserId,
@@ -4233,16 +4233,16 @@ public class JoinGameActivity extends AppCompatActivity {
     private boolean isLiveAmountDisplayEnabled() {
         return com.example.rummypulse.data.GameDefaultsRepository
                 .getInstance(getApplicationContext())
-                .isDisplayIntermediateCalculationEnabled();
+                .isShowLiveGamePointsEnabled();
     }
 
-    private void applyStandingNetAmountPlaceholder(TextView netAmountText) {
-        if (netAmountText == null) {
+    private void applyStandingFinalGamePointsPlaceholder(TextView finalGamePointsText) {
+        if (finalGamePointsText == null) {
             return;
         }
-        netAmountText.setText(getString(R.string.game_view_amount_hidden));
-        netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
-        netAmountText.setBackground(null);
+        finalGamePointsText.setText(getString(R.string.game_view_amount_hidden));
+        finalGamePointsText.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
+        finalGamePointsText.setBackground(null);
     }
 
     private void applyStandingDirectionPlaceholder(TextView directionText) {
@@ -4260,40 +4260,40 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         // Direction is safe to show even when amounts are restricted (matches view mode).
-        if (standing.netAmount > 0) {
-            directionText.setText(R.string.edit_settlement_direction_receives);
+        if (standing.finalGamePoints > 0) {
+            directionText.setText(R.string.edit_game_points_direction_receives);
             directionText.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
-        } else if (standing.netAmount < 0) {
-            directionText.setText(R.string.edit_settlement_direction_pays);
+        } else if (standing.finalGamePoints < 0) {
+            directionText.setText(R.string.edit_game_points_direction_pays);
             directionText.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
         } else {
-            directionText.setText(R.string.edit_settlement_direction_even);
+            directionText.setText(R.string.edit_game_points_direction_even);
             directionText.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
         }
     }
 
-    private void applyStandingNetAmountDisplay(TextView netAmountText, PlayerStanding standing,
+    private void applyStandingFinalGamePointsDisplay(TextView finalGamePointsText, PlayerStanding standing,
                                                com.example.rummypulse.data.GameData gameData) {
-        if (netAmountText == null) {
+        if (finalGamePointsText == null) {
             return;
         }
         if (!shouldShowStandingAmountForPlayer(gameData, standing.player)) {
-            applyStandingNetAmountPlaceholder(netAmountText);
+            applyStandingFinalGamePointsPlaceholder(finalGamePointsText);
             return;
         }
-        String amount = String.format(Locale.getDefault(), "%.0f", Math.abs(standing.netAmount));
-        if (standing.netAmount > 0) {
-            netAmountText.setText(getString(R.string.format_game_points_positive, amount));
-            netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
-            netAmountText.setBackgroundResource(R.drawable.bg_view_amount_receive);
-        } else if (standing.netAmount < 0) {
-            netAmountText.setText(getString(R.string.format_game_points_negative, amount));
-            netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
-            netAmountText.setBackgroundResource(R.drawable.bg_view_amount_pay);
+        String amount = String.format(Locale.getDefault(), "%.0f", Math.abs(standing.finalGamePoints));
+        if (standing.finalGamePoints > 0) {
+            finalGamePointsText.setText(getString(R.string.format_game_points_positive, amount));
+            finalGamePointsText.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
+            finalGamePointsText.setBackgroundResource(R.drawable.bg_view_amount_receive);
+        } else if (standing.finalGamePoints < 0) {
+            finalGamePointsText.setText(getString(R.string.format_game_points_negative, amount));
+            finalGamePointsText.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
+            finalGamePointsText.setBackgroundResource(R.drawable.bg_view_amount_pay);
         } else {
-            netAmountText.setText(R.string.game_points_zero);
-            netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
-            netAmountText.setBackground(null);
+            finalGamePointsText.setText(R.string.game_points_zero);
+            finalGamePointsText.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
+            finalGamePointsText.setBackground(null);
         }
     }
 
@@ -4565,9 +4565,9 @@ public class JoinGameActivity extends AppCompatActivity {
             PlayerStanding standing = standings.get(i);
             GamePointsCalculator.PlayerGamePoints playerPoints =
                     gamePoints.getPlayerResults().get(i);
-            standing.grossAmount = playerPoints.getBaseGamePoints();
-            standing.gstPaid = playerPoints.getBoardAdjustmentPoints();
-            standing.netAmount = playerPoints.getFinalGamePoints();
+            standing.baseGamePoints = playerPoints.getBaseGamePoints();
+            standing.boardAdjustmentPoints = playerPoints.getBoardAdjustmentPoints();
+            standing.finalGamePoints = playerPoints.getFinalGamePoints();
         }
 
         // Sort by total score (ascending - lower is better in Rummy)
@@ -4617,8 +4617,8 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView scoreText = standingsRowView.findViewById(R.id.text_score);
             scoreText.setText(String.valueOf(standing.totalScore));
 
-            TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
-            applyStandingNetAmountDisplay(netAmountText, standing, gameData);
+            TextView finalGamePointsText = standingsRowView.findViewById(R.id.text_final_game_points);
+            applyStandingFinalGamePointsDisplay(finalGamePointsText, standing, gameData);
 
             populateLastCompletedRound(standingsRowView, standing.player, gameData);
 
@@ -4832,9 +4832,9 @@ public class JoinGameActivity extends AppCompatActivity {
             toggleSection(binding.standingsContent, binding.standingsCollapseIcon);
         });
         
-        // Setup Settlement section collapsible
-        binding.settlementHeader.setOnClickListener(v -> {
-            toggleSection(binding.settlementContent, binding.settlementToggleIcon);
+        // Setup GamePoints section collapsible
+        binding.gamePointsHeader.setOnClickListener(v -> {
+            toggleSection(binding.gamePointsContent, binding.gamePointsToggleIcon);
         });
 
         binding.viewRequestsHeader.setOnClickListener(v -> {
@@ -5060,68 +5060,64 @@ public class JoinGameActivity extends AppCompatActivity {
         return Math.round(dp * density);
     }
 
-    private double calculateTotalGST(com.example.rummypulse.data.GameData gameData) {
-        return calculateGamePoints(gameData).getBoardPoints();
-    }
-
     private void updateStandingsInfo(com.example.rummypulse.data.GameData gameData) {
         // Standings info card has been removed - all info now shown in top header
         // This method is kept for compatibility but does nothing
     }
 
-    private void updateSettlementExplanation(com.example.rummypulse.data.GameData gameData) {
+    private void updateGamePointsExplanation(com.example.rummypulse.data.GameData gameData) {
         try {
-            double pointValue = gameData.getPointValue();
-            double gstPercent = gameData.getGstPercent();
+            double gamePointFactor = gameData.getGamePointFactor();
+            double boardAdjustmentPercent = gameData.getBoardAdjustmentPercent();
             int playerCount = gameData.getPlayers() != null ? gameData.getPlayers().size() : 4;
             
             // Format values - preserve fractional parts for point value
-            String pointValueText = formatPointValue(pointValue);
+            String gamePointFactorText = formatGamePointFactor(gamePointFactor);
             
-            String gstPercentText = String.format(Locale.getDefault(), "%.0f", gstPercent) + "%";
+            String boardAdjustmentPercentText = String.format(Locale.getDefault(), "%.0f", boardAdjustmentPercent) + "%";
             
             // Update Winners Rule
-            TextView winnersRule = findViewById(R.id.text_settlement_winners_rule);
+            TextView winnersRule = findViewById(R.id.text_game_points_winners_rule);
             if (winnersRule != null) {
-                winnersRule.setText(getString(R.string.settlement_winners_rule_dynamic, gstPercentText));
+                winnersRule.setText(getString(R.string.game_points_winners_rule_dynamic, boardAdjustmentPercentText));
             }
             
             // Update Formula
-            TextView formulaText = findViewById(R.id.text_settlement_formula);
+            TextView formulaText = findViewById(R.id.text_game_points_formula);
             if (formulaText != null) {
                 formulaText.setText(getString(
-                        R.string.settlement_formula_description_dynamic, playerCount, pointValueText));
+                        R.string.game_points_formula_description_dynamic, playerCount, gamePointFactorText));
             }
             
-            // Update Contribution Rule
-            TextView gstRule = findViewById(R.id.text_settlement_gst_rule);
-            if (gstRule != null) {
-                gstRule.setText(getString(R.string.settlement_contribution_rule_dynamic, gstPercentText));
+            // Update BoardAdjustment Rule
+            TextView boardAdjustmentRule = findViewById(R.id.text_game_points_board_adjustment_rule);
+            if (boardAdjustmentRule != null) {
+                boardAdjustmentRule.setText(getString(R.string.game_points_board_adjustment_rule_dynamic, boardAdjustmentPercentText));
             }
             
             // Update Example Description
-            TextView exampleDesc = findViewById(R.id.text_settlement_example_description);
+            TextView exampleDesc = findViewById(R.id.text_game_points_example_description);
             if (exampleDesc != null) {
                 exampleDesc.setText(getString(
-                        R.string.settlement_example_intro_dynamic, playerCount, pointValueText));
+                        R.string.game_points_example_intro_dynamic, playerCount, gamePointFactorText));
             }
             
             // Update Example Formula
-            TextView exampleFormula = findViewById(R.id.text_settlement_example_formula);
+            TextView exampleFormula = findViewById(R.id.text_game_points_example_formula);
             if (exampleFormula != null) {
                 exampleFormula.setText(getResources().getQuantityString(
-                        R.plurals.settlement_example_formula_dynamic,
+                        R.plurals.game_points_example_formula_dynamic,
                         playerCount,
                         playerCount,
-                        pointValueText));
+                        gamePointFactorText));
             }
             
         } catch (Exception e) {
-            System.out.println("Error updating settlement explanation");
+            System.out.println("Error updating gamePoints explanation");
         }
     }
 
-    private String formatPointValue(double value) {
+    private String formatGamePointFactor(double value) {
         // Remove unnecessary trailing zeros while preserving meaningful decimals
         if (value == Math.floor(value)) {
             // Whole number - show without decimals
@@ -5714,8 +5710,8 @@ public class JoinGameActivity extends AppCompatActivity {
                                                     }
                                                     
                                                     // Update other fields
-                                                    currentGameData.setPointValue(gameData.getPointValue());
-                                                    currentGameData.setGstPercent(gameData.getGstPercent());
+                                                    currentGameData.setGamePointFactor(gameData.getGamePointFactor());
+                                                    currentGameData.setBoardAdjustmentPercent(gameData.getBoardAdjustmentPercent());
                                                     currentGameData.setNumPlayers(gameData.getNumPlayers());
                                                     
                                                     // Update ViewModel
@@ -6302,11 +6298,11 @@ public class JoinGameActivity extends AppCompatActivity {
             if (dataMap.get("numPlayers") instanceof Number) {
                 gameData.setNumPlayers(((Number) dataMap.get("numPlayers")).intValue());
             }
-            if (dataMap.get("pointValue") instanceof Number) {
-                gameData.setPointValue(((Number) dataMap.get("pointValue")).doubleValue());
+            if (dataMap.get("gamePointFactor") instanceof Number) {
+                gameData.setGamePointFactor(((Number) dataMap.get("gamePointFactor")).doubleValue());
             }
-            if (dataMap.get("gstPercent") instanceof Number) {
-                gameData.setGstPercent(((Number) dataMap.get("gstPercent")).doubleValue());
+            if (dataMap.get("boardAdjustmentPercent") instanceof Number) {
+                gameData.setBoardAdjustmentPercent(((Number) dataMap.get("boardAdjustmentPercent")).doubleValue());
             }
             if (dataMap.get("schemaVersion") instanceof Number) {
                 gameData.setSchemaVersion(
@@ -6424,10 +6420,10 @@ public class JoinGameActivity extends AppCompatActivity {
         // Calculate standings
         java.util.List<PlayerStanding> standings = calculateStandings(gameData);
         
-        // Calculate total contribution
-        double totalContribution = 0;
+        // Calculate total boardAdjustment
+        double totalBoardPoints = 0;
         for (PlayerStanding standing : standings) {
-            totalContribution += standing.gstPaid;
+            totalBoardPoints += standing.boardAdjustmentPoints;
         }
         
         // Add game info
@@ -6437,14 +6433,14 @@ public class JoinGameActivity extends AppCompatActivity {
         text.append(getString(R.string.share_players_line, gameData.getNumPlayers())).append("\n");
         text.append(getString(
                 R.string.share_game_point_factor_line,
-                formatPointValue(gameData.getPointValue()))).append("\n");
+                formatGamePointFactor(gameData.getGamePointFactor()))).append("\n");
         text.append(getString(
                 R.string.share_board_adjustment_line,
-                String.format(Locale.getDefault(), "%.0f%%", gameData.getGstPercent())))
+                String.format(Locale.getDefault(), "%.0f%%", gameData.getBoardAdjustmentPercent())))
                 .append("\n");
         text.append(getString(
                 R.string.share_board_points_line,
-                String.format(Locale.getDefault(), "%.0f GP", totalContribution))).append("\n");
+                String.format(Locale.getDefault(), "%.0f GP", totalBoardPoints))).append("\n");
         text.append("━━━━━━━━━━━━━━━━━━━━━━\n");
         
         // Sort by total score (ascending - lower is better)
@@ -6472,7 +6468,7 @@ public class JoinGameActivity extends AppCompatActivity {
             if (shouldShowStandingAmountForPlayer(gameData, standing.player)) {
                 text.append(getString(
                         R.string.share_player_game_points_suffix,
-                        String.format(Locale.getDefault(), "%+.0f GP", standing.netAmount)));
+                        String.format(Locale.getDefault(), "%+.0f GP", standing.finalGamePoints)));
             }
             text.append("\n");
         }
@@ -6509,9 +6505,9 @@ public class JoinGameActivity extends AppCompatActivity {
             PlayerStanding standing = standings.get(i);
             GamePointsCalculator.PlayerGamePoints playerPoints =
                     gamePoints.getPlayerResults().get(i);
-            standing.grossAmount = playerPoints.getBaseGamePoints();
-            standing.gstPaid = playerPoints.getBoardAdjustmentPoints();
-            standing.netAmount = playerPoints.getFinalGamePoints();
+            standing.baseGamePoints = playerPoints.getBaseGamePoints();
+            standing.boardAdjustmentPoints = playerPoints.getBoardAdjustmentPoints();
+            standing.finalGamePoints = playerPoints.getFinalGamePoints();
         }
         
         return standings;
@@ -6521,8 +6517,8 @@ public class JoinGameActivity extends AppCompatActivity {
         com.example.rummypulse.data.Player player;
         int rank;
         int totalScore;
-        double grossAmount;
-        double gstPaid;
-        double netAmount;
+        double baseGamePoints;
+        double boardAdjustmentPoints;
+        double finalGamePoints;
     }
 }

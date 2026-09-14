@@ -42,8 +42,8 @@
     <!-- Card and Shadow Colors -->
     <color name="card_background">#FF18182A</color>
     <color name="divider_color">#FF26264A</color>
-    <color name="settlement_summary_card_background">#FF0D0D14</color>
-    <color name="settlement_summary_card_border">#FF26264A</color>
+    <color name="game_points_summary_card_background">#FF0D0D14</color>
+    <color name="game_points_summary_card_border">#FF26264A</color>
 
     <!-- Header and Navigation Colors -->
     <color name="header_background">#FF000000</color>

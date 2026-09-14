@@ -13,6 +13,7 @@ local.properties
 *.log
 lint*.txt
 build*.txt
+functions/migration/reports/
 
 # Android Studio generated files and folders
 captures/

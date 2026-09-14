@@ -65,8 +65,8 @@ public final class PlayerStatsRecorder {
         }
         GamePointsCalculator.Result gamePoints = GamePointsCalculator.calculate(
                 scores,
-                gameData.getPointValue(),
-                gameData.getGstPercent(),
+                gameData.getGamePointFactor(),
+                gameData.getBoardAdjustmentPercent(),
                 gameData.getNumPlayers());
 
         Date periodInstant = approvedAt == null ? new Date() : approvedAt;
@@ -135,6 +135,7 @@ public final class PlayerStatsRecorder {
         }
 
         Map<String, Object> document = new HashMap<>();
+        document.put("schemaVersion", GameDataSchema.CURRENT_VERSION);
         document.put("userId", userId);
         if (!isNullOrEmpty(displayName)) {
             document.put("displayName", displayName);
@@ -201,17 +202,17 @@ public final class PlayerStatsRecorder {
         return new PlayerStats.Bucket(
                 base.getGames() + delta.getGames(),
                 base.getWins() + delta.getWins(),
-                base.getNetAmount() + delta.getNetAmount(),
-                base.getGrossAmount() + delta.getGrossAmount(),
-                base.getContributionPaid() + delta.getContributionPaid());
+                base.getFinalGamePoints() + delta.getFinalGamePoints(),
+                base.getBaseGamePoints() + delta.getBaseGamePoints(),
+                base.getBoardAdjustmentPoints() + delta.getBoardAdjustmentPoints());
     }
 
     private static boolean isZero(PlayerStats.Bucket bucket) {
         return bucket.getGames() == 0
                 && bucket.getWins() == 0
-                && Math.abs(bucket.getNetAmount()) < 0.005
-                && Math.abs(bucket.getGrossAmount()) < 0.005
-                && Math.abs(bucket.getContributionPaid()) < 0.005;
+                && Math.abs(bucket.getFinalGamePoints()) < 0.005
+                && Math.abs(bucket.getBaseGamePoints()) < 0.005
+                && Math.abs(bucket.getBoardAdjustmentPoints()) < 0.005;
     }
 
     private static boolean isNullOrEmpty(String value) {

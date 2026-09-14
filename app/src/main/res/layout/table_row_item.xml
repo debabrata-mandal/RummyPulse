@@ -169,13 +169,13 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:letterSpacing="0.06"
-                    android:text="@string/review_point_value_label"
+                    android:text="@string/review_game_point_factor_label"
                     android:textColor="@color/text_secondary"
                     android:textSize="9dp"
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/text_point_value"
+                    android:id="@+id/text_game_point_factor"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -249,13 +249,13 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:letterSpacing="0.06"
-                    android:text="@string/review_contribution_pct_label"
+                    android:text="@string/review_board_adjustment_pct_label"
                     android:textColor="@color/text_secondary"
                     android:textSize="9dp"
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/text_gst_percentage"
+                    android:id="@+id/text_board_adjustment_percentage"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -289,13 +289,13 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:letterSpacing="0.06"
-                    android:text="@string/review_contribution_amt_label"
+                    android:text="@string/review_board_adjustment_amt_label"
                     android:textColor="@color/text_secondary"
                     android:textSize="9dp"
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/text_gst_amount"
+                    android:id="@+id/text_board_points"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
@@ -314,7 +314,7 @@
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_approve_gst"
+                android:id="@+id/btn_approve_board_adjustment"
                 style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"

@@ -49,11 +49,11 @@ public class GameDefaultsFragment extends Fragment {
 
         binding.btnSaveDefaults.setOnClickListener(v -> attemptSave());
 
-        binding.switchDisplayIntermediateCalculation.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        binding.switchShowLiveGamePoints.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchCallback || !isAdmin) {
                 return;
             }
-            viewModel.saveDisplayIntermediateCalculation(isChecked, true);
+            viewModel.saveShowLiveGamePoints(isChecked, true);
         });
 
         binding.switchShowDashboardApprovalCounts.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -71,11 +71,11 @@ public class GameDefaultsFragment extends Fragment {
             applyAdminOnlyFieldStates();
         });
 
-        binding.switchShowDashboardLeaderboardAmounts.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        binding.switchShowDashboardLeaderboardGamePoints.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (suppressSwitchCallback || !isAdmin) {
                 return;
             }
-            viewModel.saveShowDashboardLeaderboardAmounts(isChecked, true);
+            viewModel.saveShowDashboardLeaderboardGamePoints(isChecked, true);
         });
 
         viewModel.getDefaults().observe(getViewLifecycleOwner(), this::populateFieldsFromDefaults);
@@ -111,29 +111,29 @@ public class GameDefaultsFragment extends Fragment {
         if (binding == null) {
             return;
         }
-        binding.layoutDefaultContribution.setEnabled(isAdmin);
-        binding.editDefaultContribution.setEnabled(isAdmin);
-        binding.editDefaultContribution.setFocusable(isAdmin);
-        binding.editDefaultContribution.setFocusableInTouchMode(isAdmin);
-        binding.editDefaultContribution.setCursorVisible(isAdmin);
+        binding.layoutDefaultBoardAdjustment.setEnabled(isAdmin);
+        binding.editDefaultBoardAdjustment.setEnabled(isAdmin);
+        binding.editDefaultBoardAdjustment.setFocusable(isAdmin);
+        binding.editDefaultBoardAdjustment.setFocusableInTouchMode(isAdmin);
+        binding.editDefaultBoardAdjustment.setCursorVisible(isAdmin);
         if (isAdmin) {
-            binding.layoutDefaultContribution.setStartIconDrawable(
+            binding.layoutDefaultBoardAdjustment.setStartIconDrawable(
                     ContextCompat.getDrawable(requireContext(), R.drawable.ic_percent));
-            binding.layoutDefaultContribution.setStartIconTintList(
+            binding.layoutDefaultBoardAdjustment.setStartIconTintList(
                     ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.accent_blue_light)));
-            binding.layoutDefaultContribution.setStartIconContentDescription(null);
-            binding.layoutDefaultContribution.setHelperText(null);
+            binding.layoutDefaultBoardAdjustment.setStartIconContentDescription(null);
+            binding.layoutDefaultBoardAdjustment.setHelperText(null);
         } else {
-            binding.layoutDefaultContribution.setStartIconDrawable(
+            binding.layoutDefaultBoardAdjustment.setStartIconDrawable(
                     ContextCompat.getDrawable(requireContext(), R.drawable.ic_lock));
-            binding.layoutDefaultContribution.setStartIconTintList(
+            binding.layoutDefaultBoardAdjustment.setStartIconTintList(
                     ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.text_secondary)));
-            binding.layoutDefaultContribution.setStartIconContentDescription(
-                    getString(R.string.cd_game_defaults_contribution_locked));
-            binding.layoutDefaultContribution.setHelperText(getString(R.string.game_defaults_contribution_admin_only_helper));
+            binding.layoutDefaultBoardAdjustment.setStartIconContentDescription(
+                    getString(R.string.cd_game_defaults_board_adjustment_locked));
+            binding.layoutDefaultBoardAdjustment.setHelperText(getString(R.string.game_defaults_board_adjustment_admin_only_helper));
         }
 
-        binding.switchDisplayIntermediateCalculation.setEnabled(isAdmin);
+        binding.switchShowLiveGamePoints.setEnabled(isAdmin);
         binding.switchShowDashboardApprovalCounts.setEnabled(true);
         binding.iconDashboardApprovalCounts.setImageDrawable(
                 ContextCompat.getDrawable(requireContext(), R.drawable.ic_visibility));
@@ -148,7 +148,7 @@ public class GameDefaultsFragment extends Fragment {
             binding.iconDisplayIntermediate.setImageTintList(
                     ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.accent_blue_light)));
             binding.iconDisplayIntermediate.setContentDescription(null);
-            binding.switchDisplayIntermediateCalculation.setContentDescription(null);
+            binding.switchShowLiveGamePoints.setContentDescription(null);
             binding.textDisplayIntermediateHelper.setVisibility(View.GONE);
         } else {
             binding.iconDisplayIntermediate.setImageDrawable(
@@ -157,7 +157,7 @@ public class GameDefaultsFragment extends Fragment {
                     ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.text_secondary)));
             binding.iconDisplayIntermediate.setContentDescription(
                     getString(R.string.cd_game_defaults_display_intermediate_locked));
-            binding.switchDisplayIntermediateCalculation.setContentDescription(
+            binding.switchShowLiveGamePoints.setContentDescription(
                     getString(R.string.cd_game_defaults_display_intermediate_locked));
             binding.textDisplayIntermediateHelper.setVisibility(View.VISIBLE);
         }
@@ -172,7 +172,7 @@ public class GameDefaultsFragment extends Fragment {
     private void applyLeaderboardFieldStates() {
         binding.switchShowDashboardLeaderboard.setEnabled(isAdmin);
         boolean leaderboardOn = binding.switchShowDashboardLeaderboard.isChecked();
-        binding.switchShowDashboardLeaderboardAmounts.setEnabled(isAdmin && leaderboardOn);
+        binding.switchShowDashboardLeaderboardGamePoints.setEnabled(isAdmin && leaderboardOn);
 
         styleSettingIcon(binding.iconDashboardLeaderboard, isAdmin);
         styleSettingIcon(binding.iconDashboardLeaderboardAmounts, isAdmin && leaderboardOn);
@@ -180,7 +180,7 @@ public class GameDefaultsFragment extends Fragment {
         binding.switchShowDashboardLeaderboard.setContentDescription(isAdmin
                 ? null
                 : getString(R.string.cd_game_defaults_leaderboard_locked));
-        binding.switchShowDashboardLeaderboardAmounts.setContentDescription(isAdmin
+        binding.switchShowDashboardLeaderboardGamePoints.setContentDescription(isAdmin
                 ? null
                 : getString(R.string.cd_game_defaults_leaderboard_locked));
 
@@ -210,14 +210,14 @@ public class GameDefaultsFragment extends Fragment {
         if (g == null || binding == null) {
             return;
         }
-        binding.editDefaultPointValue.setText(formatPoint(g.getDefaultPointValue()));
-        binding.editDefaultContribution.setText(String.valueOf((int) Math.round(g.getDefaultGstPercent())));
+        binding.editDefaultGamePointFactor.setText(formatPoint(g.getDefaultGamePointFactor()));
+        binding.editDefaultBoardAdjustment.setText(String.valueOf((int) Math.round(g.getDefaultBoardAdjustmentPercent())));
         binding.editMidGameIncrement.setText(String.valueOf(g.getDefaultMidGameNewPlayerScoreIncrement()));
         suppressSwitchCallback = true;
-        binding.switchDisplayIntermediateCalculation.setChecked(g.isDisplayIntermediateCalculation());
+        binding.switchShowLiveGamePoints.setChecked(g.isShowLiveGamePoints());
         binding.switchShowDashboardApprovalCounts.setChecked(g.isShowDashboardApprovalCounts());
         binding.switchShowDashboardLeaderboard.setChecked(g.isShowDashboardLeaderboard());
-        binding.switchShowDashboardLeaderboardAmounts.setChecked(g.isShowDashboardLeaderboardAmounts());
+        binding.switchShowDashboardLeaderboardGamePoints.setChecked(g.isShowDashboardLeaderboardGamePoints());
         suppressSwitchCallback = false;
         clearFieldErrors();
         binding.textAudit.setText(buildAuditText(g));
@@ -242,7 +242,7 @@ public class GameDefaultsFragment extends Fragment {
 
     private void attemptSave() {
         clearFieldErrors();
-        Double point = parsePoint(binding.layoutDefaultPointValue, binding.editDefaultPointValue.getText().toString());
+        Double point = parsePoint(binding.layoutDefaultGamePointFactor, binding.editDefaultGamePointFactor.getText().toString());
         if (point == null) {
             return;
         }
@@ -251,14 +251,14 @@ public class GameDefaultsFragment extends Fragment {
             return;
         }
         if (isAdmin) {
-            Integer gst = parseIntField(binding.layoutDefaultContribution, binding.editDefaultContribution.getText().toString(),
-                    getString(R.string.dialog_contribution_required),
-                    getString(R.string.dialog_contribution_invalid), 0, 100);
-            if (gst == null) {
+            Integer boardAdjustment = parseIntField(binding.layoutDefaultBoardAdjustment, binding.editDefaultBoardAdjustment.getText().toString(),
+                    getString(R.string.dialog_board_adjustment_required),
+                    getString(R.string.dialog_board_adjustment_invalid), 0, 100);
+            if (boardAdjustment == null) {
                 return;
             }
-            viewModel.save(point, (double) gst, inc,
-                    binding.switchDisplayIntermediateCalculation.isChecked(),
+            viewModel.save(point, (double) boardAdjustment, inc,
+                    binding.switchShowLiveGamePoints.isChecked(),
                     binding.switchShowDashboardApprovalCounts.isChecked(),
                     true);
         } else {
@@ -269,8 +269,8 @@ public class GameDefaultsFragment extends Fragment {
     }
 
     private void clearFieldErrors() {
-        binding.layoutDefaultPointValue.setError(null);
-        binding.layoutDefaultContribution.setError(null);
+        binding.layoutDefaultGamePointFactor.setError(null);
+        binding.layoutDefaultBoardAdjustment.setError(null);
         binding.layoutMidGameIncrement.setError(null);
     }
 
@@ -278,13 +278,13 @@ public class GameDefaultsFragment extends Fragment {
     private Double parsePoint(TextInputLayout layout, String raw) {
         String s = raw != null ? raw.trim() : "";
         if (TextUtils.isEmpty(s)) {
-            layout.setError(getString(R.string.dialog_point_value_required));
+            layout.setError(getString(R.string.dialog_game_point_factor_required));
             return null;
         }
         try {
             double v = Double.parseDouble(s);
             if (v <= 0 || v > 100) {
-                layout.setError(getString(R.string.dialog_point_value_invalid));
+                layout.setError(getString(R.string.dialog_game_point_factor_invalid));
                 return null;
             }
             double snapped = Math.round(v * 20.0) / 20.0;
@@ -297,7 +297,7 @@ public class GameDefaultsFragment extends Fragment {
             layout.setError(null);
             return snapped;
         } catch (NumberFormatException e) {
-            layout.setError(getString(R.string.dialog_point_value_invalid));
+            layout.setError(getString(R.string.dialog_game_point_factor_invalid));
             return null;
         }
     }

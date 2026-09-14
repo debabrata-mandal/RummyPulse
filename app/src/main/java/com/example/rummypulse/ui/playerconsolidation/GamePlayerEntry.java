@@ -11,22 +11,22 @@ public class GamePlayerEntry {
     @Nullable
     private final String userId;
     private final int playerScore;
-    private final double grossAmount;
-    private final double gstPaid;
-    private final double netAmount;
+    private final double baseGamePoints;
+    private final double boardAdjustmentPoints;
+    private final double finalGamePoints;
 
     public GamePlayerEntry(String entryId, String gameId, String gameName, String playerName,
                            @Nullable String userId, int playerScore,
-                           double grossAmount, double gstPaid, double netAmount) {
+                           double baseGamePoints, double boardAdjustmentPoints, double finalGamePoints) {
         this.entryId = entryId;
         this.gameId = gameId;
         this.gameName = gameName;
         this.playerName = playerName;
         this.userId = userId;
         this.playerScore = playerScore;
-        this.grossAmount = grossAmount;
-        this.gstPaid = gstPaid;
-        this.netAmount = netAmount;
+        this.baseGamePoints = baseGamePoints;
+        this.boardAdjustmentPoints = boardAdjustmentPoints;
+        this.finalGamePoints = finalGamePoints;
     }
 
     public String getEntryId() {
@@ -54,15 +54,15 @@ public class GamePlayerEntry {
         return playerScore;
     }
 
-    public double getGrossAmount() {
-        return grossAmount;
+    public double getBaseGamePoints() {
+        return baseGamePoints;
     }
 
-    public double getGstPaid() {
-        return gstPaid;
+    public double getBoardAdjustmentPoints() {
+        return boardAdjustmentPoints;
     }
 
-    public double getNetAmount() {
-        return netAmount;
+    public double getFinalGamePoints() {
+        return finalGamePoints;
     }
 }

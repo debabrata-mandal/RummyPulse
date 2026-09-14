@@ -535,8 +535,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
         for (GameItem game : sorted) {
             hash.append(game.getGameId()).append('|');
             hash.append(game.getGameStatus()).append('|');
-            hash.append(game.getPointValue()).append('|');
-            hash.append(game.getGstPercentage()).append('|');
+            hash.append(game.getGamePointFactor()).append('|');
+            hash.append(game.getBoardAdjustmentPercentage()).append('|');
             List<Player> players = game.getPlayers();
             if (players != null) {
                 hash.append(players.size()).append(':');
@@ -576,7 +576,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     private static GameRepository createConfiguredGameRepository() {
         GameRepository gameRepository = new GameRepository();
-        // Cross-game settlement spans every game, not just the ones this user plays in.
+        // Cross-game gamePoints spans every game, not just the ones this user plays in.
         gameRepository.setShowAllGames(true);
         return gameRepository;
     }

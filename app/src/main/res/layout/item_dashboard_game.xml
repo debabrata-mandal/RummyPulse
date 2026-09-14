@@ -162,14 +162,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/review_point_value_label"
+                    android:text="@string/review_game_point_factor_label"
                     android:textSize="9dp"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
 
                 <TextView
-                    android:id="@+id/text_point_value"
+                    android:id="@+id/text_game_point_factor"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     tools:text="0.15×"
@@ -226,7 +226,7 @@
                 android:layout_marginHorizontal="8dp"
                 android:layout_marginVertical="4dp" />
 
-            <!-- GST Info -->
+            <!-- Board Adjustment info -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -237,14 +237,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/player_consolidation_contribution_column"
+                    android:text="@string/player_consolidation_board_adjustment_column"
                     android:textSize="9dp"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
 
                 <TextView
-                    android:id="@+id/text_gst"
+                    android:id="@+id/text_board_adjustment"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"

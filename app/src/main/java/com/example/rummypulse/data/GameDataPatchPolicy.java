@@ -110,8 +110,8 @@ public final class GameDataPatchPolicy {
         GameData copy = new GameData();
         copy.setSchemaVersion(original.getSchemaVersion());
         copy.setNumPlayers(original.getNumPlayers());
-        copy.setPointValue(original.getPointValue());
-        copy.setGstPercent(original.getGstPercent());
+        copy.setGamePointFactor(original.getGamePointFactor());
+        copy.setBoardAdjustmentPercent(original.getBoardAdjustmentPercent());
         copy.setLastUpdated(original.getLastUpdated());
         copy.setVersion(original.getVersion());
         copy.setGameStatus(original.getGameStatus());

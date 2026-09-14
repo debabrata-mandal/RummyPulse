@@ -34,7 +34,7 @@ public class LeaderboardTest {
     }
 
     @Test
-    public void ranksTopAndBottomByNetAmount() {
+    public void ranksTopAndBottomByFinalGamePoints() {
         List<PlayerStats> stats = Arrays.asList(
                 player("a", "Alice", 5, 300),
                 player("b", "Bob", 5, -200),

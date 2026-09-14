@@ -59,21 +59,21 @@ public class GameDefaultsViewModel extends AndroidViewModel {
     }
 
     /**
-     * @param gstPercentOrNull ignored when {@code isAdmin} is false (repository omits GST field).
+     * @param boardAdjustmentPercentOrNull ignored when {@code isAdmin} is false.
      * @param displayIntermediateOrNull ignored when {@code isAdmin} is false (repository omits display field).
      * @param showDashboardApprovalCountsOrNull saved for all users when non-null.
      */
-    public void save(double pointValue, @Nullable Double gstPercentOrNull, long midGameIncrement,
+    public void save(double gamePointFactor, @Nullable Double boardAdjustmentPercentOrNull, long midGameIncrement,
             @Nullable Boolean displayIntermediateOrNull,
             @Nullable Boolean showDashboardApprovalCountsOrNull,
             boolean isAdmin) {
         loading.setValue(true);
         error.setValue(null);
         saveSuccess.setValue(false);
-        Double gstWrite = isAdmin ? gstPercentOrNull : null;
+        Double boardAdjustmentWrite = isAdmin ? boardAdjustmentPercentOrNull : null;
         Boolean displayWrite = isAdmin ? displayIntermediateOrNull : null;
         Boolean countsWrite = showDashboardApprovalCountsOrNull;
-        repository.saveDefaults(pointValue, midGameIncrement, displayWrite, countsWrite, gstWrite)
+        repository.saveDefaults(gamePointFactor, midGameIncrement, displayWrite, countsWrite, boardAdjustmentWrite)
                 .addOnSuccessListener(aVoid -> {
                     loading.postValue(false);
                     saveSuccess.postValue(true);
@@ -94,12 +94,12 @@ public class GameDefaultsViewModel extends AndroidViewModel {
         saveSuccess.setValue(false);
     }
 
-    public void saveDisplayIntermediateCalculation(boolean enabled, boolean isAdmin) {
+    public void saveShowLiveGamePoints(boolean enabled, boolean isAdmin) {
         if (!isAdmin) {
             return;
         }
-        repository.setDisplayIntermediateCalculationCached(enabled);
-        repository.saveDisplayIntermediateCalculation(enabled)
+        repository.setShowLiveGamePointsCached(enabled);
+        repository.saveShowLiveGamePoints(enabled)
                 .addOnFailureListener(e -> error.postValue(
                         e.getMessage() != null ? e.getMessage() : "Failed to save display setting"));
     }
@@ -116,11 +116,11 @@ public class GameDefaultsViewModel extends AndroidViewModel {
     }
 
     /** Admin-only: the flag is global, so it changes the dashboard for every player. */
-    public void saveShowDashboardLeaderboardAmounts(boolean enabled, boolean isAdmin) {
+    public void saveShowDashboardLeaderboardGamePoints(boolean enabled, boolean isAdmin) {
         if (!isAdmin) {
             return;
         }
-        repository.saveShowDashboardLeaderboardAmounts(enabled)
+        repository.saveShowDashboardLeaderboardGamePoints(enabled)
                 .addOnFailureListener(e -> error.postValue(e.getMessage() != null
                         ? e.getMessage()
                         : "Failed to save leaderboard amount setting"));

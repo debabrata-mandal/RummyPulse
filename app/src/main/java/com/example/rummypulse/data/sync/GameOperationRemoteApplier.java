@@ -305,9 +305,9 @@ final class GameOperationRemoteApplier {
 
     private static Map<String, Object> buildDashboardSummary(GameData gameData, GameAuth auth) {
         Map<String, Object> summary = new HashMap<>();
-        summary.put("dashboardPointValue", gameData.getPointValue());
+        summary.put("dashboardGamePointFactor", gameData.getGamePointFactor());
         summary.put("dashboardNumPlayers", gameData.getPlayers().size());
-        summary.put("dashboardGstPercent", gameData.getGstPercent());
+        summary.put("dashboardBoardAdjustmentPercent", gameData.getBoardAdjustmentPercent());
         String status = gameData.getGameStatus();
         summary.put("dashboardGameStatus",
                 status == null || status.trim().isEmpty() ? "R1" : status.trim());

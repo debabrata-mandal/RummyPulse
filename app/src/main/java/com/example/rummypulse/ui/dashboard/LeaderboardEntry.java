@@ -5,7 +5,7 @@ public class LeaderboardEntry {
 
     private final String userId;
     private final String displayName;
-    private final double netAmount;
+    private final double finalGamePoints;
     private final long games;
     private final long wins;
     private final int rank;
@@ -14,14 +14,14 @@ public class LeaderboardEntry {
     public LeaderboardEntry(
             String userId,
             String displayName,
-            double netAmount,
+            double finalGamePoints,
             long games,
             long wins,
             int rank,
             boolean currentUser) {
         this.userId = userId;
         this.displayName = displayName;
-        this.netAmount = netAmount;
+        this.finalGamePoints = finalGamePoints;
         this.games = games;
         this.wins = wins;
         this.rank = rank;
@@ -36,8 +36,8 @@ public class LeaderboardEntry {
         return displayName;
     }
 
-    public double getNetAmount() {
-        return netAmount;
+    public double getFinalGamePoints() {
+        return finalGamePoints;
     }
 
     public long getGames() {

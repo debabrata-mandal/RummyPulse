@@ -26,14 +26,14 @@ public enum RankingSort {
         long games = bucket.getGames();
         switch (this) {
             case NET_PER_GAME:
-                return games <= 0 ? 0 : bucket.getNetAmount() / games;
+                return games <= 0 ? 0 : bucket.getFinalGamePoints() / games;
             case WIN_RATE:
                 return games <= 0 ? 0 : (double) bucket.getWins() / games;
             case GAMES:
                 return games;
             case NET_TOTAL:
             default:
-                return bucket.getNetAmount();
+                return bucket.getFinalGamePoints();
         }
     }
 }

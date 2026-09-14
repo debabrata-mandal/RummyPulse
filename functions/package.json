@@ -7,7 +7,8 @@
   "main": "index.js",
   "scripts": {
     "test": "node --test",
-    "check": "node --check index.js && node --check lib/account-deletion.js && node --check lib/game-name.js && node --check lib/rate-limit.js"
+    "check": "node --check index.js && node --check lib/account-deletion.js && node --check lib/game-name.js && node --check lib/rate-limit.js && node --check migration/schema-v3-transform.js && node --check migration/schema-v3-runner.js && node --check migration/schema-v3-cli.js",
+    "migrate:schema-v3": "node migration/schema-v3-cli.js"
   },
   "dependencies": {
     "firebase-admin": "^13.4.0",

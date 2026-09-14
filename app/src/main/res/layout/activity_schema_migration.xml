@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="28dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/schema_gate_title"
+        android:textColor="@color/text_primary"
+        android:textSize="26sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/text_schema_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:gravity="center"
+        android:lineSpacingExtra="3dp"
+        android:text="@string/schema_gate_checking"
+        android:textColor="@color/text_secondary"
+        android:textSize="16sp" />
+
+    <ProgressBar
+        android:id="@+id/schema_progress"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginTop="24dp"
+        android:indeterminateTint="@color/accent_blue" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/button_schema_retry"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="24dp"
+        android:maxWidth="360dp"
+        android:text="@string/schema_gate_retry"
+        android:textAllCaps="false"
+        android:visibility="gone"
+        app:cornerRadius="10dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/button_schema_exit"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:maxWidth="360dp"
+        android:text="@string/schema_gate_exit"
+        android:textAllCaps="false"
+        android:textColor="@color/text_secondary" />
+</LinearLayout>

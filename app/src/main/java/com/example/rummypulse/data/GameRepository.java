@@ -47,9 +47,9 @@ public class GameRepository {
     private final GameViewApprovalRepository viewApprovalRepository;
     private MutableLiveData<List<GameItem>> gameItemsLiveData;
     private MutableLiveData<String> errorLiveData;
-    private MutableLiveData<Double> totalApprovedGstLiveData;
+    private MutableLiveData<Double> totalApprovedBoardAdjustmentLiveData;
     private MutableLiveData<Integer> approvedGamesCountLiveData;
-    private MutableLiveData<List<MonthlyPointValueReport>> reportsSummariesLiveData;
+    private MutableLiveData<List<MonthlyGamePointFactorReport>> reportsSummariesLiveData;
     
     // Firestore listeners for real-time updates (used by Dashboard)
     private com.google.firebase.firestore.ListenerRegistration gamesListener;
@@ -80,7 +80,7 @@ public class GameRepository {
         viewApprovalRepository = new GameViewApprovalRepository();
         gameItemsLiveData = new MutableLiveData<>();
         errorLiveData = new MutableLiveData<>();
-        totalApprovedGstLiveData = new MutableLiveData<>();
+        totalApprovedBoardAdjustmentLiveData = new MutableLiveData<>();
         approvedGamesCountLiveData = new MutableLiveData<>();
         reportsSummariesLiveData = new MutableLiveData<>();
     }
@@ -100,15 +100,15 @@ public class GameRepository {
         return errorLiveData;
     }
 
-    public LiveData<Double> getTotalApprovedGst() {
-        return totalApprovedGstLiveData;
+    public LiveData<Double> getTotalApprovedBoardAdjustment() {
+        return totalApprovedBoardAdjustmentLiveData;
     }
 
     public LiveData<Integer> getApprovedGamesCount() {
         return approvedGamesCountLiveData;
     }
 
-    public LiveData<List<MonthlyPointValueReport>> getReportsSummaries() {
+    public LiveData<List<MonthlyGamePointFactorReport>> getReportsSummaries() {
         return reportsSummariesLiveData;
     }
 
@@ -298,7 +298,7 @@ public class GameRepository {
         showAllGames = false;
         gameItemsLiveData.postValue(new ArrayList<>());
         errorLiveData.postValue(null);
-        totalApprovedGstLiveData.postValue(0.0);
+        totalApprovedBoardAdjustmentLiveData.postValue(0.0);
         approvedGamesCountLiveData.postValue(0);
         reportsSummariesLiveData.postValue(new ArrayList<>());
     }
@@ -461,23 +461,23 @@ public class GameRepository {
         String gameDisplayName = gameDisplayNameFromAuth(auth);
         String unknown = "—";
 
-        String pointValueStr = auth.getDashboardPointValue() != null
-                ? String.format(Locale.getDefault(), "%.2f", auth.getDashboardPointValue()) : unknown;
+        String gamePointFactorStr = auth.getDashboardGamePointFactor() != null
+                ? String.format(Locale.getDefault(), "%.2f", auth.getDashboardGamePointFactor()) : unknown;
         String playersStr = auth.getDashboardNumPlayers() != null
                 ? String.valueOf(auth.getDashboardNumPlayers()) : unknown;
-        String gstStr = auth.getDashboardGstPercent() != null
-                ? String.format(Locale.getDefault(), "%.0f", auth.getDashboardGstPercent()) : unknown;
+        String boardAdjustmentStr = auth.getDashboardBoardAdjustmentPercent() != null
+                ? String.format(Locale.getDefault(), "%.0f", auth.getDashboardBoardAdjustmentPercent()) : unknown;
         String gameStatus = dashboardStatusForDisplay(auth.getDashboardGameStatus());
 
         GameItem gameItem = new GameItem(
                 gameId,
                 pin,
                 unknown,
-                pointValueStr,
+                gamePointFactorStr,
                 formatTimestamp(createdAt),
                 gameStatus,
                 playersStr,
-                gstStr,
+                boardAdjustmentStr,
                 unknown,
                 creatorName
         );
@@ -606,14 +606,14 @@ public class GameRepository {
         if (item == null || auth == null) {
             return;
         }
-        if (auth.getDashboardPointValue() != null) {
-            item.setPointValue(String.format(Locale.US, "%.2f", auth.getDashboardPointValue()));
+        if (auth.getDashboardGamePointFactor() != null) {
+            item.setGamePointFactor(String.format(Locale.US, "%.2f", auth.getDashboardGamePointFactor()));
         }
         if (auth.getDashboardNumPlayers() != null) {
             item.setNumberOfPlayers(String.valueOf(auth.getDashboardNumPlayers()));
         }
-        if (auth.getDashboardGstPercent() != null) {
-            item.setGstPercentage(String.format(Locale.US, "%.0f", auth.getDashboardGstPercent()));
+        if (auth.getDashboardBoardAdjustmentPercent() != null) {
+            item.setBoardAdjustmentPercentage(String.format(Locale.US, "%.0f", auth.getDashboardBoardAdjustmentPercent()));
         }
         if (auth.getDashboardGameStatus() != null && !auth.getDashboardGameStatus().trim().isEmpty()) {
             item.setGameStatus(dashboardStatusForDisplay(auth.getDashboardGameStatus()));
@@ -645,8 +645,8 @@ public class GameRepository {
         }
         int playerCount = resolvePlayerCount(gameData);
         String status = gameData.getGameStatus();
-        String pointValueStr = String.format(Locale.US, "%.2f", gameData.getPointValue());
-        String gstStr = String.format(Locale.US, "%.0f", gameData.getGstPercent());
+        String gamePointFactorStr = String.format(Locale.US, "%.2f", gameData.getGamePointFactor());
+        String boardAdjustmentStr = String.format(Locale.US, "%.0f", gameData.getBoardAdjustmentPercent());
         String totalScoreStr = String.valueOf(gameData.getTotalScore());
 
         GameItem item = gameItemsMap.get(gameId);
@@ -658,11 +658,11 @@ public class GameRepository {
                     gameId,
                     "",
                     totalScoreStr,
-                    pointValueStr,
+                    gamePointFactorStr,
                     "",
                     status != null ? status : "R1",
                     String.valueOf(playerCount),
-                    gstStr,
+                    boardAdjustmentStr,
                     "—",
                     gameData.getPlayers()
             );
@@ -672,12 +672,12 @@ public class GameRepository {
                     gameId,
                     item.getGamePin() != null ? item.getGamePin() : "",
                     totalScoreStr,
-                    pointValueStr,
+                    gamePointFactorStr,
                     item.getCreationDateTime() != null ? item.getCreationDateTime() : "",
                     status != null ? status : item.getGameStatus(),
                     String.valueOf(playerCount),
-                    gstStr,
-                    item.getGstAmount() != null ? item.getGstAmount() : "—",
+                    boardAdjustmentStr,
+                    item.getBoardPoints() != null ? item.getBoardPoints() : "—",
                     item.getCreatorName(),
                     gameData.getPlayers()
             );
@@ -821,9 +821,9 @@ public class GameRepository {
             return;
         }
         Map<String, Object> summary = new HashMap<>();
-        summary.put("dashboardPointValue", gameData.getPointValue());
+        summary.put("dashboardGamePointFactor", gameData.getGamePointFactor());
         summary.put("dashboardNumPlayers", resolvePlayerCount(gameData));
-        summary.put("dashboardGstPercent", gameData.getGstPercent());
+        summary.put("dashboardBoardAdjustmentPercent", gameData.getBoardAdjustmentPercent());
         String status = gameData.getGameStatus();
         summary.put("dashboardGameStatus",
                 status != null && !status.trim().isEmpty() ? status.trim() : "R1");
@@ -876,10 +876,10 @@ public class GameRepository {
                         gameData, auth.getCreatorUserId(), auth.getActiveEditorUserId()));
         boolean stale = auth.getDashboardNumPlayers() == null
                 || auth.getDashboardNumPlayers() != playerCount
-                || auth.getDashboardPointValue() == null
-                || Double.compare(auth.getDashboardPointValue(), gameData.getPointValue()) != 0
-                || auth.getDashboardGstPercent() == null
-                || Double.compare(auth.getDashboardGstPercent(), gameData.getGstPercent()) != 0
+                || auth.getDashboardGamePointFactor() == null
+                || Double.compare(auth.getDashboardGamePointFactor(), gameData.getGamePointFactor()) != 0
+                || auth.getDashboardBoardAdjustmentPercent() == null
+                || Double.compare(auth.getDashboardBoardAdjustmentPercent(), gameData.getBoardAdjustmentPercent()) != 0
                 || auth.getDashboardGameStatus() == null
                 || !normalizedStatus.equals(auth.getDashboardGameStatus().trim())
                 || membershipStale;
@@ -1344,14 +1344,14 @@ public class GameRepository {
         int totalScore = gameData.getTotalScore();
         
         // Format point value (convert from double to string with 2 decimal places)
-        String pointValueStr = String.format(Locale.getDefault(), "%.2f", gameData.getPointValue());
+        String gamePointFactorStr = String.format(Locale.getDefault(), "%.2f", gameData.getGamePointFactor());
         
-        // Format GST percentage
-        String gstPercentageStr = String.format(Locale.getDefault(), "%.0f", gameData.getGstPercent());
+        // Format Board Adjustment percentage
+        String boardAdjustmentPercentageStr = String.format(Locale.getDefault(), "%.0f", gameData.getBoardAdjustmentPercent());
         
-        // Calculate GST amount
-        double gstAmount = gameData.getGstAmount();
-        String gstAmountStr = String.format(Locale.getDefault(), "%.0f", gstAmount);
+        // Calculate Board Points
+        double boardPoints = gameData.getBoardPoints();
+        String boardPointsStr = String.format(Locale.getDefault(), "%.0f", boardPoints);
         
         // Format creation date (from timestamp)
         String creationDateTime = formatTimestamp(createdAt);
@@ -1366,12 +1366,12 @@ public class GameRepository {
                 gameId,
                 pin,
                 String.valueOf(totalScore),
-                pointValueStr,
+                gamePointFactorStr,
                 creationDateTime,
                 gameStatus,
                 numberOfPlayers,
-                gstPercentageStr,
-                gstAmountStr,
+                boardAdjustmentPercentageStr,
+                boardPointsStr,
                 creatorName,
                 gameData.getPlayers()
         );
@@ -1417,12 +1417,12 @@ public class GameRepository {
     /**
      * Parse point value from string to double
      */
-    private double parsePointValue(String pointValueStr) {
-        if (pointValueStr == null || pointValueStr.isEmpty()) {
+    private double parseGamePointFactor(String gamePointFactorStr) {
+        if (gamePointFactorStr == null || gamePointFactorStr.isEmpty()) {
             return 0.0;
         }
         try {
-            String cleaned = pointValueStr.trim();
+            String cleaned = gamePointFactorStr.trim();
             return Double.parseDouble(cleaned);
         } catch (NumberFormatException e) {
             return 0.0;
@@ -1648,12 +1648,12 @@ public class GameRepository {
     }
 
     /**
-     * Update point value and contribution (GST) percent for a game. Contribution amount in the UI
-     * is derived on reload via {@link GameData#getGstAmount()}.
+     * Update the Game Point factor and Board Adjustment percent for a game. Board Points in the UI
+     * is derived on reload via {@link GameData#getBoardPoints()}.
      *
      * @param onSuccess optional; runs on the main thread after Firestore write succeeds (before list refresh completes).
      */
-    public void updateGameEconomics(String gameId, double pointValue, double gstPercent, Runnable onSuccess) {
+    public void updateGameEconomics(String gameId, double gamePointFactor, double boardAdjustmentPercent, Runnable onSuccess) {
         if (gameId == null || gameId.isEmpty()) {
             errorLiveData.setValue("Cannot update game: missing game id");
             return;
@@ -1668,18 +1668,18 @@ public class GameRepository {
             if (before == null) throw new IllegalStateException("Game data is unavailable.");
             GameData after = GameDataPatchPolicy.copyGameShell(before);
             after.setPlayers(new ArrayList<>(before.getPlayers()));
-            after.setPointValue(pointValue);
-            after.setGstPercent(gstPercent);
+            after.setGamePointFactor(gamePointFactor);
+            after.setBoardAdjustmentPercent(boardAdjustmentPercent);
             ScoreRegressionGuard.requireMetadataPreservesScores(before, after);
             Long revision = snapshot.getLong("revision");
             transaction.update(dataRef,
-                    "data.pointValue", pointValue,
-                    "data.gstPercent", gstPercent,
+                    "data.gamePointFactor", gamePointFactor,
+                    "data.boardAdjustmentPercent", boardAdjustmentPercent,
                     "lastUpdated", com.google.firebase.firestore.FieldValue.serverTimestamp(),
                     "revision", (revision == null ? 0L : revision) + 1L);
             Map<String, Object> dashboard = new HashMap<>();
-            dashboard.put("dashboardPointValue", pointValue);
-            dashboard.put("dashboardGstPercent", gstPercent);
+            dashboard.put("dashboardGamePointFactor", gamePointFactor);
+            dashboard.put("dashboardBoardAdjustmentPercent", boardAdjustmentPercent);
             transaction.update(gameRef, dashboard);
             return null;
         }).addOnSuccessListener(ignored -> {
@@ -1973,19 +1973,15 @@ public class GameRepository {
                         player.getName(), player.getUserId(), player.getTotalScore()));
             }
         }
-        String gstAmount = gameItem.getGstAmount();
-        if (gstAmount == null || gstAmount.trim().isEmpty()) {
-            gstAmount = Double.toString(gameData.getGstAmount());
-        }
         return new ApprovedGameData(
                 gameItem.getGameId(),
                 gameData.getNumPlayers(),
-                gameData.getPointValue(),
-                gameData.getGstPercent(),
+                gameData.getGamePointFactor(),
+                gameData.getBoardAdjustmentPercent(),
                 approvedPlayers,
                 approvalTimestamp,
                 wrapper.getVersion(),
-                gstAmount,
+                gameData.getBoardPoints(),
                 "Completed",
                 gameItem.getCreationDateTime());
     }
@@ -2021,28 +2017,28 @@ public class GameRepository {
                     if (error != null) {
                         System.out.println("GameRepository: Error listening to approved games");
                         errorLiveData.setValue("Failed to load approved games: " + error.getMessage());
-                        totalApprovedGstLiveData.setValue(0.0);
+                        totalApprovedBoardAdjustmentLiveData.setValue(0.0);
                         approvedGamesCountLiveData.setValue(0);
                         return;
                     }
                     
                     if (querySnapshot != null) {
-                        double totalGst = 0.0;
+                        double totalBoardAdjustment = 0.0;
                         int approvedCount = 0;
                         for (DocumentSnapshot document : querySnapshot.getDocuments()) {
                             try {
                                 ApprovedGameData approvedGame = document.toObject(ApprovedGameData.class);
                                 if (approvedGame != null) {
-                                    totalGst += approvedGame.getGstAmountAsDouble();
+                                    totalBoardAdjustment += approvedGame.getBoardPointsAsDouble();
                                     approvedCount++;
                                 }
                             } catch (Exception e) {
                                 System.out.println("Error parsing approved game");
                             }
                         }
-                        totalApprovedGstLiveData.setValue(totalGst);
+                        totalApprovedBoardAdjustmentLiveData.setValue(totalBoardAdjustment);
                         approvedGamesCountLiveData.setValue(approvedCount);
-                        System.out.println("Calculated total approved contribution amount");
+                        System.out.println("Calculated total approved boardAdjustment amount");
                         System.out.println("Total approved games count: " + approvedCount);
                     }
                 });
@@ -2059,29 +2055,29 @@ public class GameRepository {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (querySnapshot != null) {
-                        double totalGst = 0.0;
+                        double totalBoardAdjustment = 0.0;
                         int approvedCount = 0;
                         for (DocumentSnapshot document : querySnapshot.getDocuments()) {
                             try {
                                 ApprovedGameData approvedGame = document.toObject(ApprovedGameData.class);
                                 if (approvedGame != null) {
-                                    totalGst += approvedGame.getGstAmountAsDouble();
+                                    totalBoardAdjustment += approvedGame.getBoardPointsAsDouble();
                                     approvedCount++;
                                 }
                             } catch (Exception e) {
                                 System.out.println("Error parsing approved game");
                             }
                         }
-                        totalApprovedGstLiveData.setValue(totalGst);
+                        totalApprovedBoardAdjustmentLiveData.setValue(totalBoardAdjustment);
                         approvedGamesCountLiveData.setValue(approvedCount);
-                        System.out.println("Calculated total approved contribution amount");
+                        System.out.println("Calculated total approved boardAdjustment amount");
                         System.out.println("Total approved games count: " + approvedCount);
                     }
                 })
                 .addOnFailureListener(error -> {
                     System.out.println("GameRepository: Error fetching approved games");
                     errorLiveData.setValue("Failed to load approved games: " + error.getMessage());
-                    totalApprovedGstLiveData.setValue(0.0);
+                    totalApprovedBoardAdjustmentLiveData.setValue(0.0);
                     approvedGamesCountLiveData.setValue(0);
                 });
     }
@@ -2093,20 +2089,20 @@ public class GameRepository {
         db.collection(FirestoreCollections.APPROVED_GAMES_REPORT)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-                    List<Pair<String, MonthlyPointValueReport>> tagged = new ArrayList<>();
+                    List<Pair<String, MonthlyGamePointFactorReport>> tagged = new ArrayList<>();
                     for (DocumentSnapshot document : querySnapshot.getDocuments()) {
                         try {
                             ApprovedGamesReportMonth month = document.toObject(ApprovedGamesReportMonth.class);
                             if (month != null) {
-                                tagged.add(new Pair<>(document.getId(), month.toMonthlyPointValueReport()));
+                                tagged.add(new Pair<>(document.getId(), month.toMonthlyGamePointFactorReport()));
                             }
                         } catch (Exception e) {
                             System.out.println("Error parsing approved-games report document");
                         }
                     }
                     tagged.sort((a, b) -> b.first.compareTo(a.first));
-                    List<MonthlyPointValueReport> out = new ArrayList<>();
-                    for (Pair<String, MonthlyPointValueReport> p : tagged) {
+                    List<MonthlyGamePointFactorReport> out = new ArrayList<>();
+                    for (Pair<String, MonthlyGamePointFactorReport> p : tagged) {
                         out.add(p.second);
                     }
                     reportsSummariesLiveData.setValue(out);
@@ -2146,10 +2142,10 @@ public class GameRepository {
                             System.out.println("Error parsing approved game");
                         }
                     }
-                    MonthlyPointValueReport report = ReportAggregator.buildMonthlyPointValueReport(yyyyMm, monthGames);
+                    MonthlyGamePointFactorReport report = ReportAggregator.buildMonthlyGamePointFactorReport(yyyyMm, monthGames);
                     ApprovedGamesReportMonth doc = new ApprovedGamesReportMonth(
                             report.getMonthYear(),
-                            report.getPointValueReports(),
+                            report.getGamePointFactorReports(),
                             Timestamp.now());
                     db.collection(FirestoreCollections.APPROVED_GAMES_REPORT)
                             .document(yyyyMm)
@@ -2236,10 +2232,10 @@ public class GameRepository {
         WriteBatch batch = db.batch();
         for (int i = start; i < end; i++) {
             Map.Entry<String, List<ApprovedGameData>> e = entries.get(i);
-            MonthlyPointValueReport report = ReportAggregator.buildMonthlyPointValueReport(e.getKey(), e.getValue());
+            MonthlyGamePointFactorReport report = ReportAggregator.buildMonthlyGamePointFactorReport(e.getKey(), e.getValue());
             ApprovedGamesReportMonth doc = new ApprovedGamesReportMonth(
                     report.getMonthYear(),
-                    report.getPointValueReports(),
+                    report.getGamePointFactorReports(),
                     Timestamp.now());
             batch.set(db.collection(FirestoreCollections.APPROVED_GAMES_REPORT).document(e.getKey()), doc);
         }

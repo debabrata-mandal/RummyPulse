@@ -24,7 +24,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
 import com.example.rummypulse.data.Player;
-import com.example.rummypulse.ui.playerconsolidation.PlayerSettlementCalculator;
+import com.example.rummypulse.ui.playerconsolidation.PlayerGamePointsCalculator;
 import com.example.rummypulse.utils.GameAttributionFormatter;
 import com.google.android.material.checkbox.MaterialCheckBox;
 
@@ -40,7 +40,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     private boolean actionsEnabled = true;
 
     public interface OnGameActionListener {
-        void onApproveGst(GameItem game, int position);
+        void onApproveBoardAdjustment(GameItem game, int position);
         void onDeleteGame(GameItem game, int position);
         void onEditGameEconomics(GameItem game, int position);
         void onKickOutEditor(GameItem game, int position);
@@ -153,20 +153,20 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             });
 
             // Set Game Point Factor with null checking.
-            String pointValue = item.getPointValue();
-            if (pointValue == null || pointValue.isEmpty()) {
-                holder.pointValueText.setText(
+            String gamePointFactor = item.getGamePointFactor();
+            if (gamePointFactor == null || gamePointFactor.isEmpty()) {
+                holder.gamePointFactorText.setText(
                         holder.itemView.getContext().getString(
                                 R.string.format_game_point_factor, "0"));
                 System.out.println("Point value is null/empty, using zero");
             } else {
-                holder.pointValueText.setText(
+                holder.gamePointFactorText.setText(
                         holder.itemView.getContext().getString(
-                                R.string.format_game_point_factor, pointValue));
+                                R.string.format_game_point_factor, gamePointFactor));
                 System.out.println("Setting game point value");
             }
 
-            holder.pointValueText.setOnClickListener(v -> {
+            holder.gamePointFactorText.setOnClickListener(v -> {
                 if (actionListener != null) {
                     actionListener.onEditGameEconomics(item, position);
                 }
@@ -180,32 +180,32 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             showPlayersDialog(holder.itemView.getContext(), item);
         });
         
-        // Set GST Percentage
-        holder.gstPercentageText.setText(item.getGstPercentage());
-        holder.gstPercentageText.setOnClickListener(v -> {
+        // Set Board Adjustment percentage
+        holder.boardAdjustmentPercentageText.setText(item.getBoardAdjustmentPercentage());
+        holder.boardAdjustmentPercentageText.setOnClickListener(v -> {
             if (actionListener != null) {
                 actionListener.onEditGameEconomics(item, position);
             }
         });
         
         // Set Board Points with unit formatting and null handling.
-        String gstAmount = item.getGstAmount();
-        System.out.println("TableAdapter: Binding game contribution amount");
-        System.out.println("TableAdapter: holder.gstAmountText is " + (holder.gstAmountText == null ? "NULL" : "NOT NULL"));
+        String boardPoints = item.getBoardPoints();
+        System.out.println("TableAdapter: Binding game boardAdjustment amount");
+        System.out.println("TableAdapter: holder.boardPointsText is " + (holder.boardPointsText == null ? "NULL" : "NOT NULL"));
         
-        if (holder.gstAmountText != null) {
-            if (gstAmount == null || gstAmount.isEmpty()) {
+        if (holder.boardPointsText != null) {
+            if (boardPoints == null || boardPoints.isEmpty()) {
                 System.out.println("TableAdapter: Board Points are null or empty, using zero");
-                holder.gstAmountText.setText(R.string.game_points_zero);
-                holder.gstAmountText.setVisibility(android.view.View.VISIBLE);
+                holder.boardPointsText.setText(R.string.game_points_zero);
+                holder.boardPointsText.setVisibility(android.view.View.VISIBLE);
             } else {
-                System.out.println("TableAdapter: Setting contribution amount");
-                holder.gstAmountText.setText(
-                        holder.itemView.getContext().getString(R.string.format_game_points, gstAmount));
-                holder.gstAmountText.setVisibility(android.view.View.VISIBLE);
+                System.out.println("TableAdapter: Setting boardAdjustment amount");
+                holder.boardPointsText.setText(
+                        holder.itemView.getContext().getString(R.string.format_game_points, boardPoints));
+                holder.boardPointsText.setVisibility(android.view.View.VISIBLE);
             }
         } else {
-            System.out.println("TableAdapter: ERROR - gstAmountText TextView is NULL!");
+            System.out.println("TableAdapter: ERROR - boardPointsText TextView is NULL!");
         }
 
             // Set Age
@@ -234,13 +234,13 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             boolean isGameCompleted = "Completed".equals(gameStatus);
             
             
-            holder.btnApproveGst.setEnabled(actionsEnabled && isGameCompleted);
+            holder.btnApproveBoardAdjustment.setEnabled(actionsEnabled && isGameCompleted);
             holder.btnDeleteGame.setEnabled(actionsEnabled);
 
             // Set up button click listeners
-            holder.btnApproveGst.setOnClickListener(v -> {
+            holder.btnApproveBoardAdjustment.setOnClickListener(v -> {
                 if (actionListener != null && actionsEnabled && isGameCompleted) {
-                    actionListener.onApproveGst(item, position);
+                    actionListener.onApproveBoardAdjustment(item, position);
                 }
             });
 
@@ -382,7 +382,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 
                 TextView playerNameText = playerView.findViewById(R.id.text_player_name);
                 TextView playerScoreText = playerView.findViewById(R.id.text_player_score);
-                TextView netAmountText = playerView.findViewById(R.id.text_net_amount);
+                TextView finalGamePointsText = playerView.findViewById(R.id.text_final_game_points);
                 
                 String playerName = player.getName();
                 if (playerName == null || playerName.isEmpty()) {
@@ -391,9 +391,9 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 
                 int playerScore = player.getTotalScore();
                 
-                PlayerSettlementCalculator.PlayerSettlement gamePoints =
-                        PlayerSettlementCalculator.compute(gameItem, player);
-                double netAmount = gamePoints.netAmount;
+                PlayerGamePointsCalculator.PlayerGamePoints gamePoints =
+                        PlayerGamePointsCalculator.compute(gameItem, player);
+                double finalGamePoints = gamePoints.finalGamePoints;
                 
                 // Add ranking indicator and winner highlighting
                 int rank = i + 1;
@@ -413,17 +413,17 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 }
                 playerScoreText.setText(String.valueOf(playerScore));
 
-                if (netAmount > 0) {
-                    netAmountText.setText(context.getString(
-                            R.string.format_game_points_positive, String.valueOf(Math.round(netAmount))));
-                    netAmountText.setTextColor(context.getColor(R.color.success_green));
-                } else if (netAmount < 0) {
-                    netAmountText.setText(context.getString(
-                            R.string.format_game_points, String.valueOf(Math.round(netAmount))));
-                    netAmountText.setTextColor(context.getColor(R.color.error_red));
+                if (finalGamePoints > 0) {
+                    finalGamePointsText.setText(context.getString(
+                            R.string.format_game_points_positive, String.valueOf(Math.round(finalGamePoints))));
+                    finalGamePointsText.setTextColor(context.getColor(R.color.success_green));
+                } else if (finalGamePoints < 0) {
+                    finalGamePointsText.setText(context.getString(
+                            R.string.format_game_points, String.valueOf(Math.round(finalGamePoints))));
+                    finalGamePointsText.setTextColor(context.getColor(R.color.error_red));
                 } else {
-                    netAmountText.setText(R.string.game_points_zero);
-                    netAmountText.setTextColor(context.getColor(R.color.text_secondary));
+                    finalGamePointsText.setText(R.string.game_points_zero);
+                    finalGamePointsText.setTextColor(context.getColor(R.color.text_secondary));
                 }
                 
                 playersContainer.addView(playerView);
@@ -519,9 +519,9 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     }
 
         public static class TableViewHolder extends RecyclerView.ViewHolder {
-            TextView gameIdHeaderText, gameCreatedSummaryText, gamePinText, pointValueText, playersText, gstPercentageText, gstAmountText, ageText, statusText;
+            TextView gameIdHeaderText, gameCreatedSummaryText, gamePinText, gamePointFactorText, playersText, boardAdjustmentPercentageText, boardPointsText, ageText, statusText;
             ImageView iconViewPin;
-            View btnApproveGst, btnDeleteGame, btnKickEditor;
+            View btnApproveBoardAdjustment, btnDeleteGame, btnKickEditor;
             MaterialCheckBox selectGameCheckBox;
 
             public TableViewHolder(@NonNull View itemView) {
@@ -529,15 +529,15 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 gameIdHeaderText = itemView.findViewById(R.id.text_game_id_header);
                 gameCreatedSummaryText = itemView.findViewById(R.id.text_game_created_summary);
                 gamePinText = itemView.findViewById(R.id.text_game_pin);
-                pointValueText = itemView.findViewById(R.id.text_point_value);
+                gamePointFactorText = itemView.findViewById(R.id.text_game_point_factor);
                 playersText = itemView.findViewById(R.id.text_players);
-                gstPercentageText = itemView.findViewById(R.id.text_gst_percentage);
-                gstAmountText = itemView.findViewById(R.id.text_gst_amount);
+                boardAdjustmentPercentageText = itemView.findViewById(R.id.text_board_adjustment_percentage);
+                boardPointsText = itemView.findViewById(R.id.text_board_points);
                 ageText = itemView.findViewById(R.id.text_age);
                 statusText = itemView.findViewById(R.id.text_status);
                 selectGameCheckBox = itemView.findViewById(R.id.checkbox_select_game);
                 iconViewPin = itemView.findViewById(R.id.icon_view_pin);
-                btnApproveGst = itemView.findViewById(R.id.btn_approve_gst);
+                btnApproveBoardAdjustment = itemView.findViewById(R.id.btn_approve_board_adjustment);
                 btnDeleteGame = itemView.findViewById(R.id.btn_delete_game);
                 btnKickEditor = itemView.findViewById(R.id.btn_kick_editor);
             }

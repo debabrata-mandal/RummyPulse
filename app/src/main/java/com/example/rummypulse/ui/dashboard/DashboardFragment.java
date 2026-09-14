@@ -318,7 +318,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         boolean hasGames = bucket.getGames() > 0;
         binding.textPerfEmpty.setVisibility(hasGames ? View.GONE : View.VISIBLE);
 
-        double net = bucket.getNetAmount();
+        double net = bucket.getFinalGamePoints();
         int netColor = !hasGames || Math.abs(net) < 0.5
                 ? R.color.view_text_secondary
                 : net > 0 ? R.color.view_mint : R.color.view_coral;
@@ -344,7 +344,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             return;
         }
         binding.cardLeaderboard.setVisibility(View.VISIBLE);
-        showLeaderboardAmounts = defaults.isLeaderboardAmountsVisible();
+        showLeaderboardAmounts = defaults.isLeaderboardGamePointsVisible();
 
         Leaderboard board = leaderboard == null ? Leaderboard.empty() : leaderboard;
         boolean empty = board.isEmpty();
@@ -378,10 +378,10 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         for (int i = 0; i < entries.size(); i++) {
             LeaderboardEntry entry = entries.get(i);
             slices.add(new LeaderboardDonutView.Slice(
-                    (float) Math.abs(entry.getNetAmount()),
+                    (float) Math.abs(entry.getFinalGamePoints()),
                     colors[i],
                     // Amounts live on the ring; withholding them leaves the arcs unlabelled.
-                    showLeaderboardAmounts ? formatSignedAmount(entry.getNetAmount()) : null));
+                    showLeaderboardAmounts ? formatSignedAmount(entry.getFinalGamePoints()) : null));
         }
         binding.viewLeaderboardDonut.setSlices(slices);
 
@@ -725,11 +725,11 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         TextInputLayout layoutGameDisplayName = dialogView.findViewById(R.id.layout_game_display_name);
         TextInputEditText editGameDisplayName = dialogView.findViewById(R.id.edit_game_display_name);
         ImageButton btnGenerateGameName = dialogView.findViewById(R.id.btn_generate_game_name);
-        TextInputLayout layoutPointValue = dialogView.findViewById(R.id.layout_point_value);
-        TextInputEditText editPointValue = dialogView.findViewById(R.id.edit_point_value);
-        ImageButton btnPointDecrement = dialogView.findViewById(R.id.btn_point_value_decrement);
-        ImageButton btnPointIncrement = dialogView.findViewById(R.id.btn_point_value_increment);
-        TextView textContributionPercentDisplay = dialogView.findViewById(R.id.text_contribution_percent_display);
+        TextInputLayout layoutGamePointFactor = dialogView.findViewById(R.id.layout_game_point_factor);
+        TextInputEditText editGamePointFactor = dialogView.findViewById(R.id.edit_game_point_factor);
+        ImageButton btnPointDecrement = dialogView.findViewById(R.id.btn_game_point_factor_decrement);
+        ImageButton btnPointIncrement = dialogView.findViewById(R.id.btn_game_point_factor_increment);
+        TextView textBoardAdjustmentPercentDisplay = dialogView.findViewById(R.id.text_board_adjustment_percent_display);
         View layoutCreationStatus = dialogView.findViewById(R.id.layout_creation_status);
         View progressCreation = dialogView.findViewById(R.id.progress_creation);
         TextView textCreationStatus = dialogView.findViewById(R.id.text_creation_status);
@@ -888,63 +888,63 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
         GameDefaultsRepository defaultsRepo = GameDefaultsRepository.getInstance(requireContext());
         GameDefaults gd = defaultsRepo.getCachedResolved();
-        final double[] pointValueState = {clampPointValue(gd.getDefaultPointValue())};
-        final double[] gstFromDefaults = {clampGstPercentForCreateGame(gd.getDefaultGstPercent())};
+        final double[] gamePointFactorState = {clampGamePointFactor(gd.getDefaultGamePointFactor())};
+        final double[] boardAdjustmentFromDefaults = {clampBoardAdjustmentPercentForCreateGame(gd.getDefaultBoardAdjustmentPercent())};
 
         Runnable refreshPointFieldUi = () -> {
-            editPointValue.setText(formatPlainDecimalForField(pointValueState[0]));
-            layoutPointValue.setError(null);
-            btnPointDecrement.setEnabled(pointValueState[0] > 0.05 + 1e-9);
-            btnPointIncrement.setEnabled(pointValueState[0] < 100.0 - 1e-9);
+            editGamePointFactor.setText(formatPlainDecimalForField(gamePointFactorState[0]));
+            layoutGamePointFactor.setError(null);
+            btnPointDecrement.setEnabled(gamePointFactorState[0] > 0.05 + 1e-9);
+            btnPointIncrement.setEnabled(gamePointFactorState[0] < 100.0 - 1e-9);
         };
-        Runnable refreshContributionFieldUi = () -> {
-            textContributionPercentDisplay.setText(
-                    String.format(Locale.US, "%.0f%%", gstFromDefaults[0]));
+        Runnable refreshBoardAdjustmentFieldUi = () -> {
+            textBoardAdjustmentPercentDisplay.setText(
+                    String.format(Locale.US, "%.0f%%", boardAdjustmentFromDefaults[0]));
         };
 
-        editPointValue.setOnFocusChangeListener((v, hasFocus) -> {
+        editGamePointFactor.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus || !isAdded()) {
                 return;
             }
-            if (!tryCommitPointField(layoutPointValue, editPointValue, pointValueState)) {
-                editPointValue.setText(formatPlainDecimalForField(pointValueState[0]));
+            if (!tryCommitPointField(layoutGamePointFactor, editGamePointFactor, gamePointFactorState)) {
+                editGamePointFactor.setText(formatPlainDecimalForField(gamePointFactorState[0]));
             }
-            btnPointDecrement.setEnabled(pointValueState[0] > 0.05 + 1e-9);
-            btnPointIncrement.setEnabled(pointValueState[0] < 100.0 - 1e-9);
+            btnPointDecrement.setEnabled(gamePointFactorState[0] > 0.05 + 1e-9);
+            btnPointIncrement.setEnabled(gamePointFactorState[0] < 100.0 - 1e-9);
         });
-        editPointValue.setOnEditorActionListener((v, actionId, event) -> {
+        editGamePointFactor.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) {
-                if (tryCommitPointField(layoutPointValue, editPointValue, pointValueState)) {
-                    editPointValue.clearFocus();
+                if (tryCommitPointField(layoutGamePointFactor, editGamePointFactor, gamePointFactorState)) {
+                    editGamePointFactor.clearFocus();
                 }
-                btnPointDecrement.setEnabled(pointValueState[0] > 0.05 + 1e-9);
-                btnPointIncrement.setEnabled(pointValueState[0] < 100.0 - 1e-9);
+                btnPointDecrement.setEnabled(gamePointFactorState[0] > 0.05 + 1e-9);
+                btnPointIncrement.setEnabled(gamePointFactorState[0] < 100.0 - 1e-9);
                 return true;
             }
             return false;
         });
 
         btnPointDecrement.setOnClickListener(v -> {
-            pointValueState[0] = clampPointValue(pointValueState[0] - 0.05);
+            gamePointFactorState[0] = clampGamePointFactor(gamePointFactorState[0] - 0.05);
             refreshPointFieldUi.run();
         });
         btnPointIncrement.setOnClickListener(v -> {
-            pointValueState[0] = clampPointValue(pointValueState[0] + 0.05);
+            gamePointFactorState[0] = clampGamePointFactor(gamePointFactorState[0] + 0.05);
             refreshPointFieldUi.run();
         });
         btnPointDecrement.setOnLongClickListener(v -> {
-            pointValueState[0] = clampPointValue(pointValueState[0] - 1.0);
+            gamePointFactorState[0] = clampGamePointFactor(gamePointFactorState[0] - 1.0);
             refreshPointFieldUi.run();
             return true;
         });
         btnPointIncrement.setOnLongClickListener(v -> {
-            pointValueState[0] = clampPointValue(pointValueState[0] + 1.0);
+            gamePointFactorState[0] = clampGamePointFactor(gamePointFactorState[0] + 1.0);
             refreshPointFieldUi.run();
             return true;
         });
 
         refreshPointFieldUi.run();
-        refreshContributionFieldUi.run();
+        refreshBoardAdjustmentFieldUi.run();
 
         btnCreate.setOnClickListener(v -> {
             isNetworkAvailable = checkNetworkAvailable();
@@ -959,21 +959,21 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 dashboardViewModel.retryGameCreation();
                 return;
             }
-            if (!tryCommitPointField(layoutPointValue, editPointValue, pointValueState)) {
+            if (!tryCommitPointField(layoutGamePointFactor, editGamePointFactor, gamePointFactorState)) {
                 return;
             }
 
-            double pointValue = pointValueState[0];
-            double gstPercentage = clampGstPercentForCreateGame(
-                    defaultsRepo.getCachedResolved().getDefaultGstPercent());
+            double gamePointFactor = gamePointFactorState[0];
+            double boardAdjustmentPercentage = clampBoardAdjustmentPercentForCreateGame(
+                    defaultsRepo.getCachedResolved().getDefaultBoardAdjustmentPercent());
 
             String displayName = editGameDisplayName.getText() != null
                     ? editGameDisplayName.getText().toString().trim()
                     : "";
-            dashboardViewModel.createNewGame(pointValue, gstPercentage, displayName);
+            dashboardViewModel.createNewGame(gamePointFactor, boardAdjustmentPercentage, displayName);
         });
 
-        final double[] baselinePoint = {pointValueState[0]};
+        final double[] baselinePoint = {gamePointFactorState[0]};
 
         dialog.show();
         renderCreationAvailability.run();
@@ -993,15 +993,15 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 return;
             }
             GameDefaults fresh = defaultsRepo.getCachedResolved();
-            gstFromDefaults[0] = clampGstPercentForCreateGame(fresh.getDefaultGstPercent());
-            refreshContributionFieldUi.run();
+            boardAdjustmentFromDefaults[0] = clampBoardAdjustmentPercentForCreateGame(fresh.getDefaultBoardAdjustmentPercent());
+            refreshBoardAdjustmentFieldUi.run();
 
-            boolean stillAtBaseline = Math.abs(pointValueState[0] - baselinePoint[0]) < 1e-9;
+            boolean stillAtBaseline = Math.abs(gamePointFactorState[0] - baselinePoint[0]) < 1e-9;
             if (!stillAtBaseline) {
                 return;
             }
-            pointValueState[0] = clampPointValue(fresh.getDefaultPointValue());
-            baselinePoint[0] = pointValueState[0];
+            gamePointFactorState[0] = clampGamePointFactor(fresh.getDefaultGamePointFactor());
+            baselinePoint[0] = gamePointFactorState[0];
             refreshPointFieldUi.run();
         });
     }
@@ -1069,21 +1069,21 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     private boolean tryCommitPointField(TextInputLayout layout, TextInputEditText edit, double[] state) {
         String s = edit.getText() != null ? edit.getText().toString().trim() : "";
         if (TextUtils.isEmpty(s)) {
-            layout.setError(getString(R.string.dialog_point_value_required));
+            layout.setError(getString(R.string.dialog_game_point_factor_required));
             return false;
         }
         try {
             double raw = Double.parseDouble(s);
             if (raw <= 0 || raw > 100) {
-                layout.setError(getString(R.string.dialog_point_value_invalid));
+                layout.setError(getString(R.string.dialog_game_point_factor_invalid));
                 return false;
             }
-            state[0] = clampPointValue(snapToFivePaise(raw));
+            state[0] = clampGamePointFactor(snapToFivePaise(raw));
             edit.setText(formatPlainDecimalForField(state[0]));
             layout.setError(null);
             return true;
         } catch (NumberFormatException e) {
-            layout.setError(getString(R.string.dialog_point_value_invalid));
+            layout.setError(getString(R.string.dialog_game_point_factor_invalid));
             return false;
         }
     }
@@ -1092,7 +1092,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         return Math.round(value * 20.0) / 20.0;
     }
 
-    private static double clampPointValue(double value) {
+    private static double clampGamePointFactor(double value) {
         double s = snapToFivePaise(value);
         if (s < 0.05) {
             return 0.05;
@@ -1103,7 +1103,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         return s;
     }
 
-    private static double clampGstPercentForCreateGame(double v) {
+    private static double clampBoardAdjustmentPercentForCreateGame(double v) {
         if (v < 0) {
             return 0;
         }

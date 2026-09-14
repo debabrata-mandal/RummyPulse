@@ -80,9 +80,9 @@ public class PlayerConsolidationEngineTest {
     private static GameItem game(String gameId, Player... players) {
         GameItem game = new GameItem();
         game.setGameId(gameId);
-        game.setPointValue("1");
-        game.setGstPercentage("0");
-        game.setGstAmount("0");
+        game.setGamePointFactor("1");
+        game.setBoardAdjustmentPercentage("0");
+        game.setBoardPoints("0");
         game.setPlayers(Arrays.asList(players));
         return game;
     }

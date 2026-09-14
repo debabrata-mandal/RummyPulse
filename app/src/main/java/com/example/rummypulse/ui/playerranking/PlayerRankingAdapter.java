@@ -66,7 +66,7 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
         }
         maxAbsoluteNet = 0;
         for (LeaderboardEntry entry : entries) {
-            maxAbsoluteNet = Math.max(maxAbsoluteNet, Math.abs(entry.getNetAmount()));
+            maxAbsoluteNet = Math.max(maxAbsoluteNet, Math.abs(entry.getFinalGamePoints()));
         }
         notifyDataSetChanged();
     }
@@ -185,9 +185,9 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
             holder.statAvg.setVisibility(View.VISIBLE);
             String avgValue = LeaderboardAmountFormatter.formatSigned(netPerGame(entry));
             String avgLabel = context.getString(R.string.player_ranking_stat_per_game);
-            int avgTint = ContextCompat.getColor(context, Math.abs(entry.getNetAmount()) < 0.5
+            int avgTint = ContextCompat.getColor(context, Math.abs(entry.getFinalGamePoints()) < 0.5
                     ? R.color.view_text_secondary
-                    : entry.getNetAmount() > 0 ? R.color.view_mint : R.color.view_coral);
+                    : entry.getFinalGamePoints() > 0 ? R.color.view_mint : R.color.view_coral);
             bindStatChip(
                     holder.statAvg,
                     avgValue,
@@ -247,7 +247,7 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
     }
 
     private static double netPerGame(LeaderboardEntry entry) {
-        return entry.getGames() <= 0 ? 0 : entry.getNetAmount() / entry.getGames();
+        return entry.getGames() <= 0 ? 0 : entry.getFinalGamePoints() / entry.getGames();
     }
 
     private void bindNet(RankingViewHolder holder, Context context, LeaderboardEntry entry) {
@@ -261,7 +261,7 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
             return;
         }
 
-        double net = entry.getNetAmount();
+        double net = entry.getFinalGamePoints();
         int direction = ContextCompat.getColor(context, Math.abs(net) < 0.5
                 ? R.color.view_text_secondary
                 : net > 0 ? R.color.view_mint : R.color.view_coral);

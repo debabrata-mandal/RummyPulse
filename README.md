@@ -120,6 +120,19 @@ Create a Firebase Android app with package name `com.example.rummypulse`, then:
 4. Enable Remote Config.
 5. Deploy [`firestore.rules`](firestore.rules).
 
+### Schema compatibility
+
+The current Android client reads and writes Firestore schema 3. At startup it checks
+`gameDefaults_v2/config.schemaVersion`; until that marker is `3`, authenticated users see a
+maintenance screen and cannot enter the normal app. This prevents schema-2 clients and partially
+migrated historical data from mixing with the Game Points model.
+
+Before distributing this client, follow the complete dry-run, backup, apply, validation, and
+Remote Config rollout procedure in
+[`functions/migration/README.md`](functions/migration/README.md).
+The migration tool defaults to read-only mode and must be run manually; application builds and
+Firebase deployments never invoke it.
+
 ### Firestore collections
 
 | Collection | Purpose |
@@ -131,6 +144,7 @@ Create a Firebase Android app with package name `com.example.rummypulse`, then:
 | `approvedGamesReport_v2` | Pre-aggregated monthly reports |
 | `gameDefaults_v2` | Shared game defaults |
 | `appUser_v2` | User profiles, roles, and safe-play acceptance records |
+| `playerStats_v2` | Schema-v3 performance totals rebuilt from approved games |
 
 ### Remote Config
 

@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.FirestoreCollections;
+import com.example.rummypulse.data.GameDataSchema;
 import com.example.rummypulse.utils.DisplayNameUtils;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.GameViewApprovalRepository;
@@ -81,12 +82,12 @@ public class DashboardViewModel extends ViewModel {
     public static class GameCreationData {
         public final String gameId;
         public final String creatorName;
-        public final double pointValue;
+        public final double gamePointFactor;
         
-        public GameCreationData(String gameId, String creatorName, double pointValue) {
+        public GameCreationData(String gameId, String creatorName, double gamePointFactor) {
             this.gameId = gameId;
             this.creatorName = creatorName;
-            this.pointValue = pointValue;
+            this.gamePointFactor = gamePointFactor;
         }
     }
 
@@ -96,8 +97,8 @@ public class DashboardViewModel extends ViewModel {
         final String pin;
         final String creatorUserId;
         final String creatorName;
-        final double pointValue;
-        final double gstPercentage;
+        final double gamePointFactor;
+        final double boardAdjustmentPercentage;
         final String displayName;
 
         CreationRequest(
@@ -106,16 +107,16 @@ public class DashboardViewModel extends ViewModel {
                 String pin,
                 String creatorUserId,
                 String creatorName,
-                double pointValue,
-                double gstPercentage,
+                double gamePointFactor,
+                double boardAdjustmentPercentage,
                 String displayName) {
             this.requestId = requestId;
             this.gameId = gameId;
             this.pin = pin;
             this.creatorUserId = creatorUserId;
             this.creatorName = creatorName;
-            this.pointValue = pointValue;
-            this.gstPercentage = gstPercentage;
+            this.gamePointFactor = gamePointFactor;
+            this.boardAdjustmentPercentage = boardAdjustmentPercentage;
             this.displayName = displayName;
         }
     }
@@ -186,7 +187,7 @@ public class DashboardViewModel extends ViewModel {
                             
                             if (isDifferentUser) {
                                 String creatorName = game.getCreatorName() != null ? game.getCreatorName() : "Someone";
-                                double pointValue = parsePointValue(game.getPointValue());
+                                double gamePointFactor = parseGamePointFactor(game.getGamePointFactor());
                                 
                                 android.util.Log.d("DashboardViewModel",
                                         "New game from another user: " + reason);
@@ -194,7 +195,7 @@ public class DashboardViewModel extends ViewModel {
                                 gameCreationEvent.setValue(new GameCreationData(
                                     game.getGameId(), 
                                     creatorName, 
-                                    pointValue
+                                    gamePointFactor
                                 ));
                             } else {
                                 android.util.Log.d("DashboardViewModel",
@@ -409,11 +410,11 @@ public class DashboardViewModel extends ViewModel {
         // joinType can be "player" or "moderator"
     }
 
-    public void createNewGame(double pointValue, double gstPercentage) {
-        createNewGame(pointValue, gstPercentage, null);
+    public void createNewGame(double gamePointFactor, double boardAdjustmentPercentage) {
+        createNewGame(gamePointFactor, boardAdjustmentPercentage, null);
     }
 
-    public void createNewGame(double pointValue, double gstPercentage, String optionalDisplayName) {
+    public void createNewGame(double gamePointFactor, double boardAdjustmentPercentage, String optionalDisplayName) {
         if (creationInProgress) {
             return;
         }
@@ -433,8 +434,8 @@ public class DashboardViewModel extends ViewModel {
                 PinUtils.generatePin(),
                 currentUser.getUid(),
                 creatorName != null ? creatorName : "User",
-                pointValue,
-                gstPercentage,
+                gamePointFactor,
+                boardAdjustmentPercentage,
                 optionalDisplayName != null ? optionalDisplayName.trim() : "");
         retryQueued = false;
         runCreationTransaction(activeCreationRequest);
@@ -467,8 +468,8 @@ public class DashboardViewModel extends ViewModel {
 
         Map<String, Object> initialGameData = new HashMap<>();
         initialGameData.put("numPlayers", 2);
-        initialGameData.put("pointValue", request.pointValue);
-        initialGameData.put("gstPercent", request.gstPercentage);
+        initialGameData.put("gamePointFactor", request.gamePointFactor);
+        initialGameData.put("boardAdjustmentPercent", request.boardAdjustmentPercentage);
         Map<String, Map<String, Object>> playersById = new java.util.LinkedHashMap<>();
         List<String> playerOrder = new ArrayList<>();
         Map<String, Object> creatorPlayer = new HashMap<>();
@@ -495,7 +496,7 @@ public class DashboardViewModel extends ViewModel {
         player2.put("userId", null);
         playersById.put(player2Id, player2);
         playerOrder.add(player2Id);
-        initialGameData.put("schemaVersion", 2);
+        initialGameData.put("schemaVersion", GameDataSchema.CURRENT_VERSION);
         initialGameData.put("playersById", playersById);
         initialGameData.put("playerOrder", playerOrder);
         initialGameData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
@@ -513,9 +514,9 @@ public class DashboardViewModel extends ViewModel {
         authData.put("activeEditorName", request.creatorName);
         authData.put("lastEditorUserId", request.creatorUserId);
         authData.put("lastEditorName", request.creatorName);
-        authData.put("dashboardPointValue", request.pointValue);
+        authData.put("dashboardGamePointFactor", request.gamePointFactor);
         authData.put("dashboardNumPlayers", 2);
-        authData.put("dashboardGstPercent", request.gstPercentage);
+        authData.put("dashboardBoardAdjustmentPercent", request.boardAdjustmentPercentage);
         authData.put("dashboardGameStatus", "R1");
         // Seeds the My Games filter; Player 2 is unlinked at creation so the creator is the only
         // member until someone is mapped to an account.
@@ -628,7 +629,7 @@ public class DashboardViewModel extends ViewModel {
                 "Game created successfully."));
         newGameCreated.setValue(request.gameId);
         gameCreationEvent.setValue(new GameCreationData(
-                request.gameId, request.creatorName, request.pointValue));
+                request.gameId, request.creatorName, request.gamePointFactor));
         android.util.Log.d("GameCreation", "Atomic game creation committed");
     }
 
@@ -687,12 +688,12 @@ public class DashboardViewModel extends ViewModel {
     /**
      * Parse point value from string to double
      */
-    private double parsePointValue(String pointValueStr) {
-        if (pointValueStr == null || pointValueStr.isEmpty()) {
+    private double parseGamePointFactor(String gamePointFactorStr) {
+        if (gamePointFactorStr == null || gamePointFactorStr.isEmpty()) {
             return 0.0;
         }
         try {
-            String cleaned = pointValueStr.trim();
+            String cleaned = gamePointFactorStr.trim();
             return Double.parseDouble(cleaned);
         } catch (NumberFormatException e) {
             return 0.0;

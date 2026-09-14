@@ -14,33 +14,33 @@ public class GameDefaultsLeaderboardVisibilityTest {
     private static GameDefaults defaults(Boolean leaderboard, Boolean amounts) {
         GameDefaults raw = new GameDefaults();
         raw.setShowDashboardLeaderboard(leaderboard);
-        raw.setShowDashboardLeaderboardAmounts(amounts);
+        raw.setShowDashboardLeaderboardGamePoints(amounts);
         return GameDefaults.resolvedFromFirestoreBean(raw);
     }
 
     @Test
     public void amountsVisibleWhenBothSwitchesAreOn() {
-        assertTrue(defaults(true, true).isLeaderboardAmountsVisible());
+        assertTrue(defaults(true, true).isLeaderboardGamePointsVisible());
     }
 
     @Test
     public void amountsHiddenWhenOnlyAmountsSwitchIsOff() {
-        assertFalse(defaults(true, false).isLeaderboardAmountsVisible());
+        assertFalse(defaults(true, false).isLeaderboardGamePointsVisible());
     }
 
     @Test
     public void amountsHiddenWhenLeaderboardIsOffEvenIfAmountsSwitchSaysOn() {
-        assertFalse(defaults(false, true).isLeaderboardAmountsVisible());
+        assertFalse(defaults(false, true).isLeaderboardGamePointsVisible());
     }
 
     @Test
     public void amountsHiddenWhenBothSwitchesAreOff() {
-        assertFalse(defaults(false, false).isLeaderboardAmountsVisible());
+        assertFalse(defaults(false, false).isLeaderboardGamePointsVisible());
     }
 
     @Test
     public void unsetFlagsFallBackToVisible() {
-        assertTrue(GameDefaults.resolvedFromFirestoreBean(null).isLeaderboardAmountsVisible());
-        assertTrue(defaults(null, null).isLeaderboardAmountsVisible());
+        assertTrue(GameDefaults.resolvedFromFirestoreBean(null).isLeaderboardGamePointsVisible());
+        assertTrue(defaults(null, null).isLeaderboardGamePointsVisible());
     }
 }

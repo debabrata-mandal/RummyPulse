@@ -78,7 +78,7 @@
         tools:visibility="visible">
 
         <androidx.core.widget.NestedScrollView
-            android:id="@+id/scroll_mapping_settlement"
+            android:id="@+id/scroll_mapping_game_points"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
@@ -307,7 +307,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1.05"
                             android:gravity="center"
-                            android:text="@string/player_consolidation_table_contribution"
+                            android:text="@string/player_consolidation_table_board_adjustment"
                             android:textColor="@color/text_secondary"
                             android:textSize="7dp" />
 
@@ -350,13 +350,13 @@
                         android:visibility="gone" />
 
                     <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/recycler_settlement_player_summary"
+                        android:id="@+id/recycler_game_points_player_summary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:nestedScrollingEnabled="false"
                         android:overScrollMode="never"
                         tools:itemCount="5"
-                        tools:listitem="@layout/item_settlement_player_summary" />
+                        tools:listitem="@layout/item_game_points_player_summary" />
 
                     <View
                         android:layout_width="match_parent"
@@ -402,7 +402,7 @@
                             tools:text="0 GP" />
 
                         <TextView
-                            android:id="@+id/text_player_table_total_contribution"
+                            android:id="@+id/text_player_table_total_board_points"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1.05"

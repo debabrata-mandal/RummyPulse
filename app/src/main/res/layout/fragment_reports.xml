@@ -115,7 +115,7 @@
             android:paddingTop="4dp"
             android:paddingBottom="96dp"
             android:clipToPadding="false"
-            tools:listitem="@layout/item_point_value_card" />
+            tools:listitem="@layout/item_game_point_factor_card" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton

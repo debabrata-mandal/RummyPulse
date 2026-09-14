@@ -182,7 +182,7 @@ public class PlayerRankingViewModel extends ViewModel {
             resolved.add(fullName == null ? entry : new LeaderboardEntry(
                     entry.getUserId(),
                     fullName,
-                    entry.getNetAmount(),
+                    entry.getFinalGamePoints(),
                     entry.getGames(),
                     entry.getWins(),
                     entry.getRank(),

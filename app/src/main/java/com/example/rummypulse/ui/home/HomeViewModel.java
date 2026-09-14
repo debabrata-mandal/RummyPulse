@@ -21,7 +21,7 @@ public class HomeViewModel extends ViewModel {
     private final MutableLiveData<Integer> mApprovedGames;
     private final MutableLiveData<Integer> mCompletedGames;
     private final MutableLiveData<Integer> mInProgressGames;
-    private final MutableLiveData<Double> mTotalGstAmount;
+    private final MutableLiveData<Double> mTotalBoardPoints;
     private final MutableLiveData<String> mError;
     
     private GameRepository gameRepository;
@@ -35,7 +35,7 @@ public class HomeViewModel extends ViewModel {
         mApprovedGames = new MutableLiveData<>();
         mCompletedGames = new MutableLiveData<>();
         mInProgressGames = new MutableLiveData<>();
-        mTotalGstAmount = new MutableLiveData<>();
+        mTotalBoardPoints = new MutableLiveData<>();
         mError = new MutableLiveData<>();
         
         // Initialize repository
@@ -65,8 +65,8 @@ public class HomeViewModel extends ViewModel {
         return mInProgressGames;
     }
 
-    public LiveData<Double> getTotalGstAmount() {
-        return mTotalGstAmount;
+    public LiveData<Double> getTotalBoardPoints() {
+        return mTotalBoardPoints;
     }
 
     public LiveData<Integer> getApprovedGamesCount() {
@@ -93,9 +93,9 @@ public class HomeViewModel extends ViewModel {
             mError.setValue(error);
         });
         
-        // Observe total approved GST amount
-        gameRepository.getTotalApprovedGst().observeForever(totalGst -> {
-            mTotalGstAmount.setValue(totalGst);
+        // Observe total approved Board Points
+        gameRepository.getTotalApprovedBoardAdjustment().observeForever(totalBoardAdjustment -> {
+            mTotalBoardPoints.setValue(totalBoardAdjustment);
         });
         
         // Observe approved games count
@@ -107,7 +107,7 @@ public class HomeViewModel extends ViewModel {
         // Load games from Firebase
         gameRepository.loadAllGames();
         
-        // Load approved games and calculate total GST
+        // Load approved games and calculate total Board Points
         gameRepository.loadApprovedGames();
     }
 
@@ -172,12 +172,12 @@ public class HomeViewModel extends ViewModel {
         gameRepository.approveAllCompletedGames(items, onAllComplete);
     }
 
-    public void updateGameEconomics(String gameId, double pointValue, double gstPercent, Runnable onSuccess) {
+    public void updateGameEconomics(String gameId, double gamePointFactor, double boardAdjustmentPercent, Runnable onSuccess) {
         if (AppUserRoleSession.getInstance().peekRole() != AppUserRoleSession.Role.ADMIN) {
             mError.setValue(ERROR_ADMIN_GAME_POINT_SETTINGS_REQUIRED);
             return;
         }
-        gameRepository.updateGameEconomics(gameId, pointValue, gstPercent, onSuccess);
+        gameRepository.updateGameEconomics(gameId, gamePointFactor, boardAdjustmentPercent, onSuccess);
     }
 
     public void kickOutEditor(

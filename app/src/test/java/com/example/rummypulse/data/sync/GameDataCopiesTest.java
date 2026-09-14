@@ -37,8 +37,8 @@ public class GameDataCopiesTest {
     public void deepCopy_copiesScalarFields() {
         GameData source = new GameData();
         source.setNumPlayers(4);
-        source.setPointValue(2.5);
-        source.setGstPercent(18.0);
+        source.setGamePointFactor(2.5);
+        source.setBoardAdjustmentPercent(18.0);
         source.setLastUpdated(null);          // Timestamp omitted; null is the safe default
         source.setVersion("v1.2");
         source.setGameStatus("Approved");     // Only "Approved"/"Rejected" round-trip via getter
@@ -50,8 +50,8 @@ public class GameDataCopiesTest {
 
         assertNotNull(copy);
         assertEquals(4, copy.getNumPlayers());
-        assertEquals(2.5, copy.getPointValue(), 0.0001);
-        assertEquals(18.0, copy.getGstPercent(), 0.0001);
+        assertEquals(2.5, copy.getGamePointFactor(), 0.0001);
+        assertEquals(18.0, copy.getBoardAdjustmentPercent(), 0.0001);
         assertNull(copy.getLastUpdated());
         assertEquals("v1.2", copy.getVersion());
         assertEquals("Approved", copy.getGameStatus());

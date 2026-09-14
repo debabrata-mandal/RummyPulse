@@ -86,13 +86,13 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/net_amount_label"
+                android:text="@string/final_game_points_label"
                 android:textSize="12sp"
                 android:textColor="@color/text_secondary"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/text_net_amount"
+                android:id="@+id/text_final_game_points"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 tools:text="0 GP"

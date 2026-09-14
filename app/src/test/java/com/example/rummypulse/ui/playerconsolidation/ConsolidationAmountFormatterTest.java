@@ -51,15 +51,15 @@ public class ConsolidationAmountFormatterTest {
         assertEquals("1.51 GP", ConsolidationAmountFormatter.formatAmount(1.505));
     }
 
-    // --- formatContribution ---
+    // --- formatBoardAdjustment ---
 
     @Test
-    public void formatContribution_delegatesToFormatAmount() {
-        // formatContribution must produce the same result as formatAmount for any input
+    public void formatBoardAdjustment_delegatesToFormatAmount() {
+        // formatBoardAdjustment must produce the same result as formatAmount for any input
         double amount = 75.25;
         assertEquals(
                 ConsolidationAmountFormatter.formatAmount(amount),
-                ConsolidationAmountFormatter.formatContribution(amount)
+                ConsolidationAmountFormatter.formatBoardAdjustment(amount)
         );
     }
 }

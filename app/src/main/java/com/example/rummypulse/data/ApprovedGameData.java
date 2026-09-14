@@ -1,30 +1,20 @@
 package com.example.rummypulse.data;
 
 import com.google.firebase.Timestamp;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 public class ApprovedGameData {
+    private Integer schemaVersion;
     private String gameId;
     private int numPlayers;
-    private double pointValue;
-    private double gstPercent;
-    /**
-     * Authoritative player results, carrying the account behind each row.
-     *
-     * <p>Null on games archived before this field existed; those fall back to {@link #playerScores}.
-     */
+    private double gamePointFactor;
+    private double boardAdjustmentPercent;
+    /** Authoritative schema-v3 player results, carrying the account behind each row. */
     private List<ApprovedPlayer> players;
-    /**
-     * @deprecated Legacy name-keyed map from before {@link #players} existed. No longer written on
-     *     new approvals; kept only so {@link #resolvePlayers()} can read older archived games.
-     */
-    @Deprecated
-    private Map<String, Integer> playerScores;
     private Timestamp approvedAt;
     private String version;
-    private String gstAmount;
+    private double boardPoints;
     private String gameStatus;
     private String creationDateTime;
 
@@ -32,38 +22,31 @@ public class ApprovedGameData {
         // Default constructor required for Firestore
     }
 
-    public ApprovedGameData(String gameId, int numPlayers, double pointValue, double gstPercent,
-                           Map<String, Integer> playerScores, Timestamp approvedAt, String version,
-                           String gstAmount, String gameStatus, String creationDateTime) {
-        this(gameId, numPlayers, pointValue, gstPercent, null, playerScores, approvedAt, version,
-                gstAmount, gameStatus, creationDateTime);
-    }
-
-    public ApprovedGameData(String gameId, int numPlayers, double pointValue, double gstPercent,
+    public ApprovedGameData(String gameId, int numPlayers, double gamePointFactor, double boardAdjustmentPercent,
                            List<ApprovedPlayer> players, Timestamp approvedAt, String version,
-                           String gstAmount, String gameStatus, String creationDateTime) {
-        this(gameId, numPlayers, pointValue, gstPercent, players, null, approvedAt, version,
-                gstAmount, gameStatus, creationDateTime);
-    }
-
-    public ApprovedGameData(String gameId, int numPlayers, double pointValue, double gstPercent,
-                           List<ApprovedPlayer> players, Map<String, Integer> playerScores,
-                           Timestamp approvedAt, String version,
-                           String gstAmount, String gameStatus, String creationDateTime) {
+                           double boardPoints, String gameStatus, String creationDateTime) {
         this.players = players;
+        this.schemaVersion = GameDataSchema.CURRENT_VERSION;
         this.gameId = gameId;
         this.numPlayers = numPlayers;
-        this.pointValue = pointValue;
-        this.gstPercent = gstPercent;
-        this.playerScores = playerScores;
+        this.gamePointFactor = gamePointFactor;
+        this.boardAdjustmentPercent = boardAdjustmentPercent;
         this.approvedAt = approvedAt;
         this.version = version;
-        this.gstAmount = gstAmount;
+        this.boardPoints = boardPoints;
         this.gameStatus = gameStatus;
         this.creationDateTime = creationDateTime;
     }
 
     // Getters and setters
+    public Integer getSchemaVersion() {
+        return schemaVersion;
+    }
+
+    public void setSchemaVersion(Integer schemaVersion) {
+        this.schemaVersion = schemaVersion;
+    }
+
     public String getGameId() {
         return gameId;
     }
@@ -80,20 +63,20 @@ public class ApprovedGameData {
         this.numPlayers = numPlayers;
     }
 
-    public double getPointValue() {
-        return pointValue;
+    public double getGamePointFactor() {
+        return gamePointFactor;
     }
 
-    public void setPointValue(double pointValue) {
-        this.pointValue = pointValue;
+    public void setGamePointFactor(double gamePointFactor) {
+        this.gamePointFactor = gamePointFactor;
     }
 
-    public double getGstPercent() {
-        return gstPercent;
+    public double getBoardAdjustmentPercent() {
+        return boardAdjustmentPercent;
     }
 
-    public void setGstPercent(double gstPercent) {
-        this.gstPercent = gstPercent;
+    public void setBoardAdjustmentPercent(double boardAdjustmentPercent) {
+        this.boardAdjustmentPercent = boardAdjustmentPercent;
     }
 
     public List<ApprovedPlayer> getPlayers() {
@@ -102,39 +85,6 @@ public class ApprovedGameData {
 
     public void setPlayers(List<ApprovedPlayer> players) {
         this.players = players;
-    }
-
-    /** @deprecated Use {@link #resolvePlayers()}. */
-    @Deprecated
-    public Map<String, Integer> getPlayerScores() {
-        return playerScores;
-    }
-
-    /** @deprecated Use {@link #setPlayers(List)}. */
-    @Deprecated
-    public void setPlayerScores(Map<String, Integer> playerScores) {
-        this.playerScores = playerScores;
-    }
-
-    /**
-     * Player results for this game, preferring {@link #players} and falling back to the legacy
-     * {@link #playerScores} map for games archived before identity was retained. Rows recovered
-     * from the fallback carry no {@code userId}.
-     */
-    public List<ApprovedPlayer> resolvePlayers() {
-        if (players != null && !players.isEmpty()) {
-            return players;
-        }
-        List<ApprovedPlayer> recovered = new ArrayList<>();
-        if (playerScores != null) {
-            for (Map.Entry<String, Integer> entry : playerScores.entrySet()) {
-                recovered.add(new ApprovedPlayer(
-                        entry.getKey(),
-                        null,
-                        entry.getValue() == null ? 0 : entry.getValue()));
-            }
-        }
-        return recovered;
     }
 
     public Timestamp getApprovedAt() {
@@ -154,12 +104,12 @@ public class ApprovedGameData {
     }
 
 
-    public String getGstAmount() {
-        return gstAmount;
+    public double getBoardPoints() {
+        return boardPoints;
     }
 
-    public void setGstAmount(String gstAmount) {
-        this.gstAmount = gstAmount;
+    public void setBoardPoints(double boardPoints) {
+        this.boardPoints = boardPoints;
     }
 
     public String getGameStatus() {
@@ -181,7 +131,7 @@ public class ApprovedGameData {
     // Helper methods
     public int getTotalGameScore() {
         int total = 0;
-        for (ApprovedPlayer player : resolvePlayers()) {
+        for (ApprovedPlayer player : players == null ? Collections.<ApprovedPlayer>emptyList() : players) {
             if (player != null && player.getScore() > 0) {
                 total += player.getScore();
             }
@@ -189,11 +139,7 @@ public class ApprovedGameData {
         return total;
     }
 
-    public double getGstAmountAsDouble() {
-        try {
-            return Double.parseDouble(gstAmount);
-        } catch (NumberFormatException e) {
-            return 0.0;
-        }
+    public double getBoardPointsAsDouble() {
+        return boardPoints;
     }
 }
