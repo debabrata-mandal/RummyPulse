@@ -13,7 +13,7 @@ public class ApprovalBatchValidatorTest {
     @Test
     public void tenValidCompletedGamesFitAtomicLimits() {
         ApprovalBatchValidator.validateSelectionCount(10);
-        ApprovalBatchValidator.validateWriteCount(10, 10);
+        ApprovalBatchValidator.validateWriteCount(10, 10, 20);
     }
 
     @Test
@@ -54,10 +54,10 @@ public class ApprovalBatchValidatorTest {
     }
 
     @Test
-    public void excessiveCleanupWritesFailBeforeCommit() {
+    public void excessiveCombinedWritesFailBeforeCommit() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> ApprovalBatchValidator.validateWriteCount(100, 151));
+                () -> ApprovalBatchValidator.validateWriteCount(100, 100, 51));
     }
 
     private static GameData completedGameData() {

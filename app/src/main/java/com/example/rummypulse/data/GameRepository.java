@@ -1820,7 +1820,7 @@ public class GameRepository {
                     public void onSuccess(@NonNull List<DocumentReference> cleanupReferences) {
                         try {
                             ApprovalBatchValidator.validateWriteCount(
-                                    games.size(), cleanupReferences.size());
+                                    games.size(), cleanupReferences.size(), 0);
                         } catch (IllegalArgumentException error) {
                             errorLiveData.setValue(error.getMessage());
                             return;
@@ -1846,6 +1846,8 @@ public class GameRepository {
             List<DocumentReference> cleanupReferences,
             long startedAt,
             Runnable onSuccess) {
+        java.util.Date approvalInstant = new java.util.Date();
+        Timestamp approvalTimestamp = new Timestamp(approvalInstant);
         db.runTransaction(transaction -> {
                     List<DocumentSnapshot> gameDataSnapshots = new ArrayList<>();
                     for (String gameId : gameIds) {
@@ -1858,10 +1860,8 @@ public class GameRepository {
                     // Collected inside the transaction body so a retry cannot accumulate
                     // duplicates.
                     Map<String, GameData> approvedGameData = new LinkedHashMap<>();
-                    // Archiving deletes gameData_v2 along with the record of what each game has
-                    // already contributed to player stats, so anything still outstanding has to be
-                    // applied here, while that record is readable. Normally empty: the game was
-                    // recorded when it completed.
+                    // Statistics are derived only here. The transaction-local collection is
+                    // recreated on each Firestore retry, preventing duplicate accumulation.
                     Map<String, List<PlayerStatsRecorder.PeriodDelta>> statsDeltas =
                             new LinkedHashMap<>();
                     for (int index = 0; index < games.size(); index++) {
@@ -1875,22 +1875,17 @@ public class GameRepository {
                         GameDataWrapper wrapper = snapshot.toObject(GameDataWrapper.class);
                         GameData gameData = ApprovalBatchValidator.validateGameData(
                                 gameItem.getGameId(), wrapper);
-                        approvedGames.add(buildApprovedGame(gameItem, wrapper, gameData));
+                        approvedGames.add(buildApprovedGame(
+                                gameItem, wrapper, gameData, approvalTimestamp));
                         approvedGameData.put(gameItem.getGameId(), gameData);
-                        for (Map.Entry<String, PlayerStatsRecorder.PeriodDelta> entry
-                                : PlayerStatsRecorder
-                                        .deltasForApproval(snapshot, gameData).entrySet()) {
-                            // A user can appear in several games of one batch; their deltas are
-                            // kept separate because they may belong to different months.
-                            List<PlayerStatsRecorder.PeriodDelta> forUser =
-                                    statsDeltas.get(entry.getKey());
-                            if (forUser == null) {
-                                forUser = new ArrayList<>();
-                                statsDeltas.put(entry.getKey(), forUser);
-                            }
-                            forUser.add(entry.getValue());
-                        }
+                        PlayerStatsRecorder.appendApprovalDeltas(
+                                statsDeltas,
+                                PlayerStatsRecorder.deltasForApproval(
+                                        gameData, approvalInstant));
                     }
+
+                    ApprovalBatchValidator.validateWriteCount(
+                            games.size(), cleanupReferences.size(), statsDeltas.size());
 
                     // Firestore requires every read before the first write.
                     Map<String, DocumentSnapshot> statsSnapshots = new LinkedHashMap<>();
@@ -1931,8 +1926,6 @@ public class GameRepository {
                     android.util.Log.d("GameRepository",
                             "Atomic approval committed: games=" + approvedCount
                                     + " reads=" + approvedCount
-                                    + " writes=" + (approvedCount * 3
-                                    + cleanupReferences.size())
                                     + " elapsedMs=" + elapsed);
                     loadAllGames();
                     loadApprovedGames();
@@ -1970,7 +1963,8 @@ public class GameRepository {
     private ApprovedGameData buildApprovedGame(
             GameItem gameItem,
             GameDataWrapper wrapper,
-            GameData gameData) {
+            GameData gameData,
+            Timestamp approvalTimestamp) {
         // One row per player, keeping the account behind it.
         List<ApprovedPlayer> approvedPlayers = new ArrayList<>();
         if (gameData.getPlayers() != null) {
@@ -1989,7 +1983,7 @@ public class GameRepository {
                 gameData.getPointValue(),
                 gameData.getGstPercent(),
                 approvedPlayers,
-                com.google.firebase.Timestamp.now(),
+                approvalTimestamp,
                 wrapper.getVersion(),
                 gstAmount,
                 "Completed",

@@ -11,8 +11,8 @@ import java.util.Map;
  *
  * <p>All reporting periods the dashboard offers live in this single document, so switching between
  * All Time, this month, last month and this week costs no additional Firestore reads. Buckets are
- * maintained incrementally by {@link PlayerStatsRecorder} when a game completes; nothing is
- * recomputed at read time.
+ * maintained by {@link PlayerStatsRecorder} inside the administrator approval transaction;
+ * unapproved games never appear here and nothing is recomputed at read time.
  */
 public class PlayerStats {
 
@@ -167,7 +167,7 @@ public class PlayerStats {
             this.contributionPaid = contributionPaid;
         }
 
-        /** Percentage of completed games with a positive net settlement, 0 when no games recorded. */
+        /** Percentage of approved games with positive final Game Points, or 0 when none exist. */
         public int winRatePercent() {
             if (games <= 0) {
                 return 0;
