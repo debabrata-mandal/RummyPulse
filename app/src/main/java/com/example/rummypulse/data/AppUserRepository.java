@@ -241,6 +241,16 @@ public class AppUserRepository {
                 .addOnFailureListener(exception -> notifyFailure(callback, exception));
     }
 
+    /** Records the signed-in user's current safe-play acknowledgment. */
+    public Task<Void> acceptSafePlayPolicy(String userId, int policyVersion) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("safePlayPolicyVersion", policyVersion);
+        updates.put("safePlayAcceptedAt", FieldValue.serverTimestamp());
+        return db.collection(FirestoreCollections.APP_USER)
+                .document(userId)
+                .update(updates);
+    }
+
     /**
      * Loads a bounded page ordered by document ID. Passing a null cursor starts a fresh listing.
      */
@@ -387,6 +397,11 @@ public class AppUserRepository {
         appUser.setPhotoUrl(document.getString("photoUrl"));
         appUser.setCreatedAt(document.getDate("createdAt"));
         appUser.setLastLoginAt(document.getDate("lastLoginAt"));
+        Long safePlayPolicyVersion = document.getLong("safePlayPolicyVersion");
+        appUser.setSafePlayPolicyVersion(safePlayPolicyVersion == null
+                ? null
+                : safePlayPolicyVersion.intValue());
+        appUser.setSafePlayAcceptedAt(document.getDate("safePlayAcceptedAt"));
         Boolean hidden = document.getBoolean("hidden");
         appUser.setHidden(hidden != null && hidden);
         return appUser;

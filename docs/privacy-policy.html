@@ -17,15 +17,15 @@
 </head>
 <body>
   <h1>RummyPulse Privacy Policy</h1>
-  <p class="updated"><strong>Effective date:</strong> September 13, 2026</p>
+  <p class="updated"><strong>Effective date:</strong> September 14, 2026</p>
 
-  <p>RummyPulse (“we”, “us”, or “the app”) is an Android application for recording rummy games, synchronising scores, reviewing completed games, and calculating settlements and reports. This policy explains what information we collect, why we use it, how it is shared and retained, and the choices available to you.</p>
+  <p>RummyPulse is an Android application for recording rummy games, synchronising scores, reviewing completed games, and calculating virtual Game Point results and reports. This policy explains what information we collect, why we use it, how it is shared and retained, and the choices available to you.</p>
 
   <h2>Information we collect</h2>
   <ul>
     <li><strong>Google Sign-In information:</strong> your name, email address, and profile photo (if available) from the Google account you select. Firebase Authentication assigns your account a Firebase user identifier (UID).</li>
-    <li><strong>Account information:</strong> account creation and last-login timestamps, authentication provider, and application role.</li>
-    <li><strong>RummyPulse data:</strong> player names or mappings, game participation, rounds, scores, game status, point values, settlements, reports, and related timestamps.</li>
+    <li><strong>Account information:</strong> account creation and last-login timestamps, authentication provider, application role, accepted safe-play policy version, and safe-play acceptance timestamp. We do not request or store your age or date of birth.</li>
+    <li><strong>RummyPulse data:</strong> player names or mappings, game participation, rounds, scores, game status, Game Point factors, Board adjustments, Game Point results, reports, and related timestamps.</li>
     <li><strong>Technical and security information:</strong> Firebase and Google services may process information such as IP address, app and Firebase identifiers, device and app metadata, authentication information, and App Check integrity information as necessary to authenticate users, synchronise data, operate backend functions, prevent abuse, and maintain security.</li>
     <li>RummyPulse does not request access to Gmail, Google Drive, Google Contacts, or Calendar, and does not receive your Google password.</li>
   </ul>
@@ -34,7 +34,8 @@
   <ul>
     <li>to authenticate you and maintain your account;</li>
     <li>to identify players and synchronise games across authorised devices;</li>
-    <li>to calculate scores, settlements, rankings, and reports;</li>
+    <li>to calculate scores, virtual Game Point results, rankings, and reports;</li>
+    <li>to enforce the non-monetary safe-play acknowledgment;</li>
     <li>to provide administration, usage insights, version checks, troubleshooting, and security controls; and</li>
     <li>to respond to support and privacy requests.</li>
   </ul>
@@ -44,14 +45,14 @@
   <p>The app is currently distributed through GitHub Releases and may contact GitHub-hosted release resources when checking for or downloading updates. If the optional automatic game-name suggestion is enabled, an authenticated Firebase function uses a one-way hash of your Firebase UID only to enforce per-user and service-wide request limits, then sends a fixed, generic card-game naming prompt to Groq and receives a suggested name. Groq does not receive your UID, account information, player information, game data, or user-entered text through this feature.</p>
 
   <h2>Sharing</h2>
-  <p>We do not sell your personal information. Information is shared with Google and Firebase, and with GitHub or Groq for the limited functions described above, only as needed to operate RummyPulse. Some player and game information may be visible to other authorised RummyPulse users when it is needed for shared games, scoring, settlement, review, or reporting. We may also disclose information when required by law or when reasonably necessary to protect users, the app, or others.</p>
+  <p>We do not sell your personal information. Information is shared with Google and Firebase, and with GitHub or Groq for the limited functions described above, only as needed to operate RummyPulse. Some player and game information may be visible to other authorised RummyPulse users when it is needed for shared games, scoring, Game Point summaries, review, or reporting. We may also disclose information when required by law or when reasonably necessary to protect users, the app, or others.</p>
 
   <h2>Storage and security</h2>
   <p>Account and game information is stored using Firebase services. We use Firebase Authentication, access controls, Firestore security rules, and encrypted network connections provided by Firebase and the other services described above. No internet service can guarantee complete security, so please use the app only with information you are comfortable storing in a shared scoring system.</p>
 
   <h2>Retention and deletion</h2>
-  <p>We retain account and game information for as long as it is needed to provide RummyPulse, maintain game history, meet legitimate operational or legal needs, protect the service, or resolve disputes. Because games can contain information about multiple players, some historical game records may need to be retained in anonymised or de-identified form so that shared scores, settlements, and reports remain accurate.</p>
-  <p>When an account is deleted, we remove its Firebase Authentication account, profile, personal statistics, view approvals, and account identifiers. We do not delete shared games or another player’s information. A linked player position remains as “Deleted player” without an account identifier, while its scores, player count, settlement values, timestamps, and non-identifying report totals remain unchanged. Some older records contain a player name but no account identifier; we review those only when the requester supplies specific game IDs, because matching a name alone could alter another person’s record.</p>
+  <p>We retain account and game information for as long as it is needed to provide RummyPulse, maintain game history, meet legitimate operational or legal needs, protect the service, or resolve disputes. Because games can contain information about multiple players, some historical game records may need to be retained in anonymised or de-identified form so that shared scores, Game Point calculations, and reports remain accurate.</p>
+  <p>When an account is deleted, we remove its Firebase Authentication account, profile—including its safe-play confirmation record—personal statistics, view approvals, and account identifiers. We do not delete shared games or another player’s information. A linked player position remains as “Deleted player” without an account identifier, while its scores, player count, Game Point results, timestamps, and non-identifying report totals remain unchanged. Some older records contain a player name but no account identifier; we review those only when the requester supplies specific game IDs, because matching a name alone could alter another person’s record.</p>
   <p>Signing out of RummyPulse or uninstalling the app does not delete your account or cloud data.</p>
 
   <h2>Your choices</h2>
@@ -59,7 +60,10 @@
   <p>You may request access or correction by contacting <a href="mailto:debabrata.developer@gmail.com">debabrata.developer@gmail.com</a>. We will delete or de-identify information unless retention is necessary for shared records, security, legal compliance, or the other legitimate purposes described above.</p>
 
   <h2>Children’s privacy</h2>
-  <p>RummyPulse is not intended for children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided personal information, contact us so we can investigate and take appropriate action.</p>
+  <p>RummyPulse is not designed for or directed to children under 13, and we do not knowingly collect personal information from children under 13. The app does not ask users to provide their age or date of birth. If you believe a child has provided personal information, contact us so we can investigate and take appropriate action.</p>
+
+  <h2>Safe Play &amp; Game Points Policy</h2>
+  <p>Game Points and Board Points have no monetary or redeemable value, and RummyPulse must not be used for stakes, payments, entry fees, goods, or prizes. Read the complete <a href="game-points-policy.html">Safe Play &amp; Game Points Policy</a>.</p>
 
   <h2>Changes to this policy</h2>
   <p>We may update this policy when the app, services, or legal requirements change. The updated version will be published on this page with a revised effective date. Material changes may also be communicated in the app or through another appropriate channel.</p>

@@ -18,6 +18,9 @@ public class AppUser {
     private Date createdAt;
     @ServerTimestamp
     private Date lastLoginAt;
+    private Integer safePlayPolicyVersion;
+    @ServerTimestamp
+    private Date safePlayAcceptedAt;
     /** When true, the account stays in the directory but is omitted from player-mapping pickers. */
     private boolean hidden;
 
@@ -104,6 +107,22 @@ public class AppUser {
 
     public void setLastLoginAt(Date lastLoginAt) {
         this.lastLoginAt = lastLoginAt;
+    }
+
+    public Integer getSafePlayPolicyVersion() {
+        return safePlayPolicyVersion;
+    }
+
+    public void setSafePlayPolicyVersion(Integer safePlayPolicyVersion) {
+        this.safePlayPolicyVersion = safePlayPolicyVersion;
+    }
+
+    public Date getSafePlayAcceptedAt() {
+        return safePlayAcceptedAt;
+    }
+
+    public void setSafePlayAcceptedAt(Date safePlayAcceptedAt) {
+        this.safePlayAcceptedAt = safePlayAcceptedAt;
     }
 
     public boolean isHidden() {

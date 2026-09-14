@@ -47,6 +47,7 @@ public final class SessionCacheCleaner {
         context.getSharedPreferences(PREFS_ROUND_DRAFTS, Context.MODE_PRIVATE).edit().clear().apply();
         context.getSharedPreferences(PREFS_PENDING_ROUNDS, Context.MODE_PRIVATE).edit().clear().apply();
         context.getSharedPreferences(PREFS_MEMBERSHIP_BACKFILL, Context.MODE_PRIVATE).edit().clear().apply();
+        SafePlayPolicyStore.clearAll(context);
     }
 
     private static void clearFirestorePersistence() {

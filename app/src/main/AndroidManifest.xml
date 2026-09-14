@@ -47,6 +47,11 @@
             android:name=".MainActivity"
             android:exported="false"
             android:theme="@style/Theme.RummyPulse.NoActionBar" />
+
+        <activity
+            android:name=".SafePlayPolicyActivity"
+            android:exported="false"
+            android:theme="@style/Theme.RummyPulse.NoActionBar" />
             
         <activity
             android:name=".JoinGameActivity"

@@ -53,6 +53,20 @@
     <string name="app_info_privacy_policy">Privacy Policy</string>
     <string name="app_info_privacy_policy_url" translatable="false">https://debabrata-mandal.github.io/RummyPulse/privacy-policy.html</string>
     <string name="app_info_privacy_policy_open_error">Unable to open the Privacy Policy</string>
+    <string name="app_info_game_points_policy">Safe Play &amp; Game Points Policy</string>
+    <string name="game_points_policy_url" translatable="false">https://debabrata-mandal.github.io/RummyPulse/game-points-policy.html</string>
+    <string name="game_points_policy_open_error">Unable to open the Safe Play &amp; Game Points Policy</string>
+    <string name="safe_play_title">Safe Play Confirmation</string>
+    <string name="safe_play_intro">Before using RummyPulse, confirm that you understand its non-monetary Game Points rules.</string>
+    <string name="safe_play_confirm_no_value">I understand that Game Points and Board Points have no monetary or redeemable value.</string>
+    <string name="safe_play_confirm_no_stakes">I will not use RummyPulse for stakes, entry fees, payments, goods, prizes, or cash settlements.</string>
+    <string name="safe_play_read_policy">Read the Safe Play &amp; Game Points Policy</string>
+    <string name="safe_play_accept">Confirm and continue</string>
+    <string name="safe_play_decline">Decline and sign out</string>
+    <string name="safe_play_loading">Checking your safe-play confirmation…</string>
+    <string name="safe_play_retry">Retry</string>
+    <string name="safe_play_load_error">RummyPulse must verify this confirmation online before you can continue. Check your connection and retry, or sign out.</string>
+    <string name="safe_play_acceptance_error">Your confirmation could not be saved. Check your connection and try again.</string>
     <string name="voice_announcements_language_section_title">Announcement language</string>
     <string name="voice_announcements_language_section_subtitle">Choose the voice language for score callouts.</string>
     <string name="voice_announcements_language_bengali">বাংলা (Bengali)</string>
