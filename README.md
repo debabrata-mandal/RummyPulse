@@ -22,14 +22,6 @@ games, and produce monthly contribution reports from one Android app.
 
 </div>
 
-## App preview
-
-| Dashboard | Admin review |
-|---|---|
-| <img src="docs/screenshots/dashboard.png" width="360" alt="RummyPulse dashboard with sanitized demo data"> | <img src="docs/screenshots/review.png" width="360" alt="RummyPulse admin review with multi-select controls and sanitized demo data"> |
-
-<sub>Screenshots use sanitized demo names and contain no account identifiers.</sub>
-
 ## What RummyPulse does
 
 | Area | Capabilities |
