@@ -90,7 +90,7 @@
                     android:layout_marginTop="2dp"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    tools:text="+₹1,648" />
+                    tools:text="+1,648 GP" />
             </LinearLayout>
 
         </LinearLayout>

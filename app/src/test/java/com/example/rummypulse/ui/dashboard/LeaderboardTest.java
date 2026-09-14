@@ -34,7 +34,7 @@ public class LeaderboardTest {
     }
 
     @Test
-    public void ranksTopAndBottomByNetAmount() {
+    public void ranksTopAndBottomByFinalGamePoints() {
         List<PlayerStats> stats = Arrays.asList(
                 player("a", "Alice", 5, 300),
                 player("b", "Bob", 5, -200),
@@ -306,5 +306,12 @@ public class LeaderboardTest {
         Leaderboard shortBoard = Leaderboard.withShortDisplayNames(board, accountNames);
 
         assertEquals("Debabrata M", shortBoard.getTop().get(0).getDisplayName());
+    }
+
+    @Test
+    public void amountFormatter_usesNonMonetaryGamePoints() {
+        assertEquals("+1,240 GP", LeaderboardAmountFormatter.formatSigned(1240));
+        assertEquals("-75 GP", LeaderboardAmountFormatter.formatSigned(-75));
+        assertEquals("0 GP", LeaderboardAmountFormatter.formatSigned(0));
     }
 }

@@ -1284,11 +1284,11 @@ public class JoinGameViewModel extends AndroidViewModel {
 
     private static Map<String, Object> buildDashboardSummary(GameData gameData) {
         Map<String, Object> summary = new HashMap<>();
-        summary.put("dashboardPointValue", gameData.getPointValue());
+        summary.put("dashboardGamePointFactor", gameData.getGamePointFactor());
         summary.put("dashboardNumPlayers", gameData.getPlayers() != null
                 ? gameData.getPlayers().size()
                 : gameData.getNumPlayers());
-        summary.put("dashboardGstPercent", gameData.getGstPercent());
+        summary.put("dashboardBoardAdjustmentPercent", gameData.getBoardAdjustmentPercent());
         String status = gameData.getGameStatus();
         summary.put("dashboardGameStatus",
                 status != null && !status.trim().isEmpty() ? status.trim() : "R1");

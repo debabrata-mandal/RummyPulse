@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Top and bottom performers for one reporting period, ranked by net amount.
+ * Top and bottom performers for one reporting period, ranked by final Game Points.
  *
  * <p>Ranking happens on the client from the stats documents already held in memory, so switching
  * period costs no Firestore reads. Only players with at least one game in the period qualify;
@@ -58,7 +58,7 @@ public class Leaderboard {
     }
 
     /**
-     * Ranks every qualifying player by net amount and slices the ends.
+     * Ranks every qualifying player by final Game Points and slices the ends.
      *
      * <p>The two slices never share a player: with fewer than {@code 2 * SIZE} qualifiers the
      * bottom list shrinks, and it disappears entirely once the top list covers everyone.
@@ -148,7 +148,7 @@ public class Leaderboard {
                 .<Ranked>comparingDouble(r -> order.keyOf(r.bucket)).reversed()
                 .thenComparing(Comparator.<Ranked>comparingLong(r -> r.bucket.getGames()).reversed())
                 .thenComparing(
-                        Comparator.<Ranked>comparingDouble(r -> r.bucket.getNetAmount()).reversed())
+                        Comparator.<Ranked>comparingDouble(r -> r.bucket.getFinalGamePoints()).reversed())
                 .thenComparing(r -> nameOf(r.stats)));
 
         List<LeaderboardEntry> entries = new ArrayList<>(ranked.size());
@@ -163,7 +163,7 @@ public class Leaderboard {
         return new LeaderboardEntry(
                 userId,
                 nameOf(ranked.stats),
-                ranked.bucket.getNetAmount(),
+                ranked.bucket.getFinalGamePoints(),
                 ranked.bucket.getGames(),
                 ranked.bucket.getWins(),
                 rank,
@@ -186,7 +186,7 @@ public class Leaderboard {
                             entry.getDisplayName(),
                             entry.getUserId(),
                             accountDisplayNameByUserId),
-                    entry.getNetAmount(),
+                    entry.getFinalGamePoints(),
                     entry.getGames(),
                     entry.getWins(),
                     entry.getRank(),

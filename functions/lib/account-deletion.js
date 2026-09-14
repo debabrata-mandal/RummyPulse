@@ -83,12 +83,6 @@ function anonymizeGameDataDocument(source, uid) {
       changed = anonymizePlayer(player, uid) || changed;
     }
   }
-  if (document.statsApplied && document.statsApplied.byUser &&
-      Object.prototype.hasOwnProperty.call(document.statsApplied.byUser, uid)) {
-    delete document.statsApplied.byUser[uid];
-    changed = true;
-  }
-
   return {changed, data: document};
 }
 

@@ -23,7 +23,7 @@ public class GameDataSchemaTest {
 
         assertEquals(first.getPlayerOrder(), second.getPlayerOrder());
         assertEquals(2, first.getPlayersById().size());
-        assertEquals(Integer.valueOf(2), first.getSchemaVersion());
+        assertEquals(Integer.valueOf(3), first.getSchemaVersion());
         assertEquals(
                 first.getPlayers().get(0).getPlayerId(),
                 first.getPlayerOrder().get(0));
@@ -40,7 +40,7 @@ public class GameDataSchemaTest {
     }
 
     @Test
-    public void schemaV2MapOnlyGame_calculatesRoundNineWithoutLegacyPlayersArray() {
+    public void schemaV3MapOnlyGame_calculatesRoundNineWithoutLegacyPlayersArray() {
         Player first = playerWithIdAndScores(
                 "p1", "First", 10, 20, 30, 40, 10, 20, 30, 40, -1);
         Player second = playerWithIdAndScores(
@@ -58,6 +58,21 @@ public class GameDataSchemaTest {
         assertEquals("R9", game.getGameStatus());
         assertEquals("p2", game.getPlayers().get(0).getPlayerId());
         assertEquals(360, game.getTotalScore());
+    }
+
+    @Test
+    public void firestoreSerializationUsesOnlySchemaV3GamePointFields() {
+        GameData game = legacyGame();
+        game.setGamePointFactor(0.25);
+        game.setBoardAdjustmentPercent(20.0);
+
+        Map<String, Object> serialized = GameDataSchema.toFirestoreData(game);
+
+        assertEquals(3, serialized.get("schemaVersion"));
+        assertEquals(0.25, (Double) serialized.get("gamePointFactor"), 0.0001);
+        assertEquals(20.0, (Double) serialized.get("boardAdjustmentPercent"), 0.0001);
+        assertFalse(serialized.containsKey("pointValue"));
+        assertFalse(serialized.containsKey("gstPercent"));
     }
 
     private static GameData legacyGame() {

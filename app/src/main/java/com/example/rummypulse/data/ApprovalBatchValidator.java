@@ -21,8 +21,9 @@ public final class ApprovalBatchValidator {
         }
     }
 
-    public static void validateWriteCount(int gameCount, int cleanupDocumentCount) {
-        int writes = gameCount * 3 + cleanupDocumentCount;
+    public static void validateWriteCount(
+            int gameCount, int cleanupDocumentCount, int playerStatsDocumentCount) {
+        int writes = gameCount * 3 + cleanupDocumentCount + playerStatsDocumentCount;
         if (writes > MAX_TRANSACTION_WRITES) {
             throw new IllegalArgumentException(
                     "This approval needs " + writes + " writes, exceeding the safe limit of "

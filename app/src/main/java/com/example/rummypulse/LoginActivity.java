@@ -27,6 +27,7 @@ import com.google.firebase.auth.GoogleAuthProvider;
 import com.example.rummypulse.utils.AccountSignOut;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.VersionGate;
+import com.example.rummypulse.utils.SafePlayPolicyStore;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -110,7 +111,7 @@ public class LoginActivity extends AppCompatActivity {
         } else if (currentUser != null) {
             Log.d(TAG, "User already signed in");
             authStateManager.saveAuthState(currentUser);
-            startMainActivity();
+            startAuthenticatedDestination();
         } else {
             Log.d(TAG, "No user currently signed in");
 
@@ -216,7 +217,7 @@ public class LoginActivity extends AppCompatActivity {
                         LoginActivity.this,
                         "Welcome, " + user.getDisplayName() + "!");
             }
-            startMainActivity();
+            startAuthenticatedDestination();
             return;
         }
 
@@ -280,11 +281,19 @@ public class LoginActivity extends AppCompatActivity {
         binding.retryButton.setVisibility(View.GONE);
     }
 
-    private void startMainActivity() {
-        Log.d(TAG, "Opening MainActivity "
+    private void startAuthenticatedDestination() {
+        FirebaseUser user = mAuth != null ? mAuth.getCurrentUser() : null;
+        Class<?> destination;
+        if (user != null
+                && SafePlayPolicyStore.hasCurrentAcceptance(this, user.getUid())) {
+            destination = MainActivity.class;
+        } else {
+            destination = SafePlayPolicyActivity.class;
+        }
+        Log.d(TAG, "Opening authenticated destination "
                 + (SystemClock.elapsedRealtime() - startupStartedAt)
                 + " ms after LoginActivity start");
-        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+        Intent intent = new Intent(LoginActivity.this, destination);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();

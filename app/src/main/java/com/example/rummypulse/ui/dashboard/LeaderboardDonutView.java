@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * Single donut chart covering every ranked player on the dashboard.
  *
- * <p>Each slice is sized by the absolute net amount, so the ring shows who moved the most money
+ * <p>Each slice is sized by the absolute final Game Points, so the ring shows whose result changed
  * regardless of direction; the slice colour carries the sign. Each amount is written along its own
  * arc, in black or white depending on how bright that slice is. Drawn directly on canvas because
  * the project has no chart dependency and only needs this one shape.

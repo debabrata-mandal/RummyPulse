@@ -25,8 +25,8 @@ public final class ConsolidationGameStatusUi {
 
     public static String formatGameSubtitle(Context context, GameItem item) {
         String players = item.getNumberOfPlayers() != null ? item.getNumberOfPlayers() : "0";
-        String pointValue = item.getPointValue() != null && !item.getPointValue().isEmpty()
-                ? item.getPointValue() : "0.00";
-        return context.getString(R.string.player_consolidation_game_subtitle, players, pointValue);
+        String gamePointFactor = item.getGamePointFactor() != null && !item.getGamePointFactor().isEmpty()
+                ? item.getGamePointFactor() : "0.00";
+        return context.getString(R.string.player_consolidation_game_subtitle, players, gamePointFactor);
     }
 }

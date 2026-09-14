@@ -333,18 +333,18 @@ public final class PlayerConsolidationEngine {
                             playerName, player.getUserId(), displayNameByUserId);
                 }
                 String entryId = buildEntryId(gameId, player, i);
-                PlayerSettlementCalculator.PlayerSettlement settlement =
-                        PlayerSettlementCalculator.compute(game, player);
+                PlayerGamePointsCalculator.PlayerGamePoints gamePoints =
+                        PlayerGamePointsCalculator.compute(game, player);
                 entries.add(new GamePlayerEntry(
                         entryId,
                         gameId,
                         gameName,
                         playerName,
                         player.getUserId(),
-                        settlement.playerScore,
-                        settlement.grossAmount,
-                        settlement.gstPaid,
-                        settlement.netAmount));
+                        gamePoints.playerScore,
+                        gamePoints.baseGamePoints,
+                        gamePoints.boardAdjustmentPoints,
+                        gamePoints.finalGamePoints));
             }
         }
         return entries;

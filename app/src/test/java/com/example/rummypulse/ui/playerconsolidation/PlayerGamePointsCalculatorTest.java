@@ -12,7 +12,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class PlayerSettlementCalculatorTest {
+public class PlayerGamePointsCalculatorTest {
 
     // -----------------------------------------------------------------------
     // Helpers
@@ -23,18 +23,18 @@ public class PlayerSettlementCalculatorTest {
      * creationDateTime is null intentionally — GameItem.calculateAge() catches
      * the parse exception and returns "Unknown", which is safe for unit tests.
      */
-    private static GameItem makeGame(String pointValue, String gstPercentage,
+    private static GameItem makeGame(String gamePointFactor, String boardAdjustmentPercentage,
                                      String numberOfPlayers, List<Player> players) {
         return new GameItem(
                 "g1",           // gameId
                 "1234",         // gamePin
                 "0",            // totalScore field (unused by the calculator)
-                pointValue,
+                gamePointFactor,
                 null,           // creationDateTime — intentionally null, safe
                 "Active",       // gameStatus
                 numberOfPlayers,
-                gstPercentage,
-                "0",            // gstAmount
+                boardAdjustmentPercentage,
+                "0",            // boardPoints
                 players
         );
     }
@@ -43,17 +43,17 @@ public class PlayerSettlementCalculatorTest {
         return new Player(name, Arrays.asList(scores), null);
     }
 
-    /** Assert all four PlayerSettlement fields in one call. */
-    private static void assertSettlement(
-            PlayerSettlementCalculator.PlayerSettlement result,
+    /** Assert all four PlayerGamePoints fields in one call. */
+    private static void assertGamePoints(
+            PlayerGamePointsCalculator.PlayerGamePoints result,
             int expectedPlayerScore,
             double expectedGross,
-            double expectedGstPaid,
+            double expectedBoardAdjustmentPoints,
             double expectedNet) {
         assertEquals("playerScore", expectedPlayerScore, result.playerScore);
-        assertEquals("grossAmount", expectedGross, result.grossAmount, 0.001);
-        assertEquals("gstPaid",     expectedGstPaid,  result.gstPaid,     0.001);
-        assertEquals("netAmount",   expectedNet,      result.netAmount,   0.001);
+        assertEquals("baseGamePoints", expectedGross, result.baseGamePoints, 0.001);
+        assertEquals("boardAdjustmentPoints",     expectedBoardAdjustmentPoints,  result.boardAdjustmentPoints,     0.001);
+        assertEquals("finalGamePoints",   expectedNet,      result.finalGamePoints,   0.001);
     }
 
     // -----------------------------------------------------------------------
@@ -61,45 +61,45 @@ public class PlayerSettlementCalculatorTest {
     // -----------------------------------------------------------------------
 
     @Test
-    public void compute_nullGame_returnsZeroSettlement() {
+    public void compute_nullGame_returnsZeroGamePoints() {
         Player alice = player("Alice", 10);
 
-        PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute((GameItem) null, alice);
+        PlayerGamePointsCalculator.PlayerGamePoints result =
+                PlayerGamePointsCalculator.compute((GameItem) null, alice);
 
-        assertSettlement(result, 0, 0.0, 0.0, 0.0);
+        assertGamePoints(result, 0, 0.0, 0.0, 0.0);
     }
 
     @Test
-    public void compute_nullGameData_returnsZeroSettlement() {
+    public void compute_nullGameData_returnsZeroGamePoints() {
         Player alice = player("Alice", 10);
 
-        PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute((GameData) null, alice);
+        PlayerGamePointsCalculator.PlayerGamePoints result =
+                PlayerGamePointsCalculator.compute((GameData) null, alice);
 
-        assertSettlement(result, 0, 0.0, 0.0, 0.0);
+        assertGamePoints(result, 0, 0.0, 0.0, 0.0);
     }
 
     @Test
-    public void compute_nullPlayer_returnsZeroSettlement() {
+    public void compute_nullPlayer_returnsZeroGamePoints() {
         GameItem game = makeGame("2.0", "10", "3",
                 Collections.singletonList(player("Alice", 10)));
 
-        PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute(game, null);
+        PlayerGamePointsCalculator.PlayerGamePoints result =
+                PlayerGamePointsCalculator.compute(game, null);
 
-        assertSettlement(result, 0, 0.0, 0.0, 0.0);
+        assertGamePoints(result, 0, 0.0, 0.0, 0.0);
     }
 
     @Test
-    public void compute_emptyPlayersList_returnsZeroSettlement() {
+    public void compute_emptyPlayersList_returnsZeroGamePoints() {
         GameItem game = makeGame("2.0", "10", "3", Collections.emptyList());
         Player alice = player("Alice", 10);
 
-        PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute(game, alice);
+        PlayerGamePointsCalculator.PlayerGamePoints result =
+                PlayerGamePointsCalculator.compute(game, alice);
 
-        assertSettlement(result, 0, 0.0, 0.0, 0.0);
+        assertGamePoints(result, 0, 0.0, 0.0, 0.0);
     }
 
     // -----------------------------------------------------------------------
@@ -107,118 +107,118 @@ public class PlayerSettlementCalculatorTest {
     // -----------------------------------------------------------------------
 
     /**
-     * Three players: Alice=10, Bob=20, Charlie=30. pointValue=2, gst=0.
+     * Three players: Alice=10, Bob=20, Charlie=30. gamePointFactor=2, boardAdjustment=0.
      * totalScore=60, numPlayers=3.
      *
      * Alice (winner, lowest score):
      *   gross = round((60 - 10*3) * 2.0) = round(60.0) = 60
-     *   gstPaid = round(60 * 0 / 100) = 0
+     *   boardAdjustmentPoints = round(60 * 0 / 100) = 0
      *   net = 60
      */
     @Test
-    public void compute_winner_positiveGrossNoGst() {
+    public void compute_winner_positiveGrossNoBoardAdjustment() {
         List<Player> players = Arrays.asList(
                 player("Alice",   10),
                 player("Bob",     20),
                 player("Charlie", 30));
         GameItem game = makeGame("2.0", "0", "3", players);
 
-        PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute(game, players.get(0)); // Alice
+        PlayerGamePointsCalculator.PlayerGamePoints result =
+                PlayerGamePointsCalculator.compute(game, players.get(0)); // Alice
 
-        assertSettlement(result, 10, 60.0, 0.0, 60.0);
+        assertGamePoints(result, 10, 60.0, 0.0, 60.0);
     }
 
     /**
-     * Three players: Alice=10, Bob=20, Charlie=30. pointValue=2, gst=10.
+     * Three players: Alice=10, Bob=20, Charlie=30. gamePointFactor=2, boardAdjustment=10.
      *
      * Charlie (loser, highest score):
      *   gross = round((60 - 30*3) * 2.0) = round(-60.0) = -60
-     *   grossAmount <= 0 → gstPaid = 0, net = -60 (GST is never charged on losses)
+     *   baseGamePoints <= 0 → boardAdjustmentPoints = 0, final = -60
      */
     @Test
-    public void compute_loser_negativeGrossNoGst() {
+    public void compute_loser_negativeGrossNoBoardAdjustment() {
         List<Player> players = Arrays.asList(
                 player("Alice",   10),
                 player("Bob",     20),
                 player("Charlie", 30));
         GameItem game = makeGame("2.0", "10", "3", players);
 
-        PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute(game, players.get(2)); // Charlie
+        PlayerGamePointsCalculator.PlayerGamePoints result =
+                PlayerGamePointsCalculator.compute(game, players.get(2)); // Charlie
 
-        assertSettlement(result, 30, -60.0, 0.0, -60.0);
+        assertGamePoints(result, 30, -60.0, 0.0, -60.0);
     }
 
     /**
-     * Alice wins with gst=10%:
-     *   gross = 60, gstPaid = round(60 * 10 / 100) = 6, net = 54.
+     * Alice wins with boardAdjustment=10%:
+     *   gross = 60, boardAdjustmentPoints = round(60 * 10 / 100) = 6, net = 54.
      */
     @Test
-    public void compute_winner_gstAppliedOnPositiveGross() {
+    public void compute_winner_boardAdjustmentAppliedOnPositiveGross() {
         List<Player> players = Arrays.asList(
                 player("Alice",   10),
                 player("Bob",     20),
                 player("Charlie", 30));
         GameItem game = makeGame("2.0", "10", "3", players);
 
-        PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute(game, players.get(0)); // Alice
+        PlayerGamePointsCalculator.PlayerGamePoints result =
+                PlayerGamePointsCalculator.compute(game, players.get(0)); // Alice
 
-        assertSettlement(result, 10, 60.0, 6.0, 54.0);
+        assertGamePoints(result, 10, 60.0, 6.0, 54.0);
     }
 
     /**
-     * pointValue = "0" → getPointValueAsDouble() = 0.0.
-     * grossAmount = round(30 * 0.0) = 0. Not > 0, so gstPaid=0 and net=0.
+     * gamePointFactor = "0" → getGamePointFactorAsDouble() = 0.0.
+     * baseGamePoints = round(30 * 0.0) = 0. Not > 0, so boardAdjustmentPoints=0 and net=0.
      */
     @Test
-    public void compute_zeroPointValue_allAmountsAreZero() {
+    public void compute_zeroGamePointFactor_allAmountsAreZero() {
         List<Player> players = Arrays.asList(
                 player("Alice",   10),
                 player("Bob",     20),
                 player("Charlie", 30));
         GameItem game = makeGame("0", "10", "3", players);
 
-        PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute(game, players.get(0)); // Alice
+        PlayerGamePointsCalculator.PlayerGamePoints result =
+                PlayerGamePointsCalculator.compute(game, players.get(0)); // Alice
 
-        assertSettlement(result, 10, 0.0, 0.0, 0.0);
+        assertGamePoints(result, 10, 0.0, 0.0, 0.0);
     }
 
     /**
-     * gstPercentage = null → parseGstPercent returns 0 → no GST deducted.
-     * Alice wins: gross=60, gstPaid=0, net=60.
+     * boardAdjustmentPercentage = null → parseBoardAdjustmentPercent returns 0.
+     * Alice wins: gross=60, boardAdjustmentPoints=0, net=60.
      */
     @Test
-    public void compute_nullGstPercentage_treatedAsZeroPercent() {
+    public void compute_nullBoardAdjustmentPercentage_treatedAsZeroPercent() {
         List<Player> players = Arrays.asList(
                 player("Alice",   10),
                 player("Bob",     20),
                 player("Charlie", 30));
         GameItem game = makeGame("2.0", null, "3", players);
 
-        PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute(game, players.get(0)); // Alice
+        PlayerGamePointsCalculator.PlayerGamePoints result =
+                PlayerGamePointsCalculator.compute(game, players.get(0)); // Alice
 
-        assertSettlement(result, 10, 60.0, 0.0, 60.0);
+        assertGamePoints(result, 10, 60.0, 0.0, 60.0);
     }
 
     /**
-     * gstPercentage = "" → parseGstPercent returns 0 → no GST deducted.
+     * boardAdjustmentPercentage = "" → parseBoardAdjustmentPercent returns 0.
      */
     @Test
-    public void compute_emptyGstPercentage_treatedAsZeroPercent() {
+    public void compute_emptyBoardAdjustmentPercentage_treatedAsZeroPercent() {
         List<Player> players = Arrays.asList(
                 player("Alice",   10),
                 player("Bob",     20),
                 player("Charlie", 30));
         GameItem game = makeGame("2.0", "", "3", players);
 
-        PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute(game, players.get(0)); // Alice
+        PlayerGamePointsCalculator.PlayerGamePoints result =
+                PlayerGamePointsCalculator.compute(game, players.get(0)); // Alice
 
-        assertSettlement(result, 10, 60.0, 0.0, 60.0);
+        assertGamePoints(result, 10, 60.0, 0.0, 60.0);
     }
 
     /**
@@ -234,15 +234,15 @@ public class PlayerSettlementCalculatorTest {
                 player("Charlie", 30));
         GameItem game = makeGame("2.0", "0", "0", players); // "0" triggers fallback
 
-        PlayerSettlementCalculator.PlayerSettlement result =
-                PlayerSettlementCalculator.compute(game, players.get(0)); // Alice
+        PlayerGamePointsCalculator.PlayerGamePoints result =
+                PlayerGamePointsCalculator.compute(game, players.get(0)); // Alice
 
         // numPlayers falls back to players.size()=3: gross = round((60-10*3)*2) = 60
-        assertSettlement(result, 10, 60.0, 0.0, 60.0);
+        assertGamePoints(result, 10, 60.0, 0.0, 60.0);
     }
 
     @Test
-    public void compute_identityAnonymization_doesNotChangeAnySettlement() {
+    public void compute_identityAnonymization_doesNotChangeAnyGamePoints() {
         Player alice = player("Alice", 10, 20);
         alice.setUserId("user-a");
         List<Player> players = Arrays.asList(
@@ -251,15 +251,15 @@ public class PlayerSettlementCalculatorTest {
                 player("Charlie", 5, 15));
         GameItem game = makeGame("2.0", "10", "3", players);
 
-        PlayerSettlementCalculator.PlayerSettlement before =
-                PlayerSettlementCalculator.compute(game, alice);
+        PlayerGamePointsCalculator.PlayerGamePoints before =
+                PlayerGamePointsCalculator.compute(game, alice);
         alice.setUserId(null);
         alice.setName("Deleted player");
-        PlayerSettlementCalculator.PlayerSettlement after =
-                PlayerSettlementCalculator.compute(game, alice);
+        PlayerGamePointsCalculator.PlayerGamePoints after =
+                PlayerGamePointsCalculator.compute(game, alice);
 
-        assertSettlement(after, before.playerScore, before.grossAmount,
-                before.gstPaid, before.netAmount);
+        assertGamePoints(after, before.playerScore, before.baseGamePoints,
+                before.boardAdjustmentPoints, before.finalGamePoints);
         assertEquals(3, game.getPlayers().size());
     }
 }

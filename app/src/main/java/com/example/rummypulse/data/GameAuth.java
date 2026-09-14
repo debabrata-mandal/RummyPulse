@@ -21,9 +21,9 @@ public class GameAuth {
     private String lastEditorUserId;
     private String lastEditorName;
     /** Denormalized dashboard fields (readable from {@code games_v2} without {@code gameData_v2}). */
-    private Double dashboardPointValue;
+    private Double dashboardGamePointFactor;
     private Integer dashboardNumPlayers;
-    private Double dashboardGstPercent;
+    private Double dashboardBoardAdjustmentPercent;
     private String dashboardGameStatus;
     /** Linked players plus creator and active editor; see {@link GameMembership}. */
     private java.util.List<String> memberUserIds;
@@ -164,12 +164,12 @@ public class GameAuth {
         return creatorName;
     }
 
-    public Double getDashboardPointValue() {
-        return dashboardPointValue;
+    public Double getDashboardGamePointFactor() {
+        return dashboardGamePointFactor;
     }
 
-    public void setDashboardPointValue(Double dashboardPointValue) {
-        this.dashboardPointValue = dashboardPointValue;
+    public void setDashboardGamePointFactor(Double dashboardGamePointFactor) {
+        this.dashboardGamePointFactor = dashboardGamePointFactor;
     }
 
     public Integer getDashboardNumPlayers() {
@@ -180,12 +180,12 @@ public class GameAuth {
         this.dashboardNumPlayers = dashboardNumPlayers;
     }
 
-    public Double getDashboardGstPercent() {
-        return dashboardGstPercent;
+    public Double getDashboardBoardAdjustmentPercent() {
+        return dashboardBoardAdjustmentPercent;
     }
 
-    public void setDashboardGstPercent(Double dashboardGstPercent) {
-        this.dashboardGstPercent = dashboardGstPercent;
+    public void setDashboardBoardAdjustmentPercent(Double dashboardBoardAdjustmentPercent) {
+        this.dashboardBoardAdjustmentPercent = dashboardBoardAdjustmentPercent;
     }
 
     public String getDashboardGameStatus() {
@@ -205,8 +205,8 @@ public class GameAuth {
     }
 
     public boolean hasDashboardSummary() {
-        return dashboardPointValue != null
+        return dashboardGamePointFactor != null
                 && dashboardNumPlayers != null
-                && dashboardGstPercent != null;
+                && dashboardBoardAdjustmentPercent != null;
     }
 }

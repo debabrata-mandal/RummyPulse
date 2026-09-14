@@ -93,7 +93,7 @@ public class ReportsFragment extends Fragment {
 
     private void observeViewModel() {
         // Observe monthly point value reports
-        reportsViewModel.getMonthlyPointValueReports().observe(getViewLifecycleOwner(), reports -> {
+        reportsViewModel.getMonthlyGamePointFactorReports().observe(getViewLifecycleOwner(), reports -> {
             if (reports != null && !reports.isEmpty()) {
                 showReports();
                 reportAdapter.updateReports(reports);

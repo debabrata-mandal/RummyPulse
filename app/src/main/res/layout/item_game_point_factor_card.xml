@@ -43,10 +43,10 @@
                 android:layout_height="wrap_content">
 
                 <TextView
-                    android:id="@+id/text_point_value"
+                    android:id="@+id/text_game_point_factor"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/point_value_subtle_background"
+                    android:background="@drawable/game_point_factor_subtle_background"
                     android:paddingHorizontal="12dp"
                     android:paddingVertical="6dp"
                     android:textColor="@color/accent_blue"
@@ -55,7 +55,7 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    tools:text="₹0.15" />
+                    tools:text="0.15×" />
 
                 <TextView
                     android:id="@+id/text_total_games"
@@ -97,21 +97,21 @@
                     android:layout_height="wrap_content"
                     android:drawablePadding="6dp"
                     android:gravity="center_vertical"
-                    android:text="@string/reports_stat_total_contribution"
+                    android:text="@string/reports_stat_total_board_points"
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                     android:textColor="@color/text_secondary"
                     app:drawableStartCompat="@drawable/ic_bar_chart"
                     app:drawableTint="@color/text_secondary" />
 
                 <TextView
-                    android:id="@+id/text_total_gst"
+                    android:id="@+id/text_total_board_adjustment"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:textColor="@color/success_green"
                     android:textSize="24sp"
                     android:textStyle="bold"
-                    tools:text="₹1,250" />
+                    tools:text="1,250 GP" />
             </LinearLayout>
 
             <LinearLayout
@@ -171,21 +171,21 @@
                     android:layout_height="wrap_content"
                     android:drawablePadding="6dp"
                     android:gravity="center_vertical"
-                    android:text="@string/reports_stat_avg_contribution_per_game"
+                    android:text="@string/reports_stat_avg_board_adjustment_per_game"
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                     android:textColor="@color/text_secondary"
                     app:drawableStartCompat="@drawable/ic_percent"
                     app:drawableTint="@color/text_secondary" />
 
                 <TextView
-                    android:id="@+id/text_avg_gst"
+                    android:id="@+id/text_avg_board_adjustment"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:textColor="@color/text_primary"
                     android:textSize="24sp"
                     android:textStyle="bold"
-                    tools:text="₹104.2" />
+                    tools:text="104.2 GP" />
             </LinearLayout>
 
             <LinearLayout

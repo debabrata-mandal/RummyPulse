@@ -9,17 +9,27 @@ import java.util.List;
  */
 public class ApprovedGamesReportMonth {
 
+    private Integer schemaVersion;
     private String monthYear;
-    private List<PointValueReport> pointValueReports;
+    private List<GamePointFactorReport> gamePointFactorReports;
     private Timestamp lastBuiltAt;
 
     public ApprovedGamesReportMonth() {
     }
 
-    public ApprovedGamesReportMonth(String monthYear, List<PointValueReport> pointValueReports, Timestamp lastBuiltAt) {
+    public ApprovedGamesReportMonth(String monthYear, List<GamePointFactorReport> gamePointFactorReports, Timestamp lastBuiltAt) {
+        this.schemaVersion = GameDataSchema.CURRENT_VERSION;
         this.monthYear = monthYear;
-        this.pointValueReports = pointValueReports;
+        this.gamePointFactorReports = gamePointFactorReports;
         this.lastBuiltAt = lastBuiltAt;
+    }
+
+    public Integer getSchemaVersion() {
+        return schemaVersion;
+    }
+
+    public void setSchemaVersion(Integer schemaVersion) {
+        this.schemaVersion = schemaVersion;
     }
 
     public String getMonthYear() {
@@ -30,12 +40,12 @@ public class ApprovedGamesReportMonth {
         this.monthYear = monthYear;
     }
 
-    public List<PointValueReport> getPointValueReports() {
-        return pointValueReports;
+    public List<GamePointFactorReport> getGamePointFactorReports() {
+        return gamePointFactorReports;
     }
 
-    public void setPointValueReports(List<PointValueReport> pointValueReports) {
-        this.pointValueReports = pointValueReports;
+    public void setGamePointFactorReports(List<GamePointFactorReport> gamePointFactorReports) {
+        this.gamePointFactorReports = gamePointFactorReports;
     }
 
     public Timestamp getLastBuiltAt() {
@@ -46,7 +56,7 @@ public class ApprovedGamesReportMonth {
         this.lastBuiltAt = lastBuiltAt;
     }
 
-    public MonthlyPointValueReport toMonthlyPointValueReport() {
-        return new MonthlyPointValueReport(monthYear, pointValueReports != null ? pointValueReports : new java.util.ArrayList<>());
+    public MonthlyGamePointFactorReport toMonthlyGamePointFactorReport() {
+        return new MonthlyGamePointFactorReport(monthYear, gamePointFactorReports != null ? gamePointFactorReports : new java.util.ArrayList<>());
     }
 }

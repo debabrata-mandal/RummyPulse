@@ -4,8 +4,8 @@
 
 ### Live Rummy scoring that keeps every player and every device in sync
 
-Run 10-round games, enter scores safely, calculate settlements, review completed
-games, and produce monthly contribution reports from one Android app.
+Run 10-round games, enter scores safely, calculate virtual Game Point results,
+review completed games, and produce non-monetary performance reports from one Android app.
 
 [![Android 7+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/about/versions/nougat)
 [![Java 11](https://img.shields.io/badge/Java-11-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/11/)
@@ -18,6 +18,8 @@ games, and produce monthly contribution reports from one Android app.
 
 [Privacy Policy](https://debabrata-mandal.github.io/RummyPulse/privacy-policy.html)
 ·
+[Safe Play & Game Points Policy](https://debabrata-mandal.github.io/RummyPulse/game-points-policy.html)
+·
 [Account deletion](https://debabrata-mandal.github.io/RummyPulse/delete-account.html)
 
 </div>
@@ -28,18 +30,18 @@ games, and produce monthly contribution reports from one Android app.
 |---|---|
 | **Live games** | Create, join, share by PIN or QR code, and follow updates across devices |
 | **Score entry** | Enter a full round player by player, preserve unfinished local drafts, then save the round in one write |
-| **Settlement** | Track standings, point value, winner contribution, and net amounts |
+| **Game Points** | Track standings, Game Point factors, Board adjustments, and final virtual results |
 | **Game access** | Spectator mode plus PIN-protected edit access and corrections |
-| **Admin review** | Edit economics, approve completed games, or select and atomically delete multiple games |
+| **Admin review** | Review Game Point settings, approve completed games, or select and atomically delete multiple games |
 | **Reports** | Browse monthly summaries and rebuild a selected month |
-| **Administration** | Manage user roles, game defaults, amount visibility, and voice announcements |
+| **Administration** | Manage user roles, game defaults, Game Point visibility, and voice announcements |
 | **Updates** | Install releases in-app and enforce a remotely configured minimum supported version |
 
 ## Designed for unreliable connections
 
-Firestore persistence keeps previously loaded data available when the network drops.
-The app launches immediately for an authenticated user and clearly shows offline
-state instead of blocking startup.
+After the one-time safe-play confirmation succeeds online, Firestore persistence keeps previously
+loaded data available when the network drops. A first-time confirmation requires connectivity;
+subsequent launches use the server-confirmed, UID-scoped local acceptance cache.
 
 | Operation | Offline behavior |
 |---|---|
@@ -64,7 +66,7 @@ RummyPulse is distributed as an APK through GitHub Releases.
 
 ### Requirements
 
-- Android Studio with Android SDK 34
+- Android Studio with Android SDK 36
 - JDK 17 for Gradle and CI
 - Android 7.0 or newer device/emulator (API 24+)
 - A Firebase Android configuration for `com.example.rummypulse`
@@ -123,12 +125,13 @@ Create a Firebase Android app with package name `com.example.rummypulse`, then:
 | Collection | Purpose |
 |---|---|
 | `games_v2` | Game metadata, status, creator, and access information |
-| `gameData_v2` | Players, rounds, scores, and game economics |
+| `gameData_v2` | Players, rounds, scores, and Game Point calculations |
 | `gameViewApprovals_v2` | Per-user requests and view approvals |
 | `approvedGames_v2` | Finalized games moved out of review |
 | `approvedGamesReport_v2` | Pre-aggregated monthly reports |
 | `gameDefaults_v2` | Shared game defaults |
-| `appUser_v2` | User profiles and roles |
+| `appUser_v2` | User profiles, roles, and safe-play acceptance records |
+| `playerStats_v2` | Per-player performance totals calculated from approved games |
 
 ### Remote Config
 
@@ -207,6 +210,7 @@ app/src/main/java/com/example/rummypulse/
 ├── utils/             Auth, updates, version gate, network, and UI helpers
 ├── JoinGameActivity.java
 ├── LoginActivity.java
+├── SafePlayPolicyActivity.java
 └── MainActivity.java
 ```
 

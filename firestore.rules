@@ -68,7 +68,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
               .hasOnly(['data', 'lastUpdated', 'editGeneration', 'version', 'revision'])
           && request.resource.data.data.diff(resource.data.data).affectedKeys()
-              .hasOnly(['pointValue', 'gstPercent', 'gameStatus'])
+              .hasOnly(['gamePointFactor', 'boardAdjustmentPercent', 'gameStatus'])
           && (
             (!resource.data.keys().hasAll(['revision'])
                 && request.resource.data.revision == 1)
@@ -79,6 +79,7 @@ service cloud.firestore {
 
     function canCreateGameData(gameId) {
       return (isGameCreator(gameId) || isActiveEditor(gameId) || isAdmin())
+          && validGameDataSchema(request.resource.data.data)
           && (!request.resource.data.keys().hasAll(['editGeneration'])
               || request.resource.data.editGeneration == gamePinGeneration(gameId));
     }
@@ -100,21 +101,39 @@ service cloud.firestore {
     function preservesStableGameSchema() {
       let oldData = resource.data.data;
       let newData = request.resource.data.data;
-      let oldIsV2 = oldData.keys().hasAll(['schemaVersion'])
-          && oldData.schemaVersion == 2;
-      return !oldIsV2 || (
-        newData.keys().hasAll(['schemaVersion', 'playersById', 'playerOrder'])
-        && newData.schemaVersion == 2
-        && newData.playersById is map
-        && newData.playerOrder is list
-      );
+      return validGameDataSchema(oldData) && validGameDataSchema(newData);
+    }
+
+    function hasNoDeprecatedGamePointKeys(data) {
+      return !data.keys().hasAny([
+        'pointValue', 'gstPercent', 'gstAmount', 'grossAmount', 'netAmount',
+        'gstPaid', 'contributionPaid', 'totalContribution', 'totalGstCollected',
+        'defaultPointValue', 'defaultGstPercent', 'dashboardPointValue',
+        'dashboardGstPercent', 'displayIntermediateCalculation',
+        'showDashboardLeaderboardAmounts', 'pointValueReports', 'statsApplied'
+      ]);
+    }
+
+    function validGameDataSchema(data) {
+      return data.keys().hasAll([
+          'schemaVersion', 'gamePointFactor', 'boardAdjustmentPercent',
+          'playersById', 'playerOrder'
+        ])
+        && data.schemaVersion == 3
+        && data.gamePointFactor is number
+        && data.boardAdjustmentPercent is number
+        && data.playersById is map
+        && data.playerOrder is list
+        && hasNoDeprecatedGamePointKeys(data);
     }
 
     match /games_v2/{gameId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated()
-          && request.resource.data.creatorUserId == request.auth.uid;
-      allow update: if isAuthenticated();
+          && request.resource.data.creatorUserId == request.auth.uid
+          && hasNoDeprecatedGamePointKeys(request.resource.data);
+      allow update: if isAuthenticated()
+          && hasNoDeprecatedGamePointKeys(request.resource.data);
       allow delete: if isAuthenticated();
     }
 
@@ -177,7 +196,13 @@ service cloud.firestore {
 
     match /approvedGames_v2/{gameId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow create, update: if isAuthenticated()
+          && request.resource.data.schemaVersion == 3
+          && request.resource.data.gamePointFactor is number
+          && request.resource.data.boardAdjustmentPercent is number
+          && request.resource.data.boardPoints is number
+          && hasNoDeprecatedGamePointKeys(request.resource.data);
+      allow delete: if isAuthenticated();
     }
 
     match /appUser_v2/{userId} {
@@ -190,12 +215,21 @@ service cloud.firestore {
     }
 
     match /gameDefaults_v2/{docId} {
-      allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated()
+          && request.resource.data.schemaVersion == 3
+          && request.resource.data.defaultGamePointFactor is number
+          && request.resource.data.defaultBoardAdjustmentPercent is number
+          && hasNoDeprecatedGamePointKeys(request.resource.data);
     }
 
     match /approvedGamesReport_v2/{monthDoc} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow write: if isAuthenticated()
+          && request.resource.data.schemaVersion == 3
+          && request.resource.data.gamePointFactorReports is list
+          && hasNoDeprecatedGamePointKeys(request.resource.data);
+      allow delete: if isAuthenticated();
     }
 
     // Pre-aggregated dashboard performance. The editor who completes a game records stats for
@@ -203,7 +237,11 @@ service cloud.firestore {
     // already used by games_v2 and approvedGames_v2.
     match /playerStats_v2/{userId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
+      allow create, update: if isAuthenticated()
+          && request.resource.data.schemaVersion == 3
+          && hasNoDeprecatedGamePointKeys(request.resource.data)
+          && hasNoDeprecatedGamePointKeys(request.resource.data.allTime);
+      allow delete: if isAuthenticated();
     }
   }
 }

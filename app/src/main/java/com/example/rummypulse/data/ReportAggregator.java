@@ -59,7 +59,7 @@ public final class ReportAggregator {
     /**
      * Full aggregation used by "Build all" and for in-memory preview if needed.
      */
-    public static List<MonthlyPointValueReport> aggregateAll(List<ApprovedGameData> games) {
+    public static List<MonthlyGamePointFactorReport> aggregateAll(List<ApprovedGameData> games) {
         Map<String, List<ApprovedGameData>> byMonth = new HashMap<>();
         for (ApprovedGameData g : games) {
             String k = yearMonthKey(g);
@@ -71,9 +71,9 @@ public final class ReportAggregator {
             }
             byMonth.get(k).add(g);
         }
-        List<MonthlyPointValueReport> monthlyReports = new ArrayList<>();
+        List<MonthlyGamePointFactorReport> monthlyReports = new ArrayList<>();
         for (Map.Entry<String, List<ApprovedGameData>> e : byMonth.entrySet()) {
-            monthlyReports.add(buildMonthlyPointValueReport(e.getKey(), e.getValue()));
+            monthlyReports.add(buildMonthlyGamePointFactorReport(e.getKey(), e.getValue()));
         }
         sortMonthlyReportsDesc(monthlyReports);
         return monthlyReports;
@@ -82,39 +82,39 @@ public final class ReportAggregator {
     /**
      * Build one month's report from games already belonging to that calendar month.
      */
-    public static MonthlyPointValueReport buildMonthlyPointValueReport(String yyyyMm, List<ApprovedGameData> monthGames) {
+    public static MonthlyGamePointFactorReport buildMonthlyGamePointFactorReport(String yyyyMm, List<ApprovedGameData> monthGames) {
         String displayMonthYear = displayMonthForYearMonth(yyyyMm);
-        Map<Double, List<ApprovedGameData>> gamesByPointValue = new HashMap<>();
+        Map<Double, List<ApprovedGameData>> gamesByGamePointFactor = new HashMap<>();
         for (ApprovedGameData game : monthGames) {
-            double pointValue = game.getPointValue();
-            if (!gamesByPointValue.containsKey(pointValue)) {
-                gamesByPointValue.put(pointValue, new ArrayList<>());
+            double gamePointFactor = game.getGamePointFactor();
+            if (!gamesByGamePointFactor.containsKey(gamePointFactor)) {
+                gamesByGamePointFactor.put(gamePointFactor, new ArrayList<>());
             }
-            gamesByPointValue.get(pointValue).add(game);
+            gamesByGamePointFactor.get(gamePointFactor).add(game);
         }
-        List<PointValueReport> pointValueReports = new ArrayList<>();
-        for (Map.Entry<Double, List<ApprovedGameData>> pointEntry : gamesByPointValue.entrySet()) {
-            double pointValue = pointEntry.getKey();
-            List<ApprovedGameData> pointValueGames = pointEntry.getValue();
-            int totalGames = pointValueGames.size();
-            double totalGstCollected = 0.0;
+        List<GamePointFactorReport> gamePointFactorReports = new ArrayList<>();
+        for (Map.Entry<Double, List<ApprovedGameData>> pointEntry : gamesByGamePointFactor.entrySet()) {
+            double gamePointFactor = pointEntry.getKey();
+            List<ApprovedGameData> gamePointFactorGames = pointEntry.getValue();
+            int totalGames = gamePointFactorGames.size();
+            double totalBoardPoints = 0.0;
             int totalPlayers = 0;
-            for (ApprovedGameData game : pointValueGames) {
-                totalGstCollected += game.getGstAmountAsDouble();
+            for (ApprovedGameData game : gamePointFactorGames) {
+                totalBoardPoints += game.getBoardPointsAsDouble();
                 totalPlayers += game.getNumPlayers();
             }
-            pointValueReports.add(new PointValueReport(
-                    pointValue,
+            gamePointFactorReports.add(new GamePointFactorReport(
+                    gamePointFactor,
                     totalGames,
-                    totalGstCollected,
+                    totalBoardPoints,
                     totalPlayers,
-                    pointValueGames));
+                    gamePointFactorGames));
         }
-        pointValueReports.sort((r1, r2) -> Double.compare(r1.getPointValue(), r2.getPointValue()));
-        return new MonthlyPointValueReport(displayMonthYear, pointValueReports);
+        gamePointFactorReports.sort((r1, r2) -> Double.compare(r1.getGamePointFactor(), r2.getGamePointFactor()));
+        return new MonthlyGamePointFactorReport(displayMonthYear, gamePointFactorReports);
     }
 
-    public static void sortMonthlyReportsDesc(List<MonthlyPointValueReport> monthlyReports) {
+    public static void sortMonthlyReportsDesc(List<MonthlyGamePointFactorReport> monthlyReports) {
         SimpleDateFormat monthYearFormat = new SimpleDateFormat("MMMM yyyy", Locale.getDefault());
         monthlyReports.sort((r1, r2) -> {
             try {

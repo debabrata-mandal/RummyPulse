@@ -10,8 +10,8 @@ import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
-import com.example.rummypulse.data.MonthlyPointValueReport;
-import com.example.rummypulse.data.PointValueReport;
+import com.example.rummypulse.data.MonthlyGamePointFactorReport;
+import com.example.rummypulse.data.GamePointFactorReport;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,26 +29,26 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
 
     // Item wrapper classes
     public static class MonthHeaderItem {
-        private MonthlyPointValueReport monthlyReport;
+        private MonthlyGamePointFactorReport monthlyReport;
 
-        public MonthHeaderItem(MonthlyPointValueReport monthlyReport) {
+        public MonthHeaderItem(MonthlyGamePointFactorReport monthlyReport) {
             this.monthlyReport = monthlyReport;
         }
 
-        public MonthlyPointValueReport getMonthlyReport() { return monthlyReport; }
+        public MonthlyGamePointFactorReport getMonthlyReport() { return monthlyReport; }
     }
 
-    public static class PointValueCardItem {
+    public static class GamePointFactorCardItem {
         private String monthYear;
-        private PointValueReport pointValueReport;
+        private GamePointFactorReport gamePointFactorReport;
 
-        public PointValueCardItem(String monthYear, PointValueReport pointValueReport) {
+        public GamePointFactorCardItem(String monthYear, GamePointFactorReport gamePointFactorReport) {
             this.monthYear = monthYear;
-            this.pointValueReport = pointValueReport;
+            this.gamePointFactorReport = gamePointFactorReport;
         }
 
         public String getMonthYear() { return monthYear; }
-        public PointValueReport getPointValueReport() { return pointValueReport; }
+        public GamePointFactorReport getGamePointFactorReport() { return gamePointFactorReport; }
     }
 
     @Override
@@ -67,8 +67,8 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
             View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_month_header_expandable, parent, false);
             return new MonthHeaderViewHolder(view);
         } else {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_point_value_card, parent, false);
-            return new PointValueCardViewHolder(view);
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_game_point_factor_card, parent, false);
+            return new GamePointFactorCardViewHolder(view);
         }
     }
 
@@ -77,9 +77,9 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
         if (holder instanceof MonthHeaderViewHolder) {
             MonthHeaderItem headerItem = (MonthHeaderItem) items.get(position);
             ((MonthHeaderViewHolder) holder).bind(headerItem.getMonthlyReport(), this);
-        } else if (holder instanceof PointValueCardViewHolder) {
-            PointValueCardItem cardItem = (PointValueCardItem) items.get(position);
-            ((PointValueCardViewHolder) holder).bind(cardItem);
+        } else if (holder instanceof GamePointFactorCardViewHolder) {
+            GamePointFactorCardItem cardItem = (GamePointFactorCardItem) items.get(position);
+            ((GamePointFactorCardViewHolder) holder).bind(cardItem);
         }
     }
 
@@ -89,12 +89,12 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    public void setMonthlyPointValueReports(List<MonthlyPointValueReport> reports) {
+    public void setMonthlyGamePointFactorReports(List<MonthlyGamePointFactorReport> reports) {
         items.clear();
         // Don't clear expandedStates to preserve user's expand/collapse preferences
         
         if (reports != null) {
-            for (MonthlyPointValueReport monthlyReport : reports) {
+            for (MonthlyGamePointFactorReport monthlyReport : reports) {
                 String monthYear = monthlyReport.getMonthYear();
                 
                 // Add month header
@@ -109,9 +109,9 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
                 boolean isExpanded = expandedStates.get(monthYear);
                 
                 // Add point value cards if expanded
-                if (isExpanded && monthlyReport.getPointValueReports() != null) {
-                    for (PointValueReport pointReport : monthlyReport.getPointValueReports()) {
-                        items.add(new PointValueCardItem(monthYear, pointReport));
+                if (isExpanded && monthlyReport.getGamePointFactorReports() != null) {
+                    for (GamePointFactorReport pointReport : monthlyReport.getGamePointFactorReports()) {
+                        items.add(new GamePointFactorCardItem(monthYear, pointReport));
                     }
                 }
             }
@@ -142,21 +142,21 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
         notifyItemChanged(headerPosition);
         
         // Find the corresponding monthly report
-        MonthlyPointValueReport monthlyReport = null;
-        for (MonthlyPointValueReport report : getCurrentReports()) {
+        MonthlyGamePointFactorReport monthlyReport = null;
+        for (MonthlyGamePointFactorReport report : getCurrentReports()) {
             if (monthYear.equals(report.getMonthYear())) {
                 monthlyReport = report;
                 break;
             }
         }
         
-        if (monthlyReport == null || monthlyReport.getPointValueReports() == null) return;
+        if (monthlyReport == null || monthlyReport.getGamePointFactorReports() == null) return;
         
         if (newState) {
             // Expanding - insert point value cards
-            List<PointValueCardItem> cardsToAdd = new ArrayList<>();
-            for (PointValueReport pointReport : monthlyReport.getPointValueReports()) {
-                cardsToAdd.add(new PointValueCardItem(monthYear, pointReport));
+            List<GamePointFactorCardItem> cardsToAdd = new ArrayList<>();
+            for (GamePointFactorReport pointReport : monthlyReport.getGamePointFactorReports()) {
+                cardsToAdd.add(new GamePointFactorCardItem(monthYear, pointReport));
             }
             
             // Insert cards after the header
@@ -173,8 +173,8 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
             
             // Count how many point value cards to remove
             for (int i = removeStart; i < items.size(); i++) {
-                if (items.get(i) instanceof PointValueCardItem) {
-                    PointValueCardItem cardItem = (PointValueCardItem) items.get(i);
+                if (items.get(i) instanceof GamePointFactorCardItem) {
+                    GamePointFactorCardItem cardItem = (GamePointFactorCardItem) items.get(i);
                     if (monthYear.equals(cardItem.getMonthYear())) {
                         removeCount++;
                     } else {
@@ -193,15 +193,15 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
         }
     }
 
-    private List<MonthlyPointValueReport> currentReports = new ArrayList<>();
+    private List<MonthlyGamePointFactorReport> currentReports = new ArrayList<>();
 
-    private List<MonthlyPointValueReport> getCurrentReports() {
+    private List<MonthlyGamePointFactorReport> getCurrentReports() {
         return currentReports;
     }
 
-    public void updateReports(List<MonthlyPointValueReport> reports) {
+    public void updateReports(List<MonthlyGamePointFactorReport> reports) {
         this.currentReports = reports != null ? new ArrayList<>(reports) : new ArrayList<>();
-        setMonthlyPointValueReports(reports);
+        setMonthlyGamePointFactorReports(reports);
     }
 
     // ViewHolder for month headers
@@ -209,19 +209,19 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
         private TextView expandCollapseIcon;
         private TextView monthYearText;
         private TextView monthlyGamesText;
-        private TextView monthlyGstText;
-        private TextView pointValuesCountText;
+        private TextView monthlyBoardAdjustmentText;
+        private TextView gamePointFactorsCountText;
 
         public MonthHeaderViewHolder(@NonNull View itemView) {
             super(itemView);
             expandCollapseIcon = itemView.findViewById(R.id.icon_expand_collapse);
             monthYearText = itemView.findViewById(R.id.text_month_year);
             monthlyGamesText = itemView.findViewById(R.id.text_monthly_games);
-            monthlyGstText = itemView.findViewById(R.id.text_monthly_gst);
-            pointValuesCountText = itemView.findViewById(R.id.text_point_values_count);
+            monthlyBoardAdjustmentText = itemView.findViewById(R.id.text_monthly_board_adjustment);
+            gamePointFactorsCountText = itemView.findViewById(R.id.text_game_point_factors_count);
         }
 
-        public void bind(MonthlyPointValueReport report, ExpandableMonthlyReportAdapter adapter) {
+        public void bind(MonthlyGamePointFactorReport report, ExpandableMonthlyReportAdapter adapter) {
             String monthYear = report.getMonthYear();
             boolean isExpanded = adapter.expandedStates.getOrDefault(monthYear, false);
 
@@ -230,12 +230,12 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
                     R.plurals.report_games_count,
                     report.getTotalGamesForMonth(),
                     report.getTotalGamesForMonth()));
-            monthlyGstText.setText(report.getFormattedMonthlyGst());
+            monthlyBoardAdjustmentText.setText(report.getFormattedMonthlyBoardAdjustment());
             
             // Point values count
-            int pointValuesCount = report.getPointValueReports() != null ? report.getPointValueReports().size() : 0;
-            pointValuesCountText.setText(itemView.getContext().getResources().getQuantityString(
-                    R.plurals.report_point_values_count, pointValuesCount, pointValuesCount));
+            int gamePointFactorsCount = report.getGamePointFactorReports() != null ? report.getGamePointFactorReports().size() : 0;
+            gamePointFactorsCountText.setText(itemView.getContext().getResources().getQuantityString(
+                    R.plurals.report_game_point_factors_count, gamePointFactorsCount, gamePointFactorsCount));
 
             // Set expand/collapse icon
             expandCollapseIcon.setText(isExpanded ? "▼" : "▶");
@@ -246,42 +246,42 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
     }
 
     // ViewHolder for point value cards
-    static class PointValueCardViewHolder extends RecyclerView.ViewHolder {
+    static class GamePointFactorCardViewHolder extends RecyclerView.ViewHolder {
         private TextView monthYearText;
-        private TextView pointValueText;
+        private TextView gamePointFactorText;
         private TextView totalGamesText;
-        private TextView totalGstText;
-        private TextView avgGstText;
+        private TextView totalBoardAdjustmentText;
+        private TextView avgBoardAdjustmentText;
         private TextView totalPlayersText;
         private TextView avgPlayersText;
 
-        public PointValueCardViewHolder(@NonNull View itemView) {
+        public GamePointFactorCardViewHolder(@NonNull View itemView) {
             super(itemView);
             monthYearText = itemView.findViewById(R.id.text_month_year);
-            pointValueText = itemView.findViewById(R.id.text_point_value);
+            gamePointFactorText = itemView.findViewById(R.id.text_game_point_factor);
             totalGamesText = itemView.findViewById(R.id.text_total_games);
-            totalGstText = itemView.findViewById(R.id.text_total_gst);
-            avgGstText = itemView.findViewById(R.id.text_avg_gst);
+            totalBoardAdjustmentText = itemView.findViewById(R.id.text_total_board_adjustment);
+            avgBoardAdjustmentText = itemView.findViewById(R.id.text_avg_board_adjustment);
             totalPlayersText = itemView.findViewById(R.id.text_total_players);
             avgPlayersText = itemView.findViewById(R.id.text_avg_players);
         }
 
-        public void bind(PointValueCardItem item) {
+        public void bind(GamePointFactorCardItem item) {
             String monthYear = item.getMonthYear();
-            PointValueReport report = item.getPointValueReport();
+            GamePointFactorReport report = item.getGamePointFactorReport();
 
             // Hide month year in card since it's shown in header
             monthYearText.setVisibility(View.GONE);
             
-            pointValueText.setText(report.getFormattedPointValue());
+            gamePointFactorText.setText(report.getFormattedGamePointFactor());
             totalGamesText.setText(itemView.getContext().getResources().getQuantityString(
                     R.plurals.report_games_count, report.getTotalGames(), report.getTotalGames()));
             
-            // Format GST amounts
-            totalGstText.setText(report.getFormattedGstAmount());
-            avgGstText.setText(itemView.getContext().getString(
-                    R.string.format_rupee_amount,
-                    String.format(Locale.getDefault(), "%.1f", report.getAverageGstPerGame())));
+            // Format Board Points
+            totalBoardAdjustmentText.setText(report.getFormattedBoardPoints());
+            avgBoardAdjustmentText.setText(itemView.getContext().getString(
+                    R.string.format_game_points,
+                    String.format(Locale.getDefault(), "%.1f", report.getAverageBoardPointsPerGame())));
             
             // Format player counts
             totalPlayersText.setText(String.valueOf(report.getTotalPlayers()));

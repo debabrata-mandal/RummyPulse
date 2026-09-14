@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets;
  * Converts legacy array-backed game data into the stable schema used by editor operations.
  */
 public final class GameDataSchema {
-    public static final int CURRENT_VERSION = 2;
+    public static final int CURRENT_VERSION = 3;
 
     private GameDataSchema() {
     }
@@ -109,8 +109,8 @@ public final class GameDataSchema {
         Map<String, Object> clean = new HashMap<>();
         clean.put("schemaVersion", CURRENT_VERSION);
         clean.put("numPlayers", data.getPlayersById().size());
-        clean.put("pointValue", data.getPointValue());
-        clean.put("gstPercent", data.getGstPercent());
+        clean.put("gamePointFactor", data.getGamePointFactor());
+        clean.put("boardAdjustmentPercent", data.getBoardAdjustmentPercent());
         clean.put("playersById", data.getPlayersById());
         clean.put("playerOrder", data.getPlayerOrder());
         clean.put("version", data.getVersion());

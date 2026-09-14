@@ -15,10 +15,10 @@
         android:layout_height="match_parent"
         android:layout_marginEnd="4dp"
         android:layout_weight="1"
-        app:cardBackgroundColor="@color/settlement_summary_card_background"
+        app:cardBackgroundColor="@color/game_points_summary_card_background"
         app:cardCornerRadius="8dp"
         app:cardElevation="0dp"
-        app:strokeColor="@color/settlement_summary_card_border"
+        app:strokeColor="@color/game_points_summary_card_border"
         app:strokeWidth="1dp">
 
         <LinearLayout
@@ -53,20 +53,20 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/player_consolidation_contribution_collected"
+                        android:text="@string/player_consolidation_board_adjustment_collected"
                         android:textColor="@color/accent_blue_light"
                         android:textSize="12sp"
                         android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/text_total_contribution"
+                        android:id="@+id/text_total_board_points"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:textColor="@color/success_green"
                         android:textSize="21sp"
                         android:textStyle="bold"
-                        tools:text="₹275.40" />
+                        tools:text="275.4 GP" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -79,7 +79,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:text="@string/player_consolidation_contribution_info"
+                android:text="@string/player_consolidation_board_adjustment_info"
                 android:textColor="@color/text_secondary"
                 android:textSize="9dp" />
         </LinearLayout>
@@ -90,10 +90,10 @@
         android:layout_height="match_parent"
         android:layout_marginStart="4dp"
         android:layout_weight="1.75"
-        app:cardBackgroundColor="@color/settlement_summary_card_background"
+        app:cardBackgroundColor="@color/game_points_summary_card_background"
         app:cardCornerRadius="8dp"
         app:cardElevation="0dp"
-        app:strokeColor="@color/settlement_summary_card_border"
+        app:strokeColor="@color/game_points_summary_card_border"
         app:strokeWidth="1dp">
 
         <LinearLayout
@@ -149,14 +149,14 @@
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        tools:text="₹12,500.00" />
+                        tools:text="12,500 GP" />
                 </LinearLayout>
 
                 <View
                     android:layout_width="1dp"
                     android:layout_height="48dp"
                     android:layout_marginHorizontal="10dp"
-                    android:background="@color/settlement_summary_card_border" />
+                    android:background="@color/game_points_summary_card_border" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -169,12 +169,12 @@
                         android:layout_height="wrap_content"
                         android:gravity="center"
                         android:maxLines="1"
-                        android:text="@string/player_consolidation_total_contribution"
+                        android:text="@string/player_consolidation_total_board_points"
                         android:textColor="@color/text_secondary"
                         android:textSize="9dp" />
 
                     <TextView
-                        android:id="@+id/text_summary_contribution"
+                        android:id="@+id/text_summary_board_adjustment"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
@@ -182,14 +182,14 @@
                         android:textColor="@color/success_green"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        tools:text="₹275.40" />
+                        tools:text="275.4 GP" />
                 </LinearLayout>
 
                 <View
                     android:layout_width="1dp"
                     android:layout_height="48dp"
                     android:layout_marginHorizontal="10dp"
-                    android:background="@color/settlement_summary_card_border" />
+                    android:background="@color/game_points_summary_card_border" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -215,7 +215,7 @@
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        tools:text="₹0.00" />
+                        tools:text="0 GP" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>

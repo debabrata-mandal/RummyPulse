@@ -200,7 +200,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
-                            android:text="@string/dialog_point_value_section_title"
+                            android:text="@string/dialog_game_point_factor_section_title"
                             android:textColor="@color/view_text_primary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
@@ -212,7 +212,7 @@
                             android:layout_weight="1"
                             android:ellipsize="end"
                             android:maxLines="1"
-                            android:text="@string/dialog_point_value_subtitle"
+                            android:text="@string/dialog_game_point_factor_subtitle"
                             android:textColor="@color/view_text_secondary"
                             android:textSize="10dp" />
                     </LinearLayout>
@@ -230,24 +230,24 @@
                         android:paddingBottom="4dp">
 
                         <ImageButton
-                            android:id="@+id/btn_point_value_decrement"
+                            android:id="@+id/btn_game_point_factor_decrement"
                             android:layout_width="44dp"
                             android:layout_height="44dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="@string/cd_decrease_point_value"
+                            android:contentDescription="@string/cd_decrease_game_point_factor"
                             android:padding="10dp"
                             android:src="@drawable/ic_counter_minus"
                             app:tint="@color/view_violet_light" />
 
                         <com.google.android.material.textfield.TextInputLayout
-                            android:id="@+id/layout_point_value"
+                            android:id="@+id/layout_game_point_factor"
                             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="4dp"
                             android:layout_marginEnd="4dp"
                             android:layout_weight="1"
-                            android:hint="@string/dialog_point_value_field_hint"
+                            android:hint="@string/dialog_game_point_factor_field_hint"
                             app:boxBackgroundColor="@color/view_surface"
                             app:boxCornerRadiusBottomEnd="10dp"
                             app:boxCornerRadiusBottomStart="10dp"
@@ -257,7 +257,7 @@
                             app:hintTextColor="@color/view_violet_light">
 
                             <com.google.android.material.textfield.TextInputEditText
-                                android:id="@+id/edit_point_value"
+                                android:id="@+id/edit_game_point_factor"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:digits="0123456789."
@@ -271,11 +271,11 @@
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <ImageButton
-                            android:id="@+id/btn_point_value_increment"
+                            android:id="@+id/btn_game_point_factor_increment"
                             android:layout_width="44dp"
                             android:layout_height="44dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
-                            android:contentDescription="@string/cd_increase_point_value"
+                            android:contentDescription="@string/cd_increase_game_point_factor"
                             android:padding="10dp"
                             android:src="@drawable/ic_add"
                             app:tint="@color/view_violet_light" />
@@ -315,7 +315,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="sans-serif-medium"
-                            android:text="@string/dialog_contribution_section_title"
+                            android:text="@string/dialog_board_adjustment_section_title"
                             android:textColor="@color/view_text_primary"
                             android:textSize="15sp"
                             android:textStyle="bold" />
@@ -327,13 +327,13 @@
                             android:layout_weight="1"
                             android:ellipsize="end"
                             android:maxLines="1"
-                            android:text="@string/dialog_contribution_subtitle"
+                            android:text="@string/dialog_board_adjustment_subtitle"
                             android:textColor="@color/view_text_secondary"
                             android:textSize="10dp" />
                     </LinearLayout>
 
                     <TextView
-                        android:id="@+id/text_contribution_percent_display"
+                        android:id="@+id/text_board_adjustment_percent_display"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"

@@ -8,21 +8,22 @@ import com.google.firebase.firestore.Exclude;
  */
 public class GameDefaults {
 
-    public static final double FALLBACK_DEFAULT_POINT_VALUE = 0.15;
-    public static final double FALLBACK_DEFAULT_GST_PERCENT = 25.0;
+    public static final double FALLBACK_DEFAULT_GAME_POINT_FACTOR = 0.15;
+    public static final double FALLBACK_DEFAULT_BOARD_ADJUSTMENT_PERCENT = 25.0;
     public static final long FALLBACK_MID_GAME_INCREMENT = 2L;
-    public static final boolean FALLBACK_DISPLAY_INTERMEDIATE_CALCULATION = true;
+    public static final boolean FALLBACK_SHOW_LIVE_GAME_POINTS = true;
     public static final boolean FALLBACK_SHOW_DASHBOARD_APPROVAL_COUNTS = true;
     public static final boolean FALLBACK_SHOW_DASHBOARD_LEADERBOARD = true;
-    public static final boolean FALLBACK_SHOW_DASHBOARD_LEADERBOARD_AMOUNTS = true;
+    public static final boolean FALLBACK_SHOW_DASHBOARD_LEADERBOARD_GAME_POINTS = true;
 
-    private Double defaultPointValue;
-    private Double defaultGstPercent;
+    private Integer schemaVersion;
+    private Double defaultGamePointFactor;
+    private Double defaultBoardAdjustmentPercent;
     private Long defaultMidGameNewPlayerScoreIncrement;
-    private Boolean displayIntermediateCalculation;
+    private Boolean showLiveGamePoints;
     private Boolean showDashboardApprovalCounts;
     private Boolean showDashboardLeaderboard;
-    private Boolean showDashboardLeaderboardAmounts;
+    private Boolean showDashboardLeaderboardGamePoints;
     private Timestamp updatedAt;
     private String updatedByUserId;
     private String updatedByUserName;
@@ -30,20 +31,28 @@ public class GameDefaults {
     public GameDefaults() {
     }
 
-    public double getDefaultPointValue() {
-        return defaultPointValue != null ? defaultPointValue : FALLBACK_DEFAULT_POINT_VALUE;
+    public Integer getSchemaVersion() {
+        return schemaVersion;
     }
 
-    public void setDefaultPointValue(Double defaultPointValue) {
-        this.defaultPointValue = defaultPointValue;
+    public void setSchemaVersion(Integer schemaVersion) {
+        this.schemaVersion = schemaVersion;
     }
 
-    public double getDefaultGstPercent() {
-        return defaultGstPercent != null ? defaultGstPercent : FALLBACK_DEFAULT_GST_PERCENT;
+    public double getDefaultGamePointFactor() {
+        return defaultGamePointFactor != null ? defaultGamePointFactor : FALLBACK_DEFAULT_GAME_POINT_FACTOR;
     }
 
-    public void setDefaultGstPercent(Double defaultGstPercent) {
-        this.defaultGstPercent = defaultGstPercent;
+    public void setDefaultGamePointFactor(Double defaultGamePointFactor) {
+        this.defaultGamePointFactor = defaultGamePointFactor;
+    }
+
+    public double getDefaultBoardAdjustmentPercent() {
+        return defaultBoardAdjustmentPercent != null ? defaultBoardAdjustmentPercent : FALLBACK_DEFAULT_BOARD_ADJUSTMENT_PERCENT;
+    }
+
+    public void setDefaultBoardAdjustmentPercent(Double defaultBoardAdjustmentPercent) {
+        this.defaultBoardAdjustmentPercent = defaultBoardAdjustmentPercent;
     }
 
     public long getDefaultMidGameNewPlayerScoreIncrement() {
@@ -56,13 +65,13 @@ public class GameDefaults {
         this.defaultMidGameNewPlayerScoreIncrement = defaultMidGameNewPlayerScoreIncrement;
     }
 
-    /** When true, standings show live amounts; when false, amounts appear only after the game ends. */
-    public boolean isDisplayIntermediateCalculation() {
-        return displayIntermediateCalculation == null || displayIntermediateCalculation;
+    /** When true, standings show live Game Points; otherwise they appear only after the game ends. */
+    public boolean isShowLiveGamePoints() {
+        return showLiveGamePoints == null || showLiveGamePoints;
     }
 
-    public void setDisplayIntermediateCalculation(Boolean displayIntermediateCalculation) {
-        this.displayIntermediateCalculation = displayIntermediateCalculation;
+    public void setShowLiveGamePoints(Boolean showLiveGamePoints) {
+        this.showLiveGamePoints = showLiveGamePoints;
     }
 
     /** When true, dashboard game cards show pending/approved/rejected view request counts to managers. */
@@ -84,28 +93,28 @@ public class GameDefaults {
     }
 
     /**
-     * When true, leaderboard rows show each player's net amount. When false the ranking is still
-     * by net amount, but the figures stay hidden.
+     * When true, leaderboard rows show each player's final Game Points. When false the ranking is
+     * still by final Game Points, but the figures stay hidden.
      */
-    public boolean isShowDashboardLeaderboardAmounts() {
-        return showDashboardLeaderboardAmounts == null || showDashboardLeaderboardAmounts;
+    public boolean isShowDashboardLeaderboardGamePoints() {
+        return showDashboardLeaderboardGamePoints == null || showDashboardLeaderboardGamePoints;
     }
 
-    public void setShowDashboardLeaderboardAmounts(Boolean showDashboardLeaderboardAmounts) {
-        this.showDashboardLeaderboardAmounts = showDashboardLeaderboardAmounts;
+    public void setShowDashboardLeaderboardGamePoints(Boolean showDashboardLeaderboardGamePoints) {
+        this.showDashboardLeaderboardGamePoints = showDashboardLeaderboardGamePoints;
     }
 
     /**
-     * Whether ranked net amounts may be shown anywhere, on the dashboard donut or the player
+     * Whether ranked final Game Points may be shown anywhere, on the dashboard donut or the player
      * ranking screen.
      *
-     * <p>Both switches must be on. The amounts switch is disabled in the admin UI while the
+     * <p>Both switches must be on. The Game Points switch is disabled in the admin UI while the
      * leaderboard switch is off, so it can be left stranded at {@code true}; honouring it alone
      * would show figures an admin believes are switched off.
      */
     @Exclude
-    public boolean isLeaderboardAmountsVisible() {
-        return isShowDashboardLeaderboard() && isShowDashboardLeaderboardAmounts();
+    public boolean isLeaderboardGamePointsVisible() {
+        return isShowDashboardLeaderboard() && isShowDashboardLeaderboardGamePoints();
     }
 
     public Timestamp getUpdatedAt() {
@@ -136,41 +145,43 @@ public class GameDefaults {
     public static GameDefaults resolvedFromFirestoreBean(GameDefaults fromDb) {
         GameDefaults g = new GameDefaults();
         if (fromDb == null) {
-            g.setDefaultPointValue(FALLBACK_DEFAULT_POINT_VALUE);
-            g.setDefaultGstPercent(FALLBACK_DEFAULT_GST_PERCENT);
+            g.setSchemaVersion(GameDataSchema.CURRENT_VERSION);
+            g.setDefaultGamePointFactor(FALLBACK_DEFAULT_GAME_POINT_FACTOR);
+            g.setDefaultBoardAdjustmentPercent(FALLBACK_DEFAULT_BOARD_ADJUSTMENT_PERCENT);
             g.setDefaultMidGameNewPlayerScoreIncrement(FALLBACK_MID_GAME_INCREMENT);
-            g.setDisplayIntermediateCalculation(FALLBACK_DISPLAY_INTERMEDIATE_CALCULATION);
+            g.setShowLiveGamePoints(FALLBACK_SHOW_LIVE_GAME_POINTS);
             g.setShowDashboardApprovalCounts(FALLBACK_SHOW_DASHBOARD_APPROVAL_COUNTS);
             g.setShowDashboardLeaderboard(FALLBACK_SHOW_DASHBOARD_LEADERBOARD);
-            g.setShowDashboardLeaderboardAmounts(FALLBACK_SHOW_DASHBOARD_LEADERBOARD_AMOUNTS);
+            g.setShowDashboardLeaderboardGamePoints(FALLBACK_SHOW_DASHBOARD_LEADERBOARD_GAME_POINTS);
             return g;
         }
-        g.setDefaultPointValue(fromDb.defaultPointValue != null && fromDb.defaultPointValue > 0
-                ? fromDb.defaultPointValue : FALLBACK_DEFAULT_POINT_VALUE);
-        g.setDefaultGstPercent(fromDb.defaultGstPercent != null
-                ? clampGst(fromDb.defaultGstPercent) : FALLBACK_DEFAULT_GST_PERCENT);
+        g.setSchemaVersion(fromDb.schemaVersion);
+        g.setDefaultGamePointFactor(fromDb.defaultGamePointFactor != null && fromDb.defaultGamePointFactor > 0
+                ? fromDb.defaultGamePointFactor : FALLBACK_DEFAULT_GAME_POINT_FACTOR);
+        g.setDefaultBoardAdjustmentPercent(fromDb.defaultBoardAdjustmentPercent != null
+                ? clampBoardAdjustment(fromDb.defaultBoardAdjustmentPercent) : FALLBACK_DEFAULT_BOARD_ADJUSTMENT_PERCENT);
         long inc = fromDb.defaultMidGameNewPlayerScoreIncrement != null
                 ? fromDb.defaultMidGameNewPlayerScoreIncrement : FALLBACK_MID_GAME_INCREMENT;
         g.setDefaultMidGameNewPlayerScoreIncrement(Math.max(0L, inc));
-        g.setDisplayIntermediateCalculation(fromDb.displayIntermediateCalculation != null
-                ? fromDb.displayIntermediateCalculation
-                : FALLBACK_DISPLAY_INTERMEDIATE_CALCULATION);
+        g.setShowLiveGamePoints(fromDb.showLiveGamePoints != null
+                ? fromDb.showLiveGamePoints
+                : FALLBACK_SHOW_LIVE_GAME_POINTS);
         g.setShowDashboardApprovalCounts(fromDb.showDashboardApprovalCounts != null
                 ? fromDb.showDashboardApprovalCounts
                 : FALLBACK_SHOW_DASHBOARD_APPROVAL_COUNTS);
         g.setShowDashboardLeaderboard(fromDb.showDashboardLeaderboard != null
                 ? fromDb.showDashboardLeaderboard
                 : FALLBACK_SHOW_DASHBOARD_LEADERBOARD);
-        g.setShowDashboardLeaderboardAmounts(fromDb.showDashboardLeaderboardAmounts != null
-                ? fromDb.showDashboardLeaderboardAmounts
-                : FALLBACK_SHOW_DASHBOARD_LEADERBOARD_AMOUNTS);
+        g.setShowDashboardLeaderboardGamePoints(fromDb.showDashboardLeaderboardGamePoints != null
+                ? fromDb.showDashboardLeaderboardGamePoints
+                : FALLBACK_SHOW_DASHBOARD_LEADERBOARD_GAME_POINTS);
         g.setUpdatedAt(fromDb.updatedAt);
         g.setUpdatedByUserId(fromDb.updatedByUserId);
         g.setUpdatedByUserName(fromDb.updatedByUserName);
         return g;
     }
 
-    private static double clampGst(double v) {
+    private static double clampBoardAdjustment(double v) {
         if (v < 0) {
             return 0;
         }

@@ -44,31 +44,31 @@ public class ConsolidatedPlayerGroup {
         this.netAdjustment += delta;
     }
 
-    public double getTotalGrossAmount() {
+    public double getTotalBaseGamePoints() {
         double sum = 0;
         for (GamePlayerEntry member : members) {
-            sum += member.getGrossAmount();
+            sum += member.getBaseGamePoints();
         }
         return sum;
     }
 
-    public double getTotalContribution() {
+    public double getTotalBoardPoints() {
         double sum = 0;
         for (GamePlayerEntry member : members) {
-            sum += member.getGstPaid();
+            sum += member.getBoardAdjustmentPoints();
         }
         return sum;
     }
 
-    public double getTotalNetAmount() {
+    public double getTotalFinalGamePoints() {
         double sum = 0;
         for (GamePlayerEntry member : members) {
-            sum += member.getNetAmount();
+            sum += member.getFinalGamePoints();
         }
         return sum;
     }
 
-    public double getAdjustedNetAmount() {
-        return getTotalNetAmount() + netAdjustment;
+    public double getAdjustedFinalGamePoints() {
+        return getTotalFinalGamePoints() + netAdjustment;
     }
 }

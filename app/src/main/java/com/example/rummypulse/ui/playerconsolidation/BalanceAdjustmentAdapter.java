@@ -54,8 +54,9 @@ public final class BalanceAdjustmentAdapter
         holder.route.setText(holder.itemView.getContext().getString(
                 R.string.player_consolidation_adjustment_route,
                 adjustment.getFromName(),
-                adjustment.getToName()));
-        holder.amount.setText(ConsolidationAmountFormatter.formatAmount(adjustment.getAmount()));
+                adjustment.getToName(),
+                ConsolidationAmountFormatter.formatAmount(adjustment.getAmount())));
+        holder.amount.setVisibility(View.GONE);
         holder.reason.setText(TextUtils.isEmpty(adjustment.getReason())
                 ? holder.itemView.getContext().getString(
                         R.string.player_consolidation_adjustment_no_reason)

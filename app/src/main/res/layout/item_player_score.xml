@@ -38,7 +38,7 @@
 
     </LinearLayout>
 
-    <!-- Score and Net Amount Container -->
+    <!-- Score and Final Game Points Container -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -76,7 +76,7 @@
 
         </LinearLayout>
 
-        <!-- Net Amount -->
+        <!-- Final Game Points -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -86,16 +86,16 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/net_amount_label"
+                android:text="@string/final_game_points_label"
                 android:textSize="12sp"
                 android:textColor="@color/text_secondary"
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/text_net_amount"
+                android:id="@+id/text_final_game_points"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                tools:text="₹0"
+                tools:text="0 GP"
                 android:textSize="16sp"
                 android:textColor="@color/text_primary"
                 android:textStyle="bold"

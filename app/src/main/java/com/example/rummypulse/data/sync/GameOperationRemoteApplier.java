@@ -10,7 +10,6 @@ import com.example.rummypulse.data.GameDataWrapper;
 import com.example.rummypulse.data.GameMembership;
 import com.example.rummypulse.data.GameViewApprovalRepository;
 import com.example.rummypulse.data.Player;
-import com.example.rummypulse.data.PlayerStatsRecorder;
 import com.example.rummypulse.data.ScoreHistoryEvent;
 import com.example.rummypulse.data.ScoreRegressionGuard;
 import com.google.android.gms.tasks.Task;
@@ -22,7 +21,6 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Transaction;
 import com.google.gson.Gson;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -32,26 +30,10 @@ final class GameOperationRemoteApplier {
     static final class Result {
         final GameData gameData;
         final long revision;
-        /** Status before the operation, needed to detect a game leaving {@code Completed}. */
-        final String previousStatus;
-        /** Users unmapped or removed by this operation; their stats must be reconciled. */
-        final Set<String> detachedUserIds;
 
         Result(GameData gameData, long revision) {
-            this(gameData, revision, null, Collections.emptySet());
-        }
-
-        Result(
-                GameData gameData,
-                long revision,
-                String previousStatus,
-                Set<String> detachedUserIds) {
             this.gameData = gameData;
             this.revision = revision;
-            this.previousStatus = previousStatus;
-            this.detachedUserIds = detachedUserIds == null
-                    ? Collections.emptySet()
-                    : detachedUserIds;
         }
     }
 
@@ -94,9 +76,6 @@ final class GameOperationRemoteApplier {
                     && targetBefore != null
                     ? GameDataCopies.copyPlayer(targetBefore)
                     : null;
-            // Captured before projection in case the projector mutates the instance.
-            String previousStatus = latest.getGameStatus();
-
             GameData patched = GameOperationProjector.apply(
                     latest, operation.operationType(), operation.playerId, payload);
             long nextRevision = previousRevision + 1L;
@@ -107,8 +86,7 @@ final class GameOperationRemoteApplier {
                             patched,
                             operation.editGeneration,
                             nextRevision,
-                            operation.operationId,
-                            dataSnapshot.get(PlayerStatsRecorder.APPLIED_FIELD)));
+                            operation.operationId));
 
             writeScoreHistory(transaction, db, operation, payload, latest, patched,
                     editorUserId, previousRevision, nextRevision);
@@ -124,43 +102,8 @@ final class GameOperationRemoteApplier {
             if (affectsDashboard(operation.operationType())) {
                 transaction.update(gameRef, buildDashboardSummary(patched, auth));
             }
-            return new Result(
-                    patched,
-                    nextRevision,
-                    previousStatus,
-                    detachedUserIds(
-                            operation.operationType(),
-                            payload,
-                            previousTargetUserId,
-                            deletedBefore));
+            return new Result(patched, nextRevision);
         });
-    }
-
-    /**
-     * Users whose stats can no longer be reconciled from the player list because this operation
-     * detached them from the game.
-     */
-    private static Set<String> detachedUserIds(
-            GameOperationType type,
-            GameOperationPayload payload,
-            String previousTargetUserId,
-            Player deletedBefore) {
-        Set<String> detached = new HashSet<>();
-        if (type == GameOperationType.MAP_USER) {
-            if (!TextUtils.isEmpty(previousTargetUserId)
-                    && (payload == null || !previousTargetUserId.equals(payload.userId))) {
-                detached.add(previousTargetUserId);
-            }
-        } else if (type == GameOperationType.UNMAP_USER) {
-            if (!TextUtils.isEmpty(previousTargetUserId)) {
-                detached.add(previousTargetUserId);
-            }
-        } else if (type == GameOperationType.DELETE_PLAYER
-                && deletedBefore != null
-                && !TextUtils.isEmpty(deletedBefore.getUserId())) {
-            detached.add(deletedBefore.getUserId());
-        }
-        return detached;
     }
 
     private static void validateScoreMutation(GameData latest, GameData patched,
@@ -343,8 +286,7 @@ final class GameOperationRemoteApplier {
             GameData gameData,
             long editGeneration,
             long revision,
-            String operationId,
-            Object statsApplied) {
+            String operationId) {
         Map<String, Object> document = new HashMap<>();
         document.put("data", GameDataSchema.toFirestoreData(gameData));
         document.put("lastUpdated", FieldValue.serverTimestamp());
@@ -352,11 +294,6 @@ final class GameOperationRemoteApplier {
         document.put("editGeneration", editGeneration);
         document.put("revision", revision);
         document.put("lastOperationId", operationId);
-        if (statsApplied != null) {
-            // This is a whole-document write, so the record of what the game has already
-            // contributed must be carried across or the next recording would double-count it.
-            document.put(PlayerStatsRecorder.APPLIED_FIELD, statsApplied);
-        }
         return document;
     }
 
@@ -368,9 +305,9 @@ final class GameOperationRemoteApplier {
 
     private static Map<String, Object> buildDashboardSummary(GameData gameData, GameAuth auth) {
         Map<String, Object> summary = new HashMap<>();
-        summary.put("dashboardPointValue", gameData.getPointValue());
+        summary.put("dashboardGamePointFactor", gameData.getGamePointFactor());
         summary.put("dashboardNumPlayers", gameData.getPlayers().size());
-        summary.put("dashboardGstPercent", gameData.getGstPercent());
+        summary.put("dashboardBoardAdjustmentPercent", gameData.getBoardAdjustmentPercent());
         String status = gameData.getGameStatus();
         summary.put("dashboardGameStatus",
                 status == null || status.trim().isEmpty() ? "R1" : status.trim());

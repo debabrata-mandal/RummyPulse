@@ -52,6 +52,7 @@ import com.example.rummypulse.service.FirebaseAccountDeletionService;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.AccountSignOut;
 import com.example.rummypulse.utils.SessionCacheCleaner;
+import com.example.rummypulse.utils.SafePlayPolicyStore;
 import com.example.rummypulse.utils.ModernToast;
 import com.example.rummypulse.utils.ModernUpdateChecker;
 import com.example.rummypulse.utils.VersionGate;
@@ -155,12 +156,18 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
-        } else {
-            android.util.Log.d("MainActivity", "User authenticated");
-            authStateManager.saveAuthState(currentUser);
-            AppUserRoleSession.getInstance().startForCurrentUser(false);
-            ensureAppUserDocument(currentUser);
         }
+        if (!SafePlayPolicyStore.hasCurrentAcceptance(this, currentUser.getUid())) {
+            Intent policyIntent = new Intent(this, SafePlayPolicyActivity.class);
+            policyIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(policyIntent);
+            finish();
+            return;
+        }
+        android.util.Log.d("MainActivity", "User authenticated");
+        authStateManager.saveAuthState(currentUser);
+        AppUserRoleSession.getInstance().startForCurrentUser(false);
+        ensureAppUserDocument(currentUser);
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -939,6 +946,8 @@ public class MainActivity extends AppCompatActivity {
             android.widget.TextView textUpdateStatus = dialog.findViewById(R.id.text_update_status);
             View btnClose = dialog.findViewById(R.id.btn_close);
             MaterialButton btnPrivacyPolicy = dialog.findViewById(R.id.btn_privacy_policy);
+            MaterialButton btnGamePointsPolicy =
+                    dialog.findViewById(R.id.btn_game_points_policy);
             MaterialButton btnCheckUpdates = dialog.findViewById(R.id.btn_check_updates);
             
             // Set values
@@ -961,6 +970,18 @@ public class MainActivity extends AppCompatActivity {
                 } catch (ActivityNotFoundException e) {
                     com.example.rummypulse.utils.ModernToast.error(
                             this, getString(R.string.app_info_privacy_policy_open_error));
+                }
+            });
+
+            btnGamePointsPolicy.setOnClickListener(v -> {
+                Intent policyIntent = new Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse(getString(R.string.game_points_policy_url)));
+                try {
+                    startActivity(policyIntent);
+                } catch (ActivityNotFoundException e) {
+                    com.example.rummypulse.utils.ModernToast.error(
+                            this, getString(R.string.game_points_policy_open_error));
                 }
             });
             

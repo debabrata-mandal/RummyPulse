@@ -68,9 +68,6 @@ public class PlayerConsolidationViewModel extends ViewModel {
     private final MutableLiveData<Set<String>> selectedEntryIds = new MutableLiveData<>(new HashSet<>());
     private final MutableLiveData<ConsolidationTotals> consolidationTotals =
             new MutableLiveData<>(new ConsolidationTotals(0, 0));
-    private final MutableLiveData<ConsolidatedSettlementCalculator.Result> settlementResult =
-            new MutableLiveData<>(ConsolidatedSettlementCalculator.calculate(
-                    new ArrayList<>(), 0));
     private final MutableLiveData<List<BalanceAdjustment>> balanceAdjustments =
             new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<Boolean> mappingsConfirmed =
@@ -122,10 +119,6 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     public LiveData<ConsolidationTotals> getConsolidationTotals() {
         return consolidationTotals;
-    }
-
-    public LiveData<ConsolidatedSettlementCalculator.Result> getSettlementResult() {
-        return settlementResult;
     }
 
     public LiveData<List<BalanceAdjustment>> getBalanceAdjustments() {
@@ -357,7 +350,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     public boolean applyTransfer(String fromGroupId, String toGroupId, double amount,
                                  @Nullable String reason) {
-        if (amount <= 0 || TextUtils.isEmpty(fromGroupId) || TextUtils.isEmpty(toGroupId)
+        if (amount <= 0 || isNullOrEmpty(fromGroupId) || isNullOrEmpty(toGroupId)
                 || fromGroupId.equals(toGroupId)) {
             return false;
         }
@@ -400,7 +393,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
     }
 
     public void deleteAdjustment(String adjustmentId) {
-        if (TextUtils.isEmpty(adjustmentId)) {
+        if (isNullOrEmpty(adjustmentId)) {
             return;
         }
         List<BalanceAdjustment> current = balanceAdjustments.getValue();
@@ -429,6 +422,10 @@ public class PlayerConsolidationViewModel extends ViewModel {
         updated.remove(target);
         balanceAdjustments.setValue(updated);
         publishDerivedLists(groups);
+    }
+
+    private static boolean isNullOrEmpty(@Nullable String value) {
+        return value == null || value.isEmpty();
     }
 
     public List<String> getSelectedEntryNames() {
@@ -538,8 +535,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
         for (GameItem game : sorted) {
             hash.append(game.getGameId()).append('|');
             hash.append(game.getGameStatus()).append('|');
-            hash.append(game.getPointValue()).append('|');
-            hash.append(game.getGstPercentage()).append('|');
+            hash.append(game.getGamePointFactor()).append('|');
+            hash.append(game.getBoardAdjustmentPercentage()).append('|');
             List<Player> players = game.getPlayers();
             if (players != null) {
                 hash.append(players.size()).append(':');
@@ -557,8 +554,6 @@ public class PlayerConsolidationViewModel extends ViewModel {
     private void publishDerivedLists(List<ConsolidatedPlayerGroup> groups) {
         if (groups == null) {
             consolidationTotals.setValue(new ConsolidationTotals(0, 0));
-            settlementResult.setValue(ConsolidatedSettlementCalculator.calculate(
-                    new ArrayList<>(), 0));
             return;
         }
         List<ConsolidatedPlayerGroup> sortedGroups = new ArrayList<>(groups);
@@ -566,8 +561,6 @@ public class PlayerConsolidationViewModel extends ViewModel {
         playerGroups.setValue(sortedGroups);
         ConsolidationTotals totals = ConsolidationTotals.fromGroups(sortedGroups);
         consolidationTotals.setValue(totals);
-        settlementResult.setValue(ConsolidatedSettlementCalculator.calculate(
-                sortedGroups, totals.getTotalContribution()));
     }
 
     private String buildGameKey(List<GameItem> selectedGames) {
@@ -583,7 +576,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     private static GameRepository createConfiguredGameRepository() {
         GameRepository gameRepository = new GameRepository();
-        // Cross-game settlement spans every game, not just the ones this user plays in.
+        // Cross-game gamePoints spans every game, not just the ones this user plays in.
         gameRepository.setShowAllGames(true);
         return gameRepository;
     }

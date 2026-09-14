@@ -285,15 +285,15 @@
             android:paddingBottom="10dp">
 
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="@string/point_value_label" android:textColor="@color/view_text_muted" android:textSize="8dp" android:textStyle="bold" />
-                <TextView android:id="@+id/text_header_point_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" tools:text="₹0.5" android:textColor="@color/view_violet_light" android:textSize="14sp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="@string/game_point_factor_label" android:textColor="@color/view_text_muted" android:textSize="8dp" android:textStyle="bold" />
+                <TextView android:id="@+id/text_header_game_point_factor" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" tools:text="0.5×" android:textColor="@color/view_violet_light" android:textSize="14sp" android:textStyle="bold" />
             </LinearLayout>
             <View android:layout_width="1dp" android:layout_height="30dp" android:background="@color/view_stroke" />
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
-                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="@string/player_consolidation_contribution_collected" android:textColor="@color/view_text_muted" android:textSize="8dp" android:textStyle="bold" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="@string/player_consolidation_board_adjustment_collected" android:textColor="@color/view_text_muted" android:textSize="8dp" android:textStyle="bold" />
                 <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:orientation="horizontal">
-                    <TextView android:id="@+id/text_header_contribution" android:layout_width="wrap_content" android:layout_height="wrap_content" tools:text="10% · " android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/text_header_total_contribution" android:layout_width="wrap_content" android:layout_height="wrap_content" tools:text="₹0" android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/text_header_board_adjustment" android:layout_width="wrap_content" android:layout_height="wrap_content" tools:text="10% · " android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/text_header_total_board_points" android:layout_width="wrap_content" android:layout_height="wrap_content" tools:text="0 GP" android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
             <View android:layout_width="1dp" android:layout_height="30dp" android:background="@color/view_stroke" />
@@ -460,7 +460,7 @@
 
                 </LinearLayout>
 
-                <!-- Sort: game order (drag) vs settlement order (grouped) -->
+                <!-- Sort: game order (drag) vs game_points order (grouped) -->
                 <com.google.android.material.button.MaterialButtonToggleGroup
                     android:id="@+id/player_list_sort_toggle"
                     android:layout_width="match_parent"
@@ -485,7 +485,7 @@
                         app:strokeColor="@color/view_stroke" />
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_sort_settlement_order"
+                        android:id="@+id/btn_sort_game_points_order"
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="36dp"
@@ -493,7 +493,7 @@
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:minHeight="36dp"
-                        android:text="@string/edit_player_sort_settlement_order"
+                        android:text="@string/edit_player_sort_game_points_order"
                         android:textAllCaps="false"
                         android:textSize="11sp"
                         app:strokeColor="@color/view_stroke" />
@@ -761,7 +761,7 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Settlement Rules Content (Collapsible) -->
+            <!-- Game_Points Rules Content (Collapsible) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -780,7 +780,7 @@
 
                     <!-- Collapsible Header -->
                     <LinearLayout
-                        android:id="@+id/settlement_header"
+                        android:id="@+id/game_points_header"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
@@ -794,16 +794,16 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/settlement_how_it_works_title"
+                            android:text="@string/game_points_how_it_works_title"
                             android:textColor="@color/view_text_primary"
                             android:textSize="16sp"
                             android:textStyle="bold" />
 
                         <ImageView
-                            android:id="@+id/settlement_toggle_icon"
+                            android:id="@+id/game_points_toggle_icon"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:contentDescription="@string/cd_toggle_settlement_section"
+                            android:contentDescription="@string/cd_toggle_game_points_section"
                             android:src="@drawable/ic_expand_more"
                             app:tint="@color/view_text_secondary" />
 
@@ -811,7 +811,7 @@
 
                     <!-- Collapsible Content -->
                     <LinearLayout
-                        android:id="@+id/settlement_content"
+                        android:id="@+id/game_points_content"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
@@ -841,8 +841,8 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:id="@+id/text_settlement_winners_rule"
-                            android:text="@string/settlement_winners_description"
+                            android:id="@+id/text_game_points_winners_rule"
+                            android:text="@string/game_points_winners_description"
                             android:textColor="@color/view_mint"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -867,7 +867,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/settlement_losers_description"
+                            android:text="@string/game_points_losers_description"
                             android:textColor="@color/view_coral"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -892,15 +892,15 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:id="@+id/text_settlement_formula"
-                            android:text="@string/settlement_formula_description"
+                            android:id="@+id/text_game_points_formula"
+                            android:text="@string/game_points_formula_description"
                             android:textColor="@color/view_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
                     </LinearLayout>
 
-                    <!-- Contribution Rule -->
+                    <!-- Board_Adjustment Rule -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -918,15 +918,15 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:id="@+id/text_settlement_gst_rule"
-                            android:text="@string/settlement_contribution_description"
+                            android:id="@+id/text_game_points_board_adjustment_rule"
+                            android:text="@string/game_points_board_adjustment_description"
                             android:textColor="@color/view_gold"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
                     </LinearLayout>
 
-                    <!-- Net Amount -->
+                    <!-- Final Game Points -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -944,7 +944,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/settlement_net_amount_description"
+                            android:text="@string/game_points_final_game_points_description"
                             android:textColor="@color/view_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
@@ -963,7 +963,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/settlement_example_title"
+                            android:text="@string/game_points_example_title"
                             android:textColor="@color/view_violet_light"
                             android:textSize="14sp"
                             android:textStyle="bold"
@@ -972,8 +972,8 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:id="@+id/text_settlement_example_description"
-                            android:text="@string/settlement_example_intro"
+                            android:id="@+id/text_game_points_example_description"
+                            android:text="@string/game_points_example_intro"
                             android:textColor="@color/view_text_secondary"
                             android:textSize="13sp"
                             android:layout_marginBottom="4dp" />
@@ -981,8 +981,8 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:id="@+id/text_settlement_example_formula"
-                            android:text="@string/settlement_example_formula"
+                            android:id="@+id/text_game_points_example_formula"
+                            android:text="@string/game_points_example_formula"
                             android:textColor="@color/view_violet_light"
                             android:textSize="13sp"
                             android:textStyle="bold" />

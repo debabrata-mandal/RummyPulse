@@ -9,8 +9,8 @@ import java.util.Map;
 public class GameData {
     private Integer schemaVersion;
     private int numPlayers;
-    private double pointValue;
-    private double gstPercent;
+    private double gamePointFactor;
+    private double boardAdjustmentPercent;
     private List<Player> players;
     private Map<String, Player> playersById;
     private List<String> playerOrder;
@@ -26,10 +26,10 @@ public class GameData {
         // Default constructor required for Firestore
     }
 
-    public GameData(int numPlayers, double pointValue, double gstPercent, List<Player> players, Timestamp lastUpdated, String version) {
+    public GameData(int numPlayers, double gamePointFactor, double boardAdjustmentPercent, List<Player> players, Timestamp lastUpdated, String version) {
         this.numPlayers = numPlayers;
-        this.pointValue = pointValue;
-        this.gstPercent = gstPercent;
+        this.gamePointFactor = gamePointFactor;
+        this.boardAdjustmentPercent = boardAdjustmentPercent;
         this.players = players;
         this.lastUpdated = lastUpdated;
         this.version = version;
@@ -53,20 +53,20 @@ public class GameData {
         this.numPlayers = numPlayers;
     }
 
-    public double getPointValue() {
-        return pointValue;
+    public double getGamePointFactor() {
+        return gamePointFactor;
     }
 
-    public void setPointValue(double pointValue) {
-        this.pointValue = pointValue;
+    public void setGamePointFactor(double gamePointFactor) {
+        this.gamePointFactor = gamePointFactor;
     }
 
-    public double getGstPercent() {
-        return gstPercent;
+    public double getBoardAdjustmentPercent() {
+        return boardAdjustmentPercent;
     }
 
-    public void setGstPercent(double gstPercent) {
-        this.gstPercent = gstPercent;
+    public void setBoardAdjustmentPercent(double boardAdjustmentPercent) {
+        this.boardAdjustmentPercent = boardAdjustmentPercent;
     }
 
     public List<Player> getPlayers() {
@@ -193,29 +193,20 @@ public class GameData {
         return totalScore;
     }
 
-    public double getGstAmount() {
+    public double getBoardPoints() {
         List<Player> currentPlayers = getPlayers();
         if (currentPlayers == null || currentPlayers.isEmpty()) return 0.0;
-        
-        // Calculate total of all scores
-        int totalAllScores = getTotalScore();
-        
-        // Calculate GST only for winning players (those with positive gross amounts)
-        double totalGstCollected = 0.0;
-        
+
+        List<Integer> playerScores = new ArrayList<>(currentPlayers.size());
         for (Player player : currentPlayers) {
-            int playerScore = player.getTotalScore();
-            // Formula: (Total of all scores - Player's score × Number of players) × Point value
-            double grossAmount = (totalAllScores - playerScore * numPlayers) * pointValue;
-            
-            // GST is only paid by winners (those with positive gross amount)
-            if (grossAmount > 0) {
-                double gstPaid = (grossAmount * gstPercent) / 100.0;
-                totalGstCollected += gstPaid;
-            }
+            playerScores.add(player != null ? player.getTotalScore() : 0);
         }
-        
-        return totalGstCollected;
+
+        return GamePointsCalculator.calculate(
+                playerScores,
+                gamePointFactor,
+                boardAdjustmentPercent,
+                numPlayers).getBoardPoints();
     }
 
     public String getGameStatus() {

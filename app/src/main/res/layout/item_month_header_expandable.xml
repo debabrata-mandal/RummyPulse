@@ -68,23 +68,23 @@
                     tools:text="15 Games" />
 
                 <TextView
-                    android:id="@+id/text_monthly_gst"
+                    android:id="@+id/text_monthly_board_adjustment"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle2"
                     android:textColor="@color/success_green"
                     android:textStyle="bold"
-                    tools:text="₹1,250" />
+                    tools:text="1,250 GP" />
             </LinearLayout>
 
             <TextView
-                android:id="@+id/text_point_values_count"
+                android:id="@+id/text_game_point_factors_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                 android:textColor="@color/text_secondary"
-                tools:text="3 Point Values" />
+                tools:text="3 Game Point Factors" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

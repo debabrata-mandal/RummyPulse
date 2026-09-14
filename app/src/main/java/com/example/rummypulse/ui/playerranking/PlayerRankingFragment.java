@@ -115,7 +115,7 @@ public class PlayerRankingFragment extends Fragment {
 
     private void applyAmountVisibility() {
         boolean visible =
-                GameDefaultsRepository.getInstance(requireContext()).isLeaderboardAmountsVisible();
+                GameDefaultsRepository.getInstance(requireContext()).isLeaderboardGamePointsVisible();
         adapter.setShowAmounts(visible);
         binding.textRankingAmountsHidden.setVisibility(visible ? View.GONE : View.VISIBLE);
     }

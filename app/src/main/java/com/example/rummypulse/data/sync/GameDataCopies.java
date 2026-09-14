@@ -17,8 +17,8 @@ public final class GameDataCopies {
         GameData copy = new GameData();
         copy.setSchemaVersion(source.getSchemaVersion());
         copy.setNumPlayers(source.getNumPlayers());
-        copy.setPointValue(source.getPointValue());
-        copy.setGstPercent(source.getGstPercent());
+        copy.setGamePointFactor(source.getGamePointFactor());
+        copy.setBoardAdjustmentPercent(source.getBoardAdjustmentPercent());
         copy.setLastUpdated(source.getLastUpdated());
         copy.setVersion(source.getVersion());
         copy.setGameStatus(source.getGameStatus());

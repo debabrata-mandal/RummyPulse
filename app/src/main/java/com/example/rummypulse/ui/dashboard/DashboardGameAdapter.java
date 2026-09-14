@@ -170,16 +170,18 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         holder.playersText.setText(String.valueOf(item.getNumberOfPlayers()));
         
         // Set point value with color coding
-        String pointValue = item.getPointValue();
-        if (pointValue == null || pointValue.isEmpty()) {
-            holder.pointValueText.setText(context.getString(R.string.format_rupee_amount_zero));
-            holder.pointValueText.setTextColor(holder.itemView.getContext().getColor(R.color.success_green));
+        String gamePointFactor = item.getGamePointFactor();
+        if (gamePointFactor == null || gamePointFactor.isEmpty()) {
+            holder.gamePointFactorText.setText(context.getString(
+                    R.string.format_game_point_factor, "0"));
+            holder.gamePointFactorText.setTextColor(holder.itemView.getContext().getColor(R.color.success_green));
         } else {
-            holder.pointValueText.setText(context.getString(R.string.format_rupee_amount, pointValue));
+            holder.gamePointFactorText.setText(context.getString(
+                    R.string.format_game_point_factor, gamePointFactor));
             
             // Color code based on point value
             try {
-                double value = Double.parseDouble(pointValue);
+                double value = Double.parseDouble(gamePointFactor);
                 int color;
                 
                 if (value <= 0.25) {
@@ -193,18 +195,18 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
                     color = holder.itemView.getContext().getColor(R.color.error_red);
                 }
                 
-                holder.pointValueText.setTextColor(color);
-                holder.pointValueText.setShadowLayer(12, 0, 0, color);
+                holder.gamePointFactorText.setTextColor(color);
+                holder.gamePointFactorText.setShadowLayer(12, 0, 0, color);
             } catch (NumberFormatException e) {
                 // Default to blue if parsing fails
                 int defaultColor = holder.itemView.getContext().getColor(R.color.accent_blue);
-                holder.pointValueText.setTextColor(defaultColor);
-                holder.pointValueText.setShadowLayer(12, 0, 0, defaultColor);
+                holder.gamePointFactorText.setTextColor(defaultColor);
+                holder.gamePointFactorText.setShadowLayer(12, 0, 0, defaultColor);
             }
         }
         
-        // Set GST percentage
-        holder.gstText.setText(item.getGstPercentage());
+        // Set Board Adjustment percentage
+        holder.boardAdjustmentText.setText(item.getBoardAdjustmentPercentage());
         
         // Set created time
         holder.createdTimeText.setText(holder.itemView.getContext().getString(
@@ -386,7 +388,7 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
     }
 
     static class GameViewHolder extends RecyclerView.ViewHolder {
-        TextView gameIdText, gameStatusText, playersText, pointValueText, gstText,
+        TextView gameIdText, gameStatusText, playersText, gamePointFactorText, boardAdjustmentText,
                 createdTimeText, creatorEditorLineText;
         TextView viewAccessStatusText, pendingViewCountText, approvedViewCountText, rejectedViewCountText;
         ImageView qrCodeIcon, creatorProfileImage;
@@ -402,8 +404,8 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
             approvedViewCountText = itemView.findViewById(R.id.text_approved_view_count);
             rejectedViewCountText = itemView.findViewById(R.id.text_rejected_view_count);
             playersText = itemView.findViewById(R.id.text_players);
-            pointValueText = itemView.findViewById(R.id.text_point_value);
-            gstText = itemView.findViewById(R.id.text_gst);
+            gamePointFactorText = itemView.findViewById(R.id.text_game_point_factor);
+            boardAdjustmentText = itemView.findViewById(R.id.text_board_adjustment);
             createdTimeText = itemView.findViewById(R.id.text_created_time);
             creatorEditorLineText = itemView.findViewById(R.id.text_creator_editor_line);
             creatorProfileImage = itemView.findViewById(R.id.image_creator_profile);

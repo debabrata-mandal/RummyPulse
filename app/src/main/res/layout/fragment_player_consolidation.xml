@@ -78,7 +78,7 @@
         tools:visibility="visible">
 
         <androidx.core.widget.NestedScrollView
-            android:id="@+id/scroll_mapping_settlement"
+            android:id="@+id/scroll_mapping_game_points"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
@@ -307,7 +307,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1.05"
                             android:gravity="center"
-                            android:text="@string/player_consolidation_table_contribution"
+                            android:text="@string/player_consolidation_table_board_adjustment"
                             android:textColor="@color/text_secondary"
                             android:textSize="7dp" />
 
@@ -350,13 +350,13 @@
                         android:visibility="gone" />
 
                     <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/recycler_settlement_player_summary"
+                        android:id="@+id/recycler_game_points_player_summary"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:nestedScrollingEnabled="false"
                         android:overScrollMode="never"
                         tools:itemCount="5"
-                        tools:listitem="@layout/item_settlement_player_summary" />
+                        tools:listitem="@layout/item_game_points_player_summary" />
 
                     <View
                         android:layout_width="match_parent"
@@ -399,17 +399,17 @@
                             android:gravity="center"
                             android:textColor="@color/text_primary"
                             android:textSize="9dp"
-                            tools:text="₹0" />
+                            tools:text="0 GP" />
 
                         <TextView
-                            android:id="@+id/text_player_table_total_contribution"
+                            android:id="@+id/text_player_table_total_board_points"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1.05"
                             android:gravity="center"
                             android:textColor="@color/warning_orange"
                             android:textSize="9dp"
-                            tools:text="₹275" />
+                            tools:text="275 GP" />
 
                         <TextView
                             android:id="@+id/text_player_table_total_net"
@@ -419,7 +419,7 @@
                             android:gravity="center"
                             android:textColor="@color/text_primary"
                             android:textSize="9dp"
-                            tools:text="₹0" />
+                            tools:text="0 GP" />
 
                         <TextView
                             android:id="@+id/text_player_table_total_adjustment"
@@ -429,7 +429,7 @@
                             android:gravity="center"
                             android:textColor="@color/text_primary"
                             android:textSize="9dp"
-                            tools:text="₹0" />
+                            tools:text="0 GP" />
 
                         <TextView
                             android:id="@+id/text_player_table_total_final"
@@ -439,7 +439,7 @@
                             android:gravity="center"
                             android:textColor="@color/text_primary"
                             android:textSize="9dp"
-                            tools:text="₹0" />
+                            tools:text="0 GP" />
 
                         <Space
                             android:layout_width="22dp"
@@ -559,173 +559,6 @@
                         android:overScrollMode="never"
                         tools:itemCount="1"
                         tools:listitem="@layout/item_balance_adjustment" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/card_settlement"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="12dp"
-                android:layout_marginTop="12dp"
-                android:visibility="gone"
-                app:cardBackgroundColor="@android:color/transparent"
-                app:cardCornerRadius="14dp"
-                app:cardElevation="3dp"
-                app:strokeColor="@color/accent_blue"
-                app:strokeWidth="1dp"
-                tools:visibility="visible">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_dashboard_game_card"
-                    android:orientation="vertical"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="10dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:paddingHorizontal="16dp">
-
-                        <ImageView
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="@drawable/circle_background"
-                            android:backgroundTint="@color/accent_blue"
-                            android:contentDescription="@null"
-                            android:padding="9dp"
-                            android:src="@drawable/ic_link_players"
-                            app:tint="@android:color/white" />
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/player_consolidation_settle_up"
-                                android:textColor="@color/text_primary"
-                                android:textSize="19sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="3dp"
-                                android:text="@string/player_consolidation_settlement_subtitle"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="12sp" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/layout_settlement_metrics"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginHorizontal="16dp"
-                        android:layout_marginTop="14dp"
-                        android:baselineAligned="false"
-                        android:orientation="horizontal">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginEnd="6dp"
-                            android:layout_weight="1"
-                            android:background="@drawable/professional_row_background"
-                            android:orientation="vertical"
-                            android:padding="12dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/player_consolidation_player_payments"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
-
-                            <TextView
-                                android:id="@+id/text_settlement_total"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:textColor="@color/success_green"
-                                android:textSize="17sp"
-                                android:textStyle="bold"
-                                tools:text="₹1,200" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:layout_weight="1"
-                            android:background="@drawable/professional_row_background"
-                            android:orientation="vertical"
-                            android:padding="12dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/player_consolidation_payment_count"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
-
-                            <TextView
-                                android:id="@+id/text_settlement_count"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:textColor="@color/accent_blue_light"
-                                android:textSize="17sp"
-                                android:textStyle="bold"
-                                tools:text="3" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/text_settlement_empty"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:paddingHorizontal="20dp"
-                        android:paddingTop="20dp"
-                        android:paddingBottom="14dp"
-                        android:text="@string/player_consolidation_all_settled"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:visibility="gone"
-                        tools:visibility="visible" />
-
-                    <TextView
-                        android:id="@+id/text_settlement_warning"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:paddingHorizontal="20dp"
-                        android:paddingTop="20dp"
-                        android:paddingBottom="14dp"
-                        android:text="@string/player_consolidation_settlement_unbalanced"
-                        android:textColor="@color/error_red"
-                        android:textSize="14sp"
-                        android:visibility="gone" />
-
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/recycler_settlement_payments"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:nestedScrollingEnabled="false"
-                        android:overScrollMode="never"
-                        tools:itemCount="3"
-                        tools:listitem="@layout/item_settlement_payment" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

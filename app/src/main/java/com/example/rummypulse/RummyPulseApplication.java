@@ -11,6 +11,7 @@ import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.SessionCacheCleaner;
+import com.example.rummypulse.utils.SafePlayPolicyStore;
 
 /**
  * Custom Application class to initialize Firebase and configure authentication persistence
@@ -69,9 +70,13 @@ public class RummyPulseApplication extends Application {
                     Log.d(TAG, "Global auth state: User is signed in");
                     // Save authentication state as backup
                     authStateManager.saveAuthState(user);
-                    gameRepository.startDashboardListener();
-                    com.example.rummypulse.data.GameDefaultsRepository.getInstance(RummyPulseApplication.this)
-                            .refreshFromServer(null);
+                    if (SafePlayPolicyStore.hasCurrentAcceptance(
+                            RummyPulseApplication.this, user.getUid())) {
+                        gameRepository.startDashboardListener();
+                        com.example.rummypulse.data.GameDefaultsRepository
+                                .getInstance(RummyPulseApplication.this)
+                                .refreshFromServer(null);
+                    }
                 } else {
                     Log.d(TAG, "Global auth state: User is signed out");
                     SessionCacheCleaner.clearAll(RummyPulseApplication.this);

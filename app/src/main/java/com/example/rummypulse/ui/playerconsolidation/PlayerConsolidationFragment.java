@@ -38,8 +38,7 @@ public class PlayerConsolidationFragment extends Fragment {
     private ConsolidationGameAdapter gameAdapter;
     private ConsolidatedPlayerAdapter consolidatedAdapter;
     private SelectedGamesStatusAdapter selectedGamesStatusAdapter;
-    private SettlementPaymentAdapter settlementPaymentAdapter;
-    private SettlementPlayerSummaryAdapter settlementPlayerSummaryAdapter;
+    private GamePointsPlayerSummaryAdapter gamePointsPlayerSummaryAdapter;
     private BalanceAdjustmentAdapter balanceAdjustmentAdapter;
     private List<GameItem> currentGames = new ArrayList<>();
     private boolean hasPlayerGroups;
@@ -112,27 +111,20 @@ public class PlayerConsolidationFragment extends Fragment {
         binding.recyclerConsolidatedPlayers.setAdapter(consolidatedAdapter);
         binding.recyclerConsolidatedPlayers.setNestedScrollingEnabled(false);
 
-        settlementPlayerSummaryAdapter = new SettlementPlayerSummaryAdapter();
-        settlementPlayerSummaryAdapter.setEditMappingsListener(() -> {
+        gamePointsPlayerSummaryAdapter = new GamePointsPlayerSummaryAdapter();
+        gamePointsPlayerSummaryAdapter.setEditMappingsListener(() -> {
             viewModel.editMappings();
-            binding.scrollMappingSettlement.post(
-                    () -> binding.scrollMappingSettlement.scrollTo(0, 0));
+            binding.scrollMappingGamePoints.post(
+                    () -> binding.scrollMappingGamePoints.scrollTo(0, 0));
         });
         GridLayoutManager playerSummaryLayoutManager =
                 new GridLayoutManager(requireContext(), 2);
         playerSummaryLayoutManager.setAutoMeasureEnabled(true);
-        binding.recyclerSettlementPlayerSummary.setLayoutManager(
+        binding.recyclerGamePointsPlayerSummary.setLayoutManager(
                 playerSummaryLayoutManager);
-        binding.recyclerSettlementPlayerSummary.setAdapter(
-                settlementPlayerSummaryAdapter);
-        binding.recyclerSettlementPlayerSummary.setNestedScrollingEnabled(false);
-
-        settlementPaymentAdapter = new SettlementPaymentAdapter();
-        LinearLayoutManager settlementLayoutManager = new LinearLayoutManager(requireContext());
-        settlementLayoutManager.setAutoMeasureEnabled(true);
-        binding.recyclerSettlementPayments.setLayoutManager(settlementLayoutManager);
-        binding.recyclerSettlementPayments.setAdapter(settlementPaymentAdapter);
-        binding.recyclerSettlementPayments.setNestedScrollingEnabled(false);
+        binding.recyclerGamePointsPlayerSummary.setAdapter(
+                gamePointsPlayerSummaryAdapter);
+        binding.recyclerGamePointsPlayerSummary.setNestedScrollingEnabled(false);
 
         balanceAdjustmentAdapter = new BalanceAdjustmentAdapter();
         balanceAdjustmentAdapter.setOnDeleteAdjustmentListener(
@@ -145,7 +137,7 @@ public class PlayerConsolidationFragment extends Fragment {
 
         viewModel.getPlayerGroups().observe(getViewLifecycleOwner(), groups -> {
             consolidatedAdapter.setGroups(groups);
-            settlementPlayerSummaryAdapter.setGroups(groups);
+            gamePointsPlayerSummaryAdapter.setGroups(groups);
             updatePlayerTableTotals(groups);
             boolean isEmpty = groups == null || groups.isEmpty();
             hasPlayerGroups = !isEmpty;
@@ -156,8 +148,6 @@ public class PlayerConsolidationFragment extends Fragment {
 
         viewModel.getSelectedEntryIds().observe(getViewLifecycleOwner(), this::updateEntrySelectionUi);
         viewModel.getConsolidationTotals().observe(getViewLifecycleOwner(), this::updateTotalsSummary);
-        viewModel.getSettlementResult().observe(
-                getViewLifecycleOwner(), this::updateSettlementUi);
         viewModel.getBalanceAdjustments().observe(getViewLifecycleOwner(), adjustments -> {
             balanceAdjustmentAdapter.setAdjustments(adjustments);
         });
@@ -176,8 +166,8 @@ public class PlayerConsolidationFragment extends Fragment {
                 return;
             }
             viewModel.confirmMappings();
-            binding.scrollMappingSettlement.post(
-                    () -> binding.scrollMappingSettlement.scrollTo(0, 0));
+            binding.scrollMappingGamePoints.post(
+                    () -> binding.scrollMappingGamePoints.scrollTo(0, 0));
         });
         binding.btnEditMappings.setOnClickListener(v -> viewModel.editMappings());
         binding.btnTransferAmount.setOnClickListener(v -> showTransferDialog());
@@ -227,7 +217,7 @@ public class PlayerConsolidationFragment extends Fragment {
         }
         boolean showMappingControls = hasPlayerGroups && !mappingsConfirmed;
         boolean allGamesCompleted = allSelectedGamesCompleted();
-        boolean showSettlement = hasPlayerGroups && mappingsConfirmed && allGamesCompleted;
+        boolean showGamePoints = hasPlayerGroups && mappingsConfirmed && allGamesCompleted;
 
         binding.textMapInstructions.setVisibility(
                 showMappingControls ? View.VISIBLE : View.GONE);
@@ -247,12 +237,11 @@ public class PlayerConsolidationFragment extends Fragment {
                 showMappingControls && allGamesCompleted ? View.VISIBLE : View.GONE);
         binding.btnEditMappings.setVisibility(View.GONE);
         binding.cardPlayerSummaryTable.setVisibility(
-                showSettlement ? View.VISIBLE : View.GONE);
+                showGamePoints ? View.VISIBLE : View.GONE);
         binding.consolidationTotalsSummary.getRoot().setVisibility(
-                showSettlement ? View.VISIBLE : View.GONE);
+                showGamePoints ? View.VISIBLE : View.GONE);
         binding.cardBalanceAdjustments.setVisibility(
-                showSettlement ? View.VISIBLE : View.GONE);
-        binding.cardSettlement.setVisibility(showSettlement ? View.VISIBLE : View.GONE);
+                showGamePoints ? View.VISIBLE : View.GONE);
         binding.fabRefreshGameData.setVisibility(
                 showMappingControls ? View.VISIBLE : View.GONE);
 
@@ -267,30 +256,30 @@ public class PlayerConsolidationFragment extends Fragment {
     private void updatePlayerTableTotals(List<ConsolidatedPlayerGroup> groups) {
         int gameEntries = 0;
         double gross = 0;
-        double contribution = 0;
+        double boardAdjustment = 0;
         double net = 0;
         double adjustment = 0;
         if (groups != null) {
             for (ConsolidatedPlayerGroup group : groups) {
                 gameEntries += group.getMembers().size();
-                gross += group.getTotalGrossAmount();
-                contribution += group.getTotalContribution();
-                net += group.getTotalNetAmount();
+                gross += group.getTotalBaseGamePoints();
+                boardAdjustment += group.getTotalBoardPoints();
+                net += group.getTotalFinalGamePoints();
                 adjustment += group.getNetAdjustment();
             }
         }
         double tolerance = gameEntries * 0.5;
         double normalizedGross = Math.abs(gross) <= tolerance ? 0 : gross;
-        double normalizedNet = Math.abs(net + contribution) <= tolerance
-                ? 0 : net + contribution;
-        double normalizedFinal = Math.abs(net + adjustment + contribution) <= tolerance
-                ? 0 : net + adjustment + contribution;
+        double normalizedNet = Math.abs(net + boardAdjustment) <= tolerance
+                ? 0 : net + boardAdjustment;
+        double normalizedFinal = Math.abs(net + adjustment + boardAdjustment) <= tolerance
+                ? 0 : net + adjustment + boardAdjustment;
 
         binding.textPlayerTableTotalGames.setText(String.valueOf(gameEntries));
         binding.textPlayerTableTotalGross.setText(
                 ConsolidationAmountFormatter.formatSignedAmount(normalizedGross));
-        binding.textPlayerTableTotalContribution.setText(
-                ConsolidationAmountFormatter.formatAmount(contribution));
+        binding.textPlayerTableTotalBoardPoints.setText(
+                ConsolidationAmountFormatter.formatAmount(boardAdjustment));
         binding.textPlayerTableTotalNet.setText(
                 ConsolidationAmountFormatter.formatSignedAmount(normalizedNet));
         binding.textPlayerTableTotalAdjustment.setText(
@@ -315,14 +304,14 @@ public class PlayerConsolidationFragment extends Fragment {
             binding.consolidationTotalsSummary.getRoot().setVisibility(View.GONE);
             return;
         }
-        binding.consolidationTotalsSummary.textTotalContribution.setText(
-                ConsolidationAmountFormatter.formatContribution(totals.getTotalContribution()));
-        binding.consolidationTotalsSummary.textTotalContribution.setTextColor(
-                ConsolidationAmountFormatter.getContributionColor(
-                        requireContext(), totals.getTotalContribution()));
-        binding.consolidationTotalsSummary.textSummaryContribution.setText(
-                ConsolidationAmountFormatter.formatContribution(
-                        totals.getTotalContribution()));
+        binding.consolidationTotalsSummary.textTotalBoardPoints.setText(
+                ConsolidationAmountFormatter.formatBoardAdjustment(totals.getTotalBoardPoints()));
+        binding.consolidationTotalsSummary.textTotalBoardPoints.setTextColor(
+                ConsolidationAmountFormatter.getBoardAdjustmentColor(
+                        requireContext(), totals.getTotalBoardPoints()));
+        binding.consolidationTotalsSummary.textSummaryBoardAdjustment.setText(
+                ConsolidationAmountFormatter.formatBoardAdjustment(
+                        totals.getTotalBoardPoints()));
         binding.consolidationTotalsSummary.textTotalGross.setText(
                 ConsolidationAmountFormatter.formatAmount(
                         totals.getTotalGrossWinnings()));
@@ -332,28 +321,6 @@ public class PlayerConsolidationFragment extends Fragment {
         binding.consolidationTotalsSummary.textNetPlayerBalance.setTextColor(
                 ConsolidationAmountFormatter.getSignedAmountColor(
                         requireContext(), totals.getNetPlayerBalance()));
-    }
-
-    private void updateSettlementUi(ConsolidatedSettlementCalculator.Result result) {
-        if (result == null) {
-            binding.cardSettlement.setVisibility(View.GONE);
-            return;
-        }
-
-        boolean unbalanced = result.getStatus()
-                == ConsolidatedSettlementCalculator.Status.UNBALANCED_INPUT;
-        boolean allSettled = result.getStatus()
-                == ConsolidatedSettlementCalculator.Status.ALL_SETTLED;
-
-        settlementPaymentAdapter.setPayments(result.getPayments());
-        binding.recyclerSettlementPayments.setVisibility(
-                unbalanced || allSettled ? View.GONE : View.VISIBLE);
-        binding.layoutSettlementMetrics.setVisibility(unbalanced ? View.GONE : View.VISIBLE);
-        binding.textSettlementEmpty.setVisibility(allSettled ? View.VISIBLE : View.GONE);
-        binding.textSettlementWarning.setVisibility(unbalanced ? View.VISIBLE : View.GONE);
-        binding.textSettlementTotal.setText(ConsolidationAmountFormatter.formatAmount(
-                result.getPlayerPaymentTotalPaise() / 100.0));
-        binding.textSettlementCount.setText(String.valueOf(result.getPayments().size()));
     }
 
     private void showMapPlayersStep(boolean initializeIfNeeded) {
@@ -534,7 +501,7 @@ public class PlayerConsolidationFragment extends Fragment {
         return getString(
                 R.string.player_consolidation_adjustment_option,
                 group.getDisplayName(),
-                ConsolidationAmountFormatter.formatSignedAmount(group.getAdjustedNetAmount()));
+                ConsolidationAmountFormatter.formatSignedAmount(group.getAdjustedFinalGamePoints()));
     }
 
     private static double parseTransferAmount(TextInputEditText amountInput) {

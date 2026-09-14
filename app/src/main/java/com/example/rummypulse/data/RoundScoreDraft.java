@@ -258,8 +258,8 @@ public final class RoundScoreDraft {
 
         GameData copy = new GameData();
         copy.setNumPlayers(copiedPlayers.size());
-        copy.setPointValue(source.getPointValue());
-        copy.setGstPercent(source.getGstPercent());
+        copy.setGamePointFactor(source.getGamePointFactor());
+        copy.setBoardAdjustmentPercent(source.getBoardAdjustmentPercent());
         copy.setPlayers(copiedPlayers);
         copy.setLastUpdated(source.getLastUpdated());
         copy.setVersion(source.getVersion());

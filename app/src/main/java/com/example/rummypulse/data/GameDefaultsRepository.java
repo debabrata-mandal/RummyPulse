@@ -18,10 +18,10 @@ import java.util.Map;
 /**
  * Singleton access to {@code gameDefaults_v2/config}.
  * <p>
- * For server-side enforcement when non-admins may write point/increment but not contribution or
+ * For server-side enforcement when non-admins may write point/increment but not boardAdjustment or
  * display-intermediate, Firestore rules should allow writes only if the caller is
- * {@code appUser_v2/{uid}.role == "admin_user"} or {@code defaultGstPercent} and
- * {@code displayIntermediateCalculation} are unchanged on merge updates.
+ * {@code appUser_v2/{uid}.role == "admin_user"} or {@code defaultBoardAdjustmentPercent} and
+ * {@code showLiveGamePoints} are unchanged on merge updates.
  */
 public class GameDefaultsRepository {
 
@@ -67,8 +67,8 @@ public class GameDefaultsRepository {
         return cachedResolved.getDefaultMidGameNewPlayerScoreIncrement();
     }
 
-    public boolean isDisplayIntermediateCalculationEnabled() {
-        return cachedResolved.isDisplayIntermediateCalculation();
+    public boolean isShowLiveGamePointsEnabled() {
+        return cachedResolved.isShowLiveGamePoints();
     }
 
     public boolean isShowDashboardApprovalCountsEnabled() {
@@ -76,8 +76,8 @@ public class GameDefaultsRepository {
     }
 
     /** Updates in-memory flag immediately (e.g. when the switch is toggled). */
-    public void setDisplayIntermediateCalculationCached(boolean enabled) {
-        cachedResolved.setDisplayIntermediateCalculation(enabled);
+    public void setShowLiveGamePointsCached(boolean enabled) {
+        cachedResolved.setShowLiveGamePoints(enabled);
     }
 
     public void setShowDashboardApprovalCountsCached(boolean enabled) {
@@ -88,21 +88,21 @@ public class GameDefaultsRepository {
         return cachedResolved.isShowDashboardLeaderboard();
     }
 
-    public boolean isShowDashboardLeaderboardAmountsEnabled() {
-        return cachedResolved.isShowDashboardLeaderboardAmounts();
+    public boolean isShowDashboardLeaderboardGamePointsEnabled() {
+        return cachedResolved.isShowDashboardLeaderboardGamePoints();
     }
 
-    /** See {@link GameDefaults#isLeaderboardAmountsVisible()}: both switches must be on. */
-    public boolean isLeaderboardAmountsVisible() {
-        return cachedResolved.isLeaderboardAmountsVisible();
+    /** See {@link GameDefaults#isLeaderboardGamePointsVisible()}: both switches must be on. */
+    public boolean isLeaderboardGamePointsVisible() {
+        return cachedResolved.isLeaderboardGamePointsVisible();
     }
 
     public void setShowDashboardLeaderboardCached(boolean enabled) {
         cachedResolved.setShowDashboardLeaderboard(enabled);
     }
 
-    public void setShowDashboardLeaderboardAmountsCached(boolean enabled) {
-        cachedResolved.setShowDashboardLeaderboardAmounts(enabled);
+    public void setShowDashboardLeaderboardGamePointsCached(boolean enabled) {
+        cachedResolved.setShowDashboardLeaderboardGamePoints(enabled);
     }
 
     /** Merge only {@code showDashboardLeaderboard} to Firestore. */
@@ -111,15 +111,16 @@ public class GameDefaultsRepository {
         return mergeFlag("showDashboardLeaderboard", enabled);
     }
 
-    /** Merge only {@code showDashboardLeaderboardAmounts} to Firestore. */
-    public com.google.android.gms.tasks.Task<Void> saveShowDashboardLeaderboardAmounts(boolean enabled) {
-        setShowDashboardLeaderboardAmountsCached(enabled);
-        return mergeFlag("showDashboardLeaderboardAmounts", enabled);
+    /** Merge only {@code showDashboardLeaderboardGamePoints} to Firestore. */
+    public com.google.android.gms.tasks.Task<Void> saveShowDashboardLeaderboardGamePoints(boolean enabled) {
+        setShowDashboardLeaderboardGamePointsCached(enabled);
+        return mergeFlag("showDashboardLeaderboardGamePoints", enabled);
     }
 
     /** Writes one boolean field, then re-reads so the cache reflects the stored document. */
     private com.google.android.gms.tasks.Task<Void> mergeFlag(String field, boolean enabled) {
         Map<String, Object> map = new HashMap<>();
+        map.put("schemaVersion", GameDataSchema.CURRENT_VERSION);
         map.put(field, enabled);
         return db.collection(COLLECTION).document(DOCUMENT_ID)
                 .set(map, SetOptions.merge())
@@ -140,11 +141,11 @@ public class GameDefaultsRepository {
                 });
     }
 
-    /** Merge only {@code displayIntermediateCalculation} to Firestore. */
-    public com.google.android.gms.tasks.Task<Void> saveDisplayIntermediateCalculation(boolean enabled) {
-        setDisplayIntermediateCalculationCached(enabled);
+    /** Merge only {@code showLiveGamePoints} to Firestore. */
+    public com.google.android.gms.tasks.Task<Void> saveShowLiveGamePoints(boolean enabled) {
+        setShowLiveGamePointsCached(enabled);
         Map<String, Object> map = new HashMap<>();
-        map.put("displayIntermediateCalculation", enabled);
+        map.put("showLiveGamePoints", enabled);
         return db.collection(COLLECTION).document(DOCUMENT_ID)
                 .set(map, SetOptions.merge())
                 .continueWithTask(task -> {
@@ -215,8 +216,8 @@ public class GameDefaultsRepository {
             if (raw == null) {
                 raw = new GameDefaults();
             }
-            if (snapshot.contains("displayIntermediateCalculation")) {
-                raw.setDisplayIntermediateCalculation(snapshot.getBoolean("displayIntermediateCalculation"));
+            if (snapshot.contains("showLiveGamePoints")) {
+                raw.setShowLiveGamePoints(snapshot.getBoolean("showLiveGamePoints"));
             }
             if (snapshot.contains("showDashboardApprovalCounts")) {
                 raw.setShowDashboardApprovalCounts(snapshot.getBoolean("showDashboardApprovalCounts"));
@@ -224,9 +225,9 @@ public class GameDefaultsRepository {
             if (snapshot.contains("showDashboardLeaderboard")) {
                 raw.setShowDashboardLeaderboard(snapshot.getBoolean("showDashboardLeaderboard"));
             }
-            if (snapshot.contains("showDashboardLeaderboardAmounts")) {
-                raw.setShowDashboardLeaderboardAmounts(
-                        snapshot.getBoolean("showDashboardLeaderboardAmounts"));
+            if (snapshot.contains("showDashboardLeaderboardGamePoints")) {
+                raw.setShowDashboardLeaderboardGamePoints(
+                        snapshot.getBoolean("showDashboardLeaderboardGamePoints"));
             }
             cachedResolved = GameDefaults.resolvedFromFirestoreBean(raw);
         } else {
@@ -240,14 +241,14 @@ public class GameDefaultsRepository {
     }
 
     /**
-     * @param gstPercentOrNull when non-null, written as {@code defaultGstPercent}; when null, that field is omitted from the merge so the server value is preserved (non-admin contribution saves).
-     * @param displayIntermediateOrNull when non-null, written as {@code displayIntermediateCalculation}; when null, omitted (non-admin saves).
+     * @param boardAdjustmentPercentOrNull when non-null, written as {@code defaultBoardAdjustmentPercent}; when null, that field is omitted from the merge so the server value is preserved (non-admin boardAdjustment saves).
+     * @param displayIntermediateOrNull when non-null, written as {@code showLiveGamePoints}; when null, omitted (non-admin saves).
      * @param showDashboardApprovalCountsOrNull when non-null, written as {@code showDashboardApprovalCounts}; when null, omitted.
      */
-    public com.google.android.gms.tasks.Task<Void> saveDefaults(double pointValue, long midGameIncrement,
+    public com.google.android.gms.tasks.Task<Void> saveDefaults(double gamePointFactor, long midGameIncrement,
             @Nullable Boolean displayIntermediateOrNull,
             @Nullable Boolean showDashboardApprovalCountsOrNull,
-            @Nullable Double gstPercentOrNull) {
+            @Nullable Double boardAdjustmentPercentOrNull) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         final String uid = user != null ? user.getUid() : "";
         final String updatedByName;
@@ -260,13 +261,13 @@ public class GameDefaultsRepository {
         }
 
         Map<String, Object> map = new HashMap<>();
-        map.put("defaultPointValue", pointValue);
-        if (gstPercentOrNull != null) {
-            map.put("defaultGstPercent", gstPercentOrNull);
+        map.put("defaultGamePointFactor", gamePointFactor);
+        if (boardAdjustmentPercentOrNull != null) {
+            map.put("defaultBoardAdjustmentPercent", boardAdjustmentPercentOrNull);
         }
         map.put("defaultMidGameNewPlayerScoreIncrement", midGameIncrement);
         if (displayIntermediateOrNull != null) {
-            map.put("displayIntermediateCalculation", displayIntermediateOrNull);
+            map.put("showLiveGamePoints", displayIntermediateOrNull);
         }
         if (showDashboardApprovalCountsOrNull != null) {
             map.put("showDashboardApprovalCounts", showDashboardApprovalCountsOrNull);
@@ -275,12 +276,12 @@ public class GameDefaultsRepository {
         map.put("updatedByUserId", uid);
         map.put("updatedByUserName", updatedByName);
 
-        final double gstForFailurePatch = gstPercentOrNull != null
-                ? gstPercentOrNull
-                : cachedResolved.getDefaultGstPercent();
+        final double boardAdjustmentForFailurePatch = boardAdjustmentPercentOrNull != null
+                ? boardAdjustmentPercentOrNull
+                : cachedResolved.getDefaultBoardAdjustmentPercent();
         final boolean displayForFailurePatch = displayIntermediateOrNull != null
                 ? displayIntermediateOrNull
-                : cachedResolved.isDisplayIntermediateCalculation();
+                : cachedResolved.isShowLiveGamePoints();
         final boolean countsForFailurePatch = showDashboardApprovalCountsOrNull != null
                 ? showDashboardApprovalCountsOrNull
                 : cachedResolved.isShowDashboardApprovalCounts();
@@ -300,10 +301,11 @@ public class GameDefaultsRepository {
                         applySnapshot((DocumentSnapshot) task.getResult());
                     } else {
                         GameDefaults patch = new GameDefaults();
-                        patch.setDefaultPointValue(pointValue);
-                        patch.setDefaultGstPercent(gstForFailurePatch);
+                        patch.setSchemaVersion(GameDataSchema.CURRENT_VERSION);
+                        patch.setDefaultGamePointFactor(gamePointFactor);
+                        patch.setDefaultBoardAdjustmentPercent(boardAdjustmentForFailurePatch);
                         patch.setDefaultMidGameNewPlayerScoreIncrement(midGameIncrement);
-                        patch.setDisplayIntermediateCalculation(displayForFailurePatch);
+                        patch.setShowLiveGamePoints(displayForFailurePatch);
                         patch.setShowDashboardApprovalCounts(countsForFailurePatch);
                         patch.setUpdatedByUserId(uid);
                         patch.setUpdatedByUserName(updatedByName);

@@ -16,8 +16,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
-public final class SettlementPlayerSummaryAdapter
-        extends RecyclerView.Adapter<SettlementPlayerSummaryAdapter.ViewHolder> {
+public final class GamePointsPlayerSummaryAdapter
+        extends RecyclerView.Adapter<GamePointsPlayerSummaryAdapter.ViewHolder> {
 
     private final List<ConsolidatedPlayerGroup> groups = new ArrayList<>();
     private Runnable editMappingsListener;
@@ -28,7 +28,7 @@ public final class SettlementPlayerSummaryAdapter
         if (updatedGroups != null) {
             groups.addAll(updatedGroups);
             groups.sort(Comparator
-                    .comparingDouble(ConsolidatedPlayerGroup::getAdjustedNetAmount)
+                    .comparingDouble(ConsolidatedPlayerGroup::getAdjustedFinalGamePoints)
                     .thenComparing(
                             ConsolidatedPlayerGroup::getDisplayName,
                             String.CASE_INSENSITIVE_ORDER));
@@ -44,7 +44,7 @@ public final class SettlementPlayerSummaryAdapter
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_settlement_player_summary, parent, false);
+                .inflate(R.layout.item_game_points_player_summary, parent, false);
         return new ViewHolder(view);
     }
 
@@ -60,7 +60,7 @@ public final class SettlementPlayerSummaryAdapter
         holder.games.setText(String.valueOf(gameCount));
         holder.gamesSubtitle.setText(holder.itemView.getContext().getResources().getQuantityString(
                 R.plurals.player_consolidation_game_count_plural, gameCount, gameCount));
-        bindSigned(holder.finalBalance, group.getAdjustedNetAmount());
+        bindSigned(holder.finalBalance, group.getAdjustedFinalGamePoints());
         holder.itemView.setOnClickListener(v -> {
             if (editMappingsListener != null) {
                 editMappingsListener.run();

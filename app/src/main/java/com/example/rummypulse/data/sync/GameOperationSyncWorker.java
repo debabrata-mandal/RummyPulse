@@ -7,7 +7,6 @@ import androidx.annotation.NonNull;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
-import com.example.rummypulse.data.PlayerStatsRecorder;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -73,7 +72,6 @@ public class GameOperationSyncWorker extends Worker {
                             System.currentTimeMillis()));
                     dao.deleteOperation(operation.operationId);
                 });
-                recordPlayerStats(gameId, remote);
                 Log.i(TAG, "Synchronized game operation: " + operation.type);
             } catch (TimeoutException timeout) {
                 dao.updateOperationState(
@@ -110,34 +108,6 @@ public class GameOperationSyncWorker extends Worker {
             }
         }
         return Result.retry();
-    }
-
-    /**
-     * Updates the pre-aggregated dashboard performance buckets.
-     *
-     * <p>Only runs when the game is entering or leaving {@code Completed}, so ordinary round saves
-     * cost nothing. Failures are logged and swallowed: the authoritative game state is already
-     * committed, and the recorder is idempotent so the next completion-affecting write repairs any
-     * gap.
-     */
-    private void recordPlayerStats(String gameId, GameOperationRemoteApplier.Result remote) {
-        if (!PlayerStatsRecorder.affectsStats(remote.previousStatus, remote.gameData)) {
-            return;
-        }
-        try {
-            Tasks.await(
-                    PlayerStatsRecorder.record(
-                            FirebaseFirestore.getInstance(),
-                            gameId,
-                            remote.gameData,
-                            remote.detachedUserIds),
-                    REMOTE_TIMEOUT_SECONDS,
-                    TimeUnit.SECONDS);
-        } catch (InterruptedException interrupted) {
-            Thread.currentThread().interrupt();
-        } catch (Exception failure) {
-            Log.w(TAG, "Could not update player stats", failure);
-        }
     }
 
     private static boolean isTransient(Throwable error) {

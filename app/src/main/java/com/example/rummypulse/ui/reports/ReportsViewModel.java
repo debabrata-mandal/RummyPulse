@@ -6,7 +6,7 @@ import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModel;
 
 import com.example.rummypulse.data.GameRepository;
-import com.example.rummypulse.data.MonthlyPointValueReport;
+import com.example.rummypulse.data.MonthlyGamePointFactorReport;
 
 import java.text.DateFormatSymbols;
 import java.util.List;
@@ -14,20 +14,20 @@ import java.util.Locale;
 
 public class ReportsViewModel extends ViewModel {
 
-    private final MutableLiveData<List<MonthlyPointValueReport>> mMonthlyPointValueReports;
+    private final MutableLiveData<List<MonthlyGamePointFactorReport>> mMonthlyGamePointFactorReports;
     private final MutableLiveData<Boolean> mIsLoading;
     private final MutableLiveData<String> mError;
     private final MutableLiveData<String> mUiMessage;
     private final GameRepository gameRepository;
 
-    private final Observer<List<MonthlyPointValueReport>> summariesObserver;
+    private final Observer<List<MonthlyGamePointFactorReport>> summariesObserver;
     private final Observer<String> errorObserver;
 
     private boolean pendingPullRefreshToast;
     private String pendingSuccessMessage;
 
     public ReportsViewModel() {
-        mMonthlyPointValueReports = new MutableLiveData<>();
+        mMonthlyGamePointFactorReports = new MutableLiveData<>();
         mIsLoading = new MutableLiveData<>();
         mError = new MutableLiveData<>();
         mUiMessage = new MutableLiveData<>();
@@ -37,7 +37,7 @@ public class ReportsViewModel extends ViewModel {
             if (list == null) {
                 return;
             }
-            mMonthlyPointValueReports.setValue(list);
+            mMonthlyGamePointFactorReports.setValue(list);
             mIsLoading.setValue(false);
             if (pendingPullRefreshToast) {
                 mUiMessage.setValue("Reports refreshed");
@@ -62,8 +62,8 @@ public class ReportsViewModel extends ViewModel {
         loadReportsData();
     }
 
-    public LiveData<List<MonthlyPointValueReport>> getMonthlyPointValueReports() {
-        return mMonthlyPointValueReports;
+    public LiveData<List<MonthlyGamePointFactorReport>> getMonthlyGamePointFactorReports() {
+        return mMonthlyGamePointFactorReports;
     }
 
     public LiveData<Boolean> getIsLoading() {

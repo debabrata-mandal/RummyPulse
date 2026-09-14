@@ -53,17 +53,11 @@ test("game data preserves player slots scores economics and other users", () => 
   const before = {
     revision: 17,
     editGeneration: 4,
-    statsApplied: {
-      monthKey: "2026-09",
-      byUser: {
-        [UID_A]: {games: 1, netAmount: 25},
-        "user-b": {games: 1, netAmount: -25},
-      },
-    },
     data: {
+      schemaVersion: 3,
       numPlayers: 3,
-      pointValue: 2,
-      gstPercent: 10,
+      gamePointFactor: 2,
+      boardAdjustmentPercent: 10,
       playerOrder: ["p1", "p2", "p3"],
       playersById: {
         p1: {playerId: "p1", name: "Alice", userId: UID_A, scores: [10, 20]},
@@ -77,8 +71,8 @@ test("game data preserves player slots scores economics and other users", () => 
 
   assert.equal(result.changed, true);
   assert.equal(result.data.data.numPlayers, before.data.numPlayers);
-  assert.equal(result.data.data.pointValue, before.data.pointValue);
-  assert.equal(result.data.data.gstPercent, before.data.gstPercent);
+  assert.equal(result.data.data.gamePointFactor, before.data.gamePointFactor);
+  assert.equal(result.data.data.boardAdjustmentPercent, before.data.boardAdjustmentPercent);
   assert.deepEqual(result.data.data.playerOrder, before.data.playerOrder);
   assert.deepEqual(result.data.data.playersById.p1.scores,
       before.data.playersById.p1.scores);
@@ -87,15 +81,13 @@ test("game data preserves player slots scores economics and other users", () => 
   assert.equal(result.data.data.playersById.p1.name, "Deleted player");
   assert.deepEqual(result.data.data.playersById.p2, before.data.playersById.p2);
   assert.deepEqual(result.data.data.playersById.p3, before.data.playersById.p3);
-  assert.equal(result.data.statsApplied.byUser[UID_A], undefined);
-  assert.deepEqual(result.data.statsApplied.byUser["user-b"],
-      before.statsApplied.byUser["user-b"]);
   assert.equal(result.data.revision, 17);
   assert.equal(result.data.editGeneration, 4);
 });
 
 test("legacy player arrays are anonymized without removing a row", () => {
   const before = {
+    schemaVersion: 3,
     data: {
       numPlayers: 2,
       players: [
@@ -116,9 +108,9 @@ test("approved game keeps all calculation inputs and other players", () => {
   const before = {
     gameId: "game-1",
     numPlayers: 3,
-    pointValue: 5,
-    gstPercent: 8,
-    gstAmount: "14",
+    gamePointFactor: 5,
+    boardAdjustmentPercent: 8,
+    boardPoints: 14,
     players: [
       {name: "Alice", userId: UID_A, score: 20},
       {name: "Bob", userId: "user-b", score: 40},
@@ -133,9 +125,9 @@ test("approved game keeps all calculation inputs and other players", () => {
   assert.deepEqual(result.data.players[1], before.players[1]);
   assert.deepEqual(result.data.players[2], before.players[2]);
   assert.equal(result.data.numPlayers, 3);
-  assert.equal(result.data.pointValue, 5);
-  assert.equal(result.data.gstPercent, 8);
-  assert.equal(result.data.gstAmount, "14");
+  assert.equal(result.data.gamePointFactor, 5);
+  assert.equal(result.data.boardAdjustmentPercent, 8);
+  assert.equal(result.data.boardPoints, 14);
 });
 
 test("name-only legacy approved rows are not guessed", () => {
@@ -148,7 +140,6 @@ test("name-only legacy approved rows are not guessed", () => {
 test("anonymization is idempotent", () => {
   const first = anonymizeGameDataDocument({
     data: {playersById: {p1: {name: "Alice", userId: UID_A, scores: [10]}}},
-    statsApplied: {byUser: {[UID_A]: {games: 1}}},
   }, UID_A);
   const second = anonymizeGameDataDocument(first.data, UID_A);
   assert.equal(first.changed, true);

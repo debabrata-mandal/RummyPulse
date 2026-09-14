@@ -94,7 +94,7 @@
                         android:text="@string/game_defaults_section_values" />
 
                     <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/layout_default_point_value"
+                        android:id="@+id/layout_default_game_point_factor"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -110,7 +110,7 @@
                         app:startIconTint="@color/accent_blue_light">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/edit_default_point_value"
+                            android:id="@+id/edit_default_game_point_factor"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="numberDecimal"
@@ -119,12 +119,12 @@
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/layout_default_contribution"
+                        android:id="@+id/layout_default_board_adjustment"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:hint="@string/game_defaults_contribution_hint"
+                        android:hint="@string/game_defaults_board_adjustment_hint"
                         app:boxCornerRadiusBottomEnd="10dp"
                         app:boxCornerRadiusBottomStart="10dp"
                         app:boxCornerRadiusTopEnd="10dp"
@@ -135,7 +135,7 @@
                         app:startIconTint="@color/accent_blue_light">
 
                         <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/edit_default_contribution"
+                            android:id="@+id/edit_default_board_adjustment"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="number"
@@ -192,7 +192,7 @@
                             android:orientation="vertical">
 
                             <com.google.android.material.switchmaterial.SwitchMaterial
-                                android:id="@+id/switch_display_intermediate_calculation"
+                                android:id="@+id/switch_show_live_game_points"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:checked="true"
@@ -329,11 +329,11 @@
                             android:orientation="vertical">
 
                             <com.google.android.material.switchmaterial.SwitchMaterial
-                                android:id="@+id/switch_show_dashboard_leaderboard_amounts"
+                                android:id="@+id/switch_show_dashboard_leaderboard_game_points"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:checked="true"
-                                android:text="@string/game_defaults_show_dashboard_leaderboard_amounts_title"
+                                android:text="@string/game_defaults_show_dashboard_leaderboard_game_points_title"
                                 android:textColor="@color/text_primary"
                                 android:textSize="15sp" />
 

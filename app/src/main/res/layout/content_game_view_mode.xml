@@ -87,7 +87,7 @@
                 android:paddingEnd="16dp"
                 android:paddingBottom="8dp">
 
-                <!-- Settlement hero -->
+                <!-- Game_Points hero -->
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -124,7 +124,7 @@
                                 android:orientation="vertical">
 
                                 <TextView
-                                    android:id="@+id/view_mode_settlement_status"
+                                    android:id="@+id/view_mode_game_points_status"
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:ellipsize="end"
@@ -189,7 +189,7 @@
                                 android:orientation="vertical"
                                 android:padding="8dp">
                                 <TextView android:id="@+id/view_mode_balance_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="@string/standing_balance" android:textColor="@color/view_text_muted" android:textSize="8dp" android:textStyle="bold" />
-                                <TextView android:id="@+id/view_mode_player_balance" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" tools:text="+₹379" android:textColor="@color/view_mint" android:textSize="15sp" android:textStyle="bold" />
+                                <TextView android:id="@+id/view_mode_player_balance" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:gravity="center" tools:text="+379 GP" android:textColor="@color/view_mint" android:textSize="15sp" android:textStyle="bold" />
                             </LinearLayout>
 
                             <LinearLayout
@@ -272,8 +272,8 @@
                                 android:layout_weight="1"
                                 android:gravity="center"
                                 android:orientation="vertical">
-                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="@string/point_value_label" android:textColor="@color/view_text_muted" android:textSize="8dp" android:textStyle="bold" />
-                                <TextView android:id="@+id/view_mode_point_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" tools:text="₹0.5" android:textColor="@color/view_violet_light" android:textSize="14sp" android:textStyle="bold" />
+                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="@string/game_point_factor_label" android:textColor="@color/view_text_muted" android:textSize="8dp" android:textStyle="bold" />
+                                <TextView android:id="@+id/view_mode_game_point_factor" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" tools:text="0.5×" android:textColor="@color/view_violet_light" android:textSize="14sp" android:textStyle="bold" />
                             </LinearLayout>
 
                             <View
@@ -287,8 +287,8 @@
                                 android:layout_weight="1"
                                 android:gravity="center"
                                 android:orientation="vertical">
-                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="@string/player_consolidation_contribution_collected" android:textColor="@color/view_text_muted" android:textSize="8dp" android:textStyle="bold" />
-                                <TextView android:id="@+id/view_mode_contribution_summary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" tools:text="10% · ₹94" android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
+                                <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="@string/player_consolidation_board_adjustment_collected" android:textColor="@color/view_text_muted" android:textSize="8dp" android:textStyle="bold" />
+                                <TextView android:id="@+id/view_mode_board_adjustment_summary" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" tools:text="10% · 94 GP" android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
                             </LinearLayout>
 
                             <View
@@ -311,9 +311,9 @@
 
             </LinearLayout>
 
-            <!-- Round scores, settlement, and administrative content scroll together. -->
+            <!-- Round scores, game_points, and administrative content scroll together. -->
             <androidx.core.widget.NestedScrollView
-                android:id="@+id/view_mode_settlement_scroll"
+                android:id="@+id/view_mode_game_points_scroll"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
@@ -438,12 +438,12 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <!-- Settlement leaderboard -->
+                <!-- Game_Points leaderboard -->
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="26dp"
-                    android:text="@string/settlement_overview_title"
+                    android:text="@string/game_points_overview_title"
                     android:textColor="@color/view_text_primary"
                     android:textSize="19sp"
                     android:textStyle="bold" />
@@ -462,7 +462,7 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="4dp" android:paddingBottom="7dp">
-                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/edit_settlement_direction_receives" android:textColor="@color/view_mint" android:textSize="10dp" android:textStyle="bold" />
+                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/edit_game_points_direction_receives" android:textColor="@color/view_mint" android:textSize="10dp" android:textStyle="bold" />
                             <TextView android:id="@+id/view_mode_receives_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_view_amount_receive" android:minWidth="24dp" android:gravity="center" android:paddingHorizontal="6dp" android:paddingVertical="3dp" tools:text="0" android:textColor="@color/view_mint" android:textSize="9dp" android:textStyle="bold" />
                         </LinearLayout>
                         <LinearLayout android:id="@+id/view_mode_positive_rows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
@@ -476,7 +476,7 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="4dp" android:paddingBottom="7dp">
-                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/edit_settlement_direction_pays" android:textColor="@color/view_coral" android:textSize="10dp" android:textStyle="bold" />
+                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/edit_game_points_direction_pays" android:textColor="@color/view_coral" android:textSize="10dp" android:textStyle="bold" />
                             <TextView android:id="@+id/view_mode_pays_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_view_amount_pay" android:minWidth="24dp" android:gravity="center" android:paddingHorizontal="6dp" android:paddingVertical="3dp" tools:text="0" android:textColor="@color/view_coral" android:textSize="9dp" android:textStyle="bold" />
                         </LinearLayout>
                         <LinearLayout android:id="@+id/view_mode_negative_rows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
@@ -485,7 +485,7 @@
                 </LinearLayout>
 
                 <LinearLayout
-                    android:id="@+id/view_mode_hidden_settlements"
+                    android:id="@+id/view_mode_hidden_game_points"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
