@@ -53,7 +53,6 @@ import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.AccountSignOut;
 import com.example.rummypulse.utils.SessionCacheCleaner;
 import com.example.rummypulse.utils.SafePlayPolicyStore;
-import com.example.rummypulse.utils.SchemaVersionStore;
 import com.example.rummypulse.utils.ModernToast;
 import com.example.rummypulse.utils.ModernUpdateChecker;
 import com.example.rummypulse.utils.VersionGate;
@@ -155,13 +154,6 @@ public class MainActivity extends AppCompatActivity {
             }
 
             startActivity(new Intent(this, LoginActivity.class));
-            finish();
-            return;
-        }
-        if (!SchemaVersionStore.isPrepared(this)) {
-            Intent schemaIntent = new Intent(this, SchemaMigrationActivity.class);
-            schemaIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(schemaIntent);
             finish();
             return;
         }

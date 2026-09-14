@@ -67,13 +67,6 @@
     <string name="safe_play_retry">Retry</string>
     <string name="safe_play_load_error">RummyPulse must verify this confirmation online before you can continue. Check your connection and retry, or sign out.</string>
     <string name="safe_play_acceptance_error">Your confirmation could not be saved. Check your connection and try again.</string>
-    <string name="schema_gate_title">RummyPulse maintenance</string>
-    <string name="schema_gate_checking">Checking whether the Game Points data upgrade is ready…</string>
-    <string name="schema_gate_pending">The Game Points data upgrade is still in progress. Please try again later.</string>
-    <string name="schema_gate_check_error">RummyPulse could not verify the data upgrade. Check your connection and try again.</string>
-    <string name="schema_gate_cache_error">RummyPulse could not safely clear older game data on this device. Close the app and try again.</string>
-    <string name="schema_gate_retry">Try again</string>
-    <string name="schema_gate_exit">Exit</string>
     <string name="voice_announcements_language_section_title">Announcement language</string>
     <string name="voice_announcements_language_section_subtitle">Choose the voice language for score callouts.</string>
     <string name="voice_announcements_language_bengali">বাংলা (Bengali)</string>

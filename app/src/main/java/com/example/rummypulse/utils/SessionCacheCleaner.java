@@ -10,7 +10,6 @@ import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.PlayerLeaderboardRepository;
 import com.example.rummypulse.data.sync.GameOperationDatabase;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.android.gms.tasks.Task;
 
 /**
  * Wipes session-scoped caches when the signed-in account changes so the next user never inherits
@@ -41,24 +40,6 @@ public final class SessionCacheCleaner {
         clearUserScopedPreferences(appContext);
         GameOperationDatabase.clearSessionData(appContext);
         clearFirestorePersistence();
-    }
-
-    /**
-     * Clears only game/schema caches during a coordinated schema cutover. Authentication,
-     * account-profile state and safe-play acceptance remain intact.
-     */
-    public static Task<Void> clearForSchemaMigration(Context context) {
-        Context appContext = context.getApplicationContext();
-        Log.d(TAG, "Clearing game caches for schema migration");
-        GameRepository.getDashboardInstance().clearSessionState();
-        PlayerLeaderboardRepository.getInstance().clearSessionState();
-        GameDefaultsRepository.getInstance(appContext).clearSessionCache();
-        context.getSharedPreferences(PREFS_EDIT_ACCESS, Context.MODE_PRIVATE).edit().clear().apply();
-        context.getSharedPreferences(PREFS_ROUND_DRAFTS, Context.MODE_PRIVATE).edit().clear().apply();
-        context.getSharedPreferences(PREFS_PENDING_ROUNDS, Context.MODE_PRIVATE).edit().clear().apply();
-        context.getSharedPreferences(PREFS_MEMBERSHIP_BACKFILL, Context.MODE_PRIVATE).edit().clear().apply();
-        GameOperationDatabase.clearSessionData(appContext);
-        return FirebaseFirestore.getInstance().clearPersistence();
     }
 
     private static void clearUserScopedPreferences(Context context) {

@@ -54,11 +54,6 @@
             android:theme="@style/Theme.RummyPulse.NoActionBar" />
 
         <activity
-            android:name=".SchemaMigrationActivity"
-            android:exported="false"
-            android:theme="@style/Theme.RummyPulse.NoActionBar" />
-            
-        <activity
             android:name=".JoinGameActivity"
             android:exported="false"
             android:label="@string/join_game_title"

@@ -17,7 +17,6 @@ import com.example.rummypulse.databinding.ActivitySafePlayPolicyBinding;
 import com.example.rummypulse.utils.AccountSignOut;
 import com.example.rummypulse.utils.SafePlayPolicyStore;
 import com.example.rummypulse.utils.SessionCacheCleaner;
-import com.example.rummypulse.utils.SchemaVersionStore;
 import com.example.rummypulse.utils.VersionGate;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -42,13 +41,6 @@ public class SafePlayPolicyActivity extends AppCompatActivity {
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) {
             returnToLogin(false);
-            return;
-        }
-        if (!SchemaVersionStore.isPrepared(this)) {
-            Intent intent = new Intent(this, SchemaMigrationActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
             return;
         }
         if (SafePlayPolicyStore.hasCurrentAcceptance(this, currentUser.getUid())) {

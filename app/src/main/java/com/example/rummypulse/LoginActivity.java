@@ -28,7 +28,6 @@ import com.example.rummypulse.utils.AccountSignOut;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.VersionGate;
 import com.example.rummypulse.utils.SafePlayPolicyStore;
-import com.example.rummypulse.utils.SchemaVersionStore;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -285,9 +284,7 @@ public class LoginActivity extends AppCompatActivity {
     private void startAuthenticatedDestination() {
         FirebaseUser user = mAuth != null ? mAuth.getCurrentUser() : null;
         Class<?> destination;
-        if (!SchemaVersionStore.isPrepared(this)) {
-            destination = SchemaMigrationActivity.class;
-        } else if (user != null
+        if (user != null
                 && SafePlayPolicyStore.hasCurrentAcceptance(this, user.getUid())) {
             destination = MainActivity.class;
         } else {
