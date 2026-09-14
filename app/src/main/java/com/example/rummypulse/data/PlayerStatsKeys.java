@@ -14,7 +14,7 @@ import java.util.TimeZone;
  */
 public final class PlayerStatsKeys {
 
-    /** Fixed reporting zone. The app settles in INR and plays on IST evenings. */
+    /** Fixed reporting zone used for consistent game-day and monthly boundaries. */
     public static final TimeZone ZONE = TimeZone.getTimeZone("Asia/Kolkata");
 
     private PlayerStatsKeys() {

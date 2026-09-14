@@ -17,12 +17,12 @@ public final class ConsolidationAmountFormatter {
     public static String formatSignedAmount(double amount) {
         long rounded = Math.round(amount);
         if (rounded > 0) {
-            return "+₹" + rounded;
+            return "+" + rounded + " GP";
         }
         if (rounded < 0) {
-            return "₹" + rounded;
+            return rounded + " GP";
         }
-        return "₹0";
+        return "0 GP";
     }
 
     public static String formatContribution(double amount) {
@@ -32,7 +32,7 @@ public final class ConsolidationAmountFormatter {
     public static String formatAmount(double amount) {
         BigDecimal rounded = BigDecimal.valueOf(amount).setScale(2, RoundingMode.HALF_UP);
         String value = rounded.stripTrailingZeros().toPlainString();
-        return "₹" + value;
+        return value + " GP";
     }
 
     public static int getSignedAmountColor(Context context, double amount) {

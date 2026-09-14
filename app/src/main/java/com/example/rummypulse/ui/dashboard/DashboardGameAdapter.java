@@ -172,10 +172,12 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         // Set point value with color coding
         String pointValue = item.getPointValue();
         if (pointValue == null || pointValue.isEmpty()) {
-            holder.pointValueText.setText(context.getString(R.string.format_rupee_amount_zero));
+            holder.pointValueText.setText(context.getString(
+                    R.string.format_game_point_factor, "0"));
             holder.pointValueText.setTextColor(holder.itemView.getContext().getColor(R.color.success_green));
         } else {
-            holder.pointValueText.setText(context.getString(R.string.format_rupee_amount, pointValue));
+            holder.pointValueText.setText(context.getString(
+                    R.string.format_game_point_factor, pointValue));
             
             // Color code based on point value
             try {

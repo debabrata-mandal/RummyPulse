@@ -775,62 +775,29 @@ public class JoinGameActivity extends AppCompatActivity {
             // Build announcement based on current locale
             StringBuilder announcement = new StringBuilder();
             
-            if (currentTtsLocale.getLanguage().equals("bn")) {
-                // Bengali announcement
-                announcement.append("খেলা শেষ। চূড়ান্ত ফলাফল। ");
-                
-                // Announce each player's results
-                for (int i = 0; i < standings.size(); i++) {
-                    PlayerStanding standing = standings.get(i);
-                    String playerName = standing.player.getName();
-                    int totalScore = standing.totalScore;
-                    double netAmount = standing.netAmount;
-                    
-                    announcement.append(playerName).append(" মোট স্কোর ").append(totalScore).append(" পয়েন্ট। ");
-                    
-                    if (netAmount > 0) {
-                        announcement.append("পাবেন ").append(String.format(Locale.getDefault(), "%.0f", netAmount)).append(" টাকা। ");
-                    } else if (netAmount < 0) {
-                        announcement.append("দিতে হবে ").append(String.format(Locale.getDefault(), "%.0f", Math.abs(netAmount))).append(" টাকা। ");
-                    } else {
-                        announcement.append("কোন পেমেন্ট নেই। ");
-                    }
-                }
-                
-                // Announce total contribution
-                if (totalContribution > 0) {
-                    announcement.append("মোট অবদান সংগৃহীত ")
-                               .append(String.format(Locale.getDefault(), "%.0f", totalContribution))
-                               .append(" টাকা।");
-                }
-            } else {
-                // English announcement
-                announcement.append("Game over. Final results. ");
-                
-                // Announce each player's results
-                for (int i = 0; i < standings.size(); i++) {
-                    PlayerStanding standing = standings.get(i);
-                    String playerName = standing.player.getName();
-                    int totalScore = standing.totalScore;
-                    double netAmount = standing.netAmount;
-                    
-                    announcement.append(playerName).append(" total score ").append(totalScore).append(" point. ");
-                    
-                    if (netAmount > 0) {
-                        announcement.append("Will receive ").append(String.format(Locale.getDefault(), "%.0f", netAmount)).append(" rupees. ");
-                    } else if (netAmount < 0) {
-                        announcement.append("Will pay ").append(String.format(Locale.getDefault(), "%.0f", Math.abs(netAmount))).append(" rupees. ");
-                    } else {
-                        announcement.append("No payment. ");
-                    }
-                }
-                
-                // Announce total contribution
-                if (totalContribution > 0) {
-                    announcement.append("Total contribution collected is ")
-                               .append(String.format(Locale.getDefault(), "%.0f", totalContribution))
-                               .append(" rupees.");
-                }
+            boolean bengali = currentTtsLocale.getLanguage().equals("bn");
+            announcement.append(getString(bengali
+                    ? R.string.game_completion_intro_bn
+                    : R.string.game_completion_intro_en));
+            for (PlayerStanding standing : standings) {
+                String result = String.format(
+                        Locale.getDefault(), "%+.0f", standing.netAmount);
+                announcement.append(getString(
+                        bengali
+                                ? R.string.game_completion_player_bn
+                                : R.string.game_completion_player_en,
+                        standing.player.getName(),
+                        standing.totalScore,
+                        result));
+            }
+            if (totalContribution > 0) {
+                String boardPoints = String.format(
+                        Locale.getDefault(), "%.0f", totalContribution);
+                announcement.append(getString(
+                        bengali
+                                ? R.string.game_completion_board_bn
+                                : R.string.game_completion_board_en,
+                        boardPoints));
             }
             
             // Queue the announcement (don't speak directly)
@@ -1082,7 +1049,7 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView scoreText = standingsRowView.findViewById(R.id.text_score);
             scoreText.setText("0");
 
-            // Set zero net amount only (simplified display)
+            // Set zero final points only (simplified display)
             TextView netAmountText = standingsRowView.findViewById(R.id.text_net_amount);
             applyStandingNetAmountPlaceholder(netAmountText);
 
@@ -1733,9 +1700,13 @@ public class JoinGameActivity extends AppCompatActivity {
         progress.setProgress(completedRounds);
         totalPlayers.setText(String.valueOf(
                 gameData.getPlayers() == null ? 0 : gameData.getPlayers().size()));
-        pointValue.setText(getString(R.string.format_rupee_amount, formatPointValue(gameData.getPointValue())));
-        contributionSummary.setText(String.format(Locale.getDefault(), "%.0f%% · ₹%d",
-                gameData.getGstPercent(), Math.round(calculateTotalContribution(gameData))));
+        pointValue.setText(getString(
+                R.string.format_game_point_factor,
+                formatPointValue(gameData.getPointValue())));
+        contributionSummary.setText(getString(
+                R.string.format_board_points_summary,
+                gameData.getGstPercent(),
+                Math.round(calculateTotalContribution(gameData))));
         renderCurrentPlayerPerformance(gameData, settlementStatus,
                 playerPosition, balanceLabel, playerBalance);
         renderViewModeSettlementRows(gameData);
@@ -1802,16 +1773,16 @@ public class JoinGameActivity extends AppCompatActivity {
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
         } else if (focusStanding.netAmount > 0) {
             balanceView.setText(getString(
-                    R.string.format_rupee_amount_positive,
+                    R.string.format_game_points_positive,
                     String.format(Locale.getDefault(), "%.0f", focusStanding.netAmount)));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
         } else if (focusStanding.netAmount < 0) {
             balanceView.setText(getString(
-                    R.string.format_rupee_amount_negative,
+                    R.string.format_game_points_negative,
                     String.format(Locale.getDefault(), "%.0f", Math.abs(focusStanding.netAmount))));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
         } else {
-            balanceView.setText("₹0");
+            balanceView.setText(R.string.game_points_zero);
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
         }
     }
@@ -1913,7 +1884,7 @@ public class JoinGameActivity extends AppCompatActivity {
             LinearLayout targetRows;
             // The settlement direction is safe to expose because scores are already
             // visible. Keep restricted amounts hidden, but still place each player in
-            // the correct receives/pays column using the internally calculated net.
+            // the correct positive/negative column using the internally calculated result.
             if (standing.netAmount < 0) {
                 targetRows = negativeRows;
                 negativeCount++;
@@ -1953,20 +1924,20 @@ public class JoinGameActivity extends AppCompatActivity {
                 }
             } else if (standing.netAmount > 0) {
                 amount.setText(getString(
-                        R.string.format_rupee_amount_positive,
+                        R.string.format_game_points_positive,
                         String.format(Locale.getDefault(), "%.0f", standing.netAmount)));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_receive);
                 direction.setText(getString(R.string.edit_settlement_direction_receives));
             } else if (standing.netAmount < 0) {
                 amount.setText(getString(
-                        R.string.format_rupee_amount_negative,
+                        R.string.format_game_points_negative,
                         String.format(Locale.getDefault(), "%.0f", Math.abs(standing.netAmount))));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_pay);
                 direction.setText(getString(R.string.edit_settlement_direction_pays));
             } else {
-                amount.setText(getString(R.string.format_rupee_amount_rounded, 0));
+                amount.setText(getString(R.string.format_game_points_rounded, 0));
                 amount.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
                 amount.setBackgroundResource(R.drawable.bg_view_amount_neutral);
                 direction.setText(getString(R.string.edit_settlement_direction_even));
@@ -2141,7 +2112,8 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Update Point Value
         binding.textHeaderPointValue.setText(getString(
-                R.string.format_rupee_amount, formatPointValue(gameData.getPointValue())));
+                R.string.format_game_point_factor,
+                formatPointValue(gameData.getPointValue())));
         
         // Update Number of Players
         int numberOfPlayers = gameData.getPlayers() != null ? gameData.getPlayers().size() : 0;
@@ -2165,7 +2137,7 @@ public class JoinGameActivity extends AppCompatActivity {
         // Update Total Contribution Amount (rounded, no decimals)
         double totalContribution = calculateTotalContribution(gameData);
         binding.textHeaderTotalContribution.setText(getString(
-                R.string.format_rupee_amount_rounded, Math.round(totalContribution)));
+                R.string.format_game_points_rounded, Math.round(totalContribution)));
 
         renderEditHeaderPerformance(gameData);
         
@@ -2214,18 +2186,18 @@ public class JoinGameActivity extends AppCompatActivity {
                     ContextCompat.getColor(this, R.color.view_text_muted));
         } else if (mappedStanding.netAmount > 0) {
             binding.editHeaderPlayerBalance.setText(getString(
-                    R.string.format_rupee_amount_positive,
+                    R.string.format_game_points_positive,
                     String.format(Locale.getDefault(), "%.0f", mappedStanding.netAmount)));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_mint));
         } else if (mappedStanding.netAmount < 0) {
             binding.editHeaderPlayerBalance.setText(getString(
-                    R.string.format_rupee_amount_negative,
+                    R.string.format_game_points_negative,
                     String.format(Locale.getDefault(), "%.0f", Math.abs(mappedStanding.netAmount))));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_coral));
         } else {
-            binding.editHeaderPlayerBalance.setText("₹0");
+            binding.editHeaderPlayerBalance.setText(R.string.game_points_zero);
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_text_secondary));
         }
@@ -4311,15 +4283,15 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         String amount = String.format(Locale.getDefault(), "%.0f", Math.abs(standing.netAmount));
         if (standing.netAmount > 0) {
-            netAmountText.setText(getString(R.string.format_rupee_amount_positive, amount));
+            netAmountText.setText(getString(R.string.format_game_points_positive, amount));
             netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
             netAmountText.setBackgroundResource(R.drawable.bg_view_amount_receive);
         } else if (standing.netAmount < 0) {
-            netAmountText.setText(getString(R.string.format_rupee_amount_negative, amount));
+            netAmountText.setText(getString(R.string.format_game_points_negative, amount));
             netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
             netAmountText.setBackgroundResource(R.drawable.bg_view_amount_pay);
         } else {
-            netAmountText.setText("₹0");
+            netAmountText.setText(R.string.game_points_zero);
             netAmountText.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
             netAmountText.setBackground(null);
         }
@@ -5104,7 +5076,7 @@ public class JoinGameActivity extends AppCompatActivity {
             int playerCount = gameData.getPlayers() != null ? gameData.getPlayers().size() : 4;
             
             // Format values - preserve fractional parts for point value
-            String pointValueText = "₹" + formatPointValue(pointValue);
+            String pointValueText = formatPointValue(pointValue);
             
             String gstPercentText = String.format(Locale.getDefault(), "%.0f", gstPercent) + "%";
             
@@ -6421,7 +6393,7 @@ public class JoinGameActivity extends AppCompatActivity {
         com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
         
         if (gameData == null) {
-            ModernToast.error(this, "No game data available to share");
+            ModernToast.error(this, getString(R.string.share_game_points_no_data));
             return;
         }
         
@@ -6434,12 +6406,13 @@ public class JoinGameActivity extends AppCompatActivity {
         shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
         
         // Create chooser to allow user to select WhatsApp or other apps
-        Intent chooserIntent = Intent.createChooser(shareIntent, "Share Standings via");
+        Intent chooserIntent = Intent.createChooser(
+                shareIntent, getString(R.string.share_game_points_chooser));
         
         try {
             startActivity(chooserIntent);
         } catch (android.content.ActivityNotFoundException e) {
-            ModernToast.error(this, "No app available to share");
+            ModernToast.error(this, getString(R.string.share_game_points_no_handler));
         }
     }
     
@@ -6447,7 +6420,7 @@ public class JoinGameActivity extends AppCompatActivity {
         StringBuilder text = new StringBuilder();
         
         // Add game header
-        text.append("🎮 *RUMMY PULSE - GAME STANDINGS* 🎮\n");
+        text.append(getString(R.string.share_game_points_header)).append("\n");
         // Calculate standings
         java.util.List<PlayerStanding> standings = calculateStandings(gameData);
         
@@ -6459,21 +6432,26 @@ public class JoinGameActivity extends AppCompatActivity {
         
         // Add game info
         if (currentGameId != null) {
-            text.append("🎯 *Game ID:* ").append(currentGameId).append("\n");
+            text.append(getString(R.string.share_game_id_line, currentGameId)).append("\n");
         }
-        text.append("👥 *Players:* ").append(gameData.getNumPlayers()).append("\n");
-        text.append("💰 *Point Value:* ₹").append(String.format(Locale.getDefault(), "%.2f", gameData.getPointValue())).append("\n");
-        text.append("📊 *Contribution %:* ").append(String.format(Locale.getDefault(), "%.0f", gameData.getGstPercent())).append("%\n");
-        text.append("💵 *Total Contribution:* ₹")
-                .append(String.format(Locale.getDefault(), "%.0f", totalContribution))
+        text.append(getString(R.string.share_players_line, gameData.getNumPlayers())).append("\n");
+        text.append(getString(
+                R.string.share_game_point_factor_line,
+                formatPointValue(gameData.getPointValue()))).append("\n");
+        text.append(getString(
+                R.string.share_board_adjustment_line,
+                String.format(Locale.getDefault(), "%.0f%%", gameData.getGstPercent())))
                 .append("\n");
+        text.append(getString(
+                R.string.share_board_points_line,
+                String.format(Locale.getDefault(), "%.0f GP", totalContribution))).append("\n");
         text.append("━━━━━━━━━━━━━━━━━━━━━━\n");
         
         // Sort by total score (ascending - lower is better)
         standings.sort((a, b) -> Integer.compare(a.totalScore, b.totalScore));
         
         // Add standings header
-        text.append("🏆 *STANDINGS* 🏆\n");
+        text.append(getString(R.string.share_standings_title)).append("\n");
         
         // Add each player's standing (compact format)
         for (int i = 0; i < standings.size(); i++) {
@@ -6486,17 +6464,21 @@ public class JoinGameActivity extends AppCompatActivity {
             else if (i == 2) rankEmoji = "🥉";
             else rankEmoji = String.valueOf(i + 1) + ".";
             
-            // Compact format: Rank Name • Score: X • Net: ₹Y
-            text.append(rankEmoji).append(" *").append(standing.player.getName()).append("*");
-            text.append(" • Score: ").append(standing.totalScore);
+            text.append(getString(
+                    R.string.share_player_score_line,
+                    rankEmoji,
+                    standing.player.getName(),
+                    standing.totalScore));
             if (shouldShowStandingAmountForPlayer(gameData, standing.player)) {
-                text.append(" • Net: ₹").append(String.format(Locale.getDefault(), "%.0f", standing.netAmount));
+                text.append(getString(
+                        R.string.share_player_game_points_suffix,
+                        String.format(Locale.getDefault(), "%+.0f GP", standing.netAmount)));
             }
             text.append("\n");
         }
         
         text.append("━━━━━━━━━━━━━━━━━━━━━━\n");
-        text.append("📱 *Shared from RummyPulse App*\n");
+        text.append(getString(R.string.share_game_points_footer)).append("\n");
         
         return text.toString();
     }

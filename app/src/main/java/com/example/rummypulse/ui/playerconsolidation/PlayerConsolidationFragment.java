@@ -38,7 +38,6 @@ public class PlayerConsolidationFragment extends Fragment {
     private ConsolidationGameAdapter gameAdapter;
     private ConsolidatedPlayerAdapter consolidatedAdapter;
     private SelectedGamesStatusAdapter selectedGamesStatusAdapter;
-    private SettlementPaymentAdapter settlementPaymentAdapter;
     private SettlementPlayerSummaryAdapter settlementPlayerSummaryAdapter;
     private BalanceAdjustmentAdapter balanceAdjustmentAdapter;
     private List<GameItem> currentGames = new ArrayList<>();
@@ -127,13 +126,6 @@ public class PlayerConsolidationFragment extends Fragment {
                 settlementPlayerSummaryAdapter);
         binding.recyclerSettlementPlayerSummary.setNestedScrollingEnabled(false);
 
-        settlementPaymentAdapter = new SettlementPaymentAdapter();
-        LinearLayoutManager settlementLayoutManager = new LinearLayoutManager(requireContext());
-        settlementLayoutManager.setAutoMeasureEnabled(true);
-        binding.recyclerSettlementPayments.setLayoutManager(settlementLayoutManager);
-        binding.recyclerSettlementPayments.setAdapter(settlementPaymentAdapter);
-        binding.recyclerSettlementPayments.setNestedScrollingEnabled(false);
-
         balanceAdjustmentAdapter = new BalanceAdjustmentAdapter();
         balanceAdjustmentAdapter.setOnDeleteAdjustmentListener(
                 adjustment -> viewModel.deleteAdjustment(adjustment.getAdjustmentId()));
@@ -156,8 +148,6 @@ public class PlayerConsolidationFragment extends Fragment {
 
         viewModel.getSelectedEntryIds().observe(getViewLifecycleOwner(), this::updateEntrySelectionUi);
         viewModel.getConsolidationTotals().observe(getViewLifecycleOwner(), this::updateTotalsSummary);
-        viewModel.getSettlementResult().observe(
-                getViewLifecycleOwner(), this::updateSettlementUi);
         viewModel.getBalanceAdjustments().observe(getViewLifecycleOwner(), adjustments -> {
             balanceAdjustmentAdapter.setAdjustments(adjustments);
         });
@@ -252,7 +242,6 @@ public class PlayerConsolidationFragment extends Fragment {
                 showSettlement ? View.VISIBLE : View.GONE);
         binding.cardBalanceAdjustments.setVisibility(
                 showSettlement ? View.VISIBLE : View.GONE);
-        binding.cardSettlement.setVisibility(showSettlement ? View.VISIBLE : View.GONE);
         binding.fabRefreshGameData.setVisibility(
                 showMappingControls ? View.VISIBLE : View.GONE);
 
@@ -332,28 +321,6 @@ public class PlayerConsolidationFragment extends Fragment {
         binding.consolidationTotalsSummary.textNetPlayerBalance.setTextColor(
                 ConsolidationAmountFormatter.getSignedAmountColor(
                         requireContext(), totals.getNetPlayerBalance()));
-    }
-
-    private void updateSettlementUi(ConsolidatedSettlementCalculator.Result result) {
-        if (result == null) {
-            binding.cardSettlement.setVisibility(View.GONE);
-            return;
-        }
-
-        boolean unbalanced = result.getStatus()
-                == ConsolidatedSettlementCalculator.Status.UNBALANCED_INPUT;
-        boolean allSettled = result.getStatus()
-                == ConsolidatedSettlementCalculator.Status.ALL_SETTLED;
-
-        settlementPaymentAdapter.setPayments(result.getPayments());
-        binding.recyclerSettlementPayments.setVisibility(
-                unbalanced || allSettled ? View.GONE : View.VISIBLE);
-        binding.layoutSettlementMetrics.setVisibility(unbalanced ? View.GONE : View.VISIBLE);
-        binding.textSettlementEmpty.setVisibility(allSettled ? View.VISIBLE : View.GONE);
-        binding.textSettlementWarning.setVisibility(unbalanced ? View.VISIBLE : View.GONE);
-        binding.textSettlementTotal.setText(ConsolidationAmountFormatter.formatAmount(
-                result.getPlayerPaymentTotalPaise() / 100.0));
-        binding.textSettlementCount.setText(String.valueOf(result.getPayments().size()));
     }
 
     private void showMapPlayersStep(boolean initializeIfNeeded) {

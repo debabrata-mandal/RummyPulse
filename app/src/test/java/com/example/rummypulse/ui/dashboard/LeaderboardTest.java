@@ -307,4 +307,11 @@ public class LeaderboardTest {
 
         assertEquals("Debabrata M", shortBoard.getTop().get(0).getDisplayName());
     }
+
+    @Test
+    public void amountFormatter_usesNonMonetaryGamePoints() {
+        assertEquals("+1,240 GP", LeaderboardAmountFormatter.formatSigned(1240));
+        assertEquals("-75 GP", LeaderboardAmountFormatter.formatSigned(-75));
+        assertEquals("0 GP", LeaderboardAmountFormatter.formatSigned(0));
+    }
 }

@@ -66,7 +66,7 @@
                         android:textColor="@color/success_green"
                         android:textSize="21sp"
                         android:textStyle="bold"
-                        tools:text="₹275.40" />
+                        tools:text="275.4 GP" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -149,7 +149,7 @@
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        tools:text="₹12,500.00" />
+                        tools:text="12,500 GP" />
                 </LinearLayout>
 
                 <View
@@ -182,7 +182,7 @@
                         android:textColor="@color/success_green"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        tools:text="₹275.40" />
+                        tools:text="275.4 GP" />
                 </LinearLayout>
 
                 <View
@@ -215,7 +215,7 @@
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        tools:text="₹0.00" />
+                        tools:text="0 GP" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>

@@ -1422,8 +1422,7 @@ public class GameRepository {
             return 0.0;
         }
         try {
-            // Remove currency symbol if present
-            String cleaned = pointValueStr.replace("₹", "").trim();
+            String cleaned = pointValueStr.trim();
             return Double.parseDouble(cleaned);
         } catch (NumberFormatException e) {
             return 0.0;

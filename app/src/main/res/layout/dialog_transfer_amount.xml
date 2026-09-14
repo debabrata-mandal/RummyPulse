@@ -126,8 +126,7 @@
             app:boxCornerRadiusTopEnd="10dp"
             app:boxCornerRadiusTopStart="10dp"
             app:boxStrokeColor="@color/dialog_input_stroke"
-            app:hintTextColor="@color/dialog_hint_text"
-            app:prefixText="₹">
+            app:hintTextColor="@color/dialog_hint_text">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/input_transfer_amount"

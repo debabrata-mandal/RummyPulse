@@ -50,7 +50,7 @@ public class MonthlyPointValueReport {
     }
 
     public String getFormattedMonthlyGst() {
-        return "₹" + String.format(Locale.getDefault(), "%.0f", getTotalGstForMonth());
+        return String.format(Locale.getDefault(), "%.0f GP", getTotalGstForMonth());
     }
 
 }

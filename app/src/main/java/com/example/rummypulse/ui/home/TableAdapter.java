@@ -152,15 +152,17 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 copyToClipboard(holder.itemView.getContext(), item.getGameId(), "Game ID");
             });
 
-            // Set Point Value with currency formatting and null checking
+            // Set Game Point Factor with null checking.
             String pointValue = item.getPointValue();
             if (pointValue == null || pointValue.isEmpty()) {
                 holder.pointValueText.setText(
-                        holder.itemView.getContext().getString(R.string.format_rupee_amount_zero));
+                        holder.itemView.getContext().getString(
+                                R.string.format_game_point_factor, "0"));
                 System.out.println("Point value is null/empty, using zero");
             } else {
                 holder.pointValueText.setText(
-                        holder.itemView.getContext().getString(R.string.format_rupee_amount, pointValue));
+                        holder.itemView.getContext().getString(
+                                R.string.format_game_point_factor, pointValue));
                 System.out.println("Setting game point value");
             }
 
@@ -186,20 +188,20 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             }
         });
         
-        // Set GST Amount with currency symbol and null handling
+        // Set Board Points with unit formatting and null handling.
         String gstAmount = item.getGstAmount();
         System.out.println("TableAdapter: Binding game contribution amount");
         System.out.println("TableAdapter: holder.gstAmountText is " + (holder.gstAmountText == null ? "NULL" : "NOT NULL"));
         
         if (holder.gstAmountText != null) {
             if (gstAmount == null || gstAmount.isEmpty()) {
-                System.out.println("TableAdapter: gstAmount is null or empty, setting to ₹0");
-                holder.gstAmountText.setText("₹0");
+                System.out.println("TableAdapter: Board Points are null or empty, using zero");
+                holder.gstAmountText.setText(R.string.game_points_zero);
                 holder.gstAmountText.setVisibility(android.view.View.VISIBLE);
             } else {
                 System.out.println("TableAdapter: Setting contribution amount");
                 holder.gstAmountText.setText(
-                        holder.itemView.getContext().getString(R.string.format_rupee_amount, gstAmount));
+                        holder.itemView.getContext().getString(R.string.format_game_points, gstAmount));
                 holder.gstAmountText.setVisibility(android.view.View.VISIBLE);
             }
         } else {
@@ -413,14 +415,14 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
 
                 if (netAmount > 0) {
                     netAmountText.setText(context.getString(
-                            R.string.format_rupee_amount_positive, String.valueOf(Math.round(netAmount))));
+                            R.string.format_game_points_positive, String.valueOf(Math.round(netAmount))));
                     netAmountText.setTextColor(context.getColor(R.color.success_green));
                 } else if (netAmount < 0) {
                     netAmountText.setText(context.getString(
-                            R.string.format_rupee_amount, String.valueOf(Math.round(netAmount))));
+                            R.string.format_game_points, String.valueOf(Math.round(netAmount))));
                     netAmountText.setTextColor(context.getColor(R.color.error_red));
                 } else {
-                    netAmountText.setText("₹0");
+                    netAmountText.setText(R.string.game_points_zero);
                     netAmountText.setTextColor(context.getColor(R.color.text_secondary));
                 }
                 

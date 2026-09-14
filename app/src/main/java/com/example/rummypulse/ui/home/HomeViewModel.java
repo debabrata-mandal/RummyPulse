@@ -12,6 +12,9 @@ import java.util.List;
 
 public class HomeViewModel extends ViewModel {
 
+    static final String ERROR_ADMIN_GAME_POINT_SETTINGS_REQUIRED =
+            "admin_game_point_settings_required";
+
     private final MutableLiveData<String> mText;
     private final MutableLiveData<List<GameItem>> mGameItems;
     private final MutableLiveData<Integer> mTotalGames;
@@ -171,7 +174,7 @@ public class HomeViewModel extends ViewModel {
 
     public void updateGameEconomics(String gameId, double pointValue, double gstPercent, Runnable onSuccess) {
         if (AppUserRoleSession.getInstance().peekRole() != AppUserRoleSession.Role.ADMIN) {
-            mError.setValue("Administrator access required to edit point value and contribution");
+            mError.setValue(ERROR_ADMIN_GAME_POINT_SETTINGS_REQUIRED);
             return;
         }
         gameRepository.updateGameEconomics(gameId, pointValue, gstPercent, onSuccess);

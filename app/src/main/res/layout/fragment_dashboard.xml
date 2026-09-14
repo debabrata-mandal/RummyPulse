@@ -174,14 +174,14 @@
                                 android:textStyle="bold" />
                         </LinearLayout>
 
-                        <!-- Net amount -->
+                        <!-- Final Game Points -->
                         <TextView
                             android:id="@+id/text_perf_net"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="18dp"
                             android:gravity="center"
-                            tools:text="₹0"
+                            tools:text="0 GP"
                             android:textColor="@color/view_text_secondary"
                             android:textSize="40sp"
                             android:textStyle="bold" />

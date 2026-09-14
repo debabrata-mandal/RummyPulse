@@ -55,7 +55,7 @@
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
-                    tools:text="₹0.15" />
+                    tools:text="0.15×" />
 
                 <TextView
                     android:id="@+id/text_total_games"
@@ -111,7 +111,7 @@
                     android:textColor="@color/success_green"
                     android:textSize="24sp"
                     android:textStyle="bold"
-                    tools:text="₹1,250" />
+                    tools:text="1,250 GP" />
             </LinearLayout>
 
             <LinearLayout
@@ -185,7 +185,7 @@
                     android:textColor="@color/text_primary"
                     android:textSize="24sp"
                     android:textStyle="bold"
-                    tools:text="₹104.2" />
+                    tools:text="104.2 GP" />
             </LinearLayout>
 
             <LinearLayout

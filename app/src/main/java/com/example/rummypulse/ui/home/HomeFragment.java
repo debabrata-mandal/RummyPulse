@@ -138,7 +138,10 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 if (reviewOperationInProgress) {
                     endReviewOperation();
                 }
-                com.example.rummypulse.utils.ModernToast.error(getContext(), error);
+                String message = HomeViewModel.ERROR_ADMIN_GAME_POINT_SETTINGS_REQUIRED.equals(error)
+                        ? getString(R.string.review_game_point_settings_admin_required)
+                        : error;
+                com.example.rummypulse.utils.ModernToast.error(getContext(), message);
             }
         });
     }
@@ -593,7 +596,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             return 0.05;
         }
         try {
-            return Double.parseDouble(pointValueStr.replace("₹", "").trim());
+            return Double.parseDouble(pointValueStr.trim());
         } catch (NumberFormatException e) {
             return 0.05;
         }

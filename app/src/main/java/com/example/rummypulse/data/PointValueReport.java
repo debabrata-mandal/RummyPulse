@@ -75,11 +75,11 @@ public class PointValueReport {
 
     // Helper methods for display
     public String getFormattedPointValue() {
-        return "₹" + String.format(Locale.getDefault(), "%.2f", pointValue);
+        return String.format(Locale.getDefault(), "%.2f×", pointValue);
     }
 
     public String getFormattedGstAmount() {
-        return "₹" + String.format(Locale.getDefault(), "%.0f", totalGstCollected);
+        return String.format(Locale.getDefault(), "%.0f GP", totalGstCollected);
     }
 
     public double getAverageGstPerGame() {

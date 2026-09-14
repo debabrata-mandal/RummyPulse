@@ -76,8 +76,8 @@
     <string name="reports_rebuild_month_month_label">Month</string>
     <string name="reports_rebuild_month_year_label">Year</string>
     <string name="reports_rebuild_month_confirm">Rebuild</string>
-    <string name="reports_stat_total_contribution">Total contribution</string>
-    <string name="reports_stat_avg_contribution_per_game">Avg contribution / game</string>
+    <string name="reports_stat_total_contribution">Total Board Points</string>
+    <string name="reports_stat_avg_contribution_per_game">Avg Board Points / game</string>
     <string name="reports_stat_total_players">Total players</string>
     <string name="reports_stat_avg_players_per_game">Avg players / game</string>
 
@@ -155,18 +155,18 @@
     <string name="dialog_create_game_creating">Creating…</string>
     <string name="dialog_create_game_retry">Retry</string>
     <string name="dialog_create_game_offline">You’re offline. Connect to the internet to create this game.</string>
-    <string name="dialog_create_game_subtitle">Set the game name, point value, and contribution.</string>
-    <string name="dialog_point_value_section_title">Point value</string>
+    <string name="dialog_create_game_subtitle">Set the game name and Game Point rules.</string>
+    <string name="dialog_point_value_section_title">Game Point Factor</string>
     <string name="dialog_game_name_section_title">✨ Game name</string>
     <string name="dialog_game_name_section_subtitle">Tap ✨ to refresh.</string>
-    <string name="dialog_point_value_subtitle">₹ per point.</string>
-    <string name="dialog_contribution_section_title">Contribution</string>
-    <string name="dialog_contribution_subtitle">Winner contribution.</string>
-    <string name="dialog_point_value_field_hint">Amount (₹)</string>
-    <string name="dialog_contribution_field_hint">Contribution (%)</string>
-    <string name="dialog_point_value_required">Enter a point value</string>
-    <string name="dialog_point_value_invalid">Enter a valid amount (max ₹100)</string>
-    <string name="dialog_contribution_required">Enter contribution %</string>
+    <string name="dialog_point_value_subtitle">Multiplier used to calculate Game Points.</string>
+    <string name="dialog_contribution_section_title">Board Adjustment</string>
+    <string name="dialog_contribution_subtitle">Percentage moved from positive Base Points to the Board.</string>
+    <string name="dialog_point_value_field_hint">Factor (for example 0.15)</string>
+    <string name="dialog_contribution_field_hint">Board Adjustment (%)</string>
+    <string name="dialog_point_value_required">Enter a Game Point Factor</string>
+    <string name="dialog_point_value_invalid">Enter a valid factor (maximum 100)</string>
+    <string name="dialog_contribution_required">Enter Board Adjustment %</string>
     <string name="dialog_contribution_invalid">Enter a whole number from 0 to 100</string>
     <string name="review_screen_title">Game review</string>
     <string name="review_screen_subtitle">Approve completed games or remove entries awaiting review</string>
@@ -178,10 +178,10 @@
     <string name="review_pin_label">PIN</string>
     <string name="review_age_label">Age</string>
     <string name="review_show_pin">Show PIN</string>
-    <string name="review_point_value_label">POINT VALUE</string>
+    <string name="review_point_value_label">GP FACTOR</string>
     <string name="review_players_label">PLAYERS</string>
-    <string name="review_contribution_pct_label">CONTRIB %</string>
-    <string name="review_contribution_amt_label">CONTRIB</string>
+    <string name="review_contribution_pct_label">BOARD %</string>
+    <string name="review_contribution_amt_label">BOARD PTS</string>
     <string name="review_approve">Approve</string>
     <string name="review_delete">Delete</string>
     <string name="review_select_game">Select game</string>
@@ -194,18 +194,19 @@
     <string name="review_delete_success_one">Game deleted.</string>
     <string name="review_access_restricted">Administrator access required</string>
     <string name="review_access_restricted_detail">This screen is limited to admin accounts. Contact an administrator if you need access.</string>
-    <string name="review_edit_economics_title">Edit point value &amp; contribution</string>
-    <string name="review_edit_economics_subtitle">Changes apply to this game and refresh contribution totals. Same rules as creating a game.</string>
+    <string name="review_game_point_settings_admin_required">Administrator access required to edit Game Point settings</string>
+    <string name="review_edit_economics_title">Edit Game Point settings</string>
+    <string name="review_edit_economics_subtitle">Changes apply to this game and refresh its Game Point results.</string>
     <string name="review_edit_economics_save">Save</string>
-    <string name="review_edit_economics_saved">Game economics updated</string>
+    <string name="review_edit_economics_saved">Game Point settings updated</string>
     <string name="review_kick_editor">Kick out editor</string>
     <string name="review_kick_editor_title">Kick out editor?</string>
     <string name="review_kick_editor_subtitle">End %1$s\'s edit session on this game</string>
     <string name="review_kick_editor_message">A new PIN will be generated. %1$s will be moved to read-only immediately and any further changes from them will be rejected.</string>
     <string name="review_kick_editor_success">Editor removed. A new PIN has been generated.</string>
     <string name="review_operation_kicking_editor">Removing editor…</string>
-    <string name="cd_decrease_point_value">Decrease point value</string>
-    <string name="cd_increase_point_value">Increase point value</string>
+    <string name="cd_decrease_point_value">Decrease Game Point Factor</string>
+    <string name="cd_increase_point_value">Increase Game Point Factor</string>
     <string name="dialog_game_name_hint">Name</string>
     <string name="dialog_game_name_generating">Generating…</string>
     <string name="cd_generate_game_name">Generate game name</string>
@@ -237,12 +238,12 @@
     <string name="dialog_correct_round_score_title">Correct Round %1$d</string>
     <string name="standing_total_score">Total Score</string>
     <string name="standing_last_round">Last Round</string>
-    <string name="standing_balance">Balance</string>
-    <string name="edit_settlement_direction_receives">Receives</string>
-    <string name="edit_settlement_direction_pays">Pays</string>
+    <string name="standing_balance">Game Points</string>
+    <string name="edit_settlement_direction_receives">Positive</string>
+    <string name="edit_settlement_direction_pays">Negative</string>
     <string name="edit_settlement_direction_even">Even</string>
     <string name="edit_player_sort_game_order">Game order</string>
-    <string name="edit_player_sort_settlement_order">Settlement order</string>
+    <string name="edit_player_sort_settlement_order">Game Point order</string>
     <string name="correct_past_round_none">No past rounds to correct yet.</string>
 
     <!-- Add player confirmation when scores already exist -->
@@ -258,28 +259,28 @@
 
     <!-- Navigation -->
     <string name="menu_game_defaults">Game defaults</string>
-    <string name="menu_player_consolidation">Settlement</string>
+    <string name="menu_player_consolidation">Game Point Summary</string>
     <string name="player_consolidation_subtitle">Select at least 2 games.</string>
     <string name="player_consolidation_empty">No games available</string>
-    <string name="player_consolidation_game_subtitle">%1$s players · ₹%2$s per point</string>
+    <string name="player_consolidation_game_subtitle">%1$s players · %2$s GP factor</string>
     <string name="player_consolidation_mapping_step_title">Step 1 · Map the players</string>
     <string name="player_consolidation_mapping_step_subtitle">Select matching names and link them.</string>
     <string name="player_consolidation_mapping_confirmed_title">Player mapping confirmed</string>
     <string name="player_consolidation_mapping_confirmed_subtitle">Linked names now count as one player.</string>
-    <string name="player_consolidation_confirm_mappings">Show settlement</string>
-    <string name="player_consolidation_complete_games_first">Complete all selected games before continuing to settlement.</string>
+    <string name="player_consolidation_confirm_mappings">Show Game Point summary</string>
+    <string name="player_consolidation_complete_games_first">Complete all selected games before viewing the Game Point summary.</string>
     <string name="player_consolidation_edit_mappings">Edit player mapping</string>
     <string name="player_consolidation_tap_edit_mapping">Tap row to edit mapping</string>
     <string name="player_consolidation_table_player">PLAYER</string>
     <string name="player_consolidation_table_games">GAMES</string>
-    <string name="player_consolidation_table_gross">GROSS</string>
-    <string name="player_consolidation_table_contribution">CONTRIB.</string>
-    <string name="player_consolidation_table_net">NET</string>
-    <string name="player_consolidation_table_adjustment">ADJUST.</string>
-    <string name="player_consolidation_table_final">FINAL</string>
+    <string name="player_consolidation_table_gross">BASE</string>
+    <string name="player_consolidation_table_contribution">BOARD</string>
+    <string name="player_consolidation_table_net">FINAL</string>
+    <string name="player_consolidation_table_adjustment">CORRECT.</string>
+    <string name="player_consolidation_table_final">RESULT</string>
     <string name="player_consolidation_table_total">TOTAL</string>
-    <string name="player_consolidation_final_balance_info">Final balance = Net + Adjustment.</string>
-    <string name="player_consolidation_consolidated_title">Player summary (consolidated)</string>
+    <string name="player_consolidation_final_balance_info">Result = Final Points + session correction.</string>
+    <string name="player_consolidation_consolidated_title">Combined Game Point summary</string>
     <string name="player_consolidation_link_selected">Link as same person</string>
     <string name="player_consolidation_select">Select</string>
     <string name="player_consolidation_selected">Selected</string>
@@ -290,49 +291,38 @@
     <string name="player_consolidation_link_confirm">Link players</string>
     <string name="player_consolidation_reset">Reset mapping</string>
     <string name="player_consolidation_link_dialog_title">Link selected players</string>
-    <string name="player_consolidation_link_dialog_subtitle">Merge these entries into one settlement identity.</string>
+    <string name="player_consolidation_link_dialog_subtitle">Merge these entries into one Game Point summary identity.</string>
     <string name="player_consolidation_link_dialog_hint">Display name</string>
     <string name="player_consolidation_no_players">No players found in the selected games.</string>
     <string name="player_consolidation_change_games">Change games</string>
     <string name="player_consolidation_refresh_data">Refresh game data</string>
     <string name="player_consolidation_refresh_data_done">Game data updated.</string>
     <string name="player_consolidation_refresh_missing_members">Some mapped players were removed from a game.</string>
-    <string name="player_consolidation_transfer_dialog_title">Add balance adjustment</string>
-    <string name="player_consolidation_transfer_dialog_subtitle">Add a previous due or off-game amount.</string>
-    <string name="player_consolidation_transfer_amount_hint">Amount</string>
-    <string name="player_consolidation_transfer_invalid_amount">Enter an amount greater than zero.</string>
+    <string name="player_consolidation_transfer_dialog_title">Add Game Point correction</string>
+    <string name="player_consolidation_transfer_dialog_subtitle">Move equal Game Points between two mapped players.</string>
+    <string name="player_consolidation_transfer_amount_hint">Game Points</string>
+    <string name="player_consolidation_transfer_invalid_amount">Enter Game Points greater than zero.</string>
     <string name="player_consolidation_add_adjustment">Add</string>
     <string name="player_consolidation_save_adjustment">Save adjustment</string>
-    <string name="player_consolidation_adjustment_from">From (payer)</string>
-    <string name="player_consolidation_adjustment_to">To (receiver)</string>
+    <string name="player_consolidation_adjustment_from">Decrease points for</string>
+    <string name="player_consolidation_adjustment_to">Increase points for</string>
     <string name="player_consolidation_adjustment_option">%1$s  ·  %2$s</string>
     <string name="player_consolidation_adjustment_same_player">Choose two different players.</string>
-    <string name="player_consolidation_adjustment_session_info">Applies to this settlement only.</string>
+    <string name="player_consolidation_adjustment_session_info">Applies to this summary only. Saved game scores are unchanged.</string>
     <string name="player_consolidation_delete_adjustment">Delete adjustment</string>
     <string name="player_consolidation_adjustment_reason_hint">Reason (optional)</string>
-    <string name="player_consolidation_adjustments_title">Balance adjustments</string>
-    <string name="player_consolidation_adjustments_subtitle">Previous dues and off-game amounts</string>
-    <string name="player_consolidation_adjustment_route">%1$s → %2$s</string>
-    <string name="player_consolidation_adjustment_no_reason">Balance adjustment</string>
-    <string name="player_consolidation_settle_up">Settle up</string>
-    <string name="player_consolidation_settlement_subtitle">Cash payments to settle balances</string>
-    <string name="player_consolidation_player_payments">Player payments</string>
-    <string name="player_consolidation_payment_count">Transfers</string>
-    <string name="player_consolidation_mark_paid">Mark payment as paid</string>
-    <string name="player_consolidation_payer_total">%1$s pays in total</string>
-    <string name="player_consolidation_distribution_recipient">to %1$s</string>
-    <string name="player_consolidation_mark_all_paid">Mark all paid</string>
-    <string name="player_consolidation_all_distributions_paid">All distributions paid</string>
-    <string name="player_consolidation_all_settled">No payments needed.</string>
-    <string name="player_consolidation_settlement_unbalanced">Balances and contribution do not match.</string>
-    <string name="player_consolidation_final_balance">Final balance</string>
-    <string name="player_consolidation_contribution_column">CONTRIBUTION</string>
-    <string name="player_consolidation_contribution_collected">Contribution</string>
-    <string name="player_consolidation_contribution_info">Paid to Contribution during settlement</string>
-    <string name="player_consolidation_sitting_summary">Sitting summary</string>
-    <string name="player_consolidation_total_gross">Gross winnings</string>
-    <string name="player_consolidation_total_contribution">Contribution</string>
-    <string name="player_consolidation_net_player_balance">Net player balance</string>
+    <string name="player_consolidation_adjustments_title">Game Point corrections</string>
+    <string name="player_consolidation_adjustments_subtitle">Equal decrease and increase; game records stay unchanged</string>
+    <string name="player_consolidation_adjustment_route">%1$s: −%3$s · %2$s: +%3$s</string>
+    <string name="player_consolidation_adjustment_no_reason">Game Point correction</string>
+    <string name="player_consolidation_final_balance">Game Point result</string>
+    <string name="player_consolidation_contribution_column">BOARD</string>
+    <string name="player_consolidation_contribution_collected">Board Points</string>
+    <string name="player_consolidation_contribution_info">Virtual points retained by the Board across these games</string>
+    <string name="player_consolidation_sitting_summary">Game Point totals</string>
+    <string name="player_consolidation_total_gross">Positive Base</string>
+    <string name="player_consolidation_total_contribution">Board Points</string>
+    <string name="player_consolidation_net_player_balance">Player Final total</string>
     <string name="player_consolidation_started">Started %1$s</string>
     <string name="player_consolidation_creator_photo">Game creator photo</string>
 
@@ -340,18 +330,18 @@
     <string name="game_defaults_intro">Defaults for new games and mid-game player catch-up. Changes are saved for everyone on this project.</string>
     <string name="game_defaults_section_values">Default values</string>
     <string name="game_defaults_section_audit">Update record</string>
-    <string name="game_defaults_point_hint">Default point value (₹)</string>
-    <string name="game_defaults_contribution_hint">Default contribution %</string>
+    <string name="game_defaults_point_hint">Default Game Point Factor</string>
+    <string name="game_defaults_contribution_hint">Default Board Adjustment %</string>
     <string name="game_defaults_contribution_admin_only_helper">Admins only.</string>
-    <string name="cd_game_defaults_contribution_locked">Contribution percent locked. Admins only.</string>
-    <string name="game_defaults_display_intermediate_title">Show live amounts</string>
+    <string name="cd_game_defaults_contribution_locked">Board Adjustment percent locked. Admins only.</string>
+    <string name="game_defaults_display_intermediate_title">Show live Game Points</string>
     <string name="game_defaults_display_intermediate_admin_only_helper">Admins only.</string>
-    <string name="cd_game_defaults_display_intermediate_locked">Show live amounts locked. Admins only.</string>
+    <string name="cd_game_defaults_display_intermediate_locked">Show live Game Points locked. Admins only.</string>
     <string name="game_defaults_show_dashboard_approval_counts_title">Show dashboard request counts</string>
     <string name="game_defaults_show_dashboard_leaderboard_title">Show dashboard leaderboard</string>
-    <string name="game_defaults_show_dashboard_leaderboard_amounts_title">Show leaderboard amounts</string>
+    <string name="game_defaults_show_dashboard_leaderboard_amounts_title">Show leaderboard Game Points</string>
     <string name="game_defaults_leaderboard_admin_only_helper">Admins only.</string>
-    <string name="game_defaults_leaderboard_amounts_off_helper">Turn the leaderboard on to show amounts.</string>
+    <string name="game_defaults_leaderboard_amounts_off_helper">Turn the leaderboard on to show Game Points.</string>
     <string name="cd_game_defaults_leaderboard_locked">Leaderboard settings locked. Admins only.</string>
     <string name="game_view_amount_hidden">—</string>
     <string name="game_defaults_increment_hint">Mid-game new player score increment</string>
@@ -411,7 +401,7 @@
     <string name="map_player_transfer_message">%1$s is currently mapped to %2$s. Move the mapping to this player?</string>
     <string name="map_player_transfer_confirm">Transfer</string>
     <string name="players_dialog_title">Players &amp; scores</string>
-    <string name="players_dialog_subtitle">Current standings and estimated net amounts.</string>
+    <string name="players_dialog_subtitle">Current standings and estimated Game Points.</string>
     <string name="edit_players_standings_title">Players &amp; Standings</string>
     <string name="edit_player_round_sheet_title">%1$s\'s Round Scores</string>
     <string name="edit_player_round_sheet_total">Total Score · %1$d</string>
@@ -438,10 +428,10 @@
     <string name="dashboard_period_this_month">Month</string>
     <string name="dashboard_period_last_month">Last Month</string>
     <string name="dashboard_period_this_week">Week</string>
-    <string name="dashboard_net_label_all_time">NET ALL TIME</string>
-    <string name="dashboard_net_label_this_month">NET THIS MONTH</string>
-    <string name="dashboard_net_label_last_month">NET LAST MONTH</string>
-    <string name="dashboard_net_label_this_week">NET THIS WEEK</string>
+    <string name="dashboard_net_label_all_time">GAME POINTS · ALL TIME</string>
+    <string name="dashboard_net_label_this_month">GAME POINTS · THIS MONTH</string>
+    <string name="dashboard_net_label_last_month">GAME POINTS · LAST MONTH</string>
+    <string name="dashboard_net_label_this_week">GAME POINTS · THIS WEEK</string>
     <string name="dashboard_stat_games">GAMES</string>
     <string name="dashboard_stat_wins">WINS</string>
     <string name="dashboard_stat_win_rate">WIN RATE</string>
@@ -461,14 +451,14 @@
     <string name="menu_player_ranking">Ranking</string>
     <string name="player_ranking_title">Player Ranking</string>
     <string name="player_ranking_empty">No ranked players in this period yet</string>
-    <string name="player_ranking_amounts_hidden_notice">Amounts are hidden by an administrator</string>
+    <string name="player_ranking_amounts_hidden_notice">Game Points are hidden by an administrator</string>
     <string name="player_ranking_name_you">%1$s (You)</string>
     <string name="player_ranking_meta">%1$s · %2$d%% wins</string>
     <string name="player_ranking_meta_avg">%1$s · %2$d%% wins · %3$s/game</string>
     <string name="player_ranking_stat_games_label">games</string>
     <string name="player_ranking_stat_win_rate">%1$d%%</string>
     <string name="player_ranking_stat_per_game">/game</string>
-    <string name="player_ranking_sort_net">Net</string>
+    <string name="player_ranking_sort_net">Game Points</string>
     <string name="player_ranking_sort_avg">Avg/game</string>
     <string name="player_ranking_sort_win_rate">Win rate</string>
     <string name="player_ranking_sort_games">Games</string>
@@ -476,37 +466,37 @@
     <!-- Layout HardcodedText fixes -->
     <string name="account_not_linked_message">Your account is not linked to a player in this game</string>
     <string name="admin_mode_title">Admin Mode</string>
-    <string name="amounts_hidden_label">AMOUNTS HIDDEN</string>
+    <string name="amounts_hidden_label">GAME POINTS HIDDEN</string>
     <string name="login_welcome_message">Welcome to RummyPulse!\n\nSign in with your Google account to access review and analytics.</string>
     <string name="login_security_message">🔒 Your data is secure and protected.\nWe only use your Google account for authentication.</string>
-    <string name="settlement_how_it_works_title">💡 How Settlement Works</string>
+    <string name="settlement_how_it_works_title">💡 How Game Points Work</string>
     <string name="settlement_example_title">💡 Example:</string>
     <string name="full_hand_label">Full Hand</string>
     <string name="sign_in_with_google">Sign in with Google</string>
     <string name="loading_game_data">Loading game data\u2026</string>
     <string name="made_game_label">Made Game</string>
     <string name="my_performance_title">My Performance</string>
-    <string name="net_amount_label">Net Amount</string>
-    <string name="no_negative_balances">No negative balances</string>
-    <string name="no_positive_balances">No positive balances</string>
+    <string name="net_amount_label">Final Points</string>
+    <string name="no_negative_balances">No negative Game Points</string>
+    <string name="no_positive_balances">No positive Game Points</string>
     <string name="packed_label">Packed</string>
     <string name="player_performance_title">Player Performance</string>
     <string name="players_round_scores_subtitle">Performance across all ten rounds</string>
     <string name="players_round_scores_title">Player\'s Round Scores</string>
-    <string name="point_value_label">Point Value</string>
+    <string name="point_value_label">Game Point Factor</string>
     <string name="position_label">Position</string>
     <string name="qr_code_scan_hint">Scan to open this game instantly.</string>
     <string name="qr_code_share_hint">Share this code with players, or tap it to copy the game ID.</string>
     <string name="qr_code_title">Game QR code</string>
     <string name="score_label">Score</string>
-    <string name="settlement_contribution_description">Contribution: Only winners pay 55% on positive amounts</string>
-    <string name="settlement_example_formula">Your settlement = (Total of all 4 scores - 25 × 4) × ₹99</string>
-    <string name="settlement_example_intro">If you score 25 points in a 4-player game with ₹99/point:</string>
-    <string name="settlement_formula_description">Formula: (Total All Scores - Your Score × 4) × ₹99</string>
-    <string name="settlement_losers_description">Losers (Red): Pay money, no contribution required</string>
-    <string name="settlement_net_amount_description">Net Amount: Gross Amount - Contribution (for winners) or just Gross Amount (for losers)</string>
-    <string name="settlement_overview_title">Settlement Overview</string>
-    <string name="settlement_winners_description">Winners (Green): Receive money but pay 55% on winnings</string>
+    <string name="settlement_contribution_description">Board Adjustment: a percentage of positive Base Points becomes Board Points</string>
+    <string name="settlement_example_formula">Base Points = (Total of all 4 scores - 25 × 4) × 0.15</string>
+    <string name="settlement_example_intro">Example for a score of 25 in a 4-player game with a 0.15 factor:</string>
+    <string name="settlement_formula_description">Base Points = (Total All Scores - Your Score × 4) × Game Point Factor</string>
+    <string name="settlement_losers_description">Negative results keep their full Base Points</string>
+    <string name="settlement_net_amount_description">Final Points = Base Points - Board Adjustment Points</string>
+    <string name="settlement_overview_title">Game Point Overview</string>
+    <string name="settlement_winners_description">Positive results contribute the configured percentage to Board Points</string>
     <string name="sign_out">Sign Out</string>
     <string name="standings_title">Standings</string>
     <string name="tap_to_enter_name_hint">Tap to enter name</string>
@@ -523,10 +513,32 @@
     <string name="user_management_search_hint">Search by name or email</string>
 
     <!-- SetTextI18n / PluralsCandidate (Java) -->
-    <string name="format_rupee_amount">₹%1$s</string>
-    <string name="format_rupee_amount_positive">+₹%1$s</string>
-    <string name="format_rupee_amount_negative">-₹%1$s</string>
-    <string name="format_rupee_amount_rounded">₹%1$d</string>
+    <string name="format_game_points">%1$s GP</string>
+    <string name="format_game_points_positive">+%1$s GP</string>
+    <string name="format_game_points_negative">-%1$s GP</string>
+    <string name="format_game_points_rounded">%1$d GP</string>
+    <string name="format_game_point_factor">%1$s×</string>
+    <string name="format_board_points_summary">%1$.0f%% · %2$d GP</string>
+    <string name="game_points_zero">0 GP</string>
+    <string name="game_completion_intro_en">Game over. Final Game Point results. </string>
+    <string name="game_completion_player_en">%1$s total score %2$d points. Result %3$s Game Points. </string>
+    <string name="game_completion_board_en">Board Points %1$s.</string>
+    <string name="game_completion_intro_bn">খেলা শেষ। চূড়ান্ত গেম পয়েন্ট ফলাফল। </string>
+    <string name="game_completion_player_bn">%1$s মোট স্কোর %2$d পয়েন্ট। ফলাফল %3$s গেম পয়েন্ট। </string>
+    <string name="game_completion_board_bn">বোর্ড পয়েন্ট %1$s।</string>
+    <string name="share_game_points_chooser">Share Game Point standings via</string>
+    <string name="share_game_points_no_data">No game data available to share.</string>
+    <string name="share_game_points_no_handler">No app available to share Game Point standings.</string>
+    <string name="share_game_points_header">🎮 *RUMMY PULSE - GAME POINT STANDINGS* 🎮</string>
+    <string name="share_game_id_line">🎯 *Game ID:* %1$s</string>
+    <string name="share_players_line">👥 *Players:* %1$d</string>
+    <string name="share_game_point_factor_line">🎲 *Game Point Factor:* %1$s</string>
+    <string name="share_board_adjustment_line">📊 *Board Adjustment:* %1$s</string>
+    <string name="share_board_points_line">⭐ *Board Points:* %1$s</string>
+    <string name="share_standings_title">🏆 *STANDINGS* 🏆</string>
+    <string name="share_player_score_line">%1$s *%2$s* · Score: %3$d</string>
+    <string name="share_player_game_points_suffix"> · Final: %1$s</string>
+    <string name="share_game_points_footer">📱 *Shared from RummyPulse App*</string>
     <string name="game_id_label">Game ID: %1$s</string>
     <string name="game_id_header">GAME  ·  %1$s</string>
     <string name="player_number_label">Player %1$d</string>
@@ -542,11 +554,11 @@
     <string name="error_with_message">Error: %1$s</string>
     <string name="game_round_status_complete">Complete · Round %1$d of %2$d</string>
     <string name="game_round_status_live">Live · Round %1$d of %2$d</string>
-    <string name="settlement_winners_rule_dynamic">Winners (Green): Receive money but pay %1$s on winnings</string>
+    <string name="settlement_winners_rule_dynamic">Positive results: %1$s becomes Board Points</string>
     <string name="settlement_formula_description_dynamic">Formula: (Total All Scores - Your Score × %1$d) × %2$s</string>
-    <string name="settlement_contribution_rule_dynamic">Contribution: Only winners pay %1$s on positive amounts</string>
-    <string name="settlement_example_intro_dynamic">If you score 25 points in a %1$d-player game with %2$s/point:</string>
-    <string name="format_rupee_amount_zero">₹0.00</string>
+    <string name="settlement_contribution_rule_dynamic">Board Adjustment: %1$s of positive Base Points</string>
+    <string name="settlement_example_intro_dynamic">If you score 25 points in a %1$d-player game with a %2$s factor:</string>
+    <string name="format_game_points_zero">0 GP</string>
     <string name="dashboard_percent_format">%1$d%%</string>
     <string name="review_access_restricted_combined">%1$s\n\n%2$s</string>
     <string name="game_header_loading">Loading\u2026</string>
@@ -555,7 +567,7 @@
     <string name="voice_language_data_missing_message">Install the voice data to use spoken score announcements in this language.</string>
     <string name="voice_language_install">Install</string>
     <string name="view_mode_round_scores_title">Round Scores</string>
-    <string name="view_mode_select_player_subtitle">Select a player from the settlement board</string>
+    <string name="view_mode_select_player_subtitle">Select a player from the Game Point board</string>
     <string name="view_mode_select_player_empty">Select a player above to view round scores</string>
     <string name="my_round_scores_title">My Round Scores</string>
     <string name="network_status_online">Online</string>
@@ -658,8 +670,8 @@
         <item quantity="other">%d points</item>
     </plurals>
     <plurals name="settlement_example_formula_dynamic">
-        <item quantity="one">Your settlement = (Total of all %d score - 25 × %2$d) × %3$s</item>
-        <item quantity="other">Your settlement = (Total of all %d scores - 25 × %2$d) × %3$s</item>
+        <item quantity="one">Base Points = (Total of all %d score - 25 × %2$d) × %3$s</item>
+        <item quantity="other">Base Points = (Total of all %d scores - 25 × %2$d) × %3$s</item>
     </plurals>
 
     <plurals name="report_games_count">
@@ -667,8 +679,8 @@
         <item quantity="other">%d Games</item>
     </plurals>
     <plurals name="report_point_values_count">
-        <item quantity="one">%d Point Value</item>
-        <item quantity="other">%d Point Values</item>
+        <item quantity="one">%d Game Point Factor</item>
+        <item quantity="other">%d Game Point Factors</item>
     </plurals>
     <plurals name="player_consolidation_game_count_plural">
         <item quantity="one">%d game</item>
@@ -701,7 +713,7 @@
     <string name="cd_toggle_completed_games">Toggle completed games section</string>
     <string name="cd_toggle_players_section">Toggle players section</string>
     <string name="cd_toggle_standings_section">Toggle standings section</string>
-    <string name="cd_toggle_settlement_section">Toggle settlement section</string>
+    <string name="cd_toggle_settlement_section">Toggle Game Point summary section</string>
     <string name="cd_create_new_game">Create New Game</string>
     <string name="cd_game_creator_profile_photo">Game creator profile photo</string>
     <string name="cd_delete_player">Delete Player</string>

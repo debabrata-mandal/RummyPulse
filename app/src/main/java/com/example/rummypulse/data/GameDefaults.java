@@ -84,8 +84,8 @@ public class GameDefaults {
     }
 
     /**
-     * When true, leaderboard rows show each player's net amount. When false the ranking is still
-     * by net amount, but the figures stay hidden.
+     * When true, leaderboard rows show each player's final Game Points. When false the ranking is
+     * still by final Game Points, but the figures stay hidden.
      */
     public boolean isShowDashboardLeaderboardAmounts() {
         return showDashboardLeaderboardAmounts == null || showDashboardLeaderboardAmounts;

@@ -121,7 +121,7 @@
                     android:paddingBottom="3dp"
                     android:textSize="10sp"
                     android:visibility="gone"
-                    tools:text="+₹127/game"
+                    tools:text="+127 GP/game"
                     tools:visibility="visible" />
             </LinearLayout>
         </LinearLayout>
@@ -140,7 +140,7 @@
             android:paddingBottom="5dp"
             android:textSize="13sp"
             android:textStyle="bold"
-            tools:text="+₹1,118" />
+            tools:text="+1,118 GP" />
     </LinearLayout>
 
     <!-- Relative magnitude. Hidden along with the figures when amounts are masked, since its

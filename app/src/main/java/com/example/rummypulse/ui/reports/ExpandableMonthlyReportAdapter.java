@@ -280,7 +280,7 @@ public class ExpandableMonthlyReportAdapter extends RecyclerView.Adapter<Recycle
             // Format GST amounts
             totalGstText.setText(report.getFormattedGstAmount());
             avgGstText.setText(itemView.getContext().getString(
-                    R.string.format_rupee_amount,
+                    R.string.format_game_points,
                     String.format(Locale.getDefault(), "%.1f", report.getAverageGstPerGame())));
             
             // Format player counts

@@ -264,4 +264,38 @@ public class PlayerConsolidationViewModelTest {
         assertEquals(1, fullySelected.size());
         assertEquals("grp1", fullySelected.get(0).getGroupId());
     }
+
+    @Test
+    public void gamePointCorrection_appliesEqualDecreaseAndIncrease() throws Exception {
+        ConsolidatedPlayerGroup alice = new ConsolidatedPlayerGroup(
+                "grp1", "Alice", Collections.singletonList(entry("e1", "g1", "Alice")));
+        ConsolidatedPlayerGroup bob = new ConsolidatedPlayerGroup(
+                "grp2", "Bob", Collections.singletonList(entry("e2", "g1", "Bob")));
+        injectPlayerGroups(Arrays.asList(alice, bob));
+
+        assertTrue(viewModel.applyTransfer("grp1", "grp2", 25, "Score correction"));
+
+        assertEquals(-25, alice.getNetAdjustment(), 0.001);
+        assertEquals(25, bob.getNetAdjustment(), 0.001);
+        assertEquals(0, alice.getNetAdjustment() + bob.getNetAdjustment(), 0.001);
+        assertEquals(1, viewModel.getBalanceAdjustments().getValue().size());
+    }
+
+    @Test
+    public void deletingGamePointCorrection_restoresBothPlayers() throws Exception {
+        ConsolidatedPlayerGroup alice = new ConsolidatedPlayerGroup(
+                "grp1", "Alice", Collections.singletonList(entry("e1", "g1", "Alice")));
+        ConsolidatedPlayerGroup bob = new ConsolidatedPlayerGroup(
+                "grp2", "Bob", Collections.singletonList(entry("e2", "g1", "Bob")));
+        injectPlayerGroups(Arrays.asList(alice, bob));
+        viewModel.applyTransfer("grp1", "grp2", 25, "");
+        String correctionId = viewModel.getBalanceAdjustments().getValue()
+                .get(0).getAdjustmentId();
+
+        viewModel.deleteAdjustment(correctionId);
+
+        assertEquals(0, alice.getNetAdjustment(), 0.001);
+        assertEquals(0, bob.getNetAdjustment(), 0.001);
+        assertTrue(viewModel.getBalanceAdjustments().getValue().isEmpty());
+    }
 }

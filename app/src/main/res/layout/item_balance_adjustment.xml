@@ -23,7 +23,7 @@
             android:textColor="@color/text_primary"
             android:textSize="14sp"
             android:textStyle="bold"
-            tools:text="Amit → Priya" />
+            tools:text="Amit: −500 GP · Priya: +500 GP" />
 
         <TextView
             android:id="@+id/text_adjustment_reason"
@@ -34,7 +34,7 @@
             android:maxLines="1"
             android:textColor="@color/text_secondary"
             android:textSize="12sp"
-            tools:text="Previous due" />
+            tools:text="Score correction" />
 
         <TextView
             android:id="@+id/text_adjustment_timestamp"
@@ -54,7 +54,8 @@
         android:textColor="@color/accent_blue_light"
         android:textSize="14sp"
         android:textStyle="bold"
-        tools:text="₹500" />
+        android:visibility="gone"
+        tools:text="500 GP" />
 
     <ImageButton
         android:id="@+id/btn_delete_adjustment"

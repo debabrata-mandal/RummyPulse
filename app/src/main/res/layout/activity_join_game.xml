@@ -286,14 +286,14 @@
 
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="@string/point_value_label" android:textColor="@color/view_text_muted" android:textSize="8dp" android:textStyle="bold" />
-                <TextView android:id="@+id/text_header_point_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" tools:text="₹0.5" android:textColor="@color/view_violet_light" android:textSize="14sp" android:textStyle="bold" />
+                <TextView android:id="@+id/text_header_point_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" tools:text="0.5×" android:textColor="@color/view_violet_light" android:textSize="14sp" android:textStyle="bold" />
             </LinearLayout>
             <View android:layout_width="1dp" android:layout_height="30dp" android:background="@color/view_stroke" />
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:text="@string/player_consolidation_contribution_collected" android:textColor="@color/view_text_muted" android:textSize="8dp" android:textStyle="bold" />
                 <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:gravity="center" android:orientation="horizontal">
                     <TextView android:id="@+id/text_header_contribution" android:layout_width="wrap_content" android:layout_height="wrap_content" tools:text="10% · " android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
-                    <TextView android:id="@+id/text_header_total_contribution" android:layout_width="wrap_content" android:layout_height="wrap_content" tools:text="₹0" android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/text_header_total_contribution" android:layout_width="wrap_content" android:layout_height="wrap_content" tools:text="0 GP" android:textColor="@color/view_gold" android:textSize="14sp" android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
             <View android:layout_width="1dp" android:layout_height="30dp" android:background="@color/view_stroke" />
@@ -926,7 +926,7 @@
 
                     </LinearLayout>
 
-                    <!-- Net Amount -->
+                    <!-- Final Game Points -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

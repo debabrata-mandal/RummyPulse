@@ -74,7 +74,7 @@
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Subtitle2"
                     android:textColor="@color/success_green"
                     android:textStyle="bold"
-                    tools:text="₹1,250" />
+                    tools:text="1,250 GP" />
             </LinearLayout>
 
             <TextView
@@ -84,7 +84,7 @@
                 android:layout_marginTop="4dp"
                 android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                 android:textColor="@color/text_secondary"
-                tools:text="3 Point Values" />
+                tools:text="3 Game Point Factors" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
