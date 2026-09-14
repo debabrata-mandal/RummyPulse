@@ -1,9 +1,11 @@
 package com.example.rummypulse.ui.playerconsolidation;
 
 import com.example.rummypulse.data.GameData;
+import com.example.rummypulse.data.GamePointsCalculator;
 import com.example.rummypulse.data.Player;
 import com.example.rummypulse.ui.home.GameItem;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public final class PlayerSettlementCalculator {
@@ -49,26 +51,26 @@ public final class PlayerSettlementCalculator {
             return PlayerSettlement.zero();
         }
 
-        int totalScore = 0;
+        List<Integer> playerScores = new ArrayList<>(players.size());
         for (Player p : players) {
-            totalScore += p.getTotalScore();
+            playerScores.add(p != null ? p.getTotalScore() : 0);
         }
 
         int playerScore = player.getTotalScore();
-        int numPlayers = declaredNumPlayers;
-        if (numPlayers <= 0) {
-            numPlayers = players.size();
-        }
+        GamePointsCalculator.PlayerGamePoints gamePoints = GamePointsCalculator.calculatePlayer(
+                playerScores,
+                playerScore,
+                pointValue,
+                gstPercent,
+                declaredNumPlayers);
 
-        double grossAmount = Math.round((totalScore - (double) playerScore * numPlayers) * pointValue);
-        double gstPaid = 0;
-        double netAmount = grossAmount;
-        if (grossAmount > 0) {
-            gstPaid = Math.round((grossAmount * gstPercent) / 100.0);
-            netAmount = grossAmount - gstPaid;
-        }
-
-        return new PlayerSettlement(playerScore, grossAmount, gstPaid, netAmount);
+        // Keep the current API stable until the UI and Firestore schema move to Game Points in
+        // later parts of the migration.
+        return new PlayerSettlement(
+                gamePoints.getPlayerScore(),
+                gamePoints.getBaseGamePoints(),
+                gamePoints.getBoardAdjustmentPoints(),
+                gamePoints.getFinalGamePoints());
     }
 
     private static double parseGstPercent(String gstPercentage) {

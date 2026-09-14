@@ -24,6 +24,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
 import com.example.rummypulse.data.Player;
+import com.example.rummypulse.ui.playerconsolidation.PlayerSettlementCalculator;
 import com.example.rummypulse.utils.GameAttributionFormatter;
 import com.google.android.material.checkbox.MaterialCheckBox;
 
@@ -367,17 +368,11 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         if (players != null && !players.isEmpty()) {
             // Sort players by total score (lowest to highest)
             players.sort((p1, p2) -> Integer.compare(p1.getTotalScore(), p2.getTotalScore()));
-            
-            // Calculate total of all scores for net amount calculation
+
             for (Player player : players) {
                 totalScore += player.getTotalScore();
             }
             
-            // Get game settings for net amount calculation
-            double pointValue = gameItem.getPointValueAsDouble();
-            double gstPercent = Double.parseDouble(gameItem.getGstPercentage());
-            int numPlayers = gameItem.getNumberOfPlayersAsInt();
-
             for (int i = 0; i < players.size(); i++) {
                 Player player = players.get(i);
                 View playerView = LayoutInflater.from(context)
@@ -394,18 +389,9 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 
                 int playerScore = player.getTotalScore();
                 
-                // Calculate net amount using the same formula as index.html
-                // Formula: (Total of all scores - Player's score × Number of players) × Point value
-                double grossAmount = Math.round((totalScore - playerScore * numPlayers) * pointValue);
-                
-                double gstPaid = 0;
-                double netAmount = grossAmount;
-                
-                // GST is only paid by winners (those with positive gross amount)
-                if (grossAmount > 0) {
-                    gstPaid = Math.round((grossAmount * gstPercent) / 100.0);
-                    netAmount = grossAmount - gstPaid;
-                }
+                PlayerSettlementCalculator.PlayerSettlement gamePoints =
+                        PlayerSettlementCalculator.compute(gameItem, player);
+                double netAmount = gamePoints.netAmount;
                 
                 // Add ranking indicator and winner highlighting
                 int rank = i + 1;

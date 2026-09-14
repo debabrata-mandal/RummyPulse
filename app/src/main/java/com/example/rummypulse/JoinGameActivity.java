@@ -37,6 +37,7 @@ import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.data.GameAuth;
+import com.example.rummypulse.data.GamePointsCalculator;
 import com.example.rummypulse.data.GameViewApproval;
 import com.example.rummypulse.data.GameViewApprovalStatus;
 import com.example.rummypulse.data.Player;
@@ -2298,29 +2299,23 @@ public class JoinGameActivity extends AppCompatActivity {
         if (gameData == null || gameData.getPlayers() == null) {
             return 0.0;
         }
-        
-        double totalContribution = 0.0;
-        int numPlayers = gameData.getPlayers().size();
-        
-        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
-            // Calculate settlement for each player
-            int totalScore = 0;
-            for (com.example.rummypulse.data.Player p : gameData.getPlayers()) {
-                totalScore += p.getTotalScore();
-            }
-            
-            // Calculate gross amount
-            int playerScore = player.getTotalScore();
-            double grossAmount = (totalScore - (playerScore * numPlayers)) * gameData.getPointValue();
-            
-            // Only winners pay GST (positive gross amount)
-            if (grossAmount > 0) {
-                double gstAmount = grossAmount * (gameData.getGstPercent() / 100.0);
-                totalContribution += gstAmount;
+
+        return calculateGamePoints(gameData).getBoardPoints();
+    }
+
+    private GamePointsCalculator.Result calculateGamePoints(
+            com.example.rummypulse.data.GameData gameData) {
+        List<Integer> playerScores = new ArrayList<>();
+        if (gameData != null && gameData.getPlayers() != null) {
+            for (Player player : gameData.getPlayers()) {
+                playerScores.add(player != null ? player.getTotalScore() : 0);
             }
         }
-        
-        return totalContribution;
+        return GamePointsCalculator.calculate(
+                playerScores,
+                gameData != null ? gameData.getPointValue() : 0,
+                gameData != null ? gameData.getGstPercent() : 0,
+                gameData != null ? gameData.getNumPlayers() : 0);
     }
 
     private void generatePlayerCards(com.example.rummypulse.data.GameData gameData) {
@@ -4581,7 +4576,6 @@ public class JoinGameActivity extends AppCompatActivity {
 
         // First pass: collect all scores
         java.util.List<PlayerStanding> standings = new java.util.ArrayList<>();
-        int totalAllScores = 0;
         
         for (int i = 0; i < gameData.getPlayers().size(); i++) {
             com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
@@ -4592,26 +4586,16 @@ public class JoinGameActivity extends AppCompatActivity {
             standing.totalScore = totalScore;
             
             standings.add(standing);
-            totalAllScores += totalScore;
         }
 
-        // Second pass: calculate amounts using Rummy formula
-        // Formula: (Total of all scores - Player's score × Number of players) × Point value
-        for (PlayerStanding standing : standings) {
-            double grossAmount = (totalAllScores - standing.totalScore * gameData.getNumPlayers()) * gameData.getPointValue();
-            
-            // Calculate GST (only for winners with positive gross amount)
-            double gstPaid = 0;
-            if (grossAmount > 0) {
-                gstPaid = (grossAmount * gameData.getGstPercent()) / 100.0;
-            }
-            
-            // Calculate net amount
-            double netAmount = grossAmount - gstPaid;
-
-            standing.grossAmount = grossAmount;
-            standing.gstPaid = gstPaid;
-            standing.netAmount = netAmount;
+        GamePointsCalculator.Result gamePoints = calculateGamePoints(gameData);
+        for (int i = 0; i < standings.size(); i++) {
+            PlayerStanding standing = standings.get(i);
+            GamePointsCalculator.PlayerGamePoints playerPoints =
+                    gamePoints.getPlayerResults().get(i);
+            standing.grossAmount = playerPoints.getBaseGamePoints();
+            standing.gstPaid = playerPoints.getBoardAdjustmentPoints();
+            standing.netAmount = playerPoints.getFinalGamePoints();
         }
 
         // Sort by total score (ascending - lower is better in Rummy)
@@ -5105,36 +5089,7 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private double calculateTotalGST(com.example.rummypulse.data.GameData gameData) {
-        double totalGST = 0.0;
-        
-        // Calculate total GST from all players' standings
-        java.util.List<PlayerStanding> standings = new java.util.ArrayList<>();
-        
-        for (int i = 0; i < gameData.getPlayers().size(); i++) {
-            com.example.rummypulse.data.Player player = gameData.getPlayers().get(i);
-            int totalScore = player.getTotalScore();
-
-            PlayerStanding standing = new PlayerStanding();
-            standing.player = player;
-            standing.totalScore = totalScore;
-            standings.add(standing);
-        }
-        
-        // Calculate gross amounts and GST
-        int totalAllScores = standings.stream().mapToInt(s -> s.totalScore).sum();
-        
-        for (PlayerStanding standing : standings) {
-            standing.grossAmount = (totalAllScores - standing.totalScore * gameData.getPlayers().size()) * gameData.getPointValue();
-            
-            if (standing.grossAmount > 0) {
-                standing.gstPaid = standing.grossAmount * (gameData.getGstPercent() / 100.0);
-                totalGST += standing.gstPaid;
-            } else {
-                standing.gstPaid = 0;
-            }
-        }
-        
-        return totalGST;
+        return calculateGamePoints(gameData).getBoardPoints();
     }
 
     private void updateStandingsInfo(com.example.rummypulse.data.GameData gameData) {
@@ -6548,8 +6503,6 @@ public class JoinGameActivity extends AppCompatActivity {
     
     private java.util.List<PlayerStanding> calculateStandings(com.example.rummypulse.data.GameData gameData) {
         java.util.List<PlayerStanding> standings = new java.util.ArrayList<>();
-        int totalAllScores = 0;
-        
         // First pass: collect all scores
         for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
             int totalScore = 0;
@@ -6567,25 +6520,16 @@ public class JoinGameActivity extends AppCompatActivity {
             standing.player = player;
             standing.totalScore = totalScore;
             standings.add(standing);
-            totalAllScores += totalScore;
         }
-        
-        // Second pass: calculate amounts using Rummy formula
-        for (PlayerStanding standing : standings) {
-            double grossAmount = (totalAllScores - standing.totalScore * gameData.getNumPlayers()) * gameData.getPointValue();
-            
-            // Calculate GST (only for winners with positive gross amount)
-            double gstPaid = 0;
-            if (grossAmount > 0) {
-                gstPaid = (grossAmount * gameData.getGstPercent()) / 100.0;
-            }
-            
-            // Calculate net amount
-            double netAmount = grossAmount - gstPaid;
-            
-            standing.grossAmount = grossAmount;
-            standing.gstPaid = gstPaid;
-            standing.netAmount = netAmount;
+
+        GamePointsCalculator.Result gamePoints = calculateGamePoints(gameData);
+        for (int i = 0; i < standings.size(); i++) {
+            PlayerStanding standing = standings.get(i);
+            GamePointsCalculator.PlayerGamePoints playerPoints =
+                    gamePoints.getPlayerResults().get(i);
+            standing.grossAmount = playerPoints.getBaseGamePoints();
+            standing.gstPaid = playerPoints.getBoardAdjustmentPoints();
+            standing.netAmount = playerPoints.getFinalGamePoints();
         }
         
         return standings;

@@ -196,26 +196,17 @@ public class GameData {
     public double getGstAmount() {
         List<Player> currentPlayers = getPlayers();
         if (currentPlayers == null || currentPlayers.isEmpty()) return 0.0;
-        
-        // Calculate total of all scores
-        int totalAllScores = getTotalScore();
-        
-        // Calculate GST only for winning players (those with positive gross amounts)
-        double totalGstCollected = 0.0;
-        
+
+        List<Integer> playerScores = new ArrayList<>(currentPlayers.size());
         for (Player player : currentPlayers) {
-            int playerScore = player.getTotalScore();
-            // Formula: (Total of all scores - Player's score × Number of players) × Point value
-            double grossAmount = (totalAllScores - playerScore * numPlayers) * pointValue;
-            
-            // GST is only paid by winners (those with positive gross amount)
-            if (grossAmount > 0) {
-                double gstPaid = (grossAmount * gstPercent) / 100.0;
-                totalGstCollected += gstPaid;
-            }
+            playerScores.add(player != null ? player.getTotalScore() : 0);
         }
-        
-        return totalGstCollected;
+
+        return GamePointsCalculator.calculate(
+                playerScores,
+                pointValue,
+                gstPercent,
+                numPlayers).getBoardPoints();
     }
 
     public String getGameStatus() {
