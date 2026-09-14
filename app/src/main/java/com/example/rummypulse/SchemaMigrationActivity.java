@@ -8,7 +8,7 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.rummypulse.data.FirestoreCollections;
-import com.example.rummypulse.data.GameDataSchema;
+import com.example.rummypulse.data.SchemaCompatibilityPolicy;
 import com.example.rummypulse.databinding.ActivitySchemaMigrationBinding;
 import com.example.rummypulse.utils.SafePlayPolicyStore;
 import com.example.rummypulse.utils.SchemaVersionStore;
@@ -78,7 +78,7 @@ public class SchemaMigrationActivity extends AppCompatActivity {
                 .get(Source.SERVER)
                 .addOnSuccessListener(snapshot -> {
                     Long version = snapshot.getLong("schemaVersion");
-                    if (version != null && version == GameDataSchema.CURRENT_VERSION) {
+                    if (SchemaCompatibilityPolicy.canOpen(version)) {
                         SchemaVersionStore.markPrepared(this);
                         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
                         if (user == null) {
