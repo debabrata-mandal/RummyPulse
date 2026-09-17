@@ -27,7 +27,9 @@ import java.util.stream.Collectors;
 public class PlayerConsolidationViewModel extends ViewModel {
 
     interface AccountDisplayNameCallback {
-        void onLoaded(Map<String, String> displayNamesByUserId);
+        void onLoaded(
+                Map<String, String> displayNamesByUserId,
+                Map<String, String> photoUrlsByUserId);
     }
 
     interface AccountDisplayNameLoader {
@@ -50,12 +52,14 @@ public class PlayerConsolidationViewModel extends ViewModel {
             appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
                 @Override
                 public void onSuccess(List<AppUser> users) {
-                    callback.onLoaded(indexDisplayNamesByUserId(users));
+                    callback.onLoaded(
+                            indexDisplayNamesByUserId(users),
+                            indexPhotoUrlsByUserId(users));
                 }
 
                 @Override
                 public void onFailure(Exception exception) {
-                    callback.onLoaded(new HashMap<>());
+                    callback.onLoaded(new HashMap<>(), new HashMap<>());
                 }
             });
         }
@@ -73,6 +77,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
     private final MutableLiveData<Boolean> mappingsConfirmed =
             new MutableLiveData<>(false);
     private Map<String, String> displayNameByUserId = new HashMap<>();
+    private Map<String, String> photoUrlByUserId = new HashMap<>();
 
     private boolean consolidationInitialized;
     private String lastInitializedGameKey = "";
@@ -107,6 +112,10 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     public LiveData<Set<String>> getSelectedGameIds() {
         return selectedGameIds;
+    }
+
+    public Map<String, String> getPhotoUrlByUserId() {
+        return photoUrlByUserId;
     }
 
     public LiveData<List<ConsolidatedPlayerGroup>> getPlayerGroups() {
@@ -582,11 +591,25 @@ public class PlayerConsolidationViewModel extends ViewModel {
     }
 
     private void loadAccountDisplayNames() {
-        accountDisplayNameLoader.load(displayNamesByUserId -> {
+        accountDisplayNameLoader.load((displayNamesByUserId, photoUrlsByUserId) -> {
             if (displayNamesByUserId != null) {
                 PlayerConsolidationViewModel.this.displayNameByUserId = displayNamesByUserId;
             }
+            if (photoUrlsByUserId != null) {
+                PlayerConsolidationViewModel.this.photoUrlByUserId = photoUrlsByUserId;
+            }
+            refreshAccountProfileUi();
         });
+    }
+
+    private void refreshAccountProfileUi() {
+        if (!consolidationInitialized) {
+            return;
+        }
+        List<ConsolidatedPlayerGroup> current = playerGroups.getValue();
+        if (current != null && !current.isEmpty()) {
+            playerGroups.setValue(current);
+        }
     }
 
     private static Map<String, String> indexDisplayNamesByUserId(List<AppUser> users) {
@@ -601,6 +624,23 @@ public class PlayerConsolidationViewModel extends ViewModel {
             String displayName = preferredAccountName(user);
             if (displayName != null) {
                 byUserId.put(user.getUserId(), displayName);
+            }
+        }
+        return byUserId;
+    }
+
+    private static Map<String, String> indexPhotoUrlsByUserId(List<AppUser> users) {
+        Map<String, String> byUserId = new HashMap<>();
+        if (users == null) {
+            return byUserId;
+        }
+        for (AppUser user : users) {
+            if (user == null || user.getUserId() == null) {
+                continue;
+            }
+            String photoUrl = user.getPhotoUrl();
+            if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+                byUserId.put(user.getUserId(), photoUrl.trim());
             }
         }
         return byUserId;

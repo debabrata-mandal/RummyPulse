@@ -3,6 +3,7 @@ package com.example.rummypulse.ui.dashboard;
 import android.animation.ValueAnimator;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.graphics.Color;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.net.ConnectivityManager;
@@ -24,6 +25,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import android.annotation.SuppressLint;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -44,6 +46,7 @@ import com.example.rummypulse.service.GroqGameNameService;
 import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.ui.playerranking.PlayerRankingFragment;
 import com.example.rummypulse.utils.DisplayNameUtils;
+import com.example.rummypulse.utils.ProfileAvatarBinder;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.android.material.textfield.TextInputEditText;
@@ -224,6 +227,10 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
         dashboardViewModel.getLeaderboard().observe(
                 getViewLifecycleOwner(), this::renderLeaderboard);
+        dashboardViewModel.getAccountDisplayNames().observe(getViewLifecycleOwner(), names ->
+                renderLeaderboard(dashboardViewModel.getLeaderboard().getValue()));
+        dashboardViewModel.getPhotoUrlsByUserId().observe(getViewLifecycleOwner(), urls ->
+                renderLeaderboard(dashboardViewModel.getLeaderboard().getValue()));
 
         dashboardViewModel.getShowAllGames().observe(getViewLifecycleOwner(), showAll -> {
             boolean all = Boolean.TRUE.equals(showAll);
@@ -385,8 +392,84 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
         }
         binding.viewLeaderboardDonut.setSlices(slices);
 
-        binding.textLeaderboardCenterName.setText(entries.get(0).getDisplayName());
+        LeaderboardEntry leader = entries.get(0);
+        String leaderName = fullAccountName(leader.getUserId(), leader.getDisplayName());
+        bindLeaderboardCenter(leader, leaderName);
         bindLeaderboardLegend(entries, colors);
+    }
+
+    private void bindLeaderboardCenter(LeaderboardEntry leader, String leaderName) {
+        binding.textLeaderboardCenterName.setText(leaderName);
+
+        Map<String, String> photoUrls = dashboardViewModel.getPhotoUrlsByUserId().getValue();
+        String photoUrl = null;
+        if (leader.getUserId() != null && photoUrls != null) {
+            String resolved = photoUrls.get(leader.getUserId());
+            if (resolved != null && !resolved.trim().isEmpty()) {
+                photoUrl = resolved.trim();
+            }
+        }
+
+        if (photoUrl != null) {
+            binding.leaderboardCenterScrim.setVisibility(View.VISIBLE);
+            applyLeaderboardCenterTextStyle(true);
+            ProfileAvatarBinder.bindWithPhotoUrl(
+                    binding.leaderboardCenterContent,
+                    binding.imageLeaderboardCenterAvatar,
+                    binding.textLeaderboardCenterAvatar,
+                    leaderName,
+                    photoUrl,
+                    ColorStateList.valueOf(ContextCompat.getColor(
+                            requireContext(), R.color.leaderboard_slice_win_1)),
+                    true,
+                    null,
+                    () -> {
+                        binding.leaderboardCenterScrim.setVisibility(View.GONE);
+                        applyLeaderboardCenterTextStyle(false);
+                    });
+            return;
+        }
+
+        com.bumptech.glide.Glide.with(this).clear(binding.imageLeaderboardCenterAvatar);
+        binding.imageLeaderboardCenterAvatar.setVisibility(View.GONE);
+        binding.textLeaderboardCenterAvatar.setVisibility(View.VISIBLE);
+        binding.textLeaderboardCenterAvatar.setText(
+                DisplayNameUtils.initials(leaderName));
+        binding.textLeaderboardCenterAvatar.setBackgroundResource(R.drawable.circle_background);
+        binding.textLeaderboardCenterAvatar.setBackgroundTintList(ColorStateList.valueOf(
+                ContextCompat.getColor(requireContext(), R.color.leaderboard_slice_win_1)));
+        binding.leaderboardCenterScrim.setVisibility(View.GONE);
+        applyLeaderboardCenterTextStyle(false);
+    }
+
+    private void applyLeaderboardCenterTextStyle(boolean onPhoto) {
+        if (onPhoto) {
+            binding.textLeaderboardCenterLabel.setTextColor(
+                    ContextCompat.getColor(requireContext(), android.R.color.white));
+            binding.textLeaderboardCenterName.setTextColor(
+                    ContextCompat.getColor(requireContext(), android.R.color.white));
+            binding.textLeaderboardCenterLabel.setShadowLayer(3f, 0f, 1f, Color.BLACK);
+            binding.textLeaderboardCenterName.setShadowLayer(4f, 0f, 1f, Color.BLACK);
+            return;
+        }
+        binding.textLeaderboardCenterLabel.setTextColor(
+                ContextCompat.getColor(requireContext(), R.color.view_text_secondary));
+        binding.textLeaderboardCenterName.setTextColor(
+                ContextCompat.getColor(requireContext(), R.color.text_primary));
+        binding.textLeaderboardCenterLabel.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT);
+        binding.textLeaderboardCenterName.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT);
+    }
+
+    @Nullable
+    private String fullAccountName(@Nullable String userId, @Nullable String fallback) {
+        Map<String, String> accountNames = dashboardViewModel.getAccountDisplayNames().getValue();
+        if (userId != null && accountNames != null) {
+            String fullName = accountNames.get(userId);
+            if (fullName != null && !fullName.trim().isEmpty()) {
+                return fullName.trim();
+            }
+        }
+        return fallback == null ? "" : fallback;
     }
 
     /** Opens the full ranking on the period the dashboard is currently showing. */

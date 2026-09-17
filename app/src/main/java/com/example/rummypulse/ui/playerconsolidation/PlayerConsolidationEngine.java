@@ -329,7 +329,7 @@ public final class PlayerConsolidationEngine {
                 if (isEmpty(playerName)) {
                     playerName = UNKNOWN_PLAYER;
                 } else {
-                    playerName = DisplayNameUtils.playerLabel(
+                    playerName = DisplayNameUtils.fullPlayerLabel(
                             playerName, player.getUserId(), displayNameByUserId);
                 }
                 String entryId = buildEntryId(gameId, player, i);

@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="3dp"
+    android:layout_marginHorizontal="12dp"
     android:layout_marginVertical="4dp"
     android:clickable="true"
     android:focusable="true"
@@ -28,17 +28,30 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/text_summary_avatar"
+            <FrameLayout
                 android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:background="@drawable/circle_background"
-                android:backgroundTint="@color/accent_blue"
-                android:gravity="center"
-                android:textColor="@android:color/white"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                tools:text="A" />
+                android:layout_height="34dp">
+
+                <ImageView
+                    android:id="@+id/image_summary_avatar"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/dashboard_avatar_description"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/text_summary_avatar"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/circle_background"
+                    android:backgroundTint="@color/accent_blue"
+                    android:gravity="center"
+                    android:textColor="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    tools:text="DM" />
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -51,12 +64,10 @@
                     android:id="@+id/text_summary_name"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxLines="1"
                     android:textColor="@color/text_primary"
                     android:textSize="15sp"
                     android:textStyle="bold"
-                    tools:text="Amit" />
+                    tools:text="Debabrata Mandal" />
 
                 <TextView
                     android:id="@+id/text_summary_games_subtitle"

@@ -70,10 +70,10 @@ public class PlayerConsolidationEngineTest {
         assertEquals(1, refreshed.getGroups().size());
         assertEquals(2, refreshed.getGroups().get(0).getMembers().size());
         assertEquals(
-                "Debabrata M",
+                "Debabrata Mandal",
                 refreshed.getGroups().get(0).getMembers().get(0).getPlayerName());
         assertEquals(
-                "D. M",
+                "D. Mandal",
                 refreshed.getGroups().get(0).getMembers().get(1).getPlayerName());
     }
 

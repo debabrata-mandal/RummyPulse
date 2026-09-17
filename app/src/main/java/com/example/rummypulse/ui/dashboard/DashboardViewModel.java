@@ -43,6 +43,8 @@ public class DashboardViewModel extends ViewModel {
     private final MediatorLiveData<Leaderboard> leaderboard;
     private final MutableLiveData<Map<String, String>> accountDisplayNames =
             new MutableLiveData<>(Collections.emptyMap());
+    private final MutableLiveData<Map<String, String>> photoUrlsByUserId =
+            new MutableLiveData<>(Collections.emptyMap());
     private final MutableLiveData<Boolean> showAllGames;
     private final MutableLiveData<StatsPeriod> selectedPeriod;
     private final MutableLiveData<List<GameItem>> mInProgressGames;
@@ -303,6 +305,14 @@ public class DashboardViewModel extends ViewModel {
         return leaderboard;
     }
 
+    public LiveData<Map<String, String>> getAccountDisplayNames() {
+        return accountDisplayNames;
+    }
+
+    public LiveData<Map<String, String>> getPhotoUrlsByUserId() {
+        return photoUrlsByUserId;
+    }
+
     private void rebuildLeaderboard() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         Leaderboard board = Leaderboard.from(
@@ -318,6 +328,7 @@ public class DashboardViewModel extends ViewModel {
             @Override
             public void onSuccess(List<AppUser> users) {
                 accountDisplayNames.setValue(indexAccountDisplayNames(users));
+                photoUrlsByUserId.setValue(indexPhotoUrlsByUserId(users));
             }
 
             @Override
@@ -339,6 +350,23 @@ public class DashboardViewModel extends ViewModel {
             String displayName = preferredAccountName(user);
             if (displayName != null) {
                 byUserId.put(user.getUserId(), displayName);
+            }
+        }
+        return byUserId;
+    }
+
+    private static Map<String, String> indexPhotoUrlsByUserId(List<AppUser> users) {
+        Map<String, String> byUserId = new HashMap<>();
+        if (users == null) {
+            return byUserId;
+        }
+        for (AppUser user : users) {
+            if (user == null || user.getUserId() == null) {
+                continue;
+            }
+            String photoUrl = user.getPhotoUrl();
+            if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+                byUserId.put(user.getUserId(), photoUrl.trim());
             }
         }
         return byUserId;

@@ -24,15 +24,29 @@
         android:paddingEnd="12dp"
         android:paddingBottom="10dp">
 
-        <TextView
+        <FrameLayout
             android:id="@+id/text_correct_player_avatar"
             android:layout_width="42dp"
-            android:layout_height="42dp"
-            android:background="@drawable/bg_view_avatar"
-            android:gravity="center"
-            android:textColor="@color/view_violet_light"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:layout_height="42dp">
+
+            <ImageView
+                android:id="@+id/player_avatar_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/dashboard_avatar_description"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/player_avatar_initial"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_view_avatar"
+                android:gravity="center"
+                android:textColor="@color/view_violet_light"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="0dp"

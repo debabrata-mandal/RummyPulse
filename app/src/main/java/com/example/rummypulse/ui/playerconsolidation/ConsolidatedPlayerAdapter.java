@@ -3,9 +3,11 @@ package com.example.rummypulse.ui.playerconsolidation;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import android.annotation.SuppressLint;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
@@ -15,17 +17,18 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.checkbox.MaterialCheckBox;
 
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<ConsolidatedPlayerAdapter.ViewHolder> {
 
     private List<ConsolidatedPlayerGroup> groups = new ArrayList<>();
     private Set<String> selectedEntryIds = new HashSet<>();
+    private Map<String, String> photoUrlByUserId = new HashMap<>();
     private OnGroupToggleListener listener;
 
     public interface OnGroupToggleListener {
@@ -39,6 +42,12 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
     @SuppressLint("NotifyDataSetChanged")
     public void setGroups(List<ConsolidatedPlayerGroup> groups) {
         this.groups = groups != null ? groups : new ArrayList<>();
+        notifyDataSetChanged();
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setPhotoUrlByUserId(@Nullable Map<String, String> photoUrlsByUserId) {
+        photoUrlByUserId = photoUrlsByUserId != null ? photoUrlsByUserId : new HashMap<>();
         notifyDataSetChanged();
     }
 
@@ -59,12 +68,15 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         ConsolidatedPlayerGroup group = groups.get(position);
-        holder.displayNameText.setText(group.getDisplayName());
         String displayName = group.getDisplayName();
-        holder.avatarInitialText.setText(
-                displayName == null || displayName.trim().isEmpty()
-                        ? "?"
-                        : displayName.trim().substring(0, 1).toUpperCase(Locale.getDefault()));
+        holder.displayNameText.setText(displayName);
+        ConsolidationPlayerAvatarBinder.bind(
+                holder.itemView,
+                holder.avatarImage,
+                holder.avatarInitialText,
+                group,
+                photoUrlByUserId,
+                displayName);
         Set<String> gameIds = new LinkedHashSet<>();
         Set<String> gameNames = new LinkedHashSet<>();
         for (GamePlayerEntry member : group.getMembers()) {
@@ -122,6 +134,7 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
     static class ViewHolder extends RecyclerView.ViewHolder {
         final MaterialCardView card;
         final TextView displayNameText;
+        final ImageView avatarImage;
         final TextView avatarInitialText;
         final TextView gameCountText;
         final TextView gameNamesText;
@@ -131,6 +144,7 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
             super(itemView);
             card = itemView.findViewById(R.id.card_player);
             displayNameText = itemView.findViewById(R.id.text_display_name);
+            avatarImage = itemView.findViewById(R.id.image_avatar);
             avatarInitialText = itemView.findViewById(R.id.text_avatar_initial);
             gameCountText = itemView.findViewById(R.id.text_game_count);
             gameNamesText = itemView.findViewById(R.id.text_game_names);

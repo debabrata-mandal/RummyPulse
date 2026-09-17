@@ -38,6 +38,7 @@ public class PlayerRankingViewModel extends ViewModel {
     private final MutableLiveData<StatsPeriod> selectedPeriod;
     private final MutableLiveData<RankingSort> selectedSort;
     private final MutableLiveData<Map<String, String>> fullNames;
+    private final MutableLiveData<Map<String, String>> photoUrlsByUserId;
     private final MediatorLiveData<List<LeaderboardEntry>> ranking;
 
     public PlayerRankingViewModel() {
@@ -46,6 +47,7 @@ public class PlayerRankingViewModel extends ViewModel {
         selectedPeriod = new MutableLiveData<>(StatsPeriod.THIS_MONTH);
         selectedSort = new MutableLiveData<>(RankingSort.NET_TOTAL);
         fullNames = new MutableLiveData<>(Collections.emptyMap());
+        photoUrlsByUserId = new MutableLiveData<>(Collections.emptyMap());
 
         ranking = new MediatorLiveData<>();
         ranking.setValue(Collections.emptyList());
@@ -66,6 +68,7 @@ public class PlayerRankingViewModel extends ViewModel {
             @Override
             public void onSuccess(List<AppUser> users) {
                 fullNames.setValue(indexByUserId(users));
+                photoUrlsByUserId.setValue(indexPhotoUrlsByUserId(users));
             }
 
             @Override
@@ -87,6 +90,23 @@ public class PlayerRankingViewModel extends ViewModel {
             String name = preferredName(user);
             if (name != null) {
                 byUserId.put(user.getUserId(), name);
+            }
+        }
+        return byUserId;
+    }
+
+    private static Map<String, String> indexPhotoUrlsByUserId(List<AppUser> users) {
+        Map<String, String> byUserId = new HashMap<>();
+        if (users == null) {
+            return byUserId;
+        }
+        for (AppUser user : users) {
+            if (user == null || user.getUserId() == null) {
+                continue;
+            }
+            String photoUrl = user.getPhotoUrl();
+            if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+                byUserId.put(user.getUserId(), photoUrl.trim());
             }
         }
         return byUserId;
@@ -123,6 +143,10 @@ public class PlayerRankingViewModel extends ViewModel {
 
     public LiveData<RankingSort> getSelectedSort() {
         return selectedSort;
+    }
+
+    public LiveData<Map<String, String>> getPhotoUrlsByUserId() {
+        return photoUrlsByUserId;
     }
 
     public void selectSort(RankingSort sort) {

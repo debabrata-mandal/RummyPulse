@@ -58,6 +58,27 @@ public final class DisplayNameUtils {
     }
 
     /**
+     * Full player label for summary screens: prefer the mapped account profile name when
+     * available, otherwise use the stored in-game name without shortening.
+     */
+    public static String fullPlayerLabel(
+            @Nullable String storedPlayerName,
+            @Nullable String userId,
+            @Nullable Map<String, String> displayNameByUserId) {
+        if (userId != null && !userId.isEmpty()
+                && displayNameByUserId != null && !displayNameByUserId.isEmpty()) {
+            String accountName = displayNameByUserId.get(userId);
+            if (accountName != null && !accountName.trim().isEmpty()) {
+                return accountName.trim();
+            }
+        }
+        if (storedPlayerName == null || storedPlayerName.trim().isEmpty()) {
+            return "";
+        }
+        return storedPlayerName.trim();
+    }
+
+    /**
      * Player label for UI: prefer the mapped account's full profile name when available,
      * otherwise format the stored in-game name.
      */

@@ -17,7 +17,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.rummypulse.R;
@@ -29,6 +28,7 @@ import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class PlayerConsolidationFragment extends Fragment {
@@ -117,8 +117,8 @@ public class PlayerConsolidationFragment extends Fragment {
             binding.scrollMappingGamePoints.post(
                     () -> binding.scrollMappingGamePoints.scrollTo(0, 0));
         });
-        GridLayoutManager playerSummaryLayoutManager =
-                new GridLayoutManager(requireContext(), 2);
+        LinearLayoutManager playerSummaryLayoutManager =
+                new LinearLayoutManager(requireContext());
         playerSummaryLayoutManager.setAutoMeasureEnabled(true);
         binding.recyclerGamePointsPlayerSummary.setLayoutManager(
                 playerSummaryLayoutManager);
@@ -136,6 +136,9 @@ public class PlayerConsolidationFragment extends Fragment {
         binding.recyclerBalanceAdjustments.setNestedScrollingEnabled(false);
 
         viewModel.getPlayerGroups().observe(getViewLifecycleOwner(), groups -> {
+            Map<String, String> photoUrlsByUserId = viewModel.getPhotoUrlByUserId();
+            consolidatedAdapter.setPhotoUrlByUserId(photoUrlsByUserId);
+            gamePointsPlayerSummaryAdapter.setPhotoUrlByUserId(photoUrlsByUserId);
             consolidatedAdapter.setGroups(groups);
             gamePointsPlayerSummaryAdapter.setGroups(groups);
             updatePlayerTableTotals(groups);

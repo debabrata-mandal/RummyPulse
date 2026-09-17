@@ -12,4 +12,10 @@
     <dimen name="dialog_balance_adjustment_max_width">460dp</dimen>
     <dimen name="consolidation_card_stroke_default">1dp</dimen>
     <dimen name="consolidation_card_stroke_selected">2dp</dimen>
+    <dimen name="leaderboard_donut_size">204dp</dimen>
+    <dimen name="leaderboard_donut_ring_thickness">28dp</dimen>
+    <!-- Gap between donut inner edge and leader center circle (each side). -->
+    <dimen name="leaderboard_donut_center_gap">16dp</dimen>
+    <!-- donut_size - (2 * ring_thickness) - (2 * center_gap) = 204 - 56 - 32 -->
+    <dimen name="leaderboard_donut_inner_size">116dp</dimen>
 </resources>

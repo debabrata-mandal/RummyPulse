@@ -14,11 +14,13 @@ import android.text.style.StyleSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.RecyclerView;
@@ -27,10 +29,12 @@ import com.example.rummypulse.R;
 import com.example.rummypulse.ui.dashboard.LeaderboardAmountFormatter;
 import com.example.rummypulse.ui.dashboard.LeaderboardEntry;
 import com.example.rummypulse.ui.dashboard.RankingSort;
-import com.example.rummypulse.utils.DisplayNameUtils;
+import com.example.rummypulse.utils.ProfileAvatarBinder;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Renders the full ranking as two-line cards.
@@ -54,6 +58,7 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
     private static final int BADGE_RING_ALPHA = 0x66;
 
     private final List<LeaderboardEntry> entries = new ArrayList<>();
+    private Map<String, String> photoUrlByUserId = new HashMap<>();
     private double maxAbsoluteNet;
     private boolean showAmounts = true;
     private RankingSort sort = RankingSort.NET_TOTAL;
@@ -68,6 +73,12 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
         for (LeaderboardEntry entry : entries) {
             maxAbsoluteNet = Math.max(maxAbsoluteNet, Math.abs(entry.getFinalGamePoints()));
         }
+        notifyDataSetChanged();
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setPhotoUrlByUserId(@Nullable Map<String, String> photoUrlsByUserId) {
+        photoUrlByUserId = photoUrlsByUserId != null ? photoUrlsByUserId : new HashMap<>();
         notifyDataSetChanged();
     }
 
@@ -144,8 +155,14 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
 
     private void bindIdentity(RankingViewHolder holder, Context context, LeaderboardEntry entry) {
         int accent = ContextCompat.getColor(context, accentColorFor(entry.getRank()));
-        holder.avatar.setText(DisplayNameUtils.initials(entry.getDisplayName()));
-        holder.avatar.setBackgroundTintList(ColorStateList.valueOf(accent));
+        ProfileAvatarBinder.bind(
+                holder.itemView,
+                holder.avatarImage,
+                holder.avatar,
+                entry.getUserId(),
+                entry.getDisplayName(),
+                photoUrlByUserId,
+                ColorStateList.valueOf(accent));
 
         holder.name.setText(entry.isCurrentUser()
                 ? context.getString(R.string.player_ranking_name_you, entry.getDisplayName())
@@ -355,6 +372,7 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
     static class RankingViewHolder extends RecyclerView.ViewHolder {
 
         final TextView position;
+        final ImageView avatarImage;
         final TextView avatar;
         final TextView name;
         final TextView statGames;
@@ -368,6 +386,7 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
         RankingViewHolder(@NonNull View itemView) {
             super(itemView);
             position = itemView.findViewById(R.id.ranking_position);
+            avatarImage = itemView.findViewById(R.id.ranking_avatar_image);
             avatar = itemView.findViewById(R.id.ranking_avatar);
             name = itemView.findViewById(R.id.ranking_name);
             statGames = itemView.findViewById(R.id.ranking_stat_games);

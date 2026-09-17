@@ -16,9 +16,47 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <FrameLayout android:layout_width="38dp" android:layout_height="38dp">
-            <TextView android:id="@+id/view_game_points_avatar" android:layout_width="36dp" android:layout_height="36dp" android:layout_gravity="center" android:background="@drawable/bg_view_avatar" android:gravity="center" tools:text="A" android:textColor="@color/view_violet_light" android:textSize="14sp" android:textStyle="bold" />
-            <TextView android:id="@+id/view_game_points_rank" android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="bottom|end" android:background="@drawable/bg_view_rank" android:gravity="center" tools:text="1" android:textColor="@color/view_text_primary" android:textSize="8dp" android:textStyle="bold" />
+        <FrameLayout
+            android:layout_width="38dp"
+            android:layout_height="38dp">
+
+            <FrameLayout
+                android:id="@+id/view_game_points_avatar_host"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_gravity="center">
+
+                <ImageView
+                    android:id="@+id/player_avatar_image"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:contentDescription="@string/dashboard_avatar_description"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/player_avatar_initial"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_view_avatar"
+                    android:gravity="center"
+                    android:textColor="@color/view_violet_light"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    tools:text="A" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/view_game_points_rank"
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="bottom|end"
+                android:background="@drawable/bg_view_rank"
+                android:gravity="center"
+                android:textColor="@color/view_text_primary"
+                android:textSize="8dp"
+                android:textStyle="bold"
+                tools:text="1" />
         </FrameLayout>
 
         <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:layout_weight="1" android:orientation="vertical">

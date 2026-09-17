@@ -101,6 +101,22 @@ public class DisplayNameUtilsTest {
     }
 
     @Test
+    public void fullPlayerLabel_mappedUser_returnsFullAccountDisplayName() {
+        Map<String, String> byUserId = new HashMap<>();
+        byUserId.put("uid-1", "Debabrata Mandal");
+        assertEquals(
+                "Debabrata Mandal",
+                DisplayNameUtils.fullPlayerLabel("Debabrata", "uid-1", byUserId));
+    }
+
+    @Test
+    public void fullPlayerLabel_unmappedUser_returnsStoredName() {
+        assertEquals(
+                "John Doe",
+                DisplayNameUtils.fullPlayerLabel("John Doe", null, Collections.emptyMap()));
+    }
+
+    @Test
     public void playerLabel_mappedUser_prefersAccountDisplayName() {
         Map<String, String> byUserId = new HashMap<>();
         byUserId.put("uid-1", "Debabrata Mandal");

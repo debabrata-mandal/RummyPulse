@@ -3,9 +3,11 @@ package com.example.rummypulse.ui.playerconsolidation;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -13,13 +15,15 @@ import com.example.rummypulse.R;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 
 public final class GamePointsPlayerSummaryAdapter
         extends RecyclerView.Adapter<GamePointsPlayerSummaryAdapter.ViewHolder> {
 
     private final List<ConsolidatedPlayerGroup> groups = new ArrayList<>();
+    private Map<String, String> photoUrlByUserId = new HashMap<>();
     private Runnable editMappingsListener;
 
     @SuppressLint("NotifyDataSetChanged")
@@ -33,6 +37,12 @@ public final class GamePointsPlayerSummaryAdapter
                             ConsolidatedPlayerGroup::getDisplayName,
                             String.CASE_INSENSITIVE_ORDER));
         }
+        notifyDataSetChanged();
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setPhotoUrlByUserId(@Nullable Map<String, String> photoUrlsByUserId) {
+        photoUrlByUserId = photoUrlsByUserId != null ? photoUrlsByUserId : new HashMap<>();
         notifyDataSetChanged();
     }
 
@@ -53,9 +63,13 @@ public final class GamePointsPlayerSummaryAdapter
         ConsolidatedPlayerGroup group = groups.get(position);
         String name = group.getDisplayName();
         int gameCount = group.getMembers().size();
-        holder.avatar.setText(name == null || name.trim().isEmpty()
-                ? "?"
-                : name.trim().substring(0, 1).toUpperCase(Locale.getDefault()));
+        ConsolidationPlayerAvatarBinder.bind(
+                holder.itemView,
+                holder.avatarImage,
+                holder.avatarInitial,
+                group,
+                photoUrlByUserId,
+                name);
         holder.name.setText(name);
         holder.games.setText(String.valueOf(gameCount));
         holder.gamesSubtitle.setText(holder.itemView.getContext().getResources().getQuantityString(
@@ -80,7 +94,8 @@ public final class GamePointsPlayerSummaryAdapter
     }
 
     static final class ViewHolder extends RecyclerView.ViewHolder {
-        private final TextView avatar;
+        private final ImageView avatarImage;
+        private final TextView avatarInitial;
         private final TextView name;
         private final TextView games;
         private final TextView gamesSubtitle;
@@ -88,7 +103,8 @@ public final class GamePointsPlayerSummaryAdapter
 
         private ViewHolder(@NonNull View itemView) {
             super(itemView);
-            avatar = itemView.findViewById(R.id.text_summary_avatar);
+            avatarImage = itemView.findViewById(R.id.image_summary_avatar);
+            avatarInitial = itemView.findViewById(R.id.text_summary_avatar);
             name = itemView.findViewById(R.id.text_summary_name);
             games = itemView.findViewById(R.id.text_summary_games);
             gamesSubtitle = itemView.findViewById(R.id.text_summary_games_subtitle);

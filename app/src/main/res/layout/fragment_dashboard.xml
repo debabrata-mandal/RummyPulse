@@ -382,38 +382,75 @@
 
                             <com.example.rummypulse.ui.dashboard.LeaderboardDonutView
                                 android:id="@+id/view_leaderboard_donut"
-                                android:layout_width="204dp"
+                                android:layout_width="@dimen/leaderboard_donut_size"
                                 android:layout_height="match_parent"
                                 android:layout_gravity="center" />
 
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center"
-                                android:gravity="center"
-                                android:orientation="vertical">
+                            <FrameLayout
+                                android:id="@+id/leaderboard_center_content"
+                                android:layout_width="@dimen/leaderboard_donut_inner_size"
+                                android:layout_height="@dimen/leaderboard_donut_inner_size"
+                                android:layout_gravity="center">
+
+                                <ImageView
+                                    android:id="@+id/image_leaderboard_center_avatar"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:contentDescription="@string/dashboard_avatar_description"
+                                    android:scaleType="centerCrop"
+                                    android:visibility="gone" />
 
                                 <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:letterSpacing="0.1"
-                                    android:text="@string/dashboard_leaderboard_center_label"
-                                    android:textColor="@color/view_text_secondary"
-                                    android:textSize="9dp"
-                                    android:textStyle="bold" />
+                                    android:id="@+id/text_leaderboard_center_avatar"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/circle_background"
+                                    android:backgroundTint="@color/leaderboard_slice_win_1"
+                                    android:gravity="center"
+                                    android:textColor="@color/text_dark"
+                                    android:textSize="28sp"
+                                    android:textStyle="bold"
+                                    tools:text="AS" />
 
-                                <TextView
-                                    android:id="@+id/text_leaderboard_center_name"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:maxWidth="96dp"
-                                    android:ellipsize="end"
-                                    android:maxLines="1"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="15sp"
-                                    android:textStyle="bold" />
-                            </LinearLayout>
+                                <View
+                                    android:id="@+id/leaderboard_center_scrim"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/bg_leaderboard_center_scrim"
+                                    android:visibility="gone" />
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:orientation="vertical"
+                                    android:paddingHorizontal="10dp">
+
+                                    <TextView
+                                        android:id="@+id/text_leaderboard_center_label"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:letterSpacing="0.12"
+                                        android:text="@string/dashboard_leaderboard_center_label"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="9dp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/text_leaderboard_center_name"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="4dp"
+                                        android:ellipsize="end"
+                                        android:gravity="center"
+                                        android:maxLines="2"
+                                        android:textAlignment="center"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="14sp"
+                                        android:textStyle="bold"
+                                        tools:text="Avijit Sarkar" />
+                                </LinearLayout>
+                            </FrameLayout>
                         </FrameLayout>
 
                         <!-- Legend: two rows of two, so the ring stays the focus. -->

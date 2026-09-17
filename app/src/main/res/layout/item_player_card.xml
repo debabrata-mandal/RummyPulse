@@ -37,20 +37,34 @@
                 android:layout_height="46dp"
                 android:layout_marginEnd="10dp">
 
-                <TextView
+                <FrameLayout
                     android:id="@+id/btn_map_player"
                     android:layout_width="42dp"
                     android:layout_height="42dp"
                     android:layout_gravity="start|top"
-                    android:background="@drawable/bg_view_avatar"
                     android:clickable="true"
                     android:contentDescription="@string/map_player_icon_description"
-                    android:focusable="true"
-                    android:gravity="center"
-                    tools:text="P"
-                    android:textColor="@color/view_violet_light"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:focusable="true">
+
+                    <ImageView
+                        android:id="@+id/player_avatar_image"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="@string/dashboard_avatar_description"
+                        android:scaleType="centerCrop"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/player_avatar_initial"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_view_avatar"
+                        android:gravity="center"
+                        android:textColor="@color/view_violet_light"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        tools:text="P" />
+                </FrameLayout>
 
                 <TextView
                     android:id="@+id/text_player_position"

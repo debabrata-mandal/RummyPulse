@@ -80,6 +80,8 @@ public class PlayerRankingFragment extends Fragment {
 
         viewModel.getSelectedPeriod().observe(getViewLifecycleOwner(), this::applyPeriodSelection);
         viewModel.getSelectedSort().observe(getViewLifecycleOwner(), this::applySortSelection);
+        viewModel.getPhotoUrlsByUserId().observe(
+                getViewLifecycleOwner(), adapter::setPhotoUrlByUserId);
         viewModel.getRanking().observe(getViewLifecycleOwner(), this::renderRanking);
     }
 
