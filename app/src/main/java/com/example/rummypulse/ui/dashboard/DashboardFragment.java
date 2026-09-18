@@ -101,19 +101,20 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     private void loadPlayerAvatar() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String photoUrl = user != null && user.getPhotoUrl() != null
-                ? user.getPhotoUrl().toString()
-                : null;
+        String photoUrl = com.example.rummypulse.utils.CurrentUserProfileSession.getPhotoUrl();
+        if (photoUrl == null) {
+            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+            if (user != null && user.getPhotoUrl() != null) {
+                photoUrl = user.getPhotoUrl().toString();
+            }
+        }
         if (photoUrl == null || getContext() == null) {
             return;
         }
-        com.bumptech.glide.Glide.with(this)
-                .load(photoUrl)
-                .circleCrop()
-                .placeholder(R.drawable.ic_person)
-                .error(R.drawable.ic_person)
-                .into(binding.imagePlayerAvatar);
+        com.example.rummypulse.utils.ProfileAvatarLoader.loadCircle(
+                binding.imagePlayerAvatar,
+                photoUrl,
+                com.example.rummypulse.utils.CurrentUserProfileSession.getProfileVersion());
     }
 
     private void setupPeriodSelector() {
@@ -229,8 +230,15 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 getViewLifecycleOwner(), this::renderLeaderboard);
         dashboardViewModel.getAccountDisplayNames().observe(getViewLifecycleOwner(), names ->
                 renderLeaderboard(dashboardViewModel.getLeaderboard().getValue()));
-        dashboardViewModel.getPhotoUrlsByUserId().observe(getViewLifecycleOwner(), urls ->
-                renderLeaderboard(dashboardViewModel.getLeaderboard().getValue()));
+        dashboardViewModel.getPhotoUrlsByUserId().observe(getViewLifecycleOwner(), urls -> {
+            gameAdapter.setPhotoUrlByUserId(urls);
+            completedGameAdapter.setPhotoUrlByUserId(urls);
+            renderLeaderboard(dashboardViewModel.getLeaderboard().getValue());
+        });
+        dashboardViewModel.getProfileVersionsByUserId().observe(getViewLifecycleOwner(), versions -> {
+            gameAdapter.setProfileVersionByUserId(versions);
+            completedGameAdapter.setProfileVersionByUserId(versions);
+        });
 
         dashboardViewModel.getShowAllGames().observe(getViewLifecycleOwner(), showAll -> {
             boolean all = Boolean.TRUE.equals(showAll);
@@ -410,6 +418,14 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
             }
         }
 
+        long profileVersion = 0L;
+        Map<String, Long> profileVersions =
+                dashboardViewModel.getProfileVersionsByUserId().getValue();
+        if (leader.getUserId() != null && profileVersions != null) {
+            Long version = profileVersions.get(leader.getUserId());
+            profileVersion = version != null ? version : 0L;
+        }
+
         if (photoUrl != null) {
             binding.leaderboardCenterScrim.setVisibility(View.VISIBLE);
             applyLeaderboardCenterTextStyle(true);
@@ -419,6 +435,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                     binding.textLeaderboardCenterAvatar,
                     leaderName,
                     photoUrl,
+                    profileVersion,
                     ColorStateList.valueOf(ContextCompat.getColor(
                             requireContext(), R.color.leaderboard_slice_win_1)),
                     true,

@@ -56,6 +56,7 @@ public class PlayerRankingFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         adapter = new PlayerRankingAdapter();
+        adapter.setOnEntryClickListener(this::showRankingDetail);
         binding.recyclerRanking.setLayoutManager(new LinearLayoutManager(requireContext()));
         binding.recyclerRanking.setAdapter(adapter);
 
@@ -82,6 +83,8 @@ public class PlayerRankingFragment extends Fragment {
         viewModel.getSelectedSort().observe(getViewLifecycleOwner(), this::applySortSelection);
         viewModel.getPhotoUrlsByUserId().observe(
                 getViewLifecycleOwner(), adapter::setPhotoUrlByUserId);
+        viewModel.getProfileVersionsByUserId().observe(
+                getViewLifecycleOwner(), adapter::setProfileVersionByUserId);
         viewModel.getRanking().observe(getViewLifecycleOwner(), this::renderRanking);
     }
 
@@ -146,6 +149,23 @@ public class PlayerRankingFragment extends Fragment {
         segment.setTextColor(ContextCompat.getColor(requireContext(), selected
                 ? R.color.text_primary
                 : R.color.view_text_secondary));
+    }
+
+    private void showRankingDetail(LeaderboardEntry entry) {
+        if (entry == null || viewModel == null) {
+            return;
+        }
+        boolean showAmounts =
+                GameDefaultsRepository.getInstance(requireContext()).isLeaderboardGamePointsVisible();
+        PlayerRankingDetail detail = viewModel.buildDetail(entry, showAmounts);
+        if (detail == null) {
+            return;
+        }
+        PlayerRankingDetailDialog.show(
+                requireContext(),
+                detail,
+                viewModel.getPhotoUrlsByUserId().getValue(),
+                viewModel.getProfileVersionsByUserId().getValue());
     }
 
     private void renderRanking(List<LeaderboardEntry> entries) {

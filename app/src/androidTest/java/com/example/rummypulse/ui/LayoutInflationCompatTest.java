@@ -40,7 +40,7 @@ import java.util.List;
 public class LayoutInflationCompatTest {
 
     /** Total app:tint attributes declared across the layouts below. */
-    private static final int EXPECTED_TINTED_VIEWS = 56;
+    private static final int EXPECTED_TINTED_VIEWS = 57;
 
     private static final int[] LAYOUTS = {
             R.layout.activity_join_game,
@@ -61,6 +61,7 @@ public class LayoutInflationCompatTest {
             R.layout.dialog_map_player,
             R.layout.dialog_pick_past_round,
             R.layout.dialog_pin_input,
+            R.layout.dialog_player_ranking_detail,
             R.layout.dialog_players_list,
             R.layout.dialog_qr_code,
             R.layout.dialog_rebuild_report_month,
@@ -79,6 +80,8 @@ public class LayoutInflationCompatTest {
             R.layout.item_leaderboard_legend,
             R.layout.fragment_player_ranking,
             R.layout.item_player_ranking,
+            R.layout.item_player_ranking_detail_metric_row,
+            R.layout.item_ranking_detail_tile,
     };
 
     @Test

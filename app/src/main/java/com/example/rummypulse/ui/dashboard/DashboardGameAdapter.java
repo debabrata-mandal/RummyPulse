@@ -14,9 +14,7 @@ import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.request.RequestOptions;
+import com.example.rummypulse.utils.ProfileAvatarLoader;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
@@ -30,13 +28,19 @@ import com.example.rummypulse.data.GameDefaultsRepository;
 import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.utils.GameAttributionFormatter;
 
+import com.example.rummypulse.utils.UserProfileIndex;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdapter.GameViewHolder> {
 
     private List<GameItem> gameItems = new ArrayList<>();
+    private Map<String, String> photoUrlByUserId = new HashMap<>();
+    private Map<String, Long> profileVersionByUserId = new HashMap<>();
     private OnGameJoinListener joinListener;
     private boolean isCompletedGamesAdapter = false;
     private android.os.Handler updateHandler = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -48,6 +52,20 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
 
     public void setOnGameJoinListener(OnGameJoinListener listener) {
         this.joinListener = listener;
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setPhotoUrlByUserId(Map<String, String> photoUrlsByUserId) {
+        photoUrlByUserId = photoUrlsByUserId != null ? photoUrlsByUserId : new HashMap<>();
+        notifyDataSetChanged();
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setProfileVersionByUserId(Map<String, Long> profileVersionsByUserId) {
+        profileVersionByUserId = profileVersionsByUserId != null
+                ? profileVersionsByUserId
+                : new HashMap<>();
+        notifyDataSetChanged();
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -216,16 +234,13 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         holder.creatorSection.setVisibility(View.VISIBLE);
         
         if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
-            if (item.getCreatorPhotoUrl() != null && !item.getCreatorPhotoUrl().isEmpty()) {
-                Glide.with(holder.itemView.getContext())
-                    .load(item.getCreatorPhotoUrl())
-                    .apply(new RequestOptions()
-                        .centerCrop()
-                        .placeholder(R.drawable.ic_person)
-                        .error(R.drawable.ic_person)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .timeout(10000))
-                    .into(holder.creatorProfileImage);
+            String creatorPhotoUrl = resolveCreatorPhotoUrl(item);
+            long creatorProfileVersion = resolveCreatorProfileVersion(item);
+            if (creatorPhotoUrl != null && !creatorPhotoUrl.isEmpty()) {
+                ProfileAvatarLoader.loadCenterCrop(
+                        holder.creatorProfileImage,
+                        creatorPhotoUrl,
+                        creatorProfileVersion);
             } else {
                 holder.creatorProfileImage.setImageResource(R.drawable.ic_person);
                 holder.creatorProfileImage.setScaleType(android.widget.ImageView.ScaleType.CENTER);
@@ -385,6 +400,26 @@ public class DashboardGameAdapter extends RecyclerView.Adapter<DashboardGameAdap
         ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
         ClipData clip = ClipData.newPlainText(label, text);
         clipboard.setPrimaryClip(clip);
+    }
+
+    private String resolveCreatorPhotoUrl(GameItem item) {
+        String creatorUserId = item.getCreatorUserId();
+        if (creatorUserId != null && !creatorUserId.isEmpty()) {
+            String livePhotoUrl = photoUrlByUserId.get(creatorUserId);
+            if (livePhotoUrl != null && !livePhotoUrl.trim().isEmpty()) {
+                return livePhotoUrl.trim();
+            }
+        }
+        return item.getCreatorPhotoUrl();
+    }
+
+    private long resolveCreatorProfileVersion(GameItem item) {
+        String creatorUserId = item.getCreatorUserId();
+        if (creatorUserId != null && !creatorUserId.isEmpty()) {
+            return UserProfileIndex.profileVersionForUserId(
+                    creatorUserId, profileVersionByUserId);
+        }
+        return item.getCreatorProfileVersion();
     }
 
     static class GameViewHolder extends RecyclerView.ViewHolder {

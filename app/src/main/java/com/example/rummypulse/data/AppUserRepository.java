@@ -20,10 +20,12 @@ import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.Transaction;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Repository class to handle appUser_v2 collection operations in Firestore.
@@ -33,6 +35,8 @@ public class AppUserRepository {
     public static final int USER_PAGE_SIZE = 50;
     /** Keep the player picker directory warm across game screens for six hours. */
     private static final long USER_DIRECTORY_CACHE_TTL_MS = 6L * 60L * 60L * 1000L;
+    /** Throttles lightweight profileVersion delta queries on app resume. */
+    public static final long PROFILE_DELTA_REFRESH_THROTTLE_MS = 30L * 60L * 1000L;
 
     private static final Object SYNC_LOCK = new Object();
     private static final Map<String, SyncCacheEntry> RECENT_SYNCS = new HashMap<>();
@@ -41,6 +45,10 @@ public class AppUserRepository {
     private static List<AppUser> cachedUserDirectory;
     private static long cachedUserDirectoryAt;
     private static List<UsersCallback> inFlightDirectoryCallbacks;
+    private static long lastProfileDeltaRefreshAt;
+    private static boolean profileDeltaRefreshInFlight;
+    private static final List<DirectoryChangeListener> DIRECTORY_CHANGE_LISTENERS =
+            new CopyOnWriteArrayList<>();
 
     private final FirebaseFirestore db;
 
@@ -57,6 +65,15 @@ public class AppUserRepository {
             FirebaseUser firebaseUser,
             String provider,
             @Nullable AppUserCallback callback) {
+        createOrUpdateUser(firebaseUser, provider, null, false, callback);
+    }
+
+    public void createOrUpdateUser(
+            FirebaseUser firebaseUser,
+            String provider,
+            @Nullable ProfileOverrides overrides,
+            boolean forceProfileVersionRefresh,
+            @Nullable AppUserCallback callback) {
         if (firebaseUser == null) {
             notifyFailure(callback, new IllegalArgumentException("FirebaseUser cannot be null"));
             return;
@@ -65,19 +82,30 @@ public class AppUserRepository {
         String userId = firebaseUser.getUid();
         long nowMillis = System.currentTimeMillis();
         String email = firebaseUser.getEmail();
-        String displayName = firebaseUser.getDisplayName();
-        String photoUrl = firebaseUser.getPhotoUrl() != null
+        String resolvedDisplayName = firebaseUser.getDisplayName();
+        String resolvedPhotoUrl = firebaseUser.getPhotoUrl() != null
                 ? firebaseUser.getPhotoUrl().toString()
                 : null;
+        if (overrides != null) {
+            if (overrides.displayName != null) {
+                resolvedDisplayName = overrides.displayName;
+            }
+            if (overrides.photoUrl != null) {
+                resolvedPhotoUrl = overrides.photoUrl;
+            }
+        }
+        final String displayName = resolvedDisplayName;
+        final String photoUrl = resolvedPhotoUrl;
         synchronized (SYNC_LOCK) {
             SyncCacheEntry recent = RECENT_SYNCS.get(userId);
-            if (recent != null && !AppUserSyncPolicy.plan(
+            if (recent != null && !forceProfileVersionRefresh && !AppUserSyncPolicy.plan(
                     recent.appUser,
                     provider,
                     email,
                     displayName,
                     photoUrl,
-                    nowMillis).hasUpdates()) {
+                    nowMillis,
+                    false).hasUpdates()) {
                 Log.d(TAG, "Skipping repeated appUser initialization");
                 if (callback != null) {
                     callback.onSuccess(recent.appUser);
@@ -113,6 +141,7 @@ public class AppUserRepository {
                         userData.put("email", email);
                         userData.put("displayName", displayName);
                         userData.put("photoUrl", photoUrl);
+                        userData.put("profileVersion", nowMillis);
                         userData.put("createdAt", FieldValue.serverTimestamp());
                         userData.put("lastLoginAt", FieldValue.serverTimestamp());
                         transaction.set(userRef, userData);
@@ -124,6 +153,7 @@ public class AppUserRepository {
                                 email,
                                 displayName,
                                 photoUrl);
+                        created.setProfileVersion(nowMillis);
                         created.setCreatedAt(new Date(nowMillis));
                         created.setLastLoginAt(new Date(nowMillis));
                         return new SyncResult(created, true, true);
@@ -136,7 +166,8 @@ public class AppUserRepository {
                             email,
                             displayName,
                             photoUrl,
-                            nowMillis);
+                            nowMillis,
+                            forceProfileVersionRefresh);
                     Map<String, Object> updates = new HashMap<>();
                     if (plan.updateProvider) {
                         updates.put("provider", provider);
@@ -153,6 +184,10 @@ public class AppUserRepository {
                     if (plan.updatePhotoUrl) {
                         updates.put("photoUrl", photoUrl);
                         existing.setPhotoUrl(photoUrl);
+                    }
+                    if (plan.updateProfileVersion) {
+                        updates.put("profileVersion", nowMillis);
+                        existing.setProfileVersion(nowMillis);
                     }
                     if (plan.updateLastLoginAt) {
                         updates.put("lastLoginAt", FieldValue.serverTimestamp());
@@ -295,6 +330,140 @@ public class AppUserRepository {
         loadUserDirectoryPage(null, new ArrayList<>());
     }
 
+    /**
+     * Fetches only users whose profileVersion changed since this device last saw them. Intended for
+     * resume-time refresh without reloading the full directory.
+     */
+    public void refreshProfileChangesSince(@Nullable ProfileChangesCallback callback) {
+        long now = System.currentTimeMillis();
+        synchronized (DIRECTORY_LOCK) {
+            if (now - lastProfileDeltaRefreshAt < PROFILE_DELTA_REFRESH_THROTTLE_MS) {
+                notifyProfileChanges(callback, Collections.emptyList());
+                return;
+            }
+            if (profileDeltaRefreshInFlight) {
+                return;
+            }
+            profileDeltaRefreshInFlight = true;
+            lastProfileDeltaRefreshAt = now;
+        }
+
+        long sinceVersion = getCachedMaxProfileVersion();
+        db.collection(FirestoreCollections.APP_USER)
+                .whereGreaterThan("profileVersion", sinceVersion)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    List<AppUser> changedUsers = new ArrayList<>();
+                    if (snapshot != null) {
+                        for (DocumentSnapshot document : snapshot.getDocuments()) {
+                            try {
+                                changedUsers.add(documentToAppUser(document));
+                            } catch (Exception exception) {
+                                Log.e(TAG, "Error converting profile delta document", exception);
+                            }
+                        }
+                    }
+                    if (!changedUsers.isEmpty()) {
+                        patchUsersInDirectoryCache(changedUsers);
+                        notifyDirectoryChangeListeners(changedUsers);
+                    }
+                    completeProfileDeltaRefresh();
+                    notifyProfileChanges(callback, changedUsers);
+                    Log.d(TAG, "Profile delta refresh: reads=" + changedUsers.size()
+                            + " sinceVersion=" + sinceVersion);
+                })
+                .addOnFailureListener(exception -> {
+                    Log.w(TAG, "Profile delta refresh failed", exception);
+                    completeProfileDeltaRefresh();
+                    notifyProfileChanges(callback, Collections.emptyList());
+                });
+    }
+
+    public static void addDirectoryChangeListener(DirectoryChangeListener listener) {
+        if (listener != null) {
+            DIRECTORY_CHANGE_LISTENERS.add(listener);
+        }
+    }
+
+    public static void removeDirectoryChangeListener(DirectoryChangeListener listener) {
+        DIRECTORY_CHANGE_LISTENERS.remove(listener);
+    }
+
+    private static void completeProfileDeltaRefresh() {
+        synchronized (DIRECTORY_LOCK) {
+            profileDeltaRefreshInFlight = false;
+        }
+    }
+
+    private static void notifyProfileChanges(
+            @Nullable ProfileChangesCallback callback,
+            List<AppUser> changedUsers) {
+        if (callback != null) {
+            callback.onComplete(new ArrayList<>(changedUsers));
+        }
+    }
+
+    private static void notifyDirectoryChangeListeners(List<AppUser> changedUsers) {
+        for (DirectoryChangeListener listener : DIRECTORY_CHANGE_LISTENERS) {
+            listener.onUsersUpdated(changedUsers);
+        }
+    }
+
+    private static long getCachedMaxProfileVersion() {
+        synchronized (DIRECTORY_LOCK) {
+            if (cachedUserDirectory == null || cachedUserDirectory.isEmpty()) {
+                return 0L;
+            }
+            long maxVersion = 0L;
+            for (AppUser user : cachedUserDirectory) {
+                if (user != null) {
+                    maxVersion = Math.max(maxVersion, user.getProfileVersion());
+                }
+            }
+            return maxVersion;
+        }
+    }
+
+    private static void patchUsersInDirectoryCache(List<AppUser> changedUsers) {
+        synchronized (DIRECTORY_LOCK) {
+            if (cachedUserDirectory == null || changedUsers.isEmpty()) {
+                return;
+            }
+            Map<String, AppUser> changedById = new HashMap<>();
+            for (AppUser user : changedUsers) {
+                if (user != null && user.getUserId() != null) {
+                    changedById.put(user.getUserId(), user);
+                }
+            }
+            List<AppUser> patched = new ArrayList<>(cachedUserDirectory.size());
+            boolean replaced = false;
+            for (AppUser user : cachedUserDirectory) {
+                if (user == null || user.getUserId() == null) {
+                    patched.add(user);
+                    continue;
+                }
+                AppUser changed = changedById.remove(user.getUserId());
+                if (changed != null) {
+                    patched.add(changed);
+                    replaced = true;
+                } else {
+                    patched.add(user);
+                }
+            }
+            patched.addAll(changedById.values());
+            if (replaced || !changedById.isEmpty()) {
+                cachedUserDirectory = patched;
+            }
+        }
+    }
+
+    private static void patchUserInDirectoryCache(AppUser updatedUser) {
+        if (updatedUser == null || updatedUser.getUserId() == null) {
+            return;
+        }
+        patchUsersInDirectoryCache(Collections.singletonList(updatedUser));
+    }
+
     private void loadUserDirectoryPage(
             @Nullable DocumentSnapshot after,
             List<AppUser> accumulated) {
@@ -395,6 +564,8 @@ public class AppUserRepository {
         appUser.setEmail(document.getString("email"));
         appUser.setDisplayName(document.getString("displayName"));
         appUser.setPhotoUrl(document.getString("photoUrl"));
+        Long profileVersion = document.getLong("profileVersion");
+        appUser.setProfileVersion(profileVersion != null ? profileVersion : 0L);
         appUser.setCreatedAt(document.getDate("createdAt"));
         appUser.setLastLoginAt(document.getDate("lastLoginAt"));
         Long safePlayPolicyVersion = document.getLong("safePlayPolicyVersion");
@@ -444,6 +615,8 @@ public class AppUserRepository {
             RECENT_SYNCS.put(userId, new SyncCacheEntry(appUser));
             callbacks = IN_FLIGHT_SYNCS.remove(userId);
         }
+        patchUserInDirectoryCache(appUser);
+        notifyDirectoryChangeListeners(Collections.singletonList(appUser));
         if (callbacks != null) {
             for (AppUserCallback callback : callbacks) {
                 callback.onSuccess(appUser);
@@ -480,6 +653,8 @@ public class AppUserRepository {
             cachedUserDirectory = null;
             cachedUserDirectoryAt = 0;
             inFlightDirectoryCallbacks = null;
+            lastProfileDeltaRefreshAt = 0L;
+            profileDeltaRefreshInFlight = false;
         }
     }
 
@@ -537,6 +712,24 @@ public class AppUserRepository {
     public interface UsersCallback {
         void onSuccess(List<AppUser> users);
         void onFailure(Exception exception);
+    }
+
+    public interface ProfileChangesCallback {
+        void onComplete(List<AppUser> changedUsers);
+    }
+
+    public interface DirectoryChangeListener {
+        void onUsersUpdated(List<AppUser> changedUsers);
+    }
+
+    public static final class ProfileOverrides {
+        @Nullable public final String displayName;
+        @Nullable public final String photoUrl;
+
+        public ProfileOverrides(@Nullable String displayName, @Nullable String photoUrl) {
+            this.displayName = displayName;
+            this.photoUrl = photoUrl;
+        }
     }
 
 }

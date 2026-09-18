@@ -1,5 +1,6 @@
 package com.example.rummypulse.ui.playerranking;
 
+import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -7,7 +8,9 @@ import androidx.lifecycle.ViewModel;
 
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
+import com.example.rummypulse.utils.UserProfileIndex;
 import com.example.rummypulse.data.PlayerLeaderboardRepository;
+import com.example.rummypulse.data.PlayerStats;
 import com.example.rummypulse.ui.dashboard.Leaderboard;
 import com.example.rummypulse.ui.dashboard.LeaderboardEntry;
 import com.example.rummypulse.ui.dashboard.RankingSort;
@@ -17,6 +20,7 @@ import com.google.firebase.auth.FirebaseUser;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +43,10 @@ public class PlayerRankingViewModel extends ViewModel {
     private final MutableLiveData<RankingSort> selectedSort;
     private final MutableLiveData<Map<String, String>> fullNames;
     private final MutableLiveData<Map<String, String>> photoUrlsByUserId;
+    private final MutableLiveData<Map<String, Long>> profileVersionsByUserId;
     private final MediatorLiveData<List<LeaderboardEntry>> ranking;
+    private final AppUserRepository.DirectoryChangeListener directoryChangeListener =
+            changedUsers -> loadFullNames();
 
     public PlayerRankingViewModel() {
         repository = PlayerLeaderboardRepository.getInstance();
@@ -48,6 +55,7 @@ public class PlayerRankingViewModel extends ViewModel {
         selectedSort = new MutableLiveData<>(RankingSort.NET_TOTAL);
         fullNames = new MutableLiveData<>(Collections.emptyMap());
         photoUrlsByUserId = new MutableLiveData<>(Collections.emptyMap());
+        profileVersionsByUserId = new MutableLiveData<>(Collections.emptyMap());
 
         ranking = new MediatorLiveData<>();
         ranking.setValue(Collections.emptyList());
@@ -57,6 +65,13 @@ public class PlayerRankingViewModel extends ViewModel {
         ranking.addSource(fullNames, names -> rebuild());
 
         loadFullNames();
+        AppUserRepository.addDirectoryChangeListener(directoryChangeListener);
+    }
+
+    @Override
+    protected void onCleared() {
+        AppUserRepository.removeDirectoryChangeListener(directoryChangeListener);
+        super.onCleared();
     }
 
     /**
@@ -68,7 +83,8 @@ public class PlayerRankingViewModel extends ViewModel {
             @Override
             public void onSuccess(List<AppUser> users) {
                 fullNames.setValue(indexByUserId(users));
-                photoUrlsByUserId.setValue(indexPhotoUrlsByUserId(users));
+                photoUrlsByUserId.setValue(UserProfileIndex.photoUrlsByUserId(users));
+                profileVersionsByUserId.setValue(UserProfileIndex.profileVersionsByUserId(users));
             }
 
             @Override
@@ -90,23 +106,6 @@ public class PlayerRankingViewModel extends ViewModel {
             String name = preferredName(user);
             if (name != null) {
                 byUserId.put(user.getUserId(), name);
-            }
-        }
-        return byUserId;
-    }
-
-    private static Map<String, String> indexPhotoUrlsByUserId(List<AppUser> users) {
-        Map<String, String> byUserId = new HashMap<>();
-        if (users == null) {
-            return byUserId;
-        }
-        for (AppUser user : users) {
-            if (user == null || user.getUserId() == null) {
-                continue;
-            }
-            String photoUrl = user.getPhotoUrl();
-            if (photoUrl != null && !photoUrl.trim().isEmpty()) {
-                byUserId.put(user.getUserId(), photoUrl.trim());
             }
         }
         return byUserId;
@@ -147,6 +146,103 @@ public class PlayerRankingViewModel extends ViewModel {
 
     public LiveData<Map<String, String>> getPhotoUrlsByUserId() {
         return photoUrlsByUserId;
+    }
+
+    public LiveData<Map<String, Long>> getProfileVersionsByUserId() {
+        return profileVersionsByUserId;
+    }
+
+    /**
+     * Builds a full profile across every reporting period for one ranked row.
+     */
+    @Nullable
+    public PlayerRankingDetail buildDetail(LeaderboardEntry entry, boolean showAmounts) {
+        if (entry == null) {
+            return null;
+        }
+
+        PlayerStats stats = findStats(entry.getUserId());
+        StatsPeriod activePeriod = selectedPeriod.getValue();
+        if (activePeriod == null) {
+            activePeriod = StatsPeriod.THIS_MONTH;
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String currentUserId = user == null ? null : user.getUid();
+
+        List<PlayerStats> allStats = repository.getAllStats().getValue();
+        List<PlayerRankingDetail.PeriodBreakdown> breakdowns = new ArrayList<>();
+        for (StatsPeriod period : StatsPeriod.values()) {
+            PlayerStats.Bucket bucket = period.bucketOf(stats);
+            Map<RankingSort, Integer> rankBySort = new EnumMap<>(RankingSort.class);
+            double maxAbsoluteNet = 0;
+            double leaderNet = 0;
+            double periodAverageNet = 0;
+            int totalPlayers = 0;
+
+            for (RankingSort sort : RankingSort.values()) {
+                List<LeaderboardEntry> ranked = Leaderboard.rankAll(
+                        allStats, period, currentUserId, sort);
+                if (sort == RankingSort.NET_TOTAL) {
+                    totalPlayers = ranked.size();
+                    for (LeaderboardEntry candidate : ranked) {
+                        maxAbsoluteNet = Math.max(
+                                maxAbsoluteNet, Math.abs(candidate.getFinalGamePoints()));
+                    }
+                    if (!ranked.isEmpty()) {
+                        leaderNet = ranked.get(0).getFinalGamePoints();
+                        double sum = 0;
+                        for (LeaderboardEntry candidate : ranked) {
+                            sum += candidate.getFinalGamePoints();
+                        }
+                        periodAverageNet = sum / ranked.size();
+                    }
+                }
+                LeaderboardEntry match = findEntry(ranked, entry.getUserId());
+                rankBySort.put(sort, match == null ? 0 : match.getRank());
+            }
+
+            breakdowns.add(new PlayerRankingDetail.PeriodBreakdown(
+                    period,
+                    totalPlayers,
+                    bucket,
+                    maxAbsoluteNet,
+                    leaderNet,
+                    periodAverageNet,
+                    rankBySort));
+        }
+
+        return new PlayerRankingDetail(entry, activePeriod, breakdowns, showAmounts);
+    }
+
+    @Nullable
+    private static LeaderboardEntry findEntry(List<LeaderboardEntry> ranked, String userId) {
+        if (ranked == null || userId == null) {
+            return null;
+        }
+        for (LeaderboardEntry candidate : ranked) {
+            if (userId.equals(candidate.getUserId())) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    private PlayerStats findStats(String userId) {
+        if (userId == null) {
+            return null;
+        }
+        List<PlayerStats> all = repository.getAllStats().getValue();
+        if (all == null) {
+            return null;
+        }
+        for (PlayerStats stats : all) {
+            if (stats != null && userId.equals(stats.getUserId())) {
+                return stats;
+            }
+        }
+        return null;
     }
 
     public void selectSort(RankingSort sort) {

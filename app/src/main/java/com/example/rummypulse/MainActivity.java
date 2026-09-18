@@ -24,9 +24,6 @@ import android.widget.ImageView;
 import java.util.List;
 import java.util.Locale;
 
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.request.RequestOptions;
 import com.example.rummypulse.utils.LanguagePreferenceManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.navigation.NavigationView;
@@ -51,6 +48,10 @@ import com.example.rummypulse.service.AccountDeletionGateway;
 import com.example.rummypulse.service.FirebaseAccountDeletionService;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.AccountSignOut;
+import com.example.rummypulse.utils.CurrentUserProfileSession;
+import com.example.rummypulse.utils.PendingProfileOverrides;
+import com.example.rummypulse.utils.ProfileAvatarLoader;
+import com.example.rummypulse.utils.ProfileSyncHelper;
 import com.example.rummypulse.utils.SessionCacheCleaner;
 import com.example.rummypulse.utils.SafePlayPolicyStore;
 import com.example.rummypulse.utils.ModernToast;
@@ -88,6 +89,8 @@ public class MainActivity extends AppCompatActivity {
     private boolean reviewNeedsAttention = false;
     private boolean initialAppUserSyncCompleted;
     private boolean hasStartedOnce;
+    private long lastLocalProfileReloadAt;
+    private static final long LOCAL_PROFILE_RELOAD_THROTTLE_MS = 5L * 60L * 1000L;
     private boolean accountDeletionInProgress;
     private GoogleSignInClient accountDeletionGoogleClient;
     private androidx.appcompat.app.AlertDialog accountDeletionProgressDialog;
@@ -284,6 +287,13 @@ public class MainActivity extends AppCompatActivity {
 
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        refreshLocalProfileIfNeeded();
+        refreshRemoteProfileChanges();
+    }
+
+    @Override
     protected void onStart() {
         super.onStart();
         // Add auth listener when activity starts
@@ -321,23 +331,98 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void ensureAppUserDocument(FirebaseUser user) {
-        AppUserRepository repo = new AppUserRepository();
         String provider = AppUserRepository.getProviderName(user);
-        repo.createOrUpdateUser(user, provider, new AppUserRepository.AppUserCallback() {
-            @Override
-            public void onSuccess(AppUser appUser) {
-                android.util.Log.d("MainActivity", "appUser document synced");
-                initialAppUserSyncCompleted = true;
-                AppUserRoleSession.getInstance()
-                        .applyVerifiedRole(appUser.getUserId(), appUser.getRole());
-            }
+        AppUserRepository.ProfileOverrides overrides = PendingProfileOverrides.consumeOverrides();
+        boolean forceProfileVersionRefresh =
+                PendingProfileOverrides.consumeForceProfileVersionRefresh();
+        if (overrides != null) {
+            CurrentUserProfileSession.applyOverrides(
+                    overrides.displayName,
+                    overrides.photoUrl);
+        }
+        ProfileSyncHelper.reloadAndSync(
+                user,
+                provider,
+                overrides,
+                forceProfileVersionRefresh,
+                new AppUserRepository.AppUserCallback() {
+                    @Override
+                    public void onSuccess(AppUser appUser) {
+                        android.util.Log.d("MainActivity", "appUser document synced");
+                        initialAppUserSyncCompleted = true;
+                        CurrentUserProfileSession.update(appUser);
+                        if (navigationView != null) {
+                            FirebaseUser currentUser = mAuth.getCurrentUser();
+                            if (currentUser != null) {
+                                updateNavigationHeader(navigationView, currentUser);
+                            }
+                        }
+                        AppUserRoleSession.getInstance()
+                                .applyVerifiedRole(appUser.getUserId(), appUser.getRole());
+                    }
 
-            @Override
-            public void onFailure(Exception exception) {
-                initialAppUserSyncCompleted = true;
-                android.util.Log.w("MainActivity",
-                        "appUser sync failed — user may be missing from Users list until next successful sync",
-                        exception);
+                    @Override
+                    public void onFailure(Exception exception) {
+                        initialAppUserSyncCompleted = true;
+                        android.util.Log.w("MainActivity",
+                                "appUser sync failed — user may be missing from Users list until next successful sync",
+                                exception);
+                    }
+                });
+    }
+
+    private void refreshLocalProfileIfNeeded() {
+        if (!initialAppUserSyncCompleted || mAuth == null) {
+            return;
+        }
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastLocalProfileReloadAt < LOCAL_PROFILE_RELOAD_THROTTLE_MS) {
+            return;
+        }
+        lastLocalProfileReloadAt = now;
+        String provider = AppUserRepository.getProviderName(user);
+        ProfileSyncHelper.reloadAndSync(
+                user,
+                provider,
+                null,
+                true,
+                new AppUserRepository.AppUserCallback() {
+                    @Override
+                    public void onSuccess(AppUser appUser) {
+                        CurrentUserProfileSession.update(appUser);
+                        if (navigationView != null && mAuth.getCurrentUser() != null) {
+                            updateNavigationHeader(navigationView, mAuth.getCurrentUser());
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Exception exception) {
+                        android.util.Log.w("MainActivity",
+                                "Resume profile reload failed", exception);
+                    }
+                });
+    }
+
+    private void refreshRemoteProfileChanges() {
+        new AppUserRepository().refreshProfileChangesSince(changedUsers -> {
+            if (changedUsers == null || changedUsers.isEmpty() || navigationView == null) {
+                return;
+            }
+            FirebaseUser currentUser = mAuth != null ? mAuth.getCurrentUser() : null;
+            if (currentUser == null) {
+                return;
+            }
+            for (AppUser changedUser : changedUsers) {
+                if (changedUser != null
+                        && currentUser.getUid().equals(changedUser.getUserId())) {
+                    CurrentUserProfileSession.update(changedUser);
+                    updateNavigationHeader(navigationView, currentUser);
+                    break;
+                }
             }
         });
     }
@@ -351,7 +436,10 @@ public class MainActivity extends AppCompatActivity {
         ImageView profileImageView = headerView.findViewById(R.id.imageView);
 
         if (user != null) {
-            String displayName = user.getDisplayName();
+            String displayName = CurrentUserProfileSession.getDisplayName();
+            if (displayName == null || displayName.trim().isEmpty()) {
+                displayName = user.getDisplayName();
+            }
             String email = user.getEmail();
             String phone = user.getPhoneNumber();
 
@@ -374,15 +462,15 @@ public class MainActivity extends AppCompatActivity {
                 subtitleTextView.setText(R.string.app_name);
             }
 
-            if (user.getPhotoUrl() != null) {
-                Glide.with(this)
-                    .load(user.getPhotoUrl())
-                    .apply(new RequestOptions()
-                        .circleCrop()
-                        .placeholder(R.drawable.ic_rummy_pulse_logo)
-                        .error(R.drawable.ic_rummy_pulse_logo)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL))
-                    .into(profileImageView);
+            String photoUrl = CurrentUserProfileSession.getPhotoUrl();
+            if (photoUrl == null && user.getPhotoUrl() != null) {
+                photoUrl = user.getPhotoUrl().toString();
+            }
+            if (photoUrl != null && !photoUrl.trim().isEmpty()) {
+                ProfileAvatarLoader.loadCircle(
+                        profileImageView,
+                        photoUrl,
+                        CurrentUserProfileSession.getProfileVersion());
             } else {
                 profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo);
             }
@@ -585,13 +673,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void signOut() {
         AccountSignOut.signOut(this).addOnCompleteListener(task -> {
-            SessionCacheCleaner.clearAll(MainActivity.this);
-            android.util.Log.d("MainActivity", "User signed out manually");
-            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
-            intent.putExtra(LoginActivity.EXTRA_REQUIRE_LOGIN, true);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
+            SessionCacheCleaner.clearAll(MainActivity.this, () -> {
+                android.util.Log.d("MainActivity", "User signed out manually");
+                Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+                intent.putExtra(LoginActivity.EXTRA_REQUIRE_LOGIN, true);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+            });
         });
     }
 

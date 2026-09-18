@@ -24,7 +24,8 @@ import java.util.Set;
 public class PlayerConsolidationViewModelTest {
 
     private static final PlayerConsolidationViewModel.AccountDisplayNameLoader NO_OP_DISPLAY_NAME_LOADER =
-            callback -> callback.onLoaded(Collections.emptyMap(), Collections.emptyMap());
+            callback -> callback.onLoaded(
+                    Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap());
 
     @Rule
     public InstantTaskExecutorRule instantTaskExecutorRule = new InstantTaskExecutorRule();

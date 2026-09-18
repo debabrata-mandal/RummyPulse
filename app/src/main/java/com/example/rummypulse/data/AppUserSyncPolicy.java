@@ -19,11 +19,32 @@ public final class AppUserSyncPolicy {
             String displayName,
             String photoUrl,
             long nowMillis) {
+        return plan(stored, provider, email, displayName, photoUrl, nowMillis, false);
+    }
+
+    public static SyncPlan plan(
+            AppUser stored,
+            String provider,
+            String email,
+            String displayName,
+            String photoUrl,
+            long nowMillis,
+            boolean forceProfileVersionRefresh) {
+        boolean updateProvider = !Objects.equals(stored.getProvider(), provider);
+        boolean updateEmail = !Objects.equals(stored.getEmail(), email);
+        boolean updateDisplayName = !Objects.equals(stored.getDisplayName(), displayName);
+        boolean updatePhotoUrl = !Objects.equals(stored.getPhotoUrl(), photoUrl);
+        boolean profileFieldsChanged = updateProvider
+                || updateEmail
+                || updateDisplayName
+                || updatePhotoUrl;
+        boolean updateProfileVersion = profileFieldsChanged || forceProfileVersionRefresh;
         return new SyncPlan(
-                !Objects.equals(stored.getProvider(), provider),
-                !Objects.equals(stored.getEmail(), email),
-                !Objects.equals(stored.getDisplayName(), displayName),
-                !Objects.equals(stored.getPhotoUrl(), photoUrl),
+                updateProvider,
+                updateEmail,
+                updateDisplayName,
+                updatePhotoUrl,
+                updateProfileVersion,
                 shouldUpdateLastLogin(stored.getLastLoginAt(), nowMillis));
     }
 
@@ -40,6 +61,7 @@ public final class AppUserSyncPolicy {
         public final boolean updateEmail;
         public final boolean updateDisplayName;
         public final boolean updatePhotoUrl;
+        public final boolean updateProfileVersion;
         public final boolean updateLastLoginAt;
 
         private SyncPlan(
@@ -47,11 +69,13 @@ public final class AppUserSyncPolicy {
                 boolean updateEmail,
                 boolean updateDisplayName,
                 boolean updatePhotoUrl,
+                boolean updateProfileVersion,
                 boolean updateLastLoginAt) {
             this.updateProvider = updateProvider;
             this.updateEmail = updateEmail;
             this.updateDisplayName = updateDisplayName;
             this.updatePhotoUrl = updatePhotoUrl;
+            this.updateProfileVersion = updateProfileVersion;
             this.updateLastLoginAt = updateLastLoginAt;
         }
 
@@ -60,6 +84,7 @@ public final class AppUserSyncPolicy {
                     || updateEmail
                     || updateDisplayName
                     || updatePhotoUrl
+                    || updateProfileVersion
                     || updateLastLoginAt;
         }
     }

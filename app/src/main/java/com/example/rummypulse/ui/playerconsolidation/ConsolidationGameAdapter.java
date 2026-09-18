@@ -11,9 +11,7 @@ import android.annotation.SuppressLint;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.request.RequestOptions;
+import com.example.rummypulse.utils.ProfileAvatarLoader;
 import com.example.rummypulse.R;
 import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.utils.GameAttributionFormatter;
@@ -73,15 +71,10 @@ public class ConsolidationGameAdapter extends RecyclerView.Adapter<Consolidation
 
         if (item.getCreatorName() != null && !item.getCreatorName().trim().isEmpty()) {
             if (item.getCreatorPhotoUrl() != null && !item.getCreatorPhotoUrl().isEmpty()) {
-                Glide.with(holder.itemView.getContext())
-                        .load(item.getCreatorPhotoUrl())
-                        .apply(new RequestOptions()
-                                .centerCrop()
-                                .placeholder(R.drawable.ic_person)
-                                .error(R.drawable.ic_person)
-                                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                .timeout(10000))
-                        .into(holder.creatorProfileImage);
+                ProfileAvatarLoader.loadCenterCrop(
+                        holder.creatorProfileImage,
+                        item.getCreatorPhotoUrl(),
+                        item.getCreatorProfileVersion());
             } else {
                 bindDefaultCreatorAvatar(holder.creatorProfileImage);
             }

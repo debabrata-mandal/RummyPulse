@@ -54,7 +54,22 @@ public class AppUserSyncPolicyTest {
         assertTrue(plan.updateEmail);
         assertTrue(plan.updateDisplayName);
         assertTrue(plan.updatePhotoUrl);
+        assertTrue(plan.updateProfileVersion);
         assertFalse(plan.updateLastLoginAt);
+    }
+
+    @Test
+    public void forceProfileVersionRefreshRequiresWriteEvenWhenFieldsMatch() {
+        AppUser stored = userWithLastLogin(NOW - 60_000L);
+
+        AppUserSyncPolicy.SyncPlan plan = AppUserSyncPolicy.plan(
+                stored, "Google", "user@example.com", "User", "photo", NOW, true);
+
+        assertTrue(plan.updateProfileVersion);
+        assertFalse(plan.updateDisplayName);
+        assertFalse(plan.updatePhotoUrl);
+        assertFalse(plan.updateLastLoginAt);
+        assertTrue(plan.hasUpdates());
     }
 
     @Test

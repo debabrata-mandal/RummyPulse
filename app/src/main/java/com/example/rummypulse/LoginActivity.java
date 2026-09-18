@@ -26,6 +26,8 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.example.rummypulse.utils.AccountSignOut;
 import com.example.rummypulse.utils.AuthStateManager;
+import com.example.rummypulse.utils.CurrentUserProfileSession;
+import com.example.rummypulse.utils.PendingProfileOverrides;
 import com.example.rummypulse.utils.VersionGate;
 import com.example.rummypulse.utils.SafePlayPolicyStore;
 
@@ -46,6 +48,7 @@ public class LoginActivity extends AppCompatActivity {
     private long startupStartedAt;
     private long googleSignInStartedAt;
     private AuthAttempt authAttempt;
+    private GoogleSignInAccount pendingGoogleAccount;
 
     private static final class AuthAttempt {
         final String idToken;
@@ -160,6 +163,7 @@ public class LoginActivity extends AppCompatActivity {
             try {
                 // Google Sign In was successful, authenticate with Firebase
                 GoogleSignInAccount account = task.getResult(ApiException.class);
+                pendingGoogleAccount = account;
                 Log.d(TAG, "Google account selected");
                 String idToken = account.getIdToken();
                 if (idToken == null || idToken.isEmpty()) {
@@ -212,6 +216,16 @@ public class LoginActivity extends AppCompatActivity {
             FirebaseUser user = mAuth.getCurrentUser();
             if (user != null) {
                 Log.d(TAG, "Firebase authentication successful");
+                PendingProfileOverrides.setFromGoogleAccount(pendingGoogleAccount);
+                if (pendingGoogleAccount != null) {
+                    String googlePhotoUrl = pendingGoogleAccount.getPhotoUrl() != null
+                            ? pendingGoogleAccount.getPhotoUrl().toString()
+                            : null;
+                    CurrentUserProfileSession.applyOverrides(
+                            pendingGoogleAccount.getDisplayName(),
+                            googlePhotoUrl);
+                }
+                pendingGoogleAccount = null;
                 AuthStateManager.getInstance(LoginActivity.this).saveAuthState(user);
                 com.example.rummypulse.utils.ModernToast.success(
                         LoginActivity.this,

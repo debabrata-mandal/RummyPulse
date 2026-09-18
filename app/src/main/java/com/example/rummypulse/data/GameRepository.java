@@ -433,10 +433,8 @@ public class GameRepository {
                         if (current == null || current.getPlayers() != null) {
                             return;
                         }
-                        String creatorPhotoUrl = userSnapshot.exists()
-                                ? userSnapshot.getString("photoUrl") : null;
-                        if (creatorPhotoUrl != null) {
-                            current.setCreatorPhotoUrl(creatorPhotoUrl);
+                        applyCreatorProfile(current, userSnapshot);
+                        if (current.getCreatorPhotoUrl() != null) {
                             applyViewApprovalCountsFromGameSnapshot(authDocument, current);
                             updateGameItemsList();
                         }
@@ -584,10 +582,11 @@ public class GameRepository {
                                     }
                                     String creatorPhotoUrl = userSnapshot.exists()
                                             ? userSnapshot.getString("photoUrl") : null;
+                                    long creatorProfileVersion = readProfileVersion(userSnapshot);
                                     GameItem gameItem = applyEditorIdentity(
                                             convertToGameItem(gameId, pin, gameData, createdAt,
                                                     creatorName, creatorPhotoUrl, creatorUserId,
-                                                    gameDisplayName),
+                                                    gameDisplayName, creatorProfileVersion),
                                             gameAuth);
                                     if (gameItem != null) {
                                         applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
@@ -682,6 +681,7 @@ public class GameRepository {
                     gameData.getPlayers()
             );
             updated.setCreatorPhotoUrl(item.getCreatorPhotoUrl());
+            updated.setCreatorProfileVersion(item.getCreatorProfileVersion());
             updated.setCreatorUserId(item.getCreatorUserId());
             updated.setEditorName(item.getEditorName());
             updated.setEditorUserId(item.getEditorUserId());
@@ -987,12 +987,15 @@ public class GameRepository {
                             return;
                         }
                         String creatorPhotoUrl = null;
+                        long creatorProfileVersion = 0L;
                         if (userSnapshot.exists()) {
                             creatorPhotoUrl = userSnapshot.getString("photoUrl");
+                            creatorProfileVersion = readProfileVersion(userSnapshot);
                         }
                         GameItem gameItem = applyEditorIdentity(
                                 convertToGameItem(gameId, pin, gameData, createdAt,
-                                        creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName),
+                                        creatorName, creatorPhotoUrl, creatorUserId, gameDisplayName,
+                                        creatorProfileVersion),
                                 gameAuth);
                         putGameItemIfStillInLoad(gameId, gameItem);
                     })
@@ -1086,13 +1089,16 @@ public class GameRepository {
                                                                 return;
                                                             }
                                                             String creatorPhotoUrl = null;
+                                                            long creatorProfileVersion = 0L;
                                                             if (userSnapshot.exists()) {
                                                                 creatorPhotoUrl = userSnapshot.getString("photoUrl");
+                                                                creatorProfileVersion = readProfileVersion(userSnapshot);
                                                             }
                                                             GameItem gameItem = applyEditorIdentity(
                                                                     convertToGameItem(gameId, pin, gameData, createdAt,
                                                                             creatorName, creatorPhotoUrl,
-                                                                            creatorUserId, gameDisplayName),
+                                                                            creatorUserId, gameDisplayName,
+                                                                            creatorProfileVersion),
                                                                     gameAuth);
                                                             
                                                             if (gameItem != null && isDashboardUpdateCurrent(gameId, updateToken)) {
@@ -1339,7 +1345,37 @@ public class GameRepository {
         return item;
     }
 
-    private GameItem convertToGameItem(String gameId, String pin, GameData gameData, com.google.firebase.Timestamp createdAt, String creatorName, String creatorPhotoUrl, String creatorUserId, String gameDisplayName) {
+    private GameItem convertToGameItem(
+            String gameId,
+            String pin,
+            GameData gameData,
+            com.google.firebase.Timestamp createdAt,
+            String creatorName,
+            String creatorPhotoUrl,
+            String creatorUserId,
+            String gameDisplayName) {
+        return convertToGameItem(
+                gameId,
+                pin,
+                gameData,
+                createdAt,
+                creatorName,
+                creatorPhotoUrl,
+                creatorUserId,
+                gameDisplayName,
+                0L);
+    }
+
+    private GameItem convertToGameItem(
+            String gameId,
+            String pin,
+            GameData gameData,
+            com.google.firebase.Timestamp createdAt,
+            String creatorName,
+            String creatorPhotoUrl,
+            String creatorUserId,
+            String gameDisplayName,
+            long creatorProfileVersion) {
         // Calculate total score
         int totalScore = gameData.getTotalScore();
         
@@ -1378,10 +1414,30 @@ public class GameRepository {
         
         // Set creator photo URL and user ID
         gameItem.setCreatorPhotoUrl(creatorPhotoUrl);
+        gameItem.setCreatorProfileVersion(creatorProfileVersion);
         gameItem.setCreatorUserId(creatorUserId);
         gameItem.setGameDisplayName(gameDisplayName != null ? gameDisplayName : "");
         
         return gameItem;
+    }
+
+    private static void applyCreatorProfile(GameItem item, DocumentSnapshot userSnapshot) {
+        if (item == null || userSnapshot == null || !userSnapshot.exists()) {
+            return;
+        }
+        String creatorPhotoUrl = userSnapshot.getString("photoUrl");
+        if (creatorPhotoUrl != null) {
+            item.setCreatorPhotoUrl(creatorPhotoUrl);
+        }
+        item.setCreatorProfileVersion(readProfileVersion(userSnapshot));
+    }
+
+    private static long readProfileVersion(DocumentSnapshot userSnapshot) {
+        if (userSnapshot == null || !userSnapshot.exists()) {
+            return 0L;
+        }
+        Long profileVersion = userSnapshot.getLong("profileVersion");
+        return profileVersion != null ? profileVersion : 0L;
     }
 
     private String formatTimestamp(com.google.firebase.Timestamp timestamp) {

@@ -24,6 +24,7 @@ public final class GamePointsPlayerSummaryAdapter
 
     private final List<ConsolidatedPlayerGroup> groups = new ArrayList<>();
     private Map<String, String> photoUrlByUserId = new HashMap<>();
+    private Map<String, Long> profileVersionByUserId = new HashMap<>();
     private Runnable editMappingsListener;
 
     @SuppressLint("NotifyDataSetChanged")
@@ -43,6 +44,14 @@ public final class GamePointsPlayerSummaryAdapter
     @SuppressLint("NotifyDataSetChanged")
     public void setPhotoUrlByUserId(@Nullable Map<String, String> photoUrlsByUserId) {
         photoUrlByUserId = photoUrlsByUserId != null ? photoUrlsByUserId : new HashMap<>();
+        notifyDataSetChanged();
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setProfileVersionByUserId(@Nullable Map<String, Long> profileVersionsByUserId) {
+        profileVersionByUserId = profileVersionsByUserId != null
+                ? profileVersionsByUserId
+                : new HashMap<>();
         notifyDataSetChanged();
     }
 
@@ -69,6 +78,7 @@ public final class GamePointsPlayerSummaryAdapter
                 holder.avatarInitial,
                 group,
                 photoUrlByUserId,
+                profileVersionByUserId,
                 name);
         holder.name.setText(name);
         holder.games.setText(String.valueOf(gameCount));

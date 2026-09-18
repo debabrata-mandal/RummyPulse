@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel;
 
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
+import com.example.rummypulse.utils.UserProfileIndex;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.Player;
 import com.example.rummypulse.ui.home.GameItem;
@@ -29,7 +30,8 @@ public class PlayerConsolidationViewModel extends ViewModel {
     interface AccountDisplayNameCallback {
         void onLoaded(
                 Map<String, String> displayNamesByUserId,
-                Map<String, String> photoUrlsByUserId);
+                Map<String, String> photoUrlsByUserId,
+                Map<String, Long> profileVersionsByUserId);
     }
 
     interface AccountDisplayNameLoader {
@@ -54,12 +56,13 @@ public class PlayerConsolidationViewModel extends ViewModel {
                 public void onSuccess(List<AppUser> users) {
                     callback.onLoaded(
                             indexDisplayNamesByUserId(users),
-                            indexPhotoUrlsByUserId(users));
+                            UserProfileIndex.photoUrlsByUserId(users),
+                            UserProfileIndex.profileVersionsByUserId(users));
                 }
 
                 @Override
                 public void onFailure(Exception exception) {
-                    callback.onLoaded(new HashMap<>(), new HashMap<>());
+                    callback.onLoaded(new HashMap<>(), new HashMap<>(), new HashMap<>());
                 }
             });
         }
@@ -78,6 +81,9 @@ public class PlayerConsolidationViewModel extends ViewModel {
             new MutableLiveData<>(false);
     private Map<String, String> displayNameByUserId = new HashMap<>();
     private Map<String, String> photoUrlByUserId = new HashMap<>();
+    private Map<String, Long> profileVersionByUserId = new HashMap<>();
+    private final AppUserRepository.DirectoryChangeListener directoryChangeListener =
+            changedUsers -> loadAccountDisplayNames();
 
     private boolean consolidationInitialized;
     private String lastInitializedGameKey = "";
@@ -104,6 +110,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
         this.gameRepository = gameRepository;
         this.accountDisplayNameLoader = accountDisplayNameLoader;
         loadAccountDisplayNames();
+        AppUserRepository.addDirectoryChangeListener(directoryChangeListener);
     }
 
     public LiveData<List<GameItem>> getGameItems() {
@@ -116,6 +123,10 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     public Map<String, String> getPhotoUrlByUserId() {
         return photoUrlByUserId;
+    }
+
+    public Map<String, Long> getProfileVersionByUserId() {
+        return profileVersionByUserId;
     }
 
     public LiveData<List<ConsolidatedPlayerGroup>> getPlayerGroups() {
@@ -591,12 +602,15 @@ public class PlayerConsolidationViewModel extends ViewModel {
     }
 
     private void loadAccountDisplayNames() {
-        accountDisplayNameLoader.load((displayNamesByUserId, photoUrlsByUserId) -> {
+        accountDisplayNameLoader.load((displayNamesByUserId, photoUrlsByUserId, profileVersionsByUserId) -> {
             if (displayNamesByUserId != null) {
                 PlayerConsolidationViewModel.this.displayNameByUserId = displayNamesByUserId;
             }
             if (photoUrlsByUserId != null) {
                 PlayerConsolidationViewModel.this.photoUrlByUserId = photoUrlsByUserId;
+            }
+            if (profileVersionsByUserId != null) {
+                PlayerConsolidationViewModel.this.profileVersionByUserId = profileVersionsByUserId;
             }
             refreshAccountProfileUi();
         });
@@ -629,23 +643,6 @@ public class PlayerConsolidationViewModel extends ViewModel {
         return byUserId;
     }
 
-    private static Map<String, String> indexPhotoUrlsByUserId(List<AppUser> users) {
-        Map<String, String> byUserId = new HashMap<>();
-        if (users == null) {
-            return byUserId;
-        }
-        for (AppUser user : users) {
-            if (user == null || user.getUserId() == null) {
-                continue;
-            }
-            String photoUrl = user.getPhotoUrl();
-            if (photoUrl != null && !photoUrl.trim().isEmpty()) {
-                byUserId.put(user.getUserId(), photoUrl.trim());
-            }
-        }
-        return byUserId;
-    }
-
     @Nullable
     private static String preferredAccountName(AppUser user) {
         String displayName = user.getDisplayName();
@@ -663,6 +660,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
 
     @Override
     protected void onCleared() {
+        AppUserRepository.removeDirectoryChangeListener(directoryChangeListener);
         super.onCleared();
         if (gameRepository != null) {
             gameRepository.removeListeners();

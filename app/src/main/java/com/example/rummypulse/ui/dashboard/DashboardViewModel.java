@@ -13,6 +13,7 @@ import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.data.GameDataSchema;
 import com.example.rummypulse.utils.DisplayNameUtils;
+import com.example.rummypulse.utils.UserProfileIndex;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.GameViewApprovalRepository;
 import com.example.rummypulse.data.GameCreationPolicy;
@@ -45,6 +46,10 @@ public class DashboardViewModel extends ViewModel {
             new MutableLiveData<>(Collections.emptyMap());
     private final MutableLiveData<Map<String, String>> photoUrlsByUserId =
             new MutableLiveData<>(Collections.emptyMap());
+    private final MutableLiveData<Map<String, Long>> profileVersionsByUserId =
+            new MutableLiveData<>(Collections.emptyMap());
+    private final AppUserRepository.DirectoryChangeListener directoryChangeListener =
+            changedUsers -> loadAccountDisplayNames();
     private final MutableLiveData<Boolean> showAllGames;
     private final MutableLiveData<StatsPeriod> selectedPeriod;
     private final MutableLiveData<List<GameItem>> mInProgressGames;
@@ -140,6 +145,7 @@ public class DashboardViewModel extends ViewModel {
         leaderboard.addSource(selectedPeriod, period -> rebuildLeaderboard());
         leaderboard.addSource(accountDisplayNames, names -> rebuildLeaderboard());
         loadAccountDisplayNames();
+        AppUserRepository.addDirectoryChangeListener(directoryChangeListener);
         mInProgressGames = new MutableLiveData<>();
         mCompletedGames = new MutableLiveData<>();
         mActiveGamesCount = new MutableLiveData<>();
@@ -313,6 +319,10 @@ public class DashboardViewModel extends ViewModel {
         return photoUrlsByUserId;
     }
 
+    public LiveData<Map<String, Long>> getProfileVersionsByUserId() {
+        return profileVersionsByUserId;
+    }
+
     private void rebuildLeaderboard() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         Leaderboard board = Leaderboard.from(
@@ -328,7 +338,8 @@ public class DashboardViewModel extends ViewModel {
             @Override
             public void onSuccess(List<AppUser> users) {
                 accountDisplayNames.setValue(indexAccountDisplayNames(users));
-                photoUrlsByUserId.setValue(indexPhotoUrlsByUserId(users));
+                photoUrlsByUserId.setValue(UserProfileIndex.photoUrlsByUserId(users));
+                profileVersionsByUserId.setValue(UserProfileIndex.profileVersionsByUserId(users));
             }
 
             @Override
@@ -350,23 +361,6 @@ public class DashboardViewModel extends ViewModel {
             String displayName = preferredAccountName(user);
             if (displayName != null) {
                 byUserId.put(user.getUserId(), displayName);
-            }
-        }
-        return byUserId;
-    }
-
-    private static Map<String, String> indexPhotoUrlsByUserId(List<AppUser> users) {
-        Map<String, String> byUserId = new HashMap<>();
-        if (users == null) {
-            return byUserId;
-        }
-        for (AppUser user : users) {
-            if (user == null || user.getUserId() == null) {
-                continue;
-            }
-            String photoUrl = user.getPhotoUrl();
-            if (photoUrl != null && !photoUrl.trim().isEmpty()) {
-                byUserId.put(user.getUserId(), photoUrl.trim());
             }
         }
         return byUserId;
@@ -730,6 +724,7 @@ public class DashboardViewModel extends ViewModel {
     
     @Override
     protected void onCleared() {
+        AppUserRepository.removeDirectoryChangeListener(directoryChangeListener);
         super.onCleared();
         cancelCreationSlowNotice();
         playerStatsRepository.stop();

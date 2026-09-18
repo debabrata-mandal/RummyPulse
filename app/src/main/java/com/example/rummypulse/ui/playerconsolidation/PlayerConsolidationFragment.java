@@ -137,8 +137,11 @@ public class PlayerConsolidationFragment extends Fragment {
 
         viewModel.getPlayerGroups().observe(getViewLifecycleOwner(), groups -> {
             Map<String, String> photoUrlsByUserId = viewModel.getPhotoUrlByUserId();
+            Map<String, Long> profileVersionsByUserId = viewModel.getProfileVersionByUserId();
             consolidatedAdapter.setPhotoUrlByUserId(photoUrlsByUserId);
+            consolidatedAdapter.setProfileVersionByUserId(profileVersionsByUserId);
             gamePointsPlayerSummaryAdapter.setPhotoUrlByUserId(photoUrlsByUserId);
+            gamePointsPlayerSummaryAdapter.setProfileVersionByUserId(profileVersionsByUserId);
             consolidatedAdapter.setGroups(groups);
             gamePointsPlayerSummaryAdapter.setGroups(groups);
             updatePlayerTableTotals(groups);

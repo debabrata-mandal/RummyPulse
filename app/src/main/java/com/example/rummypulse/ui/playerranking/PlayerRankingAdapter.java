@@ -44,6 +44,11 @@ import java.util.Map;
  */
 public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdapter.RankingViewHolder> {
 
+    /** Called when the user taps a ranked player row. */
+    public interface OnEntryClickListener {
+        void onEntryClick(LeaderboardEntry entry);
+    }
+
     /** Fill alpha for the neutral games chip. */
     private static final int STAT_CHIP_NEUTRAL_ALPHA = 0x24;
 
@@ -59,9 +64,12 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
 
     private final List<LeaderboardEntry> entries = new ArrayList<>();
     private Map<String, String> photoUrlByUserId = new HashMap<>();
+    private Map<String, Long> profileVersionByUserId = new HashMap<>();
     private double maxAbsoluteNet;
     private boolean showAmounts = true;
     private RankingSort sort = RankingSort.NET_TOTAL;
+    @Nullable
+    private OnEntryClickListener onEntryClickListener;
 
     @SuppressLint("NotifyDataSetChanged")
     public void setEntries(List<LeaderboardEntry> newEntries) {
@@ -82,6 +90,14 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
         notifyDataSetChanged();
     }
 
+    @SuppressLint("NotifyDataSetChanged")
+    public void setProfileVersionByUserId(@Nullable Map<String, Long> profileVersionsByUserId) {
+        profileVersionByUserId = profileVersionsByUserId != null
+                ? profileVersionsByUserId
+                : new HashMap<>();
+        notifyDataSetChanged();
+    }
+
     /** Masks every net figure when the game defaults withhold amounts. */
     @SuppressLint("NotifyDataSetChanged")
     public void setShowAmounts(boolean show) {
@@ -96,6 +112,10 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
      * Games and win rate are always on the row; the per-game average is added only when it is what
      * the ordering is based on, which keeps the line short the rest of the time.
      */
+    public void setOnEntryClickListener(@Nullable OnEntryClickListener listener) {
+        onEntryClickListener = listener;
+    }
+
     @SuppressLint("NotifyDataSetChanged")
     public void setSort(RankingSort newSort) {
         if (newSort != null && sort != newSort) {
@@ -120,6 +140,12 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
         holder.itemView.setBackgroundResource(entry.isCurrentUser()
                 ? R.drawable.bg_leaderboard_row_self
                 : R.drawable.bg_leaderboard_row);
+
+        holder.itemView.setOnClickListener(v -> {
+            if (onEntryClickListener != null) {
+                onEntryClickListener.onEntryClick(entry);
+            }
+        });
 
         bindRankBadge(holder, context, entry);
         bindIdentity(holder, context, entry);
@@ -162,6 +188,7 @@ public class PlayerRankingAdapter extends RecyclerView.Adapter<PlayerRankingAdap
                 entry.getUserId(),
                 entry.getDisplayName(),
                 photoUrlByUserId,
+                profileVersionByUserId,
                 ColorStateList.valueOf(accent));
 
         holder.name.setText(entry.isCurrentUser()

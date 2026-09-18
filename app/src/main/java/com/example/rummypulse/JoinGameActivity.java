@@ -2707,6 +2707,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 player.getUserId(),
                 displayName,
                 indexCachedPhotoUrlsByUserId(),
+                indexCachedProfileVersionsByUserId(),
                 null);
     }
 
@@ -2736,6 +2737,20 @@ public class JoinGameActivity extends AppCompatActivity {
             if (!TextUtils.isEmpty(photoUrl)) {
                 byUserId.put(user.getUserId(), photoUrl.trim());
             }
+        }
+        return byUserId;
+    }
+
+    private Map<String, Long> indexCachedProfileVersionsByUserId() {
+        Map<String, Long> byUserId = new HashMap<>();
+        if (cachedDirectoryUsers == null) {
+            return byUserId;
+        }
+        for (AppUser user : cachedDirectoryUsers) {
+            if (user == null || TextUtils.isEmpty(user.getUserId())) {
+                continue;
+            }
+            byUserId.put(user.getUserId(), user.getProfileVersion());
         }
         return byUserId;
     }
@@ -2855,12 +2870,28 @@ public class JoinGameActivity extends AppCompatActivity {
                 AppUser user = getItem(position);
                 TextView title = row.findViewById(R.id.text_user_name);
                 TextView detail = row.findViewById(R.id.text_user_detail);
+                ImageView avatarImage = row.findViewById(R.id.user_avatar_image);
+                TextView avatarInitial = row.findViewById(R.id.user_avatar_initial);
                 ImageView selectedIcon = row.findViewById(R.id.icon_user_selected);
                 boolean isSelected = user != null
                         && !TextUtils.isEmpty(player.getUserId())
                         && player.getUserId().equals(user.getUserId());
-                title.setText(userDisplayName(user));
+                String displayName = userDisplayName(user);
+                title.setText(displayName);
                 detail.setText(userDetail(user, player.getUserId()));
+                if (user != null) {
+                    ProfileAvatarBinder.bindWithPhotoUrl(
+                            row,
+                            avatarImage,
+                            avatarInitial,
+                            displayName,
+                            user.getPhotoUrl(),
+                            user.getProfileVersion(),
+                            null,
+                            false,
+                            null,
+                            null);
+                }
                 selectedIcon.setVisibility(isSelected ? View.VISIBLE : View.GONE);
                 row.setBackgroundResource(isSelected
                         ? R.drawable.user_mapping_selected_background

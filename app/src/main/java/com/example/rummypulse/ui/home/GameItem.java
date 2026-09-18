@@ -17,6 +17,7 @@ public class GameItem {
     private String age;
     private String creatorName;
     private String creatorPhotoUrl;
+    private long creatorProfileVersion;
     private String creatorUserId;
     private String editorName;
     private String editorUserId;
@@ -112,6 +113,10 @@ public class GameItem {
     public String getAge() { return age; }
     public String getCreatorName() { return creatorName; }
     public String getCreatorPhotoUrl() { return creatorPhotoUrl; }
+
+    public long getCreatorProfileVersion() {
+        return creatorProfileVersion;
+    }
     public String getCreatorUserId() { return creatorUserId; }
     public String getEditorName() {
         return editorName != null && !editorName.trim().isEmpty()
@@ -166,6 +171,10 @@ public class GameItem {
     public void setAge(String age) { this.age = age; }
     public void setCreatorName(String creatorName) { this.creatorName = creatorName; }
     public void setCreatorPhotoUrl(String creatorPhotoUrl) { this.creatorPhotoUrl = creatorPhotoUrl; }
+
+    public void setCreatorProfileVersion(long creatorProfileVersion) {
+        this.creatorProfileVersion = creatorProfileVersion;
+    }
     public void setCreatorUserId(String creatorUserId) { this.creatorUserId = creatorUserId; }
     public void setEditorName(String editorName) { this.editorName = editorName; }
     public void setEditorUserId(String editorUserId) { this.editorUserId = editorUserId; }

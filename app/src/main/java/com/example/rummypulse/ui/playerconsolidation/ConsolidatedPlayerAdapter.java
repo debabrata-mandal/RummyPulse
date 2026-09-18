@@ -29,6 +29,7 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
     private List<ConsolidatedPlayerGroup> groups = new ArrayList<>();
     private Set<String> selectedEntryIds = new HashSet<>();
     private Map<String, String> photoUrlByUserId = new HashMap<>();
+    private Map<String, Long> profileVersionByUserId = new HashMap<>();
     private OnGroupToggleListener listener;
 
     public interface OnGroupToggleListener {
@@ -48,6 +49,14 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
     @SuppressLint("NotifyDataSetChanged")
     public void setPhotoUrlByUserId(@Nullable Map<String, String> photoUrlsByUserId) {
         photoUrlByUserId = photoUrlsByUserId != null ? photoUrlsByUserId : new HashMap<>();
+        notifyDataSetChanged();
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setProfileVersionByUserId(@Nullable Map<String, Long> profileVersionsByUserId) {
+        profileVersionByUserId = profileVersionsByUserId != null
+                ? profileVersionsByUserId
+                : new HashMap<>();
         notifyDataSetChanged();
     }
 
@@ -76,6 +85,7 @@ public class ConsolidatedPlayerAdapter extends RecyclerView.Adapter<Consolidated
                 holder.avatarInitialText,
                 group,
                 photoUrlByUserId,
+                profileVersionByUserId,
                 displayName);
         Set<String> gameIds = new LinkedHashSet<>();
         Set<String> gameNames = new LinkedHashSet<>();

@@ -12,9 +12,7 @@ import androidx.annotation.NonNull;
 import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.request.RequestOptions;
+import com.example.rummypulse.utils.ProfileAvatarLoader;
 import com.example.rummypulse.R;
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.UserRole;
@@ -99,14 +97,10 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
                 boolean adminActionsEnabled,
                 OnUserClickListener listener) {
             if (user.getPhotoUrl() != null && !user.getPhotoUrl().isEmpty()) {
-                Glide.with(itemView.getContext())
-                    .load(user.getPhotoUrl())
-                    .apply(new RequestOptions()
-                        .circleCrop()
-                        .placeholder(R.drawable.ic_person)
-                        .error(R.drawable.ic_person)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL))
-                    .into(profileImageView);
+                ProfileAvatarLoader.loadCircle(
+                        profileImageView,
+                        user.getPhotoUrl(),
+                        user.getProfileVersion());
             } else {
                 profileImageView.setImageResource(R.drawable.ic_person);
             }

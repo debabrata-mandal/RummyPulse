@@ -15,6 +15,8 @@ import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.SafePlayPolicy;
 import com.example.rummypulse.databinding.ActivitySafePlayPolicyBinding;
 import com.example.rummypulse.utils.AccountSignOut;
+import com.example.rummypulse.utils.PendingProfileOverrides;
+import com.example.rummypulse.utils.ProfileSyncHelper;
 import com.example.rummypulse.utils.SafePlayPolicyStore;
 import com.example.rummypulse.utils.SessionCacheCleaner;
 import com.example.rummypulse.utils.VersionGate;
@@ -85,9 +87,19 @@ public class SafePlayPolicyActivity extends AppCompatActivity {
         binding.btnRetry.setVisibility(View.GONE);
         binding.textStatus.setText(R.string.safe_play_loading);
 
-        appUserRepository.createOrUpdateUser(
+        AppUserRepository.ProfileOverrides overrides = PendingProfileOverrides.consumeOverrides();
+        boolean forceProfileVersionRefresh =
+                PendingProfileOverrides.consumeForceProfileVersionRefresh();
+        if (overrides != null) {
+            com.example.rummypulse.utils.CurrentUserProfileSession.applyOverrides(
+                    overrides.displayName,
+                    overrides.photoUrl);
+        }
+        ProfileSyncHelper.reloadAndSync(
                 currentUser,
                 AppUserRepository.getProviderName(currentUser),
+                overrides,
+                forceProfileVersionRefresh,
                 new AppUserRepository.AppUserCallback() {
                     @Override
                     public void onSuccess(AppUser appUser) {

@@ -15,6 +15,8 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.Target;
+import com.bumptech.glide.signature.ObjectKey;
+import com.bumptech.glide.signature.ObjectKey;
 
 import java.util.Map;
 
@@ -30,7 +32,7 @@ public final class ProfileAvatarBinder {
             @Nullable String userId,
             @Nullable String displayName,
             @Nullable Map<String, String> photoUrlByUserId) {
-        bind(itemView, avatarImage, avatarInitial, userId, displayName, photoUrlByUserId, null);
+        bind(itemView, avatarImage, avatarInitial, userId, displayName, photoUrlByUserId, null, null);
     }
 
     public static void bind(
@@ -40,6 +42,18 @@ public final class ProfileAvatarBinder {
             @Nullable String userId,
             @Nullable String displayName,
             @Nullable Map<String, String> photoUrlByUserId,
+            @Nullable ColorStateList avatarInitialTint) {
+        bind(itemView, avatarImage, avatarInitial, userId, displayName, photoUrlByUserId, null, avatarInitialTint);
+    }
+
+    public static void bind(
+            View itemView,
+            ImageView avatarImage,
+            TextView avatarInitial,
+            @Nullable String userId,
+            @Nullable String displayName,
+            @Nullable Map<String, String> photoUrlByUserId,
+            @Nullable Map<String, Long> profileVersionByUserId,
             @Nullable ColorStateList avatarInitialTint) {
         if (avatarInitial == null) {
             return;
@@ -55,39 +69,8 @@ public final class ProfileAvatarBinder {
             return;
         }
 
-        Glide.with(avatarImage).clear(avatarImage);
-        avatarInitial.setVisibility(View.VISIBLE);
-        avatarImage.setVisibility(View.INVISIBLE);
-        Glide.with(avatarImage)
-                .load(photoUrl)
-                .apply(new RequestOptions()
-                        .circleCrop()
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .timeout(10000))
-                .listener(new RequestListener<Drawable>() {
-                    @Override
-                    public boolean onLoadFailed(
-                            @Nullable GlideException e,
-                            Object model,
-                            Target<Drawable> target,
-                            boolean isFirstResource) {
-                        showInitialAvatar(avatarImage, avatarInitial);
-                        return false;
-                    }
-
-                    @Override
-                    public boolean onResourceReady(
-                            Drawable resource,
-                            Object model,
-                            Target<Drawable> target,
-                            DataSource dataSource,
-                            boolean isFirstResource) {
-                        avatarInitial.setVisibility(View.GONE);
-                        avatarImage.setVisibility(View.VISIBLE);
-                        return false;
-                    }
-                })
-                .into(avatarImage);
+        long profileVersion = UserProfileIndex.profileVersionForUserId(userId, profileVersionByUserId);
+        loadPhoto(avatarImage, avatarInitial, photoUrl, profileVersion, false, null, null);
     }
 
     public static void bindWithPhotoUrl(
@@ -103,6 +86,7 @@ public final class ProfileAvatarBinder {
                 avatarInitial,
                 displayName,
                 photoUrl,
+                0L,
                 avatarInitialTint,
                 false,
                 null,
@@ -115,6 +99,30 @@ public final class ProfileAvatarBinder {
             TextView avatarInitial,
             @Nullable String displayName,
             @Nullable String photoUrl,
+            @Nullable ColorStateList avatarInitialTint,
+            boolean hideInitialsWhileLoading,
+            @Nullable Runnable onPhotoReady,
+            @Nullable Runnable onInitialsFallback) {
+        bindWithPhotoUrl(
+                itemView,
+                avatarImage,
+                avatarInitial,
+                displayName,
+                photoUrl,
+                0L,
+                avatarInitialTint,
+                hideInitialsWhileLoading,
+                onPhotoReady,
+                onInitialsFallback);
+    }
+
+    public static void bindWithPhotoUrl(
+            View itemView,
+            ImageView avatarImage,
+            TextView avatarInitial,
+            @Nullable String displayName,
+            @Nullable String photoUrl,
+            long profileVersion,
             @Nullable ColorStateList avatarInitialTint,
             boolean hideInitialsWhileLoading,
             @Nullable Runnable onPhotoReady,
@@ -135,14 +143,36 @@ public final class ProfileAvatarBinder {
             return;
         }
 
+        loadPhoto(
+                avatarImage,
+                avatarInitial,
+                photoUrl,
+                profileVersion,
+                hideInitialsWhileLoading,
+                onPhotoReady,
+                onInitialsFallback);
+    }
+
+    private static void loadPhoto(
+            ImageView avatarImage,
+            TextView avatarInitial,
+            String photoUrl,
+            long profileVersion,
+            boolean hideInitialsWhileLoading,
+            @Nullable Runnable onPhotoReady,
+            @Nullable Runnable onInitialsFallback) {
         Glide.with(avatarImage).clear(avatarImage);
         avatarInitial.setVisibility(hideInitialsWhileLoading ? View.INVISIBLE : View.VISIBLE);
         avatarImage.setVisibility(View.INVISIBLE);
+        ObjectKey signature = profileVersion > 0L
+                ? new ObjectKey(profileVersion)
+                : new ObjectKey(photoUrl.trim());
         Glide.with(avatarImage)
-                .load(photoUrl)
+                .load(photoUrl.trim())
                 .apply(new RequestOptions()
                         .circleCrop()
                         .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .signature(signature)
                         .timeout(10000))
                 .listener(new RequestListener<Drawable>() {
                     @Override

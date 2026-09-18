@@ -19,9 +19,7 @@ import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.UserRole;
 import com.example.rummypulse.databinding.FragmentUserManagementBinding;
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.request.RequestOptions;
+import com.example.rummypulse.utils.ProfileAvatarLoader;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -200,14 +198,10 @@ public class UserManagementFragment extends Fragment {
                 dialogView.findViewById(R.id.btn_user_action_close);
 
         if (user.getPhotoUrl() != null && !user.getPhotoUrl().isEmpty()) {
-            Glide.with(this)
-                    .load(user.getPhotoUrl())
-                    .apply(new RequestOptions()
-                            .circleCrop()
-                            .placeholder(R.drawable.ic_person)
-                            .error(R.drawable.ic_person)
-                            .diskCacheStrategy(DiskCacheStrategy.ALL))
-                    .into(profile);
+            ProfileAvatarLoader.loadCircle(
+                    profile,
+                    user.getPhotoUrl(),
+                    user.getProfileVersion());
         } else {
             profile.setImageResource(R.drawable.ic_person);
         }

@@ -14,6 +14,8 @@ public class AppUser {
     private String email;
     private String displayName;
     private String photoUrl;
+    /** Bumped when profile fields change so other clients can refresh cached avatars/names. */
+    private long profileVersion;
     @ServerTimestamp
     private Date createdAt;
     @ServerTimestamp
@@ -91,6 +93,14 @@ public class AppUser {
 
     public void setPhotoUrl(String photoUrl) {
         this.photoUrl = photoUrl;
+    }
+
+    public long getProfileVersion() {
+        return profileVersion;
+    }
+
+    public void setProfileVersion(long profileVersion) {
+        this.profileVersion = profileVersion;
     }
 
     public Date getCreatedAt() {
