@@ -30,10 +30,32 @@ public final class AppUserSyncPolicy {
             String photoUrl,
             long nowMillis,
             boolean forceProfileVersionRefresh) {
+        return plan(
+                stored,
+                provider,
+                email,
+                displayName,
+                photoUrl,
+                nowMillis,
+                forceProfileVersionRefresh,
+                true);
+    }
+
+    public static SyncPlan plan(
+            AppUser stored,
+            String provider,
+            String email,
+            String displayName,
+            String photoUrl,
+            long nowMillis,
+            boolean forceProfileVersionRefresh,
+            boolean providerProfileAuthoritative) {
         boolean updateProvider = !Objects.equals(stored.getProvider(), provider);
         boolean updateEmail = !Objects.equals(stored.getEmail(), email);
-        boolean updateDisplayName = !Objects.equals(stored.getDisplayName(), displayName);
-        boolean updatePhotoUrl = !Objects.equals(stored.getPhotoUrl(), photoUrl);
+        boolean updateDisplayName = shouldUpdateProfileField(
+                stored.getDisplayName(), displayName, providerProfileAuthoritative);
+        boolean updatePhotoUrl = shouldUpdateProfileField(
+                stored.getPhotoUrl(), photoUrl, providerProfileAuthoritative);
         boolean profileFieldsChanged = updateProvider
                 || updateEmail
                 || updateDisplayName
@@ -46,6 +68,20 @@ public final class AppUserSyncPolicy {
                 updatePhotoUrl,
                 updateProfileVersion,
                 shouldUpdateLastLogin(stored.getLastLoginAt(), nowMillis));
+    }
+
+    private static boolean shouldUpdateProfileField(
+            String storedValue,
+            String incomingValue,
+            boolean providerProfileAuthoritative) {
+        if (Objects.equals(storedValue, incomingValue)) {
+            return false;
+        }
+        return providerProfileAuthoritative || isNullOrEmpty(storedValue);
+    }
+
+    private static boolean isNullOrEmpty(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     public static boolean shouldUpdateLastLogin(Date lastLoginAt, long nowMillis) {

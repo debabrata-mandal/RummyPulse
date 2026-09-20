@@ -82,18 +82,15 @@ public class AppUserRepository {
         String userId = firebaseUser.getUid();
         long nowMillis = System.currentTimeMillis();
         String email = firebaseUser.getEmail();
-        String resolvedDisplayName = firebaseUser.getDisplayName();
-        String resolvedPhotoUrl = firebaseUser.getPhotoUrl() != null
-                ? firebaseUser.getPhotoUrl().toString()
-                : null;
-        if (overrides != null) {
-            if (overrides.displayName != null) {
-                resolvedDisplayName = overrides.displayName;
-            }
-            if (overrides.photoUrl != null) {
-                resolvedPhotoUrl = overrides.photoUrl;
-            }
-        }
+        boolean providerProfileAuthoritative = overrides != null;
+        String resolvedDisplayName = providerProfileAuthoritative
+                ? overrides.displayName
+                : firebaseUser.getDisplayName();
+        String resolvedPhotoUrl = providerProfileAuthoritative
+                ? overrides.photoUrl
+                : firebaseUser.getPhotoUrl() != null
+                        ? firebaseUser.getPhotoUrl().toString()
+                        : null;
         final String displayName = resolvedDisplayName;
         final String photoUrl = resolvedPhotoUrl;
         synchronized (SYNC_LOCK) {
@@ -105,7 +102,8 @@ public class AppUserRepository {
                     displayName,
                     photoUrl,
                     nowMillis,
-                    false).hasUpdates()) {
+                    false,
+                    providerProfileAuthoritative).hasUpdates()) {
                 Log.d(TAG, "Skipping repeated appUser initialization");
                 if (callback != null) {
                     callback.onSuccess(recent.appUser);
@@ -167,7 +165,8 @@ public class AppUserRepository {
                             displayName,
                             photoUrl,
                             nowMillis,
-                            forceProfileVersionRefresh);
+                            forceProfileVersionRefresh,
+                            providerProfileAuthoritative);
                     Map<String, Object> updates = new HashMap<>();
                     if (plan.updateProvider) {
                         updates.put("provider", provider);
@@ -337,6 +336,10 @@ public class AppUserRepository {
     public void refreshProfileChangesSince(@Nullable ProfileChangesCallback callback) {
         long now = System.currentTimeMillis();
         synchronized (DIRECTORY_LOCK) {
+            if (cachedUserDirectory == null) {
+                notifyProfileChanges(callback, Collections.emptyList());
+                return;
+            }
             if (now - lastProfileDeltaRefreshAt < PROFILE_DELTA_REFRESH_THROTTLE_MS) {
                 notifyProfileChanges(callback, Collections.emptyList());
                 return;

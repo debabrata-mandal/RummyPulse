@@ -12,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.rummypulse.databinding.ActivityLoginBinding;
+import com.example.rummypulse.data.AppUserRepository;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -27,6 +28,7 @@ import com.google.firebase.auth.GoogleAuthProvider;
 import com.example.rummypulse.utils.AccountSignOut;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.CurrentUserProfileSession;
+import com.example.rummypulse.utils.GoogleProfileResolver;
 import com.example.rummypulse.utils.PendingProfileOverrides;
 import com.example.rummypulse.utils.VersionGate;
 import com.example.rummypulse.utils.SafePlayPolicyStore;
@@ -216,20 +218,14 @@ public class LoginActivity extends AppCompatActivity {
             FirebaseUser user = mAuth.getCurrentUser();
             if (user != null) {
                 Log.d(TAG, "Firebase authentication successful");
-                PendingProfileOverrides.setFromGoogleAccount(pendingGoogleAccount);
-                if (pendingGoogleAccount != null) {
-                    String googlePhotoUrl = pendingGoogleAccount.getPhotoUrl() != null
-                            ? pendingGoogleAccount.getPhotoUrl().toString()
-                            : null;
-                    CurrentUserProfileSession.applyOverrides(
-                            pendingGoogleAccount.getDisplayName(),
-                            googlePhotoUrl);
-                }
+                GoogleSignInAccount googleAccount = pendingGoogleAccount;
                 pendingGoogleAccount = null;
                 AuthStateManager.getInstance(LoginActivity.this).saveAuthState(user);
-                com.example.rummypulse.utils.ModernToast.success(
+                GoogleProfileResolver.resolve(
                         LoginActivity.this,
-                        "Welcome, " + user.getDisplayName() + "!");
+                        googleAccount,
+                        overrides -> finishSuccessfulSignIn(user, overrides));
+                return;
             }
             startAuthenticatedDestination();
             return;
@@ -248,6 +244,23 @@ public class LoginActivity extends AppCompatActivity {
                 : "unknown";
         showError("Sign-in failed: " + truncateForToast(detail));
         showRetryState(R.string.login_status_failed);
+    }
+
+    private void finishSuccessfulSignIn(
+            FirebaseUser user,
+            AppUserRepository.ProfileOverrides overrides) {
+        PendingProfileOverrides.set(overrides);
+        CurrentUserProfileSession.applyOverrides(
+                overrides.displayName,
+                overrides.photoUrl);
+        String welcomeName = overrides.displayName != null
+                && !overrides.displayName.trim().isEmpty()
+                ? overrides.displayName.trim()
+                : user.getDisplayName();
+        com.example.rummypulse.utils.ModernToast.success(
+                LoginActivity.this,
+                "Welcome, " + welcomeName + "!");
+        startAuthenticatedDestination();
     }
 
     private void scheduleSlowNetworkNotice(@NonNull AuthAttempt attempt) {

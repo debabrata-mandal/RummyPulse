@@ -31,6 +31,11 @@ public final class PendingProfileOverrides {
         forceProfileVersionRefresh = true;
     }
 
+    public static void set(@Nullable AppUserRepository.ProfileOverrides overrides) {
+        pendingOverrides = overrides;
+        forceProfileVersionRefresh = overrides != null;
+    }
+
     @Nullable
     public static AppUserRepository.ProfileOverrides consumeOverrides() {
         AppUserRepository.ProfileOverrides overrides = pendingOverrides;

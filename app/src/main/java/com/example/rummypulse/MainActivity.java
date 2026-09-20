@@ -89,8 +89,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean reviewNeedsAttention = false;
     private boolean initialAppUserSyncCompleted;
     private boolean hasStartedOnce;
-    private long lastLocalProfileReloadAt;
-    private static final long LOCAL_PROFILE_RELOAD_THROTTLE_MS = 5L * 60L * 1000L;
     private boolean accountDeletionInProgress;
     private GoogleSignInClient accountDeletionGoogleClient;
     private androidx.appcompat.app.AlertDialog accountDeletionProgressDialog;
@@ -289,7 +287,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        refreshLocalProfileIfNeeded();
         refreshRemoteProfileChanges();
     }
 
@@ -367,42 +364,6 @@ public class MainActivity extends AppCompatActivity {
                         android.util.Log.w("MainActivity",
                                 "appUser sync failed — user may be missing from Users list until next successful sync",
                                 exception);
-                    }
-                });
-    }
-
-    private void refreshLocalProfileIfNeeded() {
-        if (!initialAppUserSyncCompleted || mAuth == null) {
-            return;
-        }
-        FirebaseUser user = mAuth.getCurrentUser();
-        if (user == null) {
-            return;
-        }
-        long now = System.currentTimeMillis();
-        if (now - lastLocalProfileReloadAt < LOCAL_PROFILE_RELOAD_THROTTLE_MS) {
-            return;
-        }
-        lastLocalProfileReloadAt = now;
-        String provider = AppUserRepository.getProviderName(user);
-        ProfileSyncHelper.reloadAndSync(
-                user,
-                provider,
-                null,
-                true,
-                new AppUserRepository.AppUserCallback() {
-                    @Override
-                    public void onSuccess(AppUser appUser) {
-                        CurrentUserProfileSession.update(appUser);
-                        if (navigationView != null && mAuth.getCurrentUser() != null) {
-                            updateNavigationHeader(navigationView, mAuth.getCurrentUser());
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Exception exception) {
-                        android.util.Log.w("MainActivity",
-                                "Resume profile reload failed", exception);
                     }
                 });
     }

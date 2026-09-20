@@ -59,6 +59,46 @@ public class AppUserSyncPolicyTest {
     }
 
     @Test
+    public void staleCachedFirebaseMetadataCannotOverwriteStoredProviderProfile() {
+        AppUser stored = userWithLastLogin(NOW - 60_000L);
+
+        AppUserSyncPolicy.SyncPlan plan = AppUserSyncPolicy.plan(
+                stored,
+                "Google",
+                "user@example.com",
+                "Old cached name",
+                "old-cached-photo",
+                NOW,
+                false,
+                false);
+
+        assertFalse(plan.updateDisplayName);
+        assertFalse(plan.updatePhotoUrl);
+        assertFalse(plan.updateProfileVersion);
+        assertFalse(plan.hasUpdates());
+    }
+
+    @Test
+    public void explicitProviderProfileCanReplaceStoredProfile() {
+        AppUser stored = userWithLastLogin(NOW - 60_000L);
+
+        AppUserSyncPolicy.SyncPlan plan = AppUserSyncPolicy.plan(
+                stored,
+                "Google",
+                "user@example.com",
+                "New provider name",
+                "new-provider-photo",
+                NOW,
+                true,
+                true);
+
+        assertTrue(plan.updateDisplayName);
+        assertTrue(plan.updatePhotoUrl);
+        assertTrue(plan.updateProfileVersion);
+        assertTrue(plan.hasUpdates());
+    }
+
+    @Test
     public void forceProfileVersionRefreshRequiresWriteEvenWhenFieldsMatch() {
         AppUser stored = userWithLastLogin(NOW - 60_000L);
 

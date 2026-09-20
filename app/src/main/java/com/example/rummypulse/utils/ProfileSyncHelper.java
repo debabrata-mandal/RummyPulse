@@ -6,7 +6,7 @@ import com.example.rummypulse.data.AppUserRepository;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
-/** Reloads Firebase Auth profile metadata before syncing appUser_v2. */
+/** Synchronizes Firebase Auth identity data and explicit provider profile responses. */
 public final class ProfileSyncHelper {
 
     private ProfileSyncHelper() {
@@ -29,6 +29,15 @@ public final class ProfileSyncHelper {
             if (callback != null) {
                 callback.onFailure(new IllegalArgumentException("FirebaseUser cannot be null"));
             }
+            return;
+        }
+        if (overrides == null) {
+            new AppUserRepository().createOrUpdateUser(
+                    user,
+                    provider,
+                    null,
+                    forceProfileVersionRefresh,
+                    callback);
             return;
         }
         user.reload().addOnCompleteListener(task -> {

@@ -15,6 +15,7 @@ import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.SafePlayPolicy;
 import com.example.rummypulse.databinding.ActivitySafePlayPolicyBinding;
 import com.example.rummypulse.utils.AccountSignOut;
+import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.example.rummypulse.utils.PendingProfileOverrides;
 import com.example.rummypulse.utils.ProfileSyncHelper;
 import com.example.rummypulse.utils.SafePlayPolicyStore;
@@ -103,6 +104,7 @@ public class SafePlayPolicyActivity extends AppCompatActivity {
                 new AppUserRepository.AppUserCallback() {
                     @Override
                     public void onSuccess(AppUser appUser) {
+                        CurrentUserProfileSession.update(appUser);
                         if (leavingActivity || isFinishing()) {
                             return;
                         }
