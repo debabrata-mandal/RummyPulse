@@ -139,7 +139,7 @@ public class UserManagementViewModel extends ViewModel {
             return;
         }
         fullDirectoryRequestInProgress = true;
-        appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
+        appUserRepository.getUsersCachedForAdmin(new AppUserRepository.UsersCallback() {
             @Override
             public void onSuccess(List<AppUser> allUsers) {
                 List<AppUser> merged = new ArrayList<>(allUsers);
@@ -168,7 +168,7 @@ public class UserManagementViewModel extends ViewModel {
             loadingMore.setValue(true);
         }
 
-        appUserRepository.getUsersPage(
+        appUserRepository.getAdminUsersPage(
                 replaceExisting ? null : nextCursor,
                 AppUserRepository.USER_PAGE_SIZE,
                 new AppUserRepository.UsersPageCallback() {
@@ -352,6 +352,8 @@ public class UserManagementViewModel extends ViewModel {
         }
         String haystack = (
                 safeText(user.getDisplayName()) + ' '
+                        + safeText(user.getProfileName()) + ' '
+                        + safeText(user.getGoogleDisplayName()) + ' '
                         + safeText(user.getEmail()) + ' '
                         + safeText(user.getProvider()) + ' '
                         + (user.getRole() != null ? user.getRole().getDisplayName() : ""))

@@ -77,6 +77,7 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
     static class UserViewHolder extends RecyclerView.ViewHolder {
         private final ImageView profileImageView;
         private final TextView nameTextView;
+        private final TextView profileNameTextView;
         private final TextView emailTextView;
         private final TextView roleTextView;
         private final TextView providerTextView;
@@ -86,6 +87,7 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
             super(itemView);
             profileImageView = itemView.findViewById(R.id.imageViewUserProfile);
             nameTextView = itemView.findViewById(R.id.textViewUserName);
+            profileNameTextView = itemView.findViewById(R.id.textViewUserProfileName);
             emailTextView = itemView.findViewById(R.id.textViewUserEmail);
             roleTextView = itemView.findViewById(R.id.textViewUserRole);
             providerTextView = itemView.findViewById(R.id.textViewUserProvider);
@@ -105,7 +107,12 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
                 profileImageView.setImageResource(R.drawable.ic_person);
             }
 
-            nameTextView.setText(user.getDisplayName() != null ? user.getDisplayName() : "No Name");
+            nameTextView.setText(itemView.getContext().getString(
+                    R.string.user_management_google_name,
+                    user.getGoogleDisplayName() != null ? user.getGoogleDisplayName() : "Unavailable"));
+            profileNameTextView.setText(itemView.getContext().getString(
+                    R.string.user_management_profile_name,
+                    user.getProfileName() != null ? user.getProfileName() : "Not set"));
             emailTextView.setText(user.getEmail() != null ? user.getEmail() : "No Email");
 
             String roleText = user.getRole().getDisplayName();

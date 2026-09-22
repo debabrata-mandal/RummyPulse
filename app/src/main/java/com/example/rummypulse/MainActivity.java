@@ -46,12 +46,14 @@ import com.example.rummypulse.data.PlayerLeaderboardRepository;
 import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.service.AccountDeletionGateway;
 import com.example.rummypulse.service.FirebaseAccountDeletionService;
+import com.example.rummypulse.service.ProfileNameService;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.AccountSignOut;
 import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.example.rummypulse.utils.PendingProfileOverrides;
 import com.example.rummypulse.utils.ProfileAvatarLoader;
 import com.example.rummypulse.utils.ProfileSyncHelper;
+import com.example.rummypulse.utils.ProfileNameValidator;
 import com.example.rummypulse.utils.SessionCacheCleaner;
 import com.example.rummypulse.utils.SafePlayPolicyStore;
 import com.example.rummypulse.utils.ModernToast;
@@ -89,6 +91,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean reviewNeedsAttention = false;
     private boolean initialAppUserSyncCompleted;
     private boolean hasStartedOnce;
+    private boolean profilePromptShown;
     private boolean accountDeletionInProgress;
     private GoogleSignInClient accountDeletionGoogleClient;
     private androidx.appcompat.app.AlertDialog accountDeletionProgressDialog;
@@ -202,7 +205,11 @@ public class MainActivity extends AppCompatActivity {
         
         // Handle navigation item clicks
         navigationView.setNavigationItemSelectedListener(item -> {
-            if (item.getItemId() == R.id.nav_voice_settings) {
+            if (item.getItemId() == R.id.nav_profile) {
+                showProfileNameDialog(false);
+                drawerLayout.closeDrawers();
+                return true;
+            } else if (item.getItemId() == R.id.nav_voice_settings) {
                 showVoiceSettingsDialog();
                 drawerLayout.closeDrawers();
                 return true;
@@ -354,6 +361,7 @@ public class MainActivity extends AppCompatActivity {
                                 updateNavigationHeader(navigationView, currentUser);
                             }
                         }
+                        maybePromptForProfileName(appUser);
                         AppUserRoleSession.getInstance()
                                 .applyVerifiedRole(appUser.getUserId(), appUser.getRole());
                     }
@@ -398,30 +406,18 @@ public class MainActivity extends AppCompatActivity {
 
         if (user != null) {
             String displayName = CurrentUserProfileSession.getDisplayName();
-            if (displayName == null || displayName.trim().isEmpty()) {
-                displayName = user.getDisplayName();
-            }
-            String email = user.getEmail();
             String phone = user.getPhoneNumber();
 
             String nameLine;
             if (displayName != null && !displayName.trim().isEmpty()) {
                 nameLine = displayName.trim();
-            } else if (email != null && email.contains("@")) {
-                nameLine = email.substring(0, email.indexOf('@'));
             } else if (phone != null && !phone.trim().isEmpty()) {
                 nameLine = phone.trim();
             } else {
                 nameLine = getString(R.string.nav_header_name_fallback);
             }
             nameTextView.setText(nameLine);
-            if (email != null && !email.trim().isEmpty()) {
-                subtitleTextView.setText(email.trim());
-            } else if (phone != null && !phone.trim().isEmpty()) {
-                subtitleTextView.setText(phone.trim());
-            } else {
-                subtitleTextView.setText(R.string.app_name);
-            }
+            subtitleTextView.setText(R.string.nav_profile_subtitle);
 
             String photoUrl = CurrentUserProfileSession.getPhotoUrl();
             if (photoUrl == null && user.getPhotoUrl() != null) {
@@ -441,6 +437,82 @@ public class MainActivity extends AppCompatActivity {
             roleBadgeTextView.setText(R.string.nav_role_checking);
             profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo);
         }
+    }
+
+    private void maybePromptForProfileName(AppUser appUser) {
+        if (profilePromptShown || appUser == null
+                || (appUser.getProfileName() != null && !appUser.getProfileName().isEmpty())) {
+            return;
+        }
+        profilePromptShown = true;
+        showProfileNameDialog(true);
+    }
+
+    private void showProfileNameDialog(boolean onboarding) {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_profile_name, null, false);
+        TextInputLayout nameLayout = dialogView.findViewById(R.id.layout_profile_name);
+        TextInputEditText nameInput = dialogView.findViewById(R.id.edit_profile_name);
+        MaterialButton skip = dialogView.findViewById(R.id.btn_profile_name_skip);
+        MaterialButton save = dialogView.findViewById(R.id.btn_profile_name_save);
+        String currentName = CurrentUserProfileSession.getProfileName();
+        if (currentName != null) {
+            nameInput.setText(currentName);
+            nameInput.setSelection(currentName.length());
+            skip.setText(R.string.profile_name_clear);
+        } else if (!onboarding) {
+            skip.setText(android.R.string.cancel);
+        }
+
+        androidx.appcompat.app.AlertDialog dialog =
+                new androidx.appcompat.app.AlertDialog.Builder(this, R.style.DarkDialogTheme)
+                        .setView(dialogView)
+                        .setCancelable(true)
+                        .create();
+        skip.setOnClickListener(v -> {
+            if (currentName == null || onboarding) {
+                dialog.dismiss();
+            } else {
+                saveProfileName(null, nameLayout, skip, save, dialog);
+            }
+        });
+        save.setOnClickListener(v -> {
+            String value = nameInput.getText() == null ? "" : nameInput.getText().toString().trim();
+            if (!ProfileNameValidator.isValid(value)) {
+                nameLayout.setError(getString(R.string.profile_name_invalid));
+                return;
+            }
+            nameLayout.setError(null);
+            saveProfileName(value, nameLayout, skip, save, dialog);
+        });
+        dialog.show();
+    }
+
+    private void saveProfileName(String profileName, TextInputLayout nameLayout,
+            MaterialButton skip, MaterialButton save, androidx.appcompat.app.AlertDialog dialog) {
+        skip.setEnabled(false);
+        save.setEnabled(false);
+        save.setText(R.string.profile_name_saving);
+        new ProfileNameService().save(profileName, new ProfileNameService.Callback() {
+            @Override
+            public void onSuccess(String savedProfileName, String displayName) {
+                CurrentUserProfileSession.applyPublicProfile(savedProfileName, displayName);
+                FirebaseUser user = mAuth != null ? mAuth.getCurrentUser() : null;
+                if (navigationView != null && user != null) {
+                    updateNavigationHeader(navigationView, user);
+                }
+                AppUserRepository.clearSessionCaches();
+                dialog.dismiss();
+                ModernToast.success(MainActivity.this, getString(R.string.profile_name_saved));
+            }
+
+            @Override
+            public void onFailure(String message) {
+                skip.setEnabled(true);
+                save.setEnabled(true);
+                save.setText(R.string.profile_name_save);
+                nameLayout.setError(message);
+            }
+        });
     }
 
     private void applyNavigationHeaderInsets(android.view.View headerView) {

@@ -206,7 +206,10 @@ public class UserManagementFragment extends Fragment {
             profile.setImageResource(R.drawable.ic_person);
         }
 
-        name.setText(user.getDisplayName() != null ? user.getDisplayName() : "No Name");
+        String googleName = user.getGoogleDisplayName() != null
+                ? user.getGoogleDisplayName() : "Unavailable";
+        String profileName = user.getProfileName() != null ? user.getProfileName() : "Not set";
+        name.setText(getString(R.string.user_management_identity_names, googleName, profileName));
         email.setText(user.getEmail() != null ? user.getEmail() : "No Email");
         String provider = user.getProvider() != null ? user.getProvider() : "Unknown";
         String lastLogin;

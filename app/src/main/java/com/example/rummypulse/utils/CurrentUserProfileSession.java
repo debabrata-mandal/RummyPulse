@@ -12,6 +12,8 @@ public final class CurrentUserProfileSession {
     private static String photoUrl;
     @Nullable
     private static String displayName;
+    @Nullable
+    private static String profileName;
 
     private CurrentUserProfileSession() {
     }
@@ -24,14 +26,12 @@ public final class CurrentUserProfileSession {
         profileVersion = appUser.getProfileVersion();
         photoUrl = appUser.getPhotoUrl();
         displayName = appUser.getDisplayName();
+        profileName = appUser.getProfileName();
     }
 
     public static void applyOverrides(
             @Nullable String overrideDisplayName,
             @Nullable String overridePhotoUrl) {
-        if (overrideDisplayName != null) {
-            displayName = overrideDisplayName;
-        }
         if (overridePhotoUrl != null) {
             photoUrl = overridePhotoUrl;
         }
@@ -51,9 +51,21 @@ public final class CurrentUserProfileSession {
         return displayName;
     }
 
+    @Nullable
+    public static String getProfileName() {
+        return profileName;
+    }
+
+    public static void applyPublicProfile(@Nullable String newProfileName, String newDisplayName) {
+        profileName = newProfileName;
+        displayName = newDisplayName;
+        profileVersion = System.currentTimeMillis();
+    }
+
     public static void clear() {
         profileVersion = 0L;
         photoUrl = null;
         displayName = null;
+        profileName = null;
     }
 }

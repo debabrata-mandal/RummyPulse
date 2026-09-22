@@ -8,6 +8,7 @@ import androidx.annotation.Nullable;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
@@ -665,11 +666,9 @@ public class GameViewApprovalRepository {
     }
 
     private static String resolveDisplayName(@NonNull FirebaseUser user) {
-        if (user.getDisplayName() != null && !user.getDisplayName().trim().isEmpty()) {
-            return user.getDisplayName().trim();
-        }
-        if (user.getEmail() != null && !user.getEmail().trim().isEmpty()) {
-            return user.getEmail().trim();
+        String displayName = CurrentUserProfileSession.getDisplayName();
+        if (displayName != null && !displayName.trim().isEmpty()) {
+            return displayName.trim();
         }
         return "User";
     }

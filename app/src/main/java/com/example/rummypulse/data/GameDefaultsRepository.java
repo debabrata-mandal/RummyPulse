@@ -6,6 +6,7 @@ import androidx.annotation.Nullable;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
@@ -251,14 +252,8 @@ public class GameDefaultsRepository {
             @Nullable Double boardAdjustmentPercentOrNull) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         final String uid = user != null ? user.getUid() : "";
-        final String updatedByName;
-        if (user != null && user.getDisplayName() != null && !user.getDisplayName().isEmpty()) {
-            updatedByName = user.getDisplayName();
-        } else if (user != null && user.getEmail() != null) {
-            updatedByName = user.getEmail();
-        } else {
-            updatedByName = "";
-        }
+        String currentPublicName = CurrentUserProfileSession.getDisplayName();
+        final String updatedByName = currentPublicName != null ? currentPublicName : "Player";
 
         Map<String, Object> map = new HashMap<>();
         map.put("defaultGamePointFactor", gamePointFactor);

@@ -46,6 +46,7 @@ import com.example.rummypulse.service.GroqGameNameService;
 import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.ui.playerranking.PlayerRankingFragment;
 import com.example.rummypulse.utils.DisplayNameUtils;
+import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.example.rummypulse.utils.ProfileAvatarBinder;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -676,16 +677,9 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     private String buildWelcomeTitle() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null) {
-            String firstName = DisplayNameUtils.firstName(user.getDisplayName());
-            if (!firstName.isEmpty()) {
-                return "Welcome " + firstName;
-            }
-            String email = user.getEmail();
-            if (email != null && email.contains("@")) {
-                return "Welcome " + email.substring(0, email.indexOf('@'));
-            }
+        String firstName = DisplayNameUtils.firstName(CurrentUserProfileSession.getDisplayName());
+        if (!firstName.isEmpty()) {
+            return "Welcome " + firstName;
         }
         return "Welcome Player";
     }

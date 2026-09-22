@@ -13,6 +13,7 @@ import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.FirestoreCollections;
 import com.example.rummypulse.data.GameDataSchema;
 import com.example.rummypulse.utils.DisplayNameUtils;
+import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.example.rummypulse.utils.UserProfileIndex;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.GameViewApprovalRepository;
@@ -371,13 +372,7 @@ public class DashboardViewModel extends ViewModel {
         if (displayName != null && !displayName.trim().isEmpty()) {
             return displayName.trim();
         }
-        String email = user.getEmail();
-        if (email == null || email.trim().isEmpty()) {
-            return null;
-        }
-        String trimmed = email.trim();
-        int at = trimmed.indexOf('@');
-        return at > 0 ? trimmed.substring(0, at) : trimmed;
+        return null;
     }
 
     public LiveData<Boolean> getShowAllGames() {
@@ -447,15 +442,13 @@ public class DashboardViewModel extends ViewModel {
                     "Your session is unavailable. Sign in again and retry."));
             return;
         }
-        String creatorName = currentUser.getDisplayName() != null
-                ? currentUser.getDisplayName()
-                : currentUser.getEmail();
+        String creatorName = CurrentUserProfileSession.getDisplayName();
         activeCreationRequest = new CreationRequest(
                 UUID.randomUUID().toString(),
                 generateGameId(),
                 PinUtils.generatePin(),
                 currentUser.getUid(),
-                creatorName != null ? creatorName : "User",
+                creatorName != null ? creatorName : "Player",
                 gamePointFactor,
                 boardAdjustmentPercentage,
                 optionalDisplayName != null ? optionalDisplayName.trim() : "");

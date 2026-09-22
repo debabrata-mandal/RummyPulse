@@ -391,7 +391,7 @@
     <string name="view_request_requested_at">Requested %1$s</string>
     <string name="map_player_title">Map player to user</string>
     <string name="map_player_subtitle">Choose the app user who is playing as %1$s.</string>
-    <string name="map_player_search_hint">Search by name or email</string>
+    <string name="map_player_search_hint">Search by game profile name</string>
     <string name="map_player_users_section">App users</string>
     <string name="map_player_users_hint">Tap a user to link them to this player.</string>
     <string name="map_player_no_users">No matching users found.</string>
@@ -405,10 +405,8 @@
     <string name="map_player_unlinking_background">Removing %1$s’s link and view access in the background…</string>
     <string name="map_player_load_failed">Could not load the player list. Check your connection and try again.</string>
     <string name="map_player_currently_linked">Currently linked</string>
-    <string name="map_player_email_linked">%1$s • Currently linked</string>
     <string name="map_player_selected">Selected user</string>
     <string name="map_player_current_mapping">Currently linked to %1$s</string>
-    <string name="map_player_current_mapping_with_email">Currently linked to %1$s\n%2$s</string>
     <string name="map_player_linked_user_unavailable">This player is linked, but that user is not available in the current list.</string>
     <string name="map_player_transfer_title">Transfer mapping?</string>
     <string name="map_player_transfer_subtitle">Move this app user to the selected player.</string>
@@ -544,6 +542,18 @@
     <string name="game_points_overview_title">Game Point Overview</string>
     <string name="game_points_winners_description">Positive results contribute the configured percentage to Board Points</string>
     <string name="sign_out">Sign Out</string>
+    <string name="menu_profile">Game profile</string>
+    <string name="profile_name_title">Choose your game profile name</string>
+    <string name="profile_name_message">This name replaces your Google name throughout RummyPulse. Your email is never shown to other players.</string>
+    <string name="profile_name_hint">Profile name</string>
+    <string name="profile_name_helper">3–16 English letters, numbers, or underscores. Names are unique.</string>
+    <string name="profile_name_skip">Not now</string>
+    <string name="profile_name_clear">Use Google name</string>
+    <string name="profile_name_save">Save name</string>
+    <string name="profile_name_saving">Saving…</string>
+    <string name="profile_name_saved">Game profile name updated</string>
+    <string name="profile_name_invalid">Use 3–16 English letters, numbers, or underscores.</string>
+    <string name="nav_profile_subtitle">Game profile</string>
     <string name="standings_title">Standings</string>
     <string name="tap_to_enter_name_hint">Tap to enter name</string>
     <string name="total_players_label">Total Players</string>
@@ -557,6 +567,9 @@
     <string name="user_management_no_users">No users found</string>
     <string name="user_management_no_search_results">No users match your search</string>
     <string name="user_management_search_hint">Search by name or email</string>
+    <string name="user_management_google_name">Google name: %1$s</string>
+    <string name="user_management_profile_name">Game profile: %1$s</string>
+    <string name="user_management_identity_names">Google name: %1$s\nGame profile: %2$s</string>
 
     <!-- SetTextI18n / PluralsCandidate (Java) -->
     <string name="format_game_points">%1$s GP</string>

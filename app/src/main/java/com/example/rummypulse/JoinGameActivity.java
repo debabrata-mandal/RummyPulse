@@ -58,6 +58,7 @@ import com.example.rummypulse.ui.join.PlayerNameEditController;
 import com.example.rummypulse.ui.join.PlayerRoundStatistics;
 import com.example.rummypulse.ui.join.PlayerRoundStatisticsCalculator;
 import com.example.rummypulse.utils.DisplayNameUtils;
+import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.example.rummypulse.utils.ModernToast;
 import com.example.rummypulse.utils.ProfileAvatarBinder;
 import com.google.android.material.button.MaterialButton;
@@ -1809,12 +1810,11 @@ public class JoinGameActivity extends AppCompatActivity {
         if (!TextUtils.isEmpty(userId) && userId.equals(player.getUserId())) {
             return true;
         }
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null && !TextUtils.isEmpty(user.getDisplayName())
-                && !TextUtils.isEmpty(player.getName())) {
-            return DisplayNameUtils.firstNameLastInitial(user.getDisplayName())
+        String publicName = CurrentUserProfileSession.getDisplayName();
+        if (!TextUtils.isEmpty(publicName) && !TextUtils.isEmpty(player.getName())) {
+            return DisplayNameUtils.firstNameLastInitial(publicName)
                     .equalsIgnoreCase(formatPlayerDisplayName(player))
-                    || DisplayNameUtils.firstName(user.getDisplayName())
+                    || DisplayNameUtils.firstName(publicName)
                             .equalsIgnoreCase(player.getName());
         }
         return false;
@@ -2907,12 +2907,8 @@ public class JoinGameActivity extends AppCompatActivity {
             currentMapping.setVisibility(View.VISIBLE);
             if (linkedUserIndex >= 0) {
                 AppUser linkedUser = allUsers.get(linkedUserIndex);
-                String email = linkedUser.getEmail();
-                currentMapping.setText(TextUtils.isEmpty(email)
-                        ? getString(R.string.map_player_current_mapping,
-                                userDisplayName(linkedUser))
-                        : getString(R.string.map_player_current_mapping_with_email,
-                                userDisplayName(linkedUser), email));
+                currentMapping.setText(getString(R.string.map_player_current_mapping,
+                        userDisplayName(linkedUser)));
                 list.setItemChecked(linkedUserIndex, true);
                 list.post(() -> list.setSelection(Math.max(0, linkedUserIndex - 1)));
             } else {
@@ -2929,9 +2925,7 @@ public class JoinGameActivity extends AppCompatActivity {
                 String query = editable.toString().trim().toLowerCase(Locale.ROOT);
                 visibleUsers.clear();
                 for (AppUser user : mappingUsers) {
-                    String haystack = (userDisplayName(user) + " "
-                            + (user.getEmail() == null ? "" : user.getEmail()))
-                            .toLowerCase(Locale.ROOT);
+                    String haystack = userDisplayName(user).toLowerCase(Locale.ROOT);
                     if (query.isEmpty() || haystack.contains(query)) {
                         visibleUsers.add(user);
                     }
@@ -3079,9 +3073,6 @@ public class JoinGameActivity extends AppCompatActivity {
         if (!TextUtils.isEmpty(user.getDisplayName())) {
             return user.getDisplayName().trim();
         }
-        if (!TextUtils.isEmpty(user.getEmail())) {
-            return user.getEmail().trim();
-        }
         return getString(R.string.unknown_user);
     }
 
@@ -3151,16 +3142,11 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private String userDetail(AppUser user, String linkedUserId) {
-        String email = user == null || TextUtils.isEmpty(user.getEmail())
-                ? ""
-                : user.getEmail().trim();
         if (user != null && user.getUserId() != null
                 && user.getUserId().equals(linkedUserId)) {
-            return email.isEmpty()
-                    ? getString(R.string.map_player_currently_linked)
-                    : getString(R.string.map_player_email_linked, email);
+            return getString(R.string.map_player_currently_linked);
         }
-        return email;
+        return "";
     }
 
     private void bindPlayerTotalScore(TextView totalScoreView, com.example.rummypulse.data.Player player) {

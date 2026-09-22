@@ -13,6 +13,8 @@ public class AppUser {
     private UserRole role;
     private String email;
     private String displayName;
+    private String profileName;
+    private String googleDisplayName;
     private String photoUrl;
     /** Bumped when profile fields change so other clients can refresh cached avatars/names. */
     private long profileVersion;
@@ -87,6 +89,22 @@ public class AppUser {
         this.displayName = displayName;
     }
 
+    public String getProfileName() {
+        return profileName;
+    }
+
+    public void setProfileName(String profileName) {
+        this.profileName = profileName;
+    }
+
+    public String getGoogleDisplayName() {
+        return googleDisplayName;
+    }
+
+    public void setGoogleDisplayName(String googleDisplayName) {
+        this.googleDisplayName = googleDisplayName;
+    }
+
     public String getPhotoUrl() {
         return photoUrl;
     }
@@ -149,7 +167,6 @@ public class AppUser {
                 "userId='" + userId + '\'' +
                 ", provider='" + provider + '\'' +
                 ", role=" + role +
-                ", email='" + email + '\'' +
                 ", displayName='" + displayName + '\'' +
                 ", photoUrl='" + photoUrl + '\'' +
                 ", createdAt=" + createdAt +

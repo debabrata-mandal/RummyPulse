@@ -23,6 +23,7 @@ import com.example.rummypulse.data.ScoreRegressionGuard;
 import com.example.rummypulse.data.ScoreRecoveryPatch;
 import com.example.rummypulse.data.sync.GameOperationRepository;
 import com.example.rummypulse.utils.PinUtils;
+import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
@@ -1374,11 +1375,9 @@ public class JoinGameViewModel extends AndroidViewModel {
     }
 
     private static String resolveEditorDisplayName(FirebaseUser user) {
-        if (user.getDisplayName() != null && !user.getDisplayName().trim().isEmpty()) {
-            return user.getDisplayName().trim();
-        }
-        if (user.getEmail() != null && !user.getEmail().trim().isEmpty()) {
-            return user.getEmail().trim();
+        String displayName = CurrentUserProfileSession.getDisplayName();
+        if (displayName != null && !displayName.trim().isEmpty()) {
+            return displayName.trim();
         }
         return "Editor";
     }

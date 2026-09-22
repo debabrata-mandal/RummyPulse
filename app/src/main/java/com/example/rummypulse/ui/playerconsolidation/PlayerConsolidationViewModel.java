@@ -649,13 +649,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
         if (displayName != null && !displayName.trim().isEmpty()) {
             return displayName.trim();
         }
-        String email = user.getEmail();
-        if (email == null || email.trim().isEmpty()) {
-            return null;
-        }
-        String trimmed = email.trim();
-        int at = trimmed.indexOf('@');
-        return at > 0 ? trimmed.substring(0, at) : trimmed;
+        return null;
     }
 
     @Override

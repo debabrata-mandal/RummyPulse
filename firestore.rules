@@ -207,11 +207,28 @@ service cloud.firestore {
 
     match /appUser_v2/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      // Profile/identity creation is performed by App Check-protected callable functions.
+      allow create: if false;
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['safePlayPolicyVersion', 'safePlayAcceptedAt']))
+        || (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['role', 'hidden']))
+      );
       // Account deletion must use the App Check-protected callable functions so Firebase Auth
       // and associated account data are cleaned consistently. Admin SDK writes bypass these rules.
       allow delete: if false;
+    }
+
+    match /appUserIdentity_v1/{userId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /profileNameClaims_v1/{nameKey} {
+      allow read, write: if false;
     }
 
     match /gameDefaults_v2/{docId} {

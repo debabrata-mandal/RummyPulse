@@ -9,6 +9,11 @@ const {defineSecret} = require("firebase-functions/params");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {logger} = require("firebase-functions");
 const {extractGroqName} = require("./lib/game-name");
+const {
+  replaceGameIdentityNames,
+  replaceLinkedPlayerNames,
+  validateProfileName,
+} = require("./lib/profile-name");
 const {nextFixedCounter, nextRollingCounter} = require("./lib/rate-limit");
 const {
   ACCOUNT_DELETION_CALLABLE_OPTIONS,
@@ -31,6 +36,14 @@ const GLOBAL_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 10;
 const MAX_GLOBAL_REQUESTS_PER_DAY = 200;
 const DELETE_PAGE_SIZE = 200;
+const PROFILE_CALLABLE_OPTIONS = Object.freeze({
+  region: "asia-south1",
+  enforceAppCheck: true,
+  timeoutSeconds: 540,
+  memory: "256MiB",
+});
+const PRIVATE_USER_COLLECTION = "appUserIdentity_v1";
+const PROFILE_NAME_CLAIMS = "profileNameClaims_v1";
 const PROMPT =
   "Generate one short, catchy English name for a rummy or card game app. " +
   "Use one or two words in title case, with no numbers or punctuation. " +
@@ -88,6 +101,114 @@ exports.suggestGameName = onCall({
   }
 });
 
+exports.syncMyIdentity = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign-in is required.");
+  }
+  const uid = request.auth.uid;
+  const provider = safeText(request.data?.provider, 40) || "Google";
+  const googleDisplayName = safeText(request.auth.token.name, 120) ||
+    safeText(request.data?.googleDisplayName, 120) || "Player";
+  const email = safeText(request.auth.token.email, 320) ||
+    safeText(request.data?.email, 320);
+  const photoUrl = safeText(request.auth.token.picture, 2048) ||
+    safeText(request.data?.photoUrl, 2048);
+  const database = getFirestore();
+  const publicRef = database.collection("appUser_v2").doc(uid);
+  const privateRef = database.collection(PRIVATE_USER_COLLECTION).doc(uid);
+  await database.runTransaction(async (transaction) => {
+    const publicSnapshot = await transaction.get(publicRef);
+    const existing = publicSnapshot.data() || {};
+    const profileName = safeText(existing.profileName, 16);
+    const now = Date.now();
+    const publicData = {
+      userId: uid,
+      provider,
+      role: existing.role || "regular_user",
+      displayName: profileName || googleDisplayName,
+      photoUrl: photoUrl || null,
+      profileVersion: now,
+      lastLoginAt: FieldValue.serverTimestamp(),
+    };
+    if (!publicSnapshot.exists) {
+      publicData.createdAt = FieldValue.serverTimestamp();
+    }
+    transaction.set(publicRef, publicData, {merge: true});
+    transaction.set(privateRef, {
+      userId: uid,
+      googleDisplayName,
+      email: email || null,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, {merge: true});
+  });
+  return {status: "synced"};
+});
+
+exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign-in is required.");
+  }
+  let requested;
+  try {
+    requested = validateProfileName(request.data?.profileName);
+  } catch (error) {
+    throw new HttpsError("invalid-argument", error.message);
+  }
+  const uid = request.auth.uid;
+  const database = getFirestore();
+  const publicRef = database.collection("appUser_v2").doc(uid);
+  const privateRef = database.collection(PRIVATE_USER_COLLECTION).doc(uid);
+  let displayName;
+  await database.runTransaction(async (transaction) => {
+    const publicSnapshot = await transaction.get(publicRef);
+    const privateSnapshot = await transaction.get(privateRef);
+    if (!publicSnapshot.exists) {
+      throw new HttpsError("failed-precondition", "Profile is not ready yet.");
+    }
+    const oldName = safeText(publicSnapshot.get("profileName"), 16);
+    const oldKey = oldName ? oldName.toLowerCase() : null;
+    const newClaimRef = requested.key ?
+      database.collection(PROFILE_NAME_CLAIMS).doc(requested.key) : null;
+    const oldClaimRef = oldKey ?
+      database.collection(PROFILE_NAME_CLAIMS).doc(oldKey) : null;
+    const newClaim = newClaimRef ? await transaction.get(newClaimRef) : null;
+    const oldClaim = oldClaimRef && oldKey !== requested.key ?
+      await transaction.get(oldClaimRef) : null;
+    if (newClaim?.exists && newClaim.get("userId") !== uid) {
+      throw new HttpsError("already-exists", "That profile name is already taken.");
+    }
+    displayName = requested.profileName ||
+      safeText(privateSnapshot.get("googleDisplayName"), 120) || "Player";
+    if (newClaimRef) {
+      transaction.set(newClaimRef, {userId: uid, profileName: requested.profileName});
+    }
+    if (oldClaimRef && oldKey !== requested.key && oldClaim?.get("userId") === uid) {
+      transaction.delete(oldClaimRef);
+    }
+    transaction.update(publicRef, {
+      profileName: requested.profileName || FieldValue.delete(),
+      displayName,
+      profileVersion: Date.now(),
+      profilePropagationPending: true,
+    });
+  });
+
+  try {
+    await propagateProfileName(database, uid, displayName);
+    await publicRef.update({
+      profilePropagationPending: FieldValue.delete(),
+      profileVersion: Date.now(),
+    });
+  } catch (error) {
+    logger.error("Profile-name propagation failed", {uid, error});
+    throw new HttpsError(
+        "unavailable",
+        "The name was saved, but some older records still need updating. Retry shortly.",
+    );
+  }
+  return {profileName: requested.profileName, displayName};
+});
+
 exports.deleteMyAccount = onCall(
     ACCOUNT_DELETION_CALLABLE_OPTIONS,
     async (request) => {
@@ -140,10 +261,84 @@ exports.adminDeleteAccount = onCall(
     });
 
 async function completeAccountDeletion(uid) {
+  const database = getFirestore();
+  const publicRef = database.collection("appUser_v2").doc(uid);
+  const publicSnapshot = await publicRef.get();
+  const profileName = publicSnapshot.exists ?
+    safeText(publicSnapshot.get("profileName"), 16) : null;
   const counts = await cleanupAccountData(uid);
   await deleteAuthenticationUser(uid);
-  await getFirestore().collection("appUser_v2").doc(uid).delete();
+  const removals = [
+    publicRef.delete(),
+    database.collection(PRIVATE_USER_COLLECTION).doc(uid).delete(),
+  ];
+  if (profileName) {
+    removals.push(database.collection(PROFILE_NAME_CLAIMS)
+        .doc(profileName.toLowerCase()).delete());
+  }
+  await Promise.all(removals);
   return counts;
+}
+
+async function propagateProfileName(database, uid, displayName) {
+  await scanCollection(database.collection("games_v2"), async (snapshot) => {
+    await rewriteProfileSnapshot(
+        database, snapshot.ref, uid, displayName, replaceGameIdentityNames);
+  });
+  await scanCollection(database.collection("gameData_v2"), async (snapshot) => {
+    await rewriteProfileSnapshot(
+        database, snapshot.ref, uid, displayName, replaceLinkedPlayerNames);
+  });
+  await scanCollection(database.collection("approvedGames_v2"), async (snapshot) => {
+    await rewriteProfileSnapshot(
+        database, snapshot.ref, uid, displayName, replaceLinkedPlayerNames);
+  });
+  await scanCollection(database.collection("gameDefaults_v2"), async (snapshot) => {
+    await database.runTransaction(async (transaction) => {
+      const current = await transaction.get(snapshot.ref);
+      if (current.exists && current.get("updatedByUserId") === uid) {
+        transaction.update(snapshot.ref, "updatedByUserName", displayName);
+      }
+    });
+  });
+  const approvals = await database.collection("gameViewApprovals_v2")
+      .where("userId", "==", uid).get();
+  const batch = database.batch();
+  let batchWrites = 0;
+  approvals.docs.forEach((snapshot) => {
+    batch.update(snapshot.ref, "userDisplayName", displayName);
+    batchWrites++;
+  });
+  const statsRef = database.collection("playerStats_v2").doc(uid);
+  const stats = await statsRef.get();
+  if (stats.exists) {
+    batch.update(statsRef, "displayName", displayName);
+    batchWrites++;
+  }
+  if (batchWrites > 0) {
+    await batch.commit();
+  }
+}
+
+async function rewriteProfileSnapshot(database, reference, uid, displayName, transformer) {
+  await database.runTransaction(async (transaction) => {
+    const current = await transaction.get(reference);
+    if (!current.exists) {
+      return;
+    }
+    const result = transformer(current.data(), uid, displayName);
+    if (result.changed) {
+      transaction.set(reference, result.data);
+    }
+  });
+}
+
+function safeText(value, maxLength) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const text = value.trim();
+  return text && text.length <= maxLength ? text : null;
 }
 
 async function cleanupAccountData(uid) {

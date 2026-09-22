@@ -46,6 +46,10 @@
         android:title="@string/menu_utilities">
         <menu>
             <item
+                android:id="@+id/nav_profile"
+                android:icon="@drawable/ic_person"
+                android:title="@string/menu_profile" />
+            <item
                 android:id="@+id/nav_voice_settings"
                 android:icon="@drawable/ic_voice"
                 android:title="@string/menu_voice_announcements" />

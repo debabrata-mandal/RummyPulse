@@ -253,13 +253,9 @@ public class LoginActivity extends AppCompatActivity {
         CurrentUserProfileSession.applyOverrides(
                 overrides.displayName,
                 overrides.photoUrl);
-        String welcomeName = overrides.displayName != null
-                && !overrides.displayName.trim().isEmpty()
-                ? overrides.displayName.trim()
-                : user.getDisplayName();
         com.example.rummypulse.utils.ModernToast.success(
                 LoginActivity.this,
-                "Welcome, " + welcomeName + "!");
+                "Welcome to RummyPulse!");
         startAuthenticatedDestination();
     }
 
