@@ -14,6 +14,23 @@ public final class UserProfileIndex {
     private UserProfileIndex() {
     }
 
+    public static Map<String, String> displayNamesByUserId(@Nullable List<AppUser> users) {
+        Map<String, String> byUserId = new HashMap<>();
+        if (users == null) {
+            return byUserId;
+        }
+        for (AppUser user : users) {
+            if (user == null || user.getUserId() == null) {
+                continue;
+            }
+            String displayName = user.getDisplayName();
+            if (displayName != null && !displayName.trim().isEmpty()) {
+                byUserId.put(user.getUserId(), displayName.trim());
+            }
+        }
+        return byUserId;
+    }
+
     public static Map<String, String> photoUrlsByUserId(@Nullable List<AppUser> users) {
         Map<String, String> byUserId = new HashMap<>();
         if (users == null) {

@@ -114,6 +114,10 @@ service cloud.firestore {
       ]);
     }
 
+    function hasNoStoredGameIdentityNames(data) {
+      return !data.keys().hasAny(['creatorName', 'activeEditorName', 'lastEditorName']);
+    }
+
     function validGameDataSchema(data) {
       return data.keys().hasAll([
           'schemaVersion', 'gamePointFactor', 'boardAdjustmentPercent',
@@ -131,8 +135,10 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated()
           && request.resource.data.creatorUserId == request.auth.uid
+          && hasNoStoredGameIdentityNames(request.resource.data)
           && hasNoDeprecatedGamePointKeys(request.resource.data);
       allow update: if isAuthenticated()
+          && hasNoStoredGameIdentityNames(request.resource.data)
           && hasNoDeprecatedGamePointKeys(request.resource.data);
       allow delete: if isAuthenticated();
     }
@@ -256,6 +262,9 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create, update: if isAuthenticated()
           && request.resource.data.schemaVersion == 3
+          && request.resource.data.keys().hasOnly([
+            'schemaVersion', 'userId', 'allTime', 'months', 'weeks', 'updatedAt'
+          ])
           && hasNoDeprecatedGamePointKeys(request.resource.data)
           && hasNoDeprecatedGamePointKeys(request.resource.data.allTime);
       allow delete: if isAuthenticated();

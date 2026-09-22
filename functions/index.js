@@ -309,12 +309,6 @@ async function propagateProfileName(database, uid, displayName) {
     batch.update(snapshot.ref, "userDisplayName", displayName);
     batchWrites++;
   });
-  const statsRef = database.collection("playerStats_v2").doc(uid);
-  const stats = await statsRef.get();
-  if (stats.exists) {
-    batch.update(statsRef, "displayName", displayName);
-    batchWrites++;
-  }
   if (batchWrites > 0) {
     await batch.commit();
   }

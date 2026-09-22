@@ -68,6 +68,7 @@ public class GameRepository {
             new HashMap<>();
     /** Invalidates slow auth/photo callbacks when newer game data has already arrived. */
     private final Map<String, Long> dashboardUpdateTokens = new HashMap<>();
+    private Map<String, String> accountDisplayNamesByUserId = new HashMap<>();
     
     // Track seen games
     private Set<String> seenGameIds = new HashSet<>();
@@ -98,6 +99,16 @@ public class GameRepository {
 
     public LiveData<String> getError() {
         return errorLiveData;
+    }
+
+    /** Supplies public profile names used to render creator/editor attribution by UID. */
+    public void setAccountDisplayNames(@Nullable Map<String, String> displayNamesByUserId) {
+        accountDisplayNamesByUserId = displayNamesByUserId == null
+                ? new HashMap<>() : new HashMap<>(displayNamesByUserId);
+        for (GameItem item : gameItemsMap.values()) {
+            applyAccountIdentity(item);
+        }
+        updateGameItemsList();
     }
 
     public LiveData<Double> getTotalApprovedBoardAdjustment() {
@@ -453,8 +464,8 @@ public class GameRepository {
 
     private GameItem convertToPlaceholderGameItem(String gameId, GameAuth auth, String creatorPhotoUrl) {
         String pin = auth.getPin() != null ? auth.getPin() : "";
-        String creatorName = auth.getCreatorName();
         String creatorUserId = auth.getCreatorUserId();
+        String creatorName = accountDisplayName(creatorUserId);
         com.google.firebase.Timestamp createdAt = auth.getCreatedAt();
         String gameDisplayName = gameDisplayNameFromAuth(auth);
         String unknown = "—";
@@ -551,8 +562,8 @@ public class GameRepository {
                     }
                     GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
                     String pin = gameAuth != null ? gameAuth.getPin() : "0000";
-                    String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
                     String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
+                    String creatorName = accountDisplayName(creatorUserId);
                     String gameDisplayName = gameDisplayNameFromAuth(gameAuth);
                     com.google.firebase.Timestamp createdAt = gameAuth != null && gameAuth.getCreatedAt() != null
                             ? gameAuth.getCreatedAt() : fallbackCreatedAt;
@@ -972,8 +983,8 @@ public class GameRepository {
         }
         GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
         String pin = gameAuth != null ? gameAuth.getPin() : "0000";
-        String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
         String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
+        String creatorName = accountDisplayName(creatorUserId);
         String gameDisplayName = gameDisplayNameFromAuth(gameAuth);
 
         com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
@@ -1070,8 +1081,8 @@ public class GameRepository {
                                             }
                                             GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
                                             String pin = gameAuth != null ? gameAuth.getPin() : "0000";
-                                            String creatorName = gameAuth != null ? gameAuth.getCreatorName() : null;
                                             String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
+                                            String creatorName = accountDisplayName(creatorUserId);
                                             String gameDisplayName = gameDisplayNameFromAuth(gameAuth);
                                             repairDashboardSummaryIfStale(
                                                     gameId, gameAuth, gameData);
@@ -1335,14 +1346,31 @@ public class GameRepository {
         return auth.getDisplayName();
     }
 
-    private static GameItem applyEditorIdentity(GameItem item, GameAuth auth) {
+    private GameItem applyEditorIdentity(GameItem item, GameAuth auth) {
         if (item != null && auth != null) {
-            item.setEditorName(auth.getDisplayEditorName());
             item.setEditorUserId(auth.getDisplayEditorUserId());
             String activeEditorUserId = auth.getActiveEditorUserId();
             item.setHasActiveEditor(activeEditorUserId != null && !activeEditorUserId.trim().isEmpty());
+            applyAccountIdentity(item);
         }
         return item;
+    }
+
+    private void applyAccountIdentity(@Nullable GameItem item) {
+        if (item == null) {
+            return;
+        }
+        item.setCreatorName(accountDisplayName(item.getCreatorUserId()));
+        item.setEditorName(accountDisplayName(item.getEditorUserId()));
+    }
+
+    @Nullable
+    private String accountDisplayName(@Nullable String userId) {
+        if (userId == null) {
+            return null;
+        }
+        String displayName = accountDisplayNamesByUserId.get(userId);
+        return displayName == null || displayName.trim().isEmpty() ? null : displayName.trim();
     }
 
     private GameItem convertToGameItem(
@@ -1426,6 +1454,10 @@ public class GameRepository {
             return;
         }
         String creatorPhotoUrl = userSnapshot.getString("photoUrl");
+        String creatorName = userSnapshot.getString("displayName");
+        if (creatorName != null && !creatorName.trim().isEmpty()) {
+            item.setCreatorName(creatorName.trim());
+        }
         if (creatorPhotoUrl != null) {
             item.setCreatorPhotoUrl(creatorPhotoUrl);
         }
@@ -1781,9 +1813,7 @@ public class GameRepository {
             updates.put("pin", newPin);
             updates.put("pinGeneration", newGen);
             updates.put("lastEditorUserId", auth.getActiveEditorUserId());
-            updates.put("lastEditorName", auth.getActiveEditorName());
             updates.put("activeEditorUserId", com.google.firebase.firestore.FieldValue.delete());
-            updates.put("activeEditorName", com.google.firebase.firestore.FieldValue.delete());
             transaction.update(gameRef, updates);
 
             if (dataSnapshot.exists()) {

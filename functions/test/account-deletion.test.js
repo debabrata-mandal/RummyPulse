@@ -36,10 +36,11 @@ test("active game anonymization changes only the deleted account", () => {
 
   assert.equal(result.changed, true);
   assert.equal(result.data.creatorUserId, undefined);
-  assert.equal(result.data.creatorName, "Deleted user");
+  assert.equal(result.data.creatorName, undefined);
   assert.equal(result.data.activeEditorUserId, undefined);
-  assert.equal(result.data.activeEditorName, "Deleted user");
+  assert.equal(result.data.activeEditorName, undefined);
   assert.equal(result.data.lastEditorUserId, "user-b");
+  assert.equal(result.data.lastEditorName, undefined);
   assert.deepEqual(result.data.memberUserIds, ["user-b", "user-c"]);
   assert.deepEqual(result.data.pendingViewRequests["user-b"],
       before.pendingViewRequests["user-b"]);

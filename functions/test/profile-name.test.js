@@ -29,7 +29,7 @@ test("linked snapshots are renamed without touching manual players", () => {
   assert.equal(result.data.data.playersById.b.name, "Manual Player");
 });
 
-test("game attribution and pending request names are renamed by uid", () => {
+test("game attribution names are removed and pending request names follow uid", () => {
   const result = replaceGameIdentityNames({
     creatorUserId: "uid-a",
     creatorName: "Google Name",
@@ -37,7 +37,7 @@ test("game attribution and pending request names are renamed by uid", () => {
     lastEditorName: "Someone Else",
     pendingViewRequests: {"uid-a": {userDisplayName: "Google Name"}},
   }, "uid-a", "CardKing");
-  assert.equal(result.data.creatorName, "CardKing");
-  assert.equal(result.data.lastEditorName, "Someone Else");
+  assert.equal(result.data.creatorName, undefined);
+  assert.equal(result.data.lastEditorName, undefined);
   assert.equal(result.data.pendingViewRequests["uid-a"].userDisplayName, "CardKing");
 });

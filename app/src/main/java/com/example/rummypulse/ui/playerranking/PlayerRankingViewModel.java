@@ -176,7 +176,7 @@ public class PlayerRankingViewModel extends ViewModel {
 
             for (RankingSort sort : RankingSort.values()) {
                 List<LeaderboardEntry> ranked = Leaderboard.rankAll(
-                        allStats, period, currentUserId, sort);
+                        allStats, period, currentUserId, sort, fullNames.getValue());
                 if (sort == RankingSort.NET_TOTAL) {
                     totalPlayers = ranked.size();
                     for (LeaderboardEntry candidate : ranked) {
@@ -258,7 +258,8 @@ public class PlayerRankingViewModel extends ViewModel {
                 repository.getAllStats().getValue(),
                 selectedPeriod.getValue(),
                 user == null ? null : user.getUid(),
-                selectedSort.getValue());
+                selectedSort.getValue(),
+                fullNames.getValue());
         ranking.setValue(pinCurrentUser(withFullNames(ranked, fullNames.getValue())));
     }
 

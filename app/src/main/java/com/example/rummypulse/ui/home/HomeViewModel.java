@@ -5,7 +5,10 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import com.example.rummypulse.data.AppUserRoleSession;
+import com.example.rummypulse.data.AppUser;
+import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.GameRepository;
+import com.example.rummypulse.utils.UserProfileIndex;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +43,17 @@ public class HomeViewModel extends ViewModel {
         
         // Initialize repository
         gameRepository = new GameRepository();
+        new AppUserRepository().getUsersCached(new AppUserRepository.UsersCallback() {
+            @Override
+            public void onSuccess(List<AppUser> users) {
+                gameRepository.setAccountDisplayNames(UserProfileIndex.displayNamesByUserId(users));
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                // Attribution temporarily renders as unknown until the directory is available.
+            }
+        });
         
         // Load data from Firebase
         loadGamesFromFirebase();

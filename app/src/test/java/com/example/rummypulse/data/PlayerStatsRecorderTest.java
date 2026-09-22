@@ -65,7 +65,6 @@ public class PlayerStatsRecorderTest {
     @Test
     public void approvalAddsToExistingStatisticsWithoutChangingPriorPeriods() {
         PlayerStats existing = new PlayerStats();
-        existing.setDisplayName("Old name");
         existing.setAllTime(new PlayerStats.Bucket(3, 1, 25, 30, 5));
         Map<String, PlayerStats.Bucket> priorMonths = new LinkedHashMap<>();
         priorMonths.put("2026-08", new PlayerStats.Bucket(3, 1, 25, 30, 5));
@@ -88,7 +87,7 @@ public class PlayerStatsRecorderTest {
         assertEquals(79.0, (Double) allTime.get("finalGamePoints"), 0.001);
         assertEquals(new PlayerStats.Bucket(3, 1, 25, 30, 5).toFirestoreMap(),
                 months.get("2026-08"));
-        assertEquals("Updated name", document.get("displayName"));
+        assertFalse(document.containsKey("displayName"));
     }
 
     @Test
@@ -102,7 +101,6 @@ public class PlayerStatsRecorderTest {
                 PlayerStatsRecorder.deltasForApproval(game, APPROVAL_TIME);
 
         assertEquals(2, deltas.size());
-        assertEquals("A1", deltas.get("user-a").displayName);
         assertEquals(1L, deltas.get("user-a").bucket.getGames());
     }
 

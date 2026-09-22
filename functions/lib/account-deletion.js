@@ -1,7 +1,6 @@
 "use strict";
 
 const DELETED_PLAYER_NAME = "Deleted player";
-const DELETED_USER_NAME = "Deleted user";
 const RECENT_AUTH_MAX_AGE_SECONDS = 5 * 60;
 const ACCOUNT_DELETION_CALLABLE_OPTIONS = Object.freeze({
   region: "asia-south1",
@@ -23,14 +22,11 @@ function cloneValue(value) {
   return value;
 }
 
-function deleteMatchingIdentity(target, uid, idField, nameField) {
+function deleteMatchingIdentity(target, uid, idField) {
   if (!target || target[idField] !== uid) {
     return false;
   }
   delete target[idField];
-  if (nameField) {
-    target[nameField] = DELETED_USER_NAME;
-  }
   return true;
 }
 
@@ -47,12 +43,16 @@ function anonymizeGameAuth(source, uid) {
   const data = cloneValue(source || {});
   let changed = false;
 
-  changed = deleteMatchingIdentity(
-      data, uid, "creatorUserId", "creatorName") || changed;
-  changed = deleteMatchingIdentity(
-      data, uid, "activeEditorUserId", "activeEditorName") || changed;
-  changed = deleteMatchingIdentity(
-      data, uid, "lastEditorUserId", "lastEditorName") || changed;
+  for (const nameField of ["creatorName", "activeEditorName", "lastEditorName"]) {
+    if (Object.prototype.hasOwnProperty.call(data, nameField)) {
+      delete data[nameField];
+      changed = true;
+    }
+  }
+
+  changed = deleteMatchingIdentity(data, uid, "creatorUserId") || changed;
+  changed = deleteMatchingIdentity(data, uid, "activeEditorUserId") || changed;
+  changed = deleteMatchingIdentity(data, uid, "lastEditorUserId") || changed;
 
   if (Array.isArray(data.memberUserIds) && data.memberUserIds.includes(uid)) {
     data.memberUserIds = data.memberUserIds.filter((memberUid) => memberUid !== uid);
@@ -123,7 +123,6 @@ function isAdministratorProfile(profile) {
 module.exports = {
   ACCOUNT_DELETION_CALLABLE_OPTIONS,
   DELETED_PLAYER_NAME,
-  DELETED_USER_NAME,
   RECENT_AUTH_MAX_AGE_SECONDS,
   anonymizeApprovedGame,
   anonymizeGameAuth,

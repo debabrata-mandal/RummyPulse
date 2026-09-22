@@ -2006,21 +2006,7 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         com.example.rummypulse.data.GameAuth auth = viewModel.getGameAuth().getValue();
         if (auth != null && userId.equals(auth.getCreatorUserId())) {
-            if (creatorSlot != null) {
-                return creatorSlot;
-            }
-            String creatorName = auth.getCreatorName();
-            if (!TextUtils.isEmpty(creatorName)) {
-                String shortCreatorName = DisplayNameUtils.firstNameLastInitial(creatorName);
-                for (Player player : gameData.getPlayers()) {
-                    if (shortCreatorName.equalsIgnoreCase(player.getName())
-                            || DisplayNameUtils.firstName(creatorName)
-                                    .equalsIgnoreCase(player.getName())
-                            || creatorName.equalsIgnoreCase(player.getName())) {
-                        return player;
-                    }
-                }
-            }
+            return creatorSlot;
         }
         return null;
     }

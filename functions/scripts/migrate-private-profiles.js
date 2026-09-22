@@ -3,7 +3,6 @@
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 const {
-  replaceGameIdentityNames,
   replaceLinkedPlayerNames,
 } = require("../lib/profile-name");
 
@@ -44,7 +43,6 @@ async function main() {
     }
   }
 
-  writes += await rewriteCollection("games_v2", publicNames, replaceGameIdentityNames);
   writes += await rewriteCollection("gameData_v2", publicNames, replaceLinkedPlayerNames);
   writes += await rewriteCollection("approvedGames_v2", publicNames, replaceLinkedPlayerNames);
   const defaults = await database.collection("gameDefaults_v2").get();
@@ -56,13 +54,15 @@ async function main() {
       if (apply) await snapshot.ref.update("updatedByUserName", displayName);
     }
   }
-  for (const [uid, displayName] of publicNames) {
-    const statsRef = database.collection("playerStats_v2").doc(uid);
-    const stats = await statsRef.get();
-    if (stats.exists && stats.get("displayName") !== displayName) {
+  const statsDocuments = await database.collection("playerStats_v2").get();
+  for (const stats of statsDocuments.docs) {
+    if (stats.exists && stats.get("displayName") !== undefined) {
       writes++;
-      if (apply) await statsRef.update("displayName", displayName);
+      if (apply) await stats.ref.update("displayName", FieldValue.delete());
     }
+  }
+
+  for (const [uid, displayName] of publicNames) {
     const approvals = await database.collection("gameViewApprovals_v2")
         .where("userId", "==", uid).get();
     for (const approval of approvals.docs) {

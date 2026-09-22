@@ -605,6 +605,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
         accountDisplayNameLoader.load((displayNamesByUserId, photoUrlsByUserId, profileVersionsByUserId) -> {
             if (displayNamesByUserId != null) {
                 PlayerConsolidationViewModel.this.displayNameByUserId = displayNamesByUserId;
+                gameRepository.setAccountDisplayNames(displayNamesByUserId);
             }
             if (photoUrlsByUserId != null) {
                 PlayerConsolidationViewModel.this.photoUrlByUserId = photoUrlsByUserId;

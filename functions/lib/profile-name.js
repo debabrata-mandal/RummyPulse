@@ -52,13 +52,9 @@ function replaceLinkedPlayerNames(source, uid, displayName) {
 function replaceGameIdentityNames(source, uid, displayName) {
   const data = cloneValue(source || {});
   let changed = false;
-  for (const [idField, nameField] of [
-    ["creatorUserId", "creatorName"],
-    ["activeEditorUserId", "activeEditorName"],
-    ["lastEditorUserId", "lastEditorName"],
-  ]) {
-    if (data[idField] === uid && data[nameField] !== displayName) {
-      data[nameField] = displayName;
+  for (const nameField of ["creatorName", "activeEditorName", "lastEditorName"]) {
+    if (Object.prototype.hasOwnProperty.call(data, nameField)) {
+      delete data[nameField];
       changed = true;
     }
   }

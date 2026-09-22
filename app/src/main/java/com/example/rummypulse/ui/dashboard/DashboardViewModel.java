@@ -326,11 +326,12 @@ public class DashboardViewModel extends ViewModel {
 
     private void rebuildLeaderboard() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        Map<String, String> accountNames = accountDisplayNames.getValue();
         Leaderboard board = Leaderboard.from(
                 leaderboardRepository.getAllStats().getValue(),
                 selectedPeriod.getValue(),
-                user == null ? null : user.getUid());
-        Map<String, String> accountNames = accountDisplayNames.getValue();
+                user == null ? null : user.getUid(),
+                accountNames);
         leaderboard.setValue(Leaderboard.withShortDisplayNames(board, accountNames));
     }
 
@@ -338,7 +339,9 @@ public class DashboardViewModel extends ViewModel {
         appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
             @Override
             public void onSuccess(List<AppUser> users) {
-                accountDisplayNames.setValue(indexAccountDisplayNames(users));
+                Map<String, String> displayNames = indexAccountDisplayNames(users);
+                accountDisplayNames.setValue(displayNames);
+                gameRepository.setAccountDisplayNames(displayNames);
                 photoUrlsByUserId.setValue(UserProfileIndex.photoUrlsByUserId(users));
                 profileVersionsByUserId.setValue(UserProfileIndex.profileVersionsByUserId(users));
             }
@@ -521,14 +524,11 @@ public class DashboardViewModel extends ViewModel {
         authData.put("pin", request.pin);
         authData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
         authData.put("creatorUserId", request.creatorUserId);
-        authData.put("creatorName", request.creatorName);
         authData.put("version", "1.0");
         authData.put("displayName", request.displayName);
         authData.put("pinGeneration", 1L);
         authData.put("activeEditorUserId", request.creatorUserId);
-        authData.put("activeEditorName", request.creatorName);
         authData.put("lastEditorUserId", request.creatorUserId);
-        authData.put("lastEditorName", request.creatorName);
         authData.put("dashboardGamePointFactor", request.gamePointFactor);
         authData.put("dashboardNumPlayers", 2);
         authData.put("dashboardBoardAdjustmentPercent", request.boardAdjustmentPercentage);

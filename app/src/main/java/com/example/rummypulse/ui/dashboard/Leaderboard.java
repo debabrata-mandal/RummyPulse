@@ -65,7 +65,13 @@ public class Leaderboard {
      */
     public static Leaderboard from(
             List<PlayerStats> allStats, StatsPeriod period, String currentUserId) {
-        List<LeaderboardEntry> ranked = rankAll(allStats, period, currentUserId);
+        return from(allStats, period, currentUserId, Collections.emptyMap());
+    }
+
+    public static Leaderboard from(List<PlayerStats> allStats, StatsPeriod period,
+            String currentUserId, @Nullable Map<String, String> displayNamesByUserId) {
+        List<LeaderboardEntry> ranked = rankAll(
+                allStats, period, currentUserId, RankingSort.NET_TOTAL, displayNamesByUserId);
         if (ranked.isEmpty()) {
             return EMPTY;
         }
@@ -122,9 +128,17 @@ public class Leaderboard {
             StatsPeriod period,
             String currentUserId,
             RankingSort sort) {
+        return rankAll(allStats, period, currentUserId, sort, Collections.emptyMap());
+    }
+
+    public static List<LeaderboardEntry> rankAll(List<PlayerStats> allStats, StatsPeriod period,
+            String currentUserId, RankingSort sort,
+            @Nullable Map<String, String> displayNamesByUserId) {
         if (allStats == null || allStats.isEmpty() || period == null) {
             return Collections.emptyList();
         }
+        Map<String, String> names = displayNamesByUserId == null
+                ? Collections.emptyMap() : displayNamesByUserId;
 
         List<Ranked> ranked = new ArrayList<>();
         for (PlayerStats stats : allStats) {
@@ -149,20 +163,22 @@ public class Leaderboard {
                 .thenComparing(Comparator.<Ranked>comparingLong(r -> r.bucket.getGames()).reversed())
                 .thenComparing(
                         Comparator.<Ranked>comparingDouble(r -> r.bucket.getFinalGamePoints()).reversed())
-                .thenComparing(r -> nameOf(r.stats)));
+                .thenComparing(r -> nameOf(r.stats, names), String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(r -> r.stats.getUserId()));
 
         List<LeaderboardEntry> entries = new ArrayList<>(ranked.size());
         for (int i = 0; i < ranked.size(); i++) {
-            entries.add(toEntry(ranked.get(i), i + 1, currentUserId));
+            entries.add(toEntry(ranked.get(i), i + 1, currentUserId, names));
         }
         return entries;
     }
 
-    private static LeaderboardEntry toEntry(Ranked ranked, int rank, String currentUserId) {
+    private static LeaderboardEntry toEntry(Ranked ranked, int rank, String currentUserId,
+            Map<String, String> displayNamesByUserId) {
         String userId = ranked.stats.getUserId();
         return new LeaderboardEntry(
                 userId,
-                nameOf(ranked.stats),
+                nameOf(ranked.stats, displayNamesByUserId),
                 ranked.bucket.getFinalGamePoints(),
                 ranked.bucket.getGames(),
                 ranked.bucket.getWins(),
@@ -170,8 +186,8 @@ public class Leaderboard {
                 userId.equals(currentUserId));
     }
 
-    private static String nameOf(PlayerStats stats) {
-        String name = stats.getDisplayName();
+    private static String nameOf(PlayerStats stats, Map<String, String> displayNamesByUserId) {
+        String name = displayNamesByUserId.get(stats.getUserId());
         return name == null || name.trim().isEmpty() ? "Player" : name.trim();
     }
 

@@ -11,4 +11,7 @@ Deploy this change in the following order so legacy clients cannot recreate publ
 
 The migration is idempotent. It copies Google identity into the private collection, removes public
 email fields, creates claims for any existing profile names, and replaces UID-linked legacy name
-snapshots with each user's effective public display name.
+snapshots with each user's effective public display name. It also removes the legacy `displayName`
+field from the preserved `playerStats_v2` collection. Wipe `games_v2` before rollout; no migration
+is performed for that collection. Leaderboard and game-attribution names are joined from
+`appUser_v2` by `userId`.
