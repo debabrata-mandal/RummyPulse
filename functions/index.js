@@ -30,7 +30,7 @@ initializeApp();
 const groqApiKey = defineSecret("GROQ_API_KEY");
 const GROQ_MODEL = "openai/gpt-oss-20b";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const RATE_LIMIT_COLLECTION = "_functionRateLimits";
+const FUNCTION_QUOTAS_COLLECTION = "functionQuotas_v2";
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const GLOBAL_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 10;
@@ -400,7 +400,7 @@ async function cleanupAccountData(uid) {
   const rateLimitKey = createHash("sha256").update(uid).digest("hex");
   await Promise.all([
     database.collection("playerStats_v2").doc(uid).delete(),
-    database.collection(RATE_LIMIT_COLLECTION).doc("groqGameNames")
+    database.collection(FUNCTION_QUOTAS_COLLECTION).doc("groqGameNames")
         .collection("users").doc(rateLimitKey).delete(),
   ]);
   return counts;
@@ -469,7 +469,7 @@ async function deleteAuthenticationUser(uid) {
 
 async function enforceRequestQuotas(uid) {
   const database = getFirestore();
-  const namespaceRef = database.collection(RATE_LIMIT_COLLECTION).doc("groqGameNames");
+  const namespaceRef = database.collection(FUNCTION_QUOTAS_COLLECTION).doc("groqGameNames");
   const userKey = createHash("sha256").update(uid).digest("hex");
   const userRef = namespaceRef.collection("users").doc(userKey);
   const now = Date.now();
