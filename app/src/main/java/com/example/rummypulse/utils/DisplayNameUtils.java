@@ -39,7 +39,7 @@ public final class DisplayNameUtils {
 
     /**
      * Short in-game label: first token plus last-token initial when a full name is available.
-     * Example: {@code "Debabrata Mandal"} → {@code "Debabrata M"}.
+     * Example: {@code "Bob Smith"} → {@code "Bob S"}.
      */
     public static String firstNameLastInitial(String displayName) {
         if (displayName == null) {

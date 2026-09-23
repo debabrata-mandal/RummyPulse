@@ -311,15 +311,15 @@ public class LeaderboardTest {
     @Test
     public void withShortDisplayNames_prefersAccountDirectoryName() {
         Leaderboard board = leaderboard(
-                Collections.singletonList(scored("uid-1", "Debabrata", 3, 2, 500)),
+                Collections.singletonList(scored("uid-1", "Bob", 3, 2, 500)),
                 StatsPeriod.ALL_TIME,
                 null);
         Map<String, String> accountNames = new HashMap<>();
-        accountNames.put("uid-1", "Debabrata Mandal");
+        accountNames.put("uid-1", "Bob Smith");
 
         Leaderboard shortBoard = Leaderboard.withShortDisplayNames(board, accountNames);
 
-        assertEquals("Debabrata M", shortBoard.getTop().get(0).getDisplayName());
+        assertEquals("Bob S", shortBoard.getTop().get(0).getDisplayName());
     }
 
     @Test

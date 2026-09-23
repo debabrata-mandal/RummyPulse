@@ -12,16 +12,16 @@ public class GoogleProfileResolverTest {
     @Test
     public void freshUserInfoReplacesStaleSignInProfile() {
         AppUserRepository.ProfileOverrides stale =
-                new AppUserRepository.ProfileOverrides("Debabrata Device", "old-photo");
+                new AppUserRepository.ProfileOverrides("Bob Device", "old-photo");
 
         AppUserRepository.ProfileOverrides resolved = GoogleProfileResolver.mergeUserInfo(
                 stale,
                 "google-user-id",
                 "{\"sub\":\"google-user-id\","
-                        + "\"name\":\"Debabrata Android\","
+                        + "\"name\":\"Bob Android\","
                         + "\"picture\":\"new-photo\"}");
 
-        assertEquals("Debabrata Android", resolved.displayName);
+        assertEquals("Bob Android", resolved.displayName);
         assertEquals("new-photo", resolved.photoUrl);
     }
 

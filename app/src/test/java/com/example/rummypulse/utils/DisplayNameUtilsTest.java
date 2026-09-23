@@ -82,7 +82,7 @@ public class DisplayNameUtilsTest {
 
     @Test
     public void firstNameLastInitial_fullName_returnsFirstNameAndLastInitial() {
-        assertEquals("Debabrata M", DisplayNameUtils.firstNameLastInitial("Debabrata Mandal"));
+        assertEquals("Bob S", DisplayNameUtils.firstNameLastInitial("Bob Smith"));
     }
 
     @Test
@@ -103,10 +103,10 @@ public class DisplayNameUtilsTest {
     @Test
     public void fullPlayerLabel_mappedUser_returnsFullAccountDisplayName() {
         Map<String, String> byUserId = new HashMap<>();
-        byUserId.put("uid-1", "Debabrata Mandal");
+        byUserId.put("uid-1", "Bob Smith");
         assertEquals(
-                "Debabrata Mandal",
-                DisplayNameUtils.fullPlayerLabel("Debabrata", "uid-1", byUserId));
+                "Bob Smith",
+                DisplayNameUtils.fullPlayerLabel("Bob", "uid-1", byUserId));
     }
 
     @Test
@@ -119,10 +119,10 @@ public class DisplayNameUtilsTest {
     @Test
     public void playerLabel_mappedUser_prefersAccountDisplayName() {
         Map<String, String> byUserId = new HashMap<>();
-        byUserId.put("uid-1", "Debabrata Mandal");
+        byUserId.put("uid-1", "Bob Smith");
         assertEquals(
-                "Debabrata M",
-                DisplayNameUtils.playerLabel("Debabrata", "uid-1", byUserId));
+                "Bob S",
+                DisplayNameUtils.playerLabel("Bob", "uid-1", byUserId));
     }
 
     @Test
