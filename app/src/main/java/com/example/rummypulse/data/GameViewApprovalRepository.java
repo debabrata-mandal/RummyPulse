@@ -1,14 +1,11 @@
 package com.example.rummypulse.data;
 
-import android.text.TextUtils;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
@@ -95,13 +92,10 @@ public class GameViewApprovalRepository {
         return false;
     }
 
-    public void seedCreatorApproval(@NonNull String gameId,
-                                  @NonNull String creatorUserId,
-                                  @NonNull String creatorName) {
+    public void seedCreatorApproval(@NonNull String gameId, @NonNull String creatorUserId) {
         Map<String, Object> data = new HashMap<>();
         data.put("gameId", gameId);
         data.put("userId", creatorUserId);
-        data.put("userDisplayName", creatorName);
         data.put("status", GameViewApprovalStatus.APPROVED.getFirestoreValue());
         data.put("requestedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
         data.put("lastUpdatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
@@ -148,13 +142,12 @@ public class GameViewApprovalRepository {
         Map<String, Object> data = new HashMap<>();
         data.put("gameId", gameId);
         data.put("userId", user.getUid());
-        data.put("userDisplayName", resolveDisplayName(user));
         data.put("status", GameViewApprovalStatus.REQUESTED.getFirestoreValue());
         data.put("requestedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
         data.put("lastUpdatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
 
         ref.set(data).addOnSuccessListener(aVoid -> {
-            addPendingRequestToGameDoc(gameId, user.getUid(), resolveDisplayName(user));
+            addPendingRequestToGameDoc(gameId, user.getUid());
             if (callback != null) {
                 callback.onResult(ViewAccessOutcome.PENDING);
             }
@@ -322,11 +315,8 @@ public class GameViewApprovalRepository {
                 });
     }
 
-    private void addPendingRequestToGameDoc(@NonNull String gameId,
-                                            @NonNull String userId,
-                                            @NonNull String displayName) {
+    private void addPendingRequestToGameDoc(@NonNull String gameId, @NonNull String userId) {
         Map<String, Object> entry = new HashMap<>();
-        entry.put("userDisplayName", displayName);
         entry.put("status", GameViewApprovalStatus.REQUESTED.getFirestoreValue());
         entry.put("requestedAt", FieldValue.serverTimestamp());
 
@@ -383,8 +373,6 @@ public class GameViewApprovalRepository {
             GameViewApproval approval = new GameViewApproval();
             approval.setGameId(gameId);
             approval.setUserId(entry.getKey());
-            Object name = data.get("userDisplayName");
-            approval.setUserDisplayName(name != null ? String.valueOf(name) : null);
             approval.setStatus(String.valueOf(statusObj));
             Object requestedAt = data.get("requestedAt");
             if (requestedAt instanceof Timestamp) {
@@ -665,11 +653,4 @@ public class GameViewApprovalRepository {
         }
     }
 
-    private static String resolveDisplayName(@NonNull FirebaseUser user) {
-        String displayName = CurrentUserProfileSession.getDisplayName();
-        if (displayName != null && !displayName.trim().isEmpty()) {
-            return displayName.trim();
-        }
-        return "User";
-    }
 }

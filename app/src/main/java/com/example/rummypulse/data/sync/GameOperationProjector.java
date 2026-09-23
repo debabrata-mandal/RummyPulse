@@ -16,6 +16,7 @@ import java.util.Set;
  */
 public final class GameOperationProjector {
     private static final Gson GSON = new Gson();
+    private static final String UNKNOWN_PLAYER_NAME = "Unknown";
 
     private GameOperationProjector() {
     }
@@ -51,6 +52,8 @@ public final class GameOperationProjector {
                 applyMapping(result, playerId, safePayload, false);
                 break;
             case UNMAP_USER:
+                applyUnmapping(result, playerId);
+                break;
             case TRANSFER_MAPPING:
             case RENAME_PLAYER:
                 throw new IllegalArgumentException(
@@ -147,6 +150,12 @@ public final class GameOperationProjector {
         Player target = requirePlayer(data, playerId);
         target.setUserId(userId);
         target.setName(name);
+    }
+
+    private static void applyUnmapping(GameData data, String playerId) {
+        Player target = requirePlayer(data, playerId);
+        target.setUserId(null);
+        target.setName(UNKNOWN_PLAYER_NAME);
     }
 
     private static void applyTransfer(

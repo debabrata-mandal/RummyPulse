@@ -803,7 +803,6 @@ public class JoinGameViewModel extends AndroidViewModel {
             String playerId,
             String linkedPlayerName,
             String linkedUserId,
-            String linkedUserDisplayName,
             PlayerLinkCallback callback) {
         if (TextUtils.isEmpty(gameId) || TextUtils.isEmpty(playerId)
                 || TextUtils.isEmpty(linkedPlayerName)
@@ -884,9 +883,6 @@ public class JoinGameViewModel extends AndroidViewModel {
                             expectedGeneration,
                             revisionOf(currentDataSnapshot) + 1L);
 
-            String approvalDisplayName = TextUtils.isEmpty(linkedUserDisplayName)
-                    ? linkedUserId
-                    : linkedUserDisplayName;
             Object requestedAt = approvalSnapshot.exists()
                     ? approvalSnapshot.get("requestedAt")
                     : null;
@@ -897,14 +893,12 @@ public class JoinGameViewModel extends AndroidViewModel {
             Map<String, Object> approvalData = new HashMap<>();
             approvalData.put("gameId", gameId);
             approvalData.put("userId", linkedUserId);
-            approvalData.put("userDisplayName", approvalDisplayName);
             approvalData.put("status", "approved");
             approvalData.put("requestedAt", requestedAt);
             approvalData.put("lastUpdatedAt",
                     com.google.firebase.firestore.FieldValue.serverTimestamp());
 
             Map<String, Object> mirroredApproval = new HashMap<>();
-            mirroredApproval.put("userDisplayName", approvalDisplayName);
             mirroredApproval.put("status", "approved");
             mirroredApproval.put("requestedAt", requestedAt);
             mirroredApproval.put("lastUpdatedAt",

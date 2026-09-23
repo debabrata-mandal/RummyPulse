@@ -181,6 +181,9 @@ service cloud.firestore {
         || canManageViewApprovals(resource.data.gameId)
       );
       allow create: if isAuthenticated()
+          && request.resource.data.keys().hasOnly([
+            'gameId', 'userId', 'status', 'requestedAt', 'lastUpdatedAt'
+          ])
           && approvalId == request.resource.data.gameId + '_' + request.resource.data.userId
           && (
             (
@@ -196,7 +199,12 @@ service cloud.firestore {
             )
           );
       allow update: if isAuthenticated()
-          && canManageViewApprovals(resource.data.gameId);
+          && canManageViewApprovals(resource.data.gameId)
+          && request.resource.data.keys().hasOnly([
+            'gameId', 'userId', 'status', 'requestedAt', 'lastUpdatedAt'
+          ])
+          && request.resource.data.gameId == resource.data.gameId
+          && request.resource.data.userId == resource.data.userId;
       allow delete: if isAuthenticated();
     }
 

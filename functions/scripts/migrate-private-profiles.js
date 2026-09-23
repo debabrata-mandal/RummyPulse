@@ -62,16 +62,6 @@ async function main() {
     }
   }
 
-  for (const [uid, displayName] of publicNames) {
-    const approvals = await database.collection("gameViewApprovals_v2")
-        .where("userId", "==", uid).get();
-    for (const approval of approvals.docs) {
-      if (approval.get("userDisplayName") !== displayName) {
-        writes++;
-        if (apply) await approval.ref.update("userDisplayName", displayName);
-      }
-    }
-  }
   process.stdout.write(`${apply ? "Applied" : "Dry run"}: ${users.size} users, ${writes} writes\n`);
 }
 

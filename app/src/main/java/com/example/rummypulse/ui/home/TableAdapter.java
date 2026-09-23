@@ -23,14 +23,18 @@ import android.annotation.SuppressLint;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.rummypulse.R;
+import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.Player;
 import com.example.rummypulse.ui.playerconsolidation.PlayerGamePointsCalculator;
 import com.example.rummypulse.utils.GameAttributionFormatter;
+import com.example.rummypulse.utils.ProfileAvatarBinder;
 import com.google.android.material.checkbox.MaterialCheckBox;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHolder> {
     private List<GameItem> gameItems;
@@ -38,7 +42,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     private OnSelectionChangedListener selectionChangedListener;
     private final ReviewSelectionModel selection = new ReviewSelectionModel();
     private boolean actionsEnabled = true;
-    private java.util.Set<String> knownProfileUserIds;
+    private Map<String, AppUser> directoryUsersById;
 
     public interface OnGameActionListener {
         void onApproveBoardAdjustment(GameItem game, int position);
@@ -102,8 +106,15 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    public void setKnownProfileUserIds(java.util.Set<String> userIds) {
-        knownProfileUserIds = userIds == null ? null : new java.util.HashSet<>(userIds);
+    public void setDirectoryUsers(List<AppUser> users) {
+        directoryUsersById = new HashMap<>();
+        if (users != null) {
+            for (AppUser user : users) {
+                if (user != null && user.getUserId() != null) {
+                    directoryUsersById.put(user.getUserId(), user);
+                }
+            }
+        }
         notifyDataSetChanged();
     }
 
@@ -398,12 +409,34 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 TextView playerNameText = playerView.findViewById(R.id.text_player_name);
                 TextView playerScoreText = playerView.findViewById(R.id.text_player_score);
                 TextView finalGamePointsText = playerView.findViewById(R.id.text_final_game_points);
-                LinearLayout identityColumn = (LinearLayout) playerNameText.getParent();
+                View avatarButton = playerView.findViewById(R.id.btn_review_map_player);
+                ImageView avatarImage = playerView.findViewById(R.id.review_player_avatar_image);
+                TextView avatarInitial = playerView.findViewById(R.id.review_player_avatar_initial);
                 
-                String playerName = player.getName();
-                if (playerName == null || playerName.isEmpty()) {
-                    playerName = "Unknown Player";
-                }
+                AppUser directoryUser = directoryUser(player);
+                String playerName = directoryUser != null
+                        ? directoryUser.getDisplayName() : player.getName();
+                if (playerName == null || playerName.trim().isEmpty()) playerName = "Unknown";
+                playerNameText.setText(playerName);
+                ProfileAvatarBinder.bindWithPhotoUrl(
+                        playerView,
+                        avatarImage,
+                        avatarInitial,
+                        playerName,
+                        directoryUser == null ? null : directoryUser.getPhotoUrl(),
+                        directoryUser == null ? 0L : directoryUser.getProfileVersion(),
+                        null,
+                        false,
+                        null,
+                        null);
+                avatarButton.setEnabled(actionsEnabled);
+                avatarButton.setAlpha(actionsEnabled ? 1f : 0.65f);
+                avatarButton.setOnClickListener(v -> {
+                    if (actionListener != null && actionsEnabled) {
+                        dialog.dismiss();
+                        actionListener.onChangePlayerMapping(gameItem, player);
+                    }
+                });
                 
                 int playerScore = player.getTotalScore();
                 
@@ -411,49 +444,8 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                         PlayerGamePointsCalculator.compute(gameItem, player);
                 double finalGamePoints = gamePoints.finalGamePoints;
                 
-                // Add ranking indicator and winner highlighting
-                int rank = i + 1;
-                if (rank == 1) {
-                    playerNameText.setText(context.getString(R.string.player_rank_winner, playerName));
-                    playerScoreText.setTextColor(context.getColor(R.color.success_green));
-                } else if (rank == 2) {
-                    playerNameText.setText(context.getString(R.string.player_rank_second, playerName));
-                    playerScoreText.setTextColor(context.getColor(R.color.warning_orange));
-                } else if (rank == 3) {
-                    playerNameText.setText(context.getString(R.string.player_rank_third, playerName));
-                    playerScoreText.setTextColor(context.getColor(R.color.error_red));
-                } else {
-                    playerNameText.setText(context.getString(
-                            R.string.player_rank_numbered, rank, playerName));
-                    playerScoreText.setTextColor(context.getColor(R.color.text_primary));
-                }
+                playerScoreText.setTextColor(context.getColor(R.color.view_gold));
                 playerScoreText.setText(String.valueOf(playerScore));
-
-                TextView mappingStatus = new TextView(context);
-                boolean mapped = isKnownProfile(player);
-                mappingStatus.setText(mapped
-                        ? context.getString(R.string.review_player_mapped)
-                        : context.getString(R.string.review_player_mapping_required));
-                mappingStatus.setTextColor(context.getColor(mapped
-                        ? R.color.success_green : R.color.error_red));
-                mappingStatus.setTextSize(11);
-                identityColumn.addView(mappingStatus);
-
-                com.google.android.material.button.MaterialButton changeMapping =
-                        new com.google.android.material.button.MaterialButton(
-                                context, null,
-                                com.google.android.material.R.attr.materialButtonOutlinedStyle);
-                changeMapping.setText(R.string.review_change_mapping);
-                changeMapping.setTextSize(11);
-                changeMapping.setAllCaps(false);
-                changeMapping.setEnabled(actionsEnabled);
-                changeMapping.setOnClickListener(v -> {
-                    if (actionListener != null && actionsEnabled) {
-                        dialog.dismiss();
-                        actionListener.onChangePlayerMapping(gameItem, player);
-                    }
-                });
-                identityColumn.addView(changeMapping);
 
                 if (finalGamePoints > 0) {
                     finalGamePointsText.setText(context.getString(
@@ -523,8 +515,12 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 || player.getUserId().trim().isEmpty()) {
             return false;
         }
-        return knownProfileUserIds == null
-                || knownProfileUserIds.contains(player.getUserId());
+        return directoryUsersById == null || directoryUsersById.containsKey(player.getUserId());
+    }
+
+    private AppUser directoryUser(Player player) {
+        if (player == null || player.getUserId() == null || directoryUsersById == null) return null;
+        return directoryUsersById.get(player.getUserId());
     }
     
     private void showQrCodeDialog(Context context, GameItem gameItem) {

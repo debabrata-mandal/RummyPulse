@@ -41,6 +41,8 @@ public class UserManagementFragment extends Fragment {
     private UserManagementAdapter adapter;
     private LinearLayoutManager layoutManager;
     private Boolean pendingHiddenToast;
+    private androidx.appcompat.app.AlertDialog activeManagedProfileDialog;
+    private MaterialButton activeManagedProfileSaveButton;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -115,12 +117,11 @@ public class UserManagementFragment extends Fragment {
         });
 
         userManagementViewModel.getLoading().observe(getViewLifecycleOwner(), isLoading -> {
-            binding.swipeRefreshLayout.setRefreshing(isLoading);
-            if (isLoading) {
-                binding.progressBar.setVisibility(View.VISIBLE);
-            } else {
-                binding.progressBar.setVisibility(View.GONE);
-            }
+            boolean loading = Boolean.TRUE.equals(isLoading);
+            boolean pullToRefresh = binding.swipeRefreshLayout.isRefreshing();
+            binding.progressBar.setVisibility(
+                    loading && !pullToRefresh ? View.VISIBLE : View.GONE);
+            if (!loading) binding.swipeRefreshLayout.setRefreshing(false);
         });
 
         userManagementViewModel.getLoadingMore().observe(getViewLifecycleOwner(), isLoading -> {
@@ -130,7 +131,12 @@ public class UserManagementFragment extends Fragment {
 
         userManagementViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
-                Log.e(TAG, "User management operation failed");
+                Log.e(TAG, "User management operation failed: " + error);
+                if (activeManagedProfileSaveButton != null) {
+                    activeManagedProfileSaveButton.setEnabled(true);
+                    activeManagedProfileSaveButton.setText(
+                            R.string.user_management_save_managed);
+                }
                 if (adapter.getItemCount() == 0) {
                     showError(error);
                 }
@@ -171,6 +177,10 @@ public class UserManagementFragment extends Fragment {
         userManagementViewModel.getManagedProfileSaved().observe(
                 getViewLifecycleOwner(), saved -> {
                     if (Boolean.TRUE.equals(saved)) {
+                        if (activeManagedProfileDialog != null
+                                && activeManagedProfileDialog.isShowing()) {
+                            activeManagedProfileDialog.dismiss();
+                        }
                         com.example.rummypulse.utils.ModernToast.success(
                                 getContext(), getString(R.string.user_management_managed_saved));
                     }
@@ -217,11 +227,24 @@ public class UserManagementFragment extends Fragment {
             profile.setImageResource(R.drawable.ic_person);
         }
 
-        String googleName = user.getActualName() != null
-                ? user.getActualName() : "Unavailable";
-        String profileName = user.getProfileName() != null ? user.getProfileName() : "Not set";
-        name.setText(getString(R.string.user_management_identity_names, googleName, profileName));
-        email.setText(user.getEmail() != null ? user.getEmail() : "No Email");
+        String profileName = user.getProfileName() != null
+                ? user.getProfileName() : user.getDisplayName();
+        if (profileName == null || profileName.trim().isEmpty()) {
+            profileName = getString(R.string.unknown_user);
+        }
+        String actualName = user.getActualName() == null
+                ? profileName : user.getActualName().trim();
+        if (actualName.isEmpty()) actualName = profileName;
+        name.setText(actualName + "\n" + getString(
+                R.string.user_management_profile_name, profileName));
+        String emailAddress = user.getEmail() == null ? "" : user.getEmail().trim();
+        String phoneNumber = user.getPhoneNumber() == null
+                ? "" : user.getPhoneNumber().trim();
+        String contact = emailAddress.isEmpty()
+                ? phoneNumber
+                : phoneNumber.isEmpty() ? emailAddress : emailAddress + " · " + phoneNumber;
+        email.setVisibility(contact.isEmpty() ? View.GONE : View.VISIBLE);
+        email.setText(contact);
         String provider = user.getProvider() != null ? user.getProvider() : "Unknown";
         String lastLogin;
         if (user.getLastLoginAt() != null) {
@@ -317,10 +340,18 @@ public class UserManagementFragment extends Fragment {
                 dialogView.findViewById(R.id.layout_managed_actual_name);
         com.google.android.material.textfield.TextInputLayout profileLayout =
                 dialogView.findViewById(R.id.layout_managed_profile_name);
+        com.google.android.material.textfield.TextInputLayout emailLayout =
+                dialogView.findViewById(R.id.layout_managed_email);
+        com.google.android.material.textfield.TextInputLayout phoneLayout =
+                dialogView.findViewById(R.id.layout_managed_phone);
         com.google.android.material.textfield.TextInputEditText actualInput =
                 dialogView.findViewById(R.id.input_managed_actual_name);
         com.google.android.material.textfield.TextInputEditText profileInput =
                 dialogView.findViewById(R.id.input_managed_profile_name);
+        com.google.android.material.textfield.TextInputEditText emailInput =
+                dialogView.findViewById(R.id.input_managed_email);
+        com.google.android.material.textfield.TextInputEditText phoneInput =
+                dialogView.findViewById(R.id.input_managed_phone);
         MaterialButton cancel = dialogView.findViewById(R.id.btn_managed_profile_cancel);
         MaterialButton save = dialogView.findViewById(R.id.btn_managed_profile_save);
         title.setText(existing == null
@@ -329,6 +360,8 @@ public class UserManagementFragment extends Fragment {
         if (existing != null) {
             actualInput.setText(existing.getActualName());
             profileInput.setText(existing.getProfileName());
+            emailInput.setText(existing.getEmail());
+            phoneInput.setText(existing.getPhoneNumber());
         }
         androidx.appcompat.app.AlertDialog dialog =
                 new androidx.appcompat.app.AlertDialog.Builder(
@@ -342,8 +375,14 @@ public class UserManagementFragment extends Fragment {
                     ? "" : actualInput.getText().toString().trim();
             String profileName = profileInput.getText() == null
                     ? "" : profileInput.getText().toString().trim();
+            String email = emailInput.getText() == null
+                    ? "" : emailInput.getText().toString().trim();
+            String phoneNumber = phoneInput.getText() == null
+                    ? "" : phoneInput.getText().toString().trim();
             actualLayout.setError(null);
             profileLayout.setError(null);
+            emailLayout.setError(null);
+            phoneLayout.setError(null);
             if (actualName.isEmpty()) {
                 actualLayout.setError(getString(R.string.user_management_actual_name));
                 return;
@@ -352,10 +391,30 @@ public class UserManagementFragment extends Fragment {
                 profileLayout.setError(getString(R.string.user_management_profile_name_help));
                 return;
             }
+            if (!email.isEmpty()
+                    && !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                emailLayout.setError(getString(R.string.user_management_invalid_email));
+                return;
+            }
+            String phoneDigits = phoneNumber.replaceAll("\\D", "");
+            if (!phoneNumber.isEmpty()
+                    && (phoneDigits.length() < 7 || phoneDigits.length() > 15)) {
+                phoneLayout.setError(getString(R.string.user_management_invalid_phone));
+                return;
+            }
+            save.setEnabled(false);
+            save.setText(R.string.profile_name_saving);
             userManagementViewModel.saveManagedProfile(
-                    existing, actualName, profileName);
-            dialog.dismiss();
+                    existing, actualName, profileName, email, phoneNumber);
         });
+        dialog.setOnDismissListener(ignored -> {
+            if (activeManagedProfileDialog == dialog) {
+                activeManagedProfileDialog = null;
+                activeManagedProfileSaveButton = null;
+            }
+        });
+        activeManagedProfileDialog = dialog;
+        activeManagedProfileSaveButton = save;
         dialog.show();
         styleDialogWindow(dialog);
     }
@@ -568,6 +627,8 @@ public class UserManagementFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        if (activeManagedProfileDialog != null) activeManagedProfileDialog.dismiss();
+        activeManagedProfileDialog = null;
         binding = null;
     }
 }

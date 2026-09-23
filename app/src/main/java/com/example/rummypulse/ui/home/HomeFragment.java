@@ -23,6 +23,7 @@ import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserDirectoryFilter;
 import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.Player;
+import com.example.rummypulse.utils.ProfileAvatarBinder;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -109,6 +110,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 tableAdapter = new TableAdapter(gameItems);
                 tableAdapter.setOnGameActionListener(this);
                 tableAdapter.setOnSelectionChangedListener(this::updateSelectionControls);
+                tableAdapter.setDirectoryUsers(homeViewModel.getDirectoryUsers().getValue());
                 recyclerView.setAdapter(tableAdapter);
             } else {
                 tableAdapter.submitItems(gameItems);
@@ -118,17 +120,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         });
         homeViewModel.getDirectoryUsers().observe(getViewLifecycleOwner(), users -> {
             if (tableAdapter == null) return;
-            java.util.Set<String> userIds = new java.util.HashSet<>();
-            if (users != null) {
-                for (AppUser user : users) {
-                    if (user != null && user.getUserId() != null
-                            && user.getProfileName() != null
-                            && !user.getProfileName().trim().isEmpty()) {
-                        userIds.add(user.getUserId());
-                    }
-                }
-            }
-            tableAdapter.setKnownProfileUserIds(userIds);
+            tableAdapter.setDirectoryUsers(users);
         });
 
         homeViewModel.getCompletedGames().observe(getViewLifecycleOwner(), completedGames -> {
@@ -461,15 +453,29 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                                     ViewGroup parent) {
                                 View row = super.getView(position, convertView, parent);
                                 AppUser user = getItem(position);
-                                ((TextView) row.findViewById(R.id.text_user_name))
-                                        .setText(user.getDisplayName());
+                                String displayName = user.getDisplayName();
+                                ((TextView) row.findViewById(R.id.text_user_name)).setText(displayName);
                                 ((TextView) row.findViewById(R.id.text_user_detail))
                                         .setText(user.getUserId().equals(player.getUserId())
                                                 ? getString(R.string.map_player_currently_linked)
                                                 : "");
+                                ProfileAvatarBinder.bindWithPhotoUrl(
+                                        row,
+                                        row.findViewById(R.id.user_avatar_image),
+                                        row.findViewById(R.id.user_avatar_initial),
+                                        displayName,
+                                        user.getPhotoUrl(),
+                                        user.getProfileVersion(),
+                                        null,
+                                        false,
+                                        null,
+                                        null);
                                 row.findViewById(R.id.icon_user_selected).setVisibility(
                                         user.getUserId().equals(player.getUserId())
                                                 ? View.VISIBLE : View.GONE);
+                                row.setBackgroundResource(user.getUserId().equals(player.getUserId())
+                                        ? R.drawable.user_mapping_selected_background
+                                        : R.drawable.user_mapping_row_background);
                                 return row;
                             }
                         };

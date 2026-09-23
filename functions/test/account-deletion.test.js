@@ -25,8 +25,8 @@ test("active game anonymization changes only the deleted account", () => {
     lastEditorName: "Bob",
     memberUserIds: [UID_A, "user-b", "user-c"],
     pendingViewRequests: {
-      [UID_A]: {status: "approved", userDisplayName: "Alice"},
-      "user-b": {status: "approved", userDisplayName: "Bob"},
+      [UID_A]: {status: "approved"},
+      "user-b": {status: "approved"},
     },
     pin: "1234",
     pinGeneration: 8,

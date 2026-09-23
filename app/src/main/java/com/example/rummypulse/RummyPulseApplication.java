@@ -7,6 +7,9 @@ import androidx.annotation.NonNull;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreSettings;
+import com.google.firebase.functions.FirebaseFunctions;
 import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.utils.AuthStateManager;
@@ -26,12 +29,19 @@ public class RummyPulseApplication extends Application {
         
         // Initialize Firebase
         FirebaseApp.initializeApp(this);
+        FirebaseAuth firebaseAuth = FirebaseAuth.getInstance();
+        FirebaseFirestore firestore = FirebaseFirestore.getInstance();
+        if (BuildConfig.USE_FIREBASE_EMULATORS) {
+            firebaseAuth.useEmulator("10.0.2.2", 9099);
+            firestore.useEmulator("10.0.2.2", 8080);
+            FirebaseFunctions.getInstance("asia-south1")
+                    .useEmulator("10.0.2.2", 5001);
+            Log.i(TAG, "Using local Firebase Auth, Firestore, and Functions emulators");
+        }
         AppCheckInitializer.initialize();
         AppUserRoleSession.getInstance().initialize(this);
-        
+
         // Configure Firebase Auth for better persistence
-        FirebaseAuth firebaseAuth = FirebaseAuth.getInstance();
-        
         // Explicitly enable persistence (should be default, but ensuring it's set)
         try {
             // This ensures authentication state persists across app restarts and force stops
@@ -41,15 +51,17 @@ public class RummyPulseApplication extends Application {
             Log.e(TAG, "Error configuring Firebase Auth persistence", e);
         }
         
-        // Enable offline persistence for Firestore
+        // Emulator data is reset/imported by the local launcher, so do not mix it with an
+        // Android offline cache. Production keeps offline persistence enabled.
         try {
-            com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
-            com.google.firebase.firestore.FirebaseFirestoreSettings settings = 
-                new com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
-                    .setPersistenceEnabled(true)
+            FirebaseFirestoreSettings settings =
+                new FirebaseFirestoreSettings.Builder()
+                    .setPersistenceEnabled(!BuildConfig.USE_FIREBASE_EMULATORS)
                     .build();
-            db.setFirestoreSettings(settings);
-            Log.d(TAG, "Firestore offline persistence enabled successfully");
+            firestore.setFirestoreSettings(settings);
+            Log.d(TAG, BuildConfig.USE_FIREBASE_EMULATORS
+                    ? "Firestore offline persistence disabled for local emulators"
+                    : "Firestore offline persistence enabled successfully");
         } catch (Exception e) {
             Log.e(TAG, "Error enabling Firestore offline persistence", e);
         }

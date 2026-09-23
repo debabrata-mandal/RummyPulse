@@ -29,15 +29,15 @@ test("linked snapshots are renamed without touching manual players", () => {
   assert.equal(result.data.data.playersById.b.name, "Manual Player");
 });
 
-test("game attribution names are removed and pending request names follow uid", () => {
+test("game attribution names are removed without changing approval status", () => {
   const result = replaceGameIdentityNames({
     creatorUserId: "uid-a",
     creatorName: "Google Name",
     lastEditorUserId: "uid-b",
     lastEditorName: "Someone Else",
-    pendingViewRequests: {"uid-a": {userDisplayName: "Google Name"}},
+    pendingViewRequests: {"uid-a": {status: "requested"}},
   }, "uid-a", "CardKing");
   assert.equal(result.data.creatorName, undefined);
   assert.equal(result.data.lastEditorName, undefined);
-  assert.equal(result.data.pendingViewRequests["uid-a"].userDisplayName, "CardKing");
+  assert.equal(result.data.pendingViewRequests["uid-a"].status, "requested");
 });

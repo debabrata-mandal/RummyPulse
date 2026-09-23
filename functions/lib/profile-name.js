@@ -58,11 +58,6 @@ function replaceGameIdentityNames(source, uid, displayName) {
       changed = true;
     }
   }
-  if (data.pendingViewRequests && data.pendingViewRequests[uid] &&
-      data.pendingViewRequests[uid].userDisplayName !== displayName) {
-    data.pendingViewRequests[uid].userDisplayName = displayName;
-    changed = true;
-  }
   return {changed, data};
 }
 

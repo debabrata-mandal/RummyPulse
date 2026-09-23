@@ -671,6 +671,10 @@
     <string name="user_management_edit_managed_title">Edit player profile</string>
     <string name="user_management_managed_help">For a player without a sign-in account. The actual name is visible only to administrators.</string>
     <string name="user_management_actual_name">Actual name</string>
+    <string name="user_management_email_optional">Email address (optional)</string>
+    <string name="user_management_phone_optional">Phone number (optional)</string>
+    <string name="user_management_invalid_email">Enter a valid email address</string>
+    <string name="user_management_invalid_phone">Enter a valid phone number</string>
     <string name="user_management_profile_name_label">Game profile name</string>
     <string name="user_management_profile_name_help">3–16 letters, numbers, or underscores</string>
     <string name="user_management_managed_saved">Player profile saved</string>

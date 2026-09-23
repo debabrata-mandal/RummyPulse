@@ -3,106 +3,117 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:baselineAligned="false"
-    android:orientation="horizontal"
+    android:layout_marginBottom="8dp"
     android:background="@drawable/professional_row_background"
-    android:padding="16dp"
-    android:layout_marginBottom="8dp">
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="14dp">
 
-    <!-- Player Name -->
-    <LinearLayout
+    <FrameLayout
+        android:id="@+id/btn_review_map_player"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:clickable="true"
+        android:contentDescription="@string/map_player_icon_description"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/review_player_avatar_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/dashboard_avatar_description"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/review_player_avatar_initial"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_view_avatar"
+            android:gravity="center"
+            android:textColor="@color/view_violet_light"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="P" />
+
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/text_player_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
         android:layout_weight="1"
-        android:orientation="vertical">
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        tools:text="Player name" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="Player Name"
-            android:textSize="14sp"
-            android:textColor="@color/text_secondary"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/text_player_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="Player 1"
-            android:textSize="16sp"
-            android:textColor="@color/text_primary"
-            android:textStyle="bold"
-            android:layout_marginTop="4dp"
-            android:maxLines="2"
-            android:ellipsize="end" />
-
-    </LinearLayout>
-
-    <!-- Score and Final Game Points Container -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="end">
+        android:layout_marginStart="10dp"
+        android:gravity="end"
+        android:orientation="horizontal">
 
-        <!-- Player Score -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            android:layout_marginEnd="14dp"
             android:gravity="center"
-            android:layout_marginEnd="16dp">
+            android:orientation="vertical">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/score_label"
-                android:textSize="12sp"
                 android:textColor="@color/text_secondary"
+                android:textSize="11sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/text_player_score"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                tools:text="0"
-                android:textSize="16sp"
-                android:textColor="@color/accent_blue"
-                android:textStyle="bold"
                 android:layout_marginTop="2dp"
-                android:singleLine="true"
+                android:ellipsize="end"
                 android:maxLines="1"
-                android:ellipsize="end" />
+                android:singleLine="true"
+                android:textColor="@color/view_gold"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="100" />
 
         </LinearLayout>
 
-        <!-- Final Game Points -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center">
+            android:gravity="center"
+            android:orientation="vertical">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/final_game_points_label"
-                android:textSize="12sp"
                 android:textColor="@color/text_secondary"
+                android:textSize="11sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/text_final_game_points"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                tools:text="0 GP"
-                android:textSize="16sp"
-                android:textColor="@color/text_primary"
-                android:textStyle="bold"
                 android:layout_marginTop="2dp"
-                android:singleLine="true"
+                android:ellipsize="end"
                 android:maxLines="1"
-                android:ellipsize="end" />
+                android:singleLine="true"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="+554 GP" />
 
         </LinearLayout>
 

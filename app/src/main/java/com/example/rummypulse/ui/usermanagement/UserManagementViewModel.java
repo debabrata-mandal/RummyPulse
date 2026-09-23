@@ -48,6 +48,7 @@ public class UserManagementViewModel extends ViewModel {
     private boolean pageRequestInProgress;
     private boolean refreshQueued;
     private boolean fullDirectoryRequestInProgress;
+    private boolean managedProfileRequestInProgress;
 
     public UserManagementViewModel() {
         this(new AppUserRepository(), new FirebaseAccountDeletionService());
@@ -103,13 +104,17 @@ public class UserManagementViewModel extends ViewModel {
     }
 
     public void saveManagedProfile(
-            AppUser existing, String actualName, String profileName) {
+            AppUser existing, String actualName, String profileName,
+            String email, String phoneNumber) {
+        if (managedProfileRequestInProgress) return;
+        managedProfileRequestInProgress = true;
         loading.setValue(true);
         error.setValue(null);
         managedProfileSaved.setValue(false);
         AppUserRepository.AppUserCallback callback = new AppUserRepository.AppUserCallback() {
             @Override
             public void onSuccess(AppUser saved) {
+                managedProfileRequestInProgress = false;
                 managedProfileSaved.setValue(true);
                 loading.setValue(false);
                 loadAllUsers();
@@ -117,15 +122,18 @@ public class UserManagementViewModel extends ViewModel {
 
             @Override
             public void onFailure(Exception exception) {
+                managedProfileRequestInProgress = false;
                 loading.setValue(false);
                 error.setValue("Failed to save player profile: " + exception.getMessage());
             }
         };
         if (existing == null) {
-            appUserRepository.createManagedProfile(actualName, profileName, callback);
+            appUserRepository.createManagedProfile(
+                    actualName, profileName, email, phoneNumber, callback);
         } else {
             appUserRepository.updateManagedProfile(
-                    existing.getUserId(), actualName, profileName, callback);
+                    existing.getUserId(), actualName, profileName,
+                    email, phoneNumber, callback);
         }
     }
 

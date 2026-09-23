@@ -2,9 +2,10 @@
 
 const DELETED_PLAYER_NAME = "Deleted player";
 const RECENT_AUTH_MAX_AGE_SECONDS = 5 * 60;
+const IS_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true";
 const ACCOUNT_DELETION_CALLABLE_OPTIONS = Object.freeze({
   region: "asia-south1",
-  enforceAppCheck: true,
+  enforceAppCheck: !IS_EMULATOR,
   timeoutSeconds: 540,
   memory: "256MiB",
 });

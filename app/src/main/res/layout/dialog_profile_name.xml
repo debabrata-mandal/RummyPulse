@@ -29,9 +29,14 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="18dp"
         android:hint="@string/profile_name_hint"
+        app:boxBackgroundColor="@color/card_background"
+        app:boxStrokeColor="@color/dialog_input_stroke"
         app:counterEnabled="true"
         app:counterMaxLength="16"
-        app:helperText="@string/profile_name_helper">
+        app:counterTextColor="@color/text_secondary"
+        app:helperText="@string/profile_name_helper"
+        app:helperTextTextColor="@color/text_secondary"
+        app:hintTextColor="@color/dialog_hint_text">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/edit_profile_name"
@@ -40,7 +45,10 @@
             android:imeOptions="actionDone"
             android:inputType="textNoSuggestions"
             android:maxLength="16"
-            android:maxLines="1" />
+            android:maxLines="1"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:textCursorDrawable="@null" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <LinearLayout

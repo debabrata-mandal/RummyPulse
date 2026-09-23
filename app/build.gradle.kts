@@ -7,6 +7,9 @@ val releaseStoreFilePath = providers.environmentVariable("RELEASE_STORE_FILE").o
 val releaseStorePassword = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
 val releaseKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull
 val releaseKeyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").orNull
+val useFirebaseEmulators = providers.gradleProperty("useFirebaseEmulators")
+    .map { it.toBoolean() }
+    .orElse(true)
 
 val validateReleaseSigning by tasks.registering {
     group = "verification"
@@ -56,7 +59,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField(
+                "boolean",
+                "USE_FIREBASE_EMULATORS",
+                useFirebaseEmulators.get().toString()
+            )
+        }
         release {
+            buildConfigField("boolean", "USE_FIREBASE_EMULATORS", "false")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

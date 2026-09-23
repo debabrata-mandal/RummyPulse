@@ -38,3 +38,7 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Firebase Local Emulator Suite runtime state and persisted developer data
+.firebase-emulator-data/
+.firebase-emulator-runtime/

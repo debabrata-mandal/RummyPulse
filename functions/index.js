@@ -27,6 +27,7 @@ const {
 
 initializeApp();
 
+const IS_EMULATOR = process.env.FUNCTIONS_EMULATOR === "true";
 const groqApiKey = defineSecret("GROQ_API_KEY");
 const GROQ_MODEL = "openai/gpt-oss-20b";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -38,7 +39,7 @@ const MAX_GLOBAL_REQUESTS_PER_DAY = 200;
 const DELETE_PAGE_SIZE = 200;
 const PROFILE_CALLABLE_OPTIONS = Object.freeze({
   region: "asia-south1",
-  enforceAppCheck: true,
+  enforceAppCheck: !IS_EMULATOR,
   timeoutSeconds: 540,
   memory: "256MiB",
 });
@@ -56,7 +57,7 @@ const PROMPT =
 exports.suggestGameName = onCall({
   region: "asia-south1",
   secrets: [groqApiKey],
-  enforceAppCheck: true,
+  enforceAppCheck: !IS_EMULATOR,
   maxInstances: 5,
   concurrency: 10,
   timeoutSeconds: 30,
@@ -213,6 +214,8 @@ exports.adminCreateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
   await requireAdministrator(database, request);
   const actualName = requireActualName(request.data?.actualName);
   const requested = requireProfileName(request.data?.profileName);
+  const email = optionalEmail(request.data?.email);
+  const phoneNumber = optionalPhoneNumber(request.data?.phoneNumber);
   const userRef = database.collection(PUBLIC_USER_COLLECTION).doc();
   const privateRef = database.collection(PRIVATE_USER_COLLECTION).doc(userRef.id);
   const claimRef = database.collection(PROFILE_NAME_CLAIMS).doc(requested.key);
@@ -237,7 +240,8 @@ exports.adminCreateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
     transaction.create(privateRef, {
       userId: userRef.id,
       actualName,
-      email: null,
+      email,
+      phoneNumber,
       updatedAt: FieldValue.serverTimestamp(),
     });
   });
@@ -250,6 +254,8 @@ exports.adminUpdateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
   const userId = requireDocumentId(request.data?.userId, "A valid managed profile is required.");
   const actualName = requireActualName(request.data?.actualName);
   const requested = requireProfileName(request.data?.profileName);
+  const email = optionalEmail(request.data?.email);
+  const phoneNumber = optionalPhoneNumber(request.data?.phoneNumber);
   const publicRef = database.collection(PUBLIC_USER_COLLECTION).doc(userId);
   const privateRef = database.collection(PRIVATE_USER_COLLECTION).doc(userId);
   let oldKey = null;
@@ -281,7 +287,8 @@ exports.adminUpdateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
     transaction.set(privateRef, {
       userId,
       actualName,
-      email: null,
+      email,
+      phoneNumber,
       updatedAt: FieldValue.serverTimestamp(),
     }, {merge: true});
   });
@@ -316,6 +323,8 @@ exports.adminUpdateGamePlayerMapping = onCall(PROFILE_CALLABLE_OPTIONS, async (r
     if (!displayName) {
       throw new HttpsError("failed-precondition", "The selected profile needs a profile name.");
     }
+    const managedProfile = userSnapshot.get("profileType") === "managed" ||
+      userSnapshot.get("provider") === "managed";
     const wrapper = dataSnapshot.data() || {};
     const gameData = structuredClone(wrapper.data || {});
     const players = gameData.playersById;
@@ -357,20 +366,26 @@ exports.adminUpdateGamePlayerMapping = onCall(PROFILE_CALLABLE_OPTIONS, async (r
       transaction.update(gameRef,
           new FieldPath("pendingViewRequests", previousUserId), FieldValue.delete());
     }
-    transaction.set(database.collection(VIEW_APPROVAL_COLLECTION).doc(`${gameId}_${userId}`), {
-      gameId,
-      userId,
-      userDisplayName: displayName,
-      status: "approved",
-      requestedAt: FieldValue.serverTimestamp(),
-      lastUpdatedAt: FieldValue.serverTimestamp(),
-    });
-    transaction.update(gameRef, new FieldPath("pendingViewRequests", userId), {
-      userDisplayName: displayName,
-      status: "approved",
-      requestedAt: FieldValue.serverTimestamp(),
-      lastUpdatedAt: FieldValue.serverTimestamp(),
-    });
+    const approvalRef = database.collection(VIEW_APPROVAL_COLLECTION)
+        .doc(`${gameId}_${userId}`);
+    if (managedProfile) {
+      transaction.delete(approvalRef);
+      transaction.update(gameRef,
+          new FieldPath("pendingViewRequests", userId), FieldValue.delete());
+    } else {
+      transaction.set(approvalRef, {
+        gameId,
+        userId,
+        status: "approved",
+        requestedAt: FieldValue.serverTimestamp(),
+        lastUpdatedAt: FieldValue.serverTimestamp(),
+      });
+      transaction.update(gameRef, new FieldPath("pendingViewRequests", userId), {
+        status: "approved",
+        requestedAt: FieldValue.serverTimestamp(),
+        lastUpdatedAt: FieldValue.serverTimestamp(),
+      });
+    }
   });
   return {gameId, playerId, userId};
 });
@@ -467,17 +482,6 @@ async function propagateProfileName(database, uid, displayName) {
       }
     });
   });
-  const approvals = await database.collection("gameViewApprovals_v2")
-      .where("userId", "==", uid).get();
-  const batch = database.batch();
-  let batchWrites = 0;
-  approvals.docs.forEach((snapshot) => {
-    batch.update(snapshot.ref, "userDisplayName", displayName);
-    batchWrites++;
-  });
-  if (batchWrites > 0) {
-    await batch.commit();
-  }
 }
 
 async function rewriteProfileSnapshot(database, reference, uid, displayName, transformer) {
@@ -523,6 +527,26 @@ function requireActualName(value) {
     throw new HttpsError("invalid-argument", "Actual name is required.");
   }
   return actualName;
+}
+
+function optionalEmail(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const email = safeText(value, 320);
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new HttpsError("invalid-argument", "Enter a valid email address.");
+  }
+  return email.toLowerCase();
+}
+
+function optionalPhoneNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const phoneNumber = safeText(value, 32);
+  const digits = phoneNumber ? phoneNumber.replace(/\D/g, "") : "";
+  if (!phoneNumber || !/^[+0-9()\-\s]+$/.test(phoneNumber)
+      || digits.length < 7 || digits.length > 15) {
+    throw new HttpsError("invalid-argument", "Enter a valid phone number.");
+  }
+  return phoneNumber;
 }
 
 function requireDocumentId(value, message) {

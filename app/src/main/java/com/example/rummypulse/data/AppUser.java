@@ -17,6 +17,7 @@ public class AppUser {
     private String profileName;
     private String googleDisplayName;
     private String actualName;
+    private String phoneNumber;
     private String photoUrl;
     /** Bumped when profile fields change so other clients can refresh cached avatars/names. */
     private long profileVersion;
@@ -126,6 +127,14 @@ public class AppUser {
 
     public void setActualName(String actualName) {
         this.actualName = actualName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
     public String getPhotoUrl() {

@@ -29,7 +29,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:hint="@string/user_management_actual_name">
+        android:hint="@string/user_management_actual_name"
+        app:boxBackgroundColor="@color/card_background"
+        app:boxStrokeColor="@color/dialog_input_stroke"
+        app:hintTextColor="@color/dialog_hint_text">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/input_managed_actual_name"
@@ -37,7 +40,10 @@
             android:layout_height="wrap_content"
             android:inputType="textPersonName"
             android:maxLength="120"
-            android:maxLines="1" />
+            android:maxLines="1"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:textCursorDrawable="@null" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
@@ -47,7 +53,11 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:hint="@string/user_management_profile_name_label"
-        app:helperText="@string/user_management_profile_name_help">
+        app:boxBackgroundColor="@color/card_background"
+        app:boxStrokeColor="@color/dialog_input_stroke"
+        app:helperText="@string/user_management_profile_name_help"
+        app:helperTextTextColor="@color/text_secondary"
+        app:hintTextColor="@color/dialog_hint_text">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/input_managed_profile_name"
@@ -55,7 +65,58 @@
             android:layout_height="wrap_content"
             android:inputType="textVisiblePassword"
             android:maxLength="16"
-            android:maxLines="1" />
+            android:maxLines="1"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:textCursorDrawable="@null" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layout_managed_email"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:hint="@string/user_management_email_optional"
+        app:boxBackgroundColor="@color/card_background"
+        app:boxStrokeColor="@color/dialog_input_stroke"
+        app:hintTextColor="@color/dialog_hint_text">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/input_managed_email"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionNext"
+            android:inputType="textEmailAddress"
+            android:maxLength="320"
+            android:maxLines="1"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:textCursorDrawable="@null" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layout_managed_phone"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:hint="@string/user_management_phone_optional"
+        app:boxBackgroundColor="@color/card_background"
+        app:boxStrokeColor="@color/dialog_input_stroke"
+        app:hintTextColor="@color/dialog_hint_text">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/input_managed_phone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionDone"
+            android:inputType="phone"
+            android:maxLength="32"
+            android:maxLines="1"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:textCursorDrawable="@null" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <LinearLayout

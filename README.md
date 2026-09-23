@@ -223,6 +223,29 @@ app/src/main/java/com/example/rummypulse/
 | Build | Gradle Kotlin DSL, Android Gradle Plugin 8.13 |
 | Tests | JUnit 4 |
 
+## Local Firebase emulators
+
+Node.js and Java JDK 11 or newer are required. Start Authentication, Firestore,
+Cloud Functions, and the Emulator Suite UI in the foreground with:
+
+```powershell
+.\tools\start-local.ps1
+```
+
+Press `Ctrl+C` to stop gracefully. Emulator data is exported to the ignored
+`.firebase-emulator-data` directory and imported on the next start.
+
+To run without keeping a terminal attached:
+
+```powershell
+.\tools\start-local.ps1 -Background
+.\tools\stop-local.ps1
+```
+
+The UI is available at `http://127.0.0.1:4000`. Background logs are written to
+the ignored `.firebase-emulator-runtime` directory. The launcher uses a globally
+installed Firebase CLI when available and otherwise downloads it through `npx`.
+
 ## Release workflow
 
 The `Android Build and Release` workflow runs for pull requests and pushes to

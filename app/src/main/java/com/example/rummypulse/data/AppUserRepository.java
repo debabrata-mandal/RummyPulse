@@ -189,19 +189,25 @@ public class AppUserRepository {
     }
 
     public void createManagedProfile(
-            String actualName, String profileName, AppUserCallback callback) {
+            String actualName, String profileName, String email,
+            String phoneNumber, AppUserCallback callback) {
         Map<String, Object> request = new HashMap<>();
         request.put("actualName", actualName);
         request.put("profileName", profileName);
+        request.put("email", email);
+        request.put("phoneNumber", phoneNumber);
         callManagedProfileFunction("adminCreateManagedProfile", request, callback);
     }
 
     public void updateManagedProfile(
-            String userId, String actualName, String profileName, AppUserCallback callback) {
+            String userId, String actualName, String profileName, String email,
+            String phoneNumber, AppUserCallback callback) {
         Map<String, Object> request = new HashMap<>();
         request.put("userId", userId);
         request.put("actualName", actualName);
         request.put("profileName", profileName);
+        request.put("email", email);
+        request.put("phoneNumber", phoneNumber);
         callManagedProfileFunction("adminUpdateManagedProfile", request, callback);
     }
 
@@ -583,6 +589,7 @@ public class AppUserRepository {
                 users.get(index).setEmail(identity.getString("email"));
                 users.get(index).setGoogleDisplayName(identity.getString("googleDisplayName"));
                 users.get(index).setActualName(identity.getString("actualName"));
+                users.get(index).setPhoneNumber(identity.getString("phoneNumber"));
             }
             callback.onSuccess(users);
         }).addOnFailureListener(callback::onFailure);
@@ -594,6 +601,7 @@ public class AppUserRepository {
         copy.setProfileName(source.getProfileName());
         copy.setProfileType(source.getProfileType());
         copy.setActualName(source.getActualName());
+        copy.setPhoneNumber(source.getPhoneNumber());
         copy.setProfileVersion(source.getProfileVersion());
         copy.setCreatedAt(source.getCreatedAt());
         copy.setLastLoginAt(source.getLastLoginAt());

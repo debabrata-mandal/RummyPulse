@@ -48,7 +48,7 @@ public class GameOperationProjectorTest {
                     game,
                     GameOperationType.MAP_USER,
                     "p2",
-                    GameOperationPayload.mapping("u1", "Debu", "Debu"));
+                    GameOperationPayload.mapping("u1", "Debu"));
             fail("Expected duplicate mapping rejection");
         } catch (IllegalStateException expected) {
             assertEquals(
@@ -63,7 +63,20 @@ public class GameOperationProjectorTest {
                 game(),
                 GameOperationType.TRANSFER_MAPPING,
                 "p2",
-                GameOperationPayload.transfer("p1", "u1", "Debu", "Debu")));
+                GameOperationPayload.transfer("p1", "u1", "Debu")));
+    }
+
+    @Test
+    public void unmap_clearsUserAndUsesUnknownPlayerName() {
+        GameData unmapped = GameOperationProjector.apply(
+                game(),
+                GameOperationType.UNMAP_USER,
+                "p1",
+                new GameOperationPayload());
+
+        Player player = GameDataSchema.findPlayer(unmapped, "p1");
+        assertEquals(null, player.getUserId());
+        assertEquals("Unknown", player.getName());
     }
 
     @Test

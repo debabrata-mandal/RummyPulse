@@ -541,7 +541,6 @@ public class DashboardViewModel extends ViewModel {
         Map<String, Object> creatorApproval = new HashMap<>();
         creatorApproval.put("gameId", request.gameId);
         creatorApproval.put("userId", request.creatorUserId);
-        creatorApproval.put("userDisplayName", request.creatorName);
         creatorApproval.put("status", "approved");
         creatorApproval.put("requestedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
         creatorApproval.put("lastUpdatedAt", com.google.firebase.firestore.FieldValue.serverTimestamp());

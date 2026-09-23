@@ -2564,6 +2564,10 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         cachedDirectoryUsers = sortDirectoryUsers(users);
         refreshPlayerAvatars();
+        List<GameViewApproval> requests = viewModel.getPendingViewRequests().getValue();
+        if (requests != null) {
+            renderViewRequests(requests);
+        }
         com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
         if (gameData == null) {
             return;
@@ -2709,8 +2713,26 @@ public class JoinGameActivity extends AppCompatActivity {
         Button cancel = dialogView.findViewById(R.id.btn_cancel_mapping);
 
         subtitle.setText(getString(R.string.map_player_subtitle, player.getName()));
-        unlink.setVisibility(View.GONE);
+        unlink.setVisibility(TextUtils.isEmpty(player.getUserId()) ? View.GONE : View.VISIBLE);
         cancel.setOnClickListener(v -> dialog.dismiss());
+        unlink.setOnClickListener(v -> {
+            String oldName = player.getName();
+            String linkedUserId = player.getUserId();
+            if (TextUtils.isEmpty(linkedUserId)) {
+                dialog.dismiss();
+                return;
+            }
+            dialog.dismiss();
+            ModernToast.info(this, getString(
+                    R.string.map_player_unlinking_background, oldName));
+            enqueueGameOperation(
+                    GameOperationType.UNMAP_USER,
+                    playerId,
+                    new GameOperationPayload(),
+                    () -> ModernToast.success(
+                            JoinGameActivity.this,
+                            getString(R.string.map_player_unlinked, oldName)));
+        });
 
         dialog.show();
         Window window = dialog.getWindow();
@@ -2882,8 +2904,7 @@ public class JoinGameActivity extends AppCompatActivity {
         enqueueGameOperation(
                 GameOperationType.MAP_USER,
                 playerId,
-                GameOperationPayload.mapping(
-                        selected.getUserId(), profileName, profileName),
+                GameOperationPayload.mapping(selected.getUserId(), profileName),
                 () -> ModernToast.success(
                         JoinGameActivity.this,
                         getString(R.string.map_player_linked,
@@ -4955,8 +4976,7 @@ public class JoinGameActivity extends AppCompatActivity {
             MaterialButton approveBtn = row.findViewById(R.id.btn_view_request_approve);
             MaterialButton rejectBtn = row.findViewById(R.id.btn_view_request_reject);
 
-            String name = request.getUserDisplayName();
-            userView.setText(TextUtils.isEmpty(name) ? request.getUserId() : name);
+            userView.setText(resolveApprovalUserDisplayName(request.getUserId()));
 
             GameViewApprovalStatus status = request.getStatusEnum();
             if (status == GameViewApprovalStatus.APPROVED) {
@@ -4987,6 +5007,17 @@ public class JoinGameActivity extends AppCompatActivity {
 
             container.addView(row);
         }
+    }
+
+    private String resolveApprovalUserDisplayName(String userId) {
+        if (!TextUtils.isEmpty(userId) && cachedDirectoryUsers != null) {
+            for (AppUser user : cachedDirectoryUsers) {
+                if (user != null && userId.equals(user.getUserId())) {
+                    return userDisplayName(user);
+                }
+            }
+        }
+        return getString(R.string.unknown_user);
     }
 
     private void toggleSection(View contentView, ImageView arrowIcon) {
@@ -5316,10 +5347,21 @@ public class JoinGameActivity extends AppCompatActivity {
                             android.view.ViewGroup parent) {
                         View row = super.getView(position, convertView, parent);
                         AppUser user = getItem(position);
-                        ((TextView) row.findViewById(R.id.text_user_name))
-                                .setText(userDisplayName(user));
+                        String displayName = userDisplayName(user);
+                        ((TextView) row.findViewById(R.id.text_user_name)).setText(displayName);
                         ((TextView) row.findViewById(R.id.text_user_detail)).setText("");
                         row.findViewById(R.id.icon_user_selected).setVisibility(View.GONE);
+                        ProfileAvatarBinder.bindWithPhotoUrl(
+                                row,
+                                row.findViewById(R.id.user_avatar_image),
+                                row.findViewById(R.id.user_avatar_initial),
+                                displayName,
+                                user == null ? null : user.getPhotoUrl(),
+                                user == null ? 0L : user.getProfileVersion(),
+                                null,
+                                false,
+                                null,
+                                null);
                         return row;
                     }
                 };

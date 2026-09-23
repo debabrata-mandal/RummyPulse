@@ -15,6 +15,12 @@
         <item name="colorSurface">@color/surface_color</item>
         <item name="colorOnBackground">@color/text_primary</item>
         <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+        <item name="android:colorAccent">@color/accent_blue</item>
+        <item name="android:editTextStyle">@style/RummyPulseEditText</item>
+        <item name="android:numberPickerStyle">@style/RummyPulseNumberPicker</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">@color/primary_blue_dark</item>
         <item name="android:windowLightStatusBar">false</item>
@@ -35,6 +41,15 @@
     <style name="Theme.RummyPulse.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <style name="Theme.RummyPulse.PopupOverlay" parent="ThemeOverlay.AppCompat.Dark" />
+
+    <style name="RummyPulseEditText" parent="Widget.AppCompat.EditText">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+    </style>
+
+    <style name="RummyPulseNumberPicker" parent="@android:style/Widget.Material.NumberPicker">
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
 
     <style name="NavigationSectionText" parent="TextAppearance.MaterialComponents.Body2">
         <item name="android:textColor">@color/navigation_section_text</item>
@@ -72,6 +87,10 @@
         <item name="colorOnSurface">@color/text_primary</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+        <item name="android:colorAccent">@color/accent_blue</item>
+        <item name="android:editTextStyle">@style/RummyPulseEditText</item>
+        <item name="android:numberPickerStyle">@style/RummyPulseNumberPicker</item>
         <item name="colorPrimary">@color/accent_blue</item>
         <item name="android:windowBackground">@drawable/bg_app_surface_blue</item>
     </style>
@@ -106,6 +125,10 @@
         <item name="colorOnSurface">@color/text_primary</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+        <item name="android:colorAccent">@color/accent_blue</item>
+        <item name="android:editTextStyle">@style/RummyPulseEditText</item>
+        <item name="android:numberPickerStyle">@style/RummyPulseNumberPicker</item>
         <item name="colorPrimary">@color/accent_blue</item>
         <item name="android:windowBackground">@drawable/bg_app_surface_blue</item>
         <item name="materialAlertDialogBodyTextStyle">@style/TableRowTextSecondary</item>
