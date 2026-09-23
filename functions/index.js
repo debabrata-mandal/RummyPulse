@@ -10,8 +10,6 @@ const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {logger} = require("firebase-functions");
 const {extractGroqName} = require("./lib/game-name");
 const {
-  replaceGameIdentityNames,
-  replaceLinkedPlayerNames,
   validateProfileName,
 } = require("./lib/profile-name");
 const {nextFixedCounter, nextRollingCounter} = require("./lib/rate-limit");
@@ -160,7 +158,6 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
   const uid = request.auth.uid;
   const database = getFirestore();
   const publicRef = database.collection("appUser_v2").doc(uid);
-  let displayName;
   await database.runTransaction(async (transaction) => {
     const publicSnapshot = await transaction.get(publicRef);
     if (!publicSnapshot.exists) {
@@ -178,7 +175,6 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
     if (newClaim?.exists && newClaim.get("userId") !== uid) {
       throw new HttpsError("already-exists", "That profile name is already taken.");
     }
-    displayName = requested.profileName;
     if (newClaimRef) {
       transaction.set(newClaimRef, {userId: uid, profileName: requested.profileName});
     }
@@ -186,27 +182,12 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
       transaction.delete(oldClaimRef);
     }
     transaction.update(publicRef, {
-      profileName: requested.profileName || FieldValue.delete(),
-      displayName,
+      profileName: requested.profileName,
+      displayName: requested.profileName,
       profileVersion: Date.now(),
-      profilePropagationPending: true,
     });
   });
-
-  try {
-    await propagateProfileName(database, uid, displayName);
-    await publicRef.update({
-      profilePropagationPending: FieldValue.delete(),
-      profileVersion: Date.now(),
-    });
-  } catch (error) {
-    logger.error("Profile-name propagation failed", {uid, error});
-    throw new HttpsError(
-        "unavailable",
-        "The name was saved, but some older records still need updating. Retry shortly.",
-    );
-  }
-  return {profileName: requested.profileName, displayName};
+  return {profileName: requested.profileName, displayName: requested.profileName};
 });
 
 exports.adminCreateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
@@ -282,7 +263,6 @@ exports.adminUpdateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
       profileName: requested.profileName,
       displayName: requested.profileName,
       profileVersion: Date.now(),
-      profilePropagationPending: true,
     });
     transaction.set(privateRef, {
       userId,
@@ -291,11 +271,6 @@ exports.adminUpdateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
       phoneNumber,
       updatedAt: FieldValue.serverTimestamp(),
     }, {merge: true});
-  });
-  await propagateProfileName(database, userId, requested.profileName);
-  await publicRef.update({
-    profilePropagationPending: FieldValue.delete(),
-    profileVersion: Date.now(),
   });
   return {userId, profileName: requested.profileName, displayName: requested.profileName};
 });
@@ -459,42 +434,6 @@ async function completeAccountDeletion(uid) {
   }
   await Promise.all(removals);
   return counts;
-}
-
-async function propagateProfileName(database, uid, displayName) {
-  await scanCollection(database.collection("games_v2"), async (snapshot) => {
-    await rewriteProfileSnapshot(
-        database, snapshot.ref, uid, displayName, replaceGameIdentityNames);
-  });
-  await scanCollection(database.collection("gameData_v2"), async (snapshot) => {
-    await rewriteProfileSnapshot(
-        database, snapshot.ref, uid, displayName, replaceLinkedPlayerNames);
-  });
-  await scanCollection(database.collection("approvedGames_v2"), async (snapshot) => {
-    await rewriteProfileSnapshot(
-        database, snapshot.ref, uid, displayName, replaceLinkedPlayerNames);
-  });
-  await scanCollection(database.collection("gameDefaults_v2"), async (snapshot) => {
-    await database.runTransaction(async (transaction) => {
-      const current = await transaction.get(snapshot.ref);
-      if (current.exists && current.get("updatedByUserId") === uid) {
-        transaction.update(snapshot.ref, "updatedByUserName", displayName);
-      }
-    });
-  });
-}
-
-async function rewriteProfileSnapshot(database, reference, uid, displayName, transformer) {
-  await database.runTransaction(async (transaction) => {
-    const current = await transaction.get(reference);
-    if (!current.exists) {
-      return;
-    }
-    const result = transformer(current.data(), uid, displayName);
-    if (result.changed) {
-      transaction.set(reference, result.data);
-    }
-  });
 }
 
 async function requireAdministrator(database, request) {

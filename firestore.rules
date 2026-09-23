@@ -205,7 +205,11 @@ service cloud.firestore {
           ])
           && request.resource.data.gameId == resource.data.gameId
           && request.resource.data.userId == resource.data.userId;
-      allow delete: if isAuthenticated();
+      allow delete: if isAuthenticated()
+          && (
+            resource.data.userId == request.auth.uid
+            || canManageViewApprovals(resource.data.gameId)
+          );
     }
 
     match /approvedGames_v2/{gameId} {
