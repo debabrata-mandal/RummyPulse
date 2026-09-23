@@ -9,6 +9,7 @@ const {defineSecret} = require("firebase-functions/params");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {logger} = require("firebase-functions");
 const {extractGroqName} = require("./lib/game-name");
+const {authenticationProvider} = require("./lib/auth-identity");
 const {
   validateProfileName,
 } = require("./lib/profile-name");
@@ -109,13 +110,14 @@ exports.syncMyIdentity = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
     throw new HttpsError("unauthenticated", "Sign-in is required.");
   }
   const uid = request.auth.uid;
-  const provider = safeText(request.data?.provider, 40) || "Google";
+  const authUser = await getAuth().getUser(uid);
+  const provider = authenticationProvider(request.auth.token, authUser.providerData);
   const googleDisplayName = safeText(request.auth.token.name, 120) ||
-    safeText(request.data?.googleDisplayName, 120) || "Player";
+    safeText(authUser.displayName, 120);
   const email = safeText(request.auth.token.email, 320) ||
-    safeText(request.data?.email, 320);
+    safeText(authUser.email, 320);
   const photoUrl = safeText(request.auth.token.picture, 2048) ||
-    safeText(request.data?.photoUrl, 2048);
+    safeText(authUser.photoURL, 2048);
   const database = getFirestore();
   const publicRef = database.collection("appUser_v2").doc(uid);
   const privateRef = database.collection(PRIVATE_USER_COLLECTION).doc(uid);
@@ -139,7 +141,7 @@ exports.syncMyIdentity = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
     transaction.set(publicRef, publicData, {merge: true});
     transaction.set(privateRef, {
       userId: uid,
-      googleDisplayName,
+      googleDisplayName: googleDisplayName || null,
       email: email || null,
       updatedAt: FieldValue.serverTimestamp(),
     }, {merge: true});

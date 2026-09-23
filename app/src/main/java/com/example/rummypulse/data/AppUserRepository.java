@@ -94,14 +94,8 @@ public class AppUserRepository {
             IN_FLIGHT_SYNCS.put(userId, waiting);
         }
 
-        String googleDisplayName = overrides != null ? overrides.displayName : firebaseUser.getDisplayName();
-        String photoUrl = overrides != null ? overrides.photoUrl
-                : firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : null;
         Map<String, Object> request = new HashMap<>();
-        request.put("provider", provider);
-        request.put("googleDisplayName", googleDisplayName);
-        request.put("email", firebaseUser.getEmail());
-        request.put("photoUrl", photoUrl);
+        // Identity fields are resolved from the verified token and Firebase Auth user record.
         request.put("forceProfileVersionRefresh", forceProfileVersionRefresh);
         FirebaseFunctions.getInstance("asia-south1").getHttpsCallable("syncMyIdentity").call(request)
                 .continueWithTask(task -> {
