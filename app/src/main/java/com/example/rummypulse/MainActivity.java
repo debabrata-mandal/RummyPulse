@@ -458,23 +458,19 @@ public class MainActivity extends AppCompatActivity {
         if (currentName != null) {
             nameInput.setText(currentName);
             nameInput.setSelection(currentName.length());
-            skip.setText(R.string.profile_name_clear);
-        } else if (!onboarding) {
+        }
+        if (onboarding) {
+            skip.setVisibility(View.GONE);
+        } else {
             skip.setText(android.R.string.cancel);
         }
 
         androidx.appcompat.app.AlertDialog dialog =
                 new androidx.appcompat.app.AlertDialog.Builder(this, R.style.DarkDialogTheme)
                         .setView(dialogView)
-                        .setCancelable(true)
+                        .setCancelable(!onboarding)
                         .create();
-        skip.setOnClickListener(v -> {
-            if (currentName == null || onboarding) {
-                dialog.dismiss();
-            } else {
-                saveProfileName(null, nameLayout, skip, save, dialog);
-            }
-        });
+        skip.setOnClickListener(v -> dialog.dismiss());
         save.setOnClickListener(v -> {
             String value = nameInput.getText() == null ? "" : nameInput.getText().toString().trim();
             if (!ProfileNameValidator.isValid(value)) {

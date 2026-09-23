@@ -41,6 +41,7 @@ public class UserManagementViewModel extends ViewModel {
     private final MutableLiveData<Boolean> deleteSuccess = new MutableLiveData<>();
     private final MutableLiveData<Boolean> deleteFailure = new MutableLiveData<>();
     private final MutableLiveData<Boolean> hiddenUpdateSuccess = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> managedProfileSaved = new MutableLiveData<>();
 
     private DocumentSnapshot nextCursor;
     private boolean hasMore = true;
@@ -95,6 +96,37 @@ public class UserManagementViewModel extends ViewModel {
 
     public LiveData<Boolean> getHiddenUpdateSuccess() {
         return hiddenUpdateSuccess;
+    }
+
+    public LiveData<Boolean> getManagedProfileSaved() {
+        return managedProfileSaved;
+    }
+
+    public void saveManagedProfile(
+            AppUser existing, String actualName, String profileName) {
+        loading.setValue(true);
+        error.setValue(null);
+        managedProfileSaved.setValue(false);
+        AppUserRepository.AppUserCallback callback = new AppUserRepository.AppUserCallback() {
+            @Override
+            public void onSuccess(AppUser saved) {
+                managedProfileSaved.setValue(true);
+                loading.setValue(false);
+                loadAllUsers();
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                loading.setValue(false);
+                error.setValue("Failed to save player profile: " + exception.getMessage());
+            }
+        };
+        if (existing == null) {
+            appUserRepository.createManagedProfile(actualName, profileName, callback);
+        } else {
+            appUserRepository.updateManagedProfile(
+                    existing.getUserId(), actualName, profileName, callback);
+        }
     }
 
     /**

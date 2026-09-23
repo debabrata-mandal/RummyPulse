@@ -51,20 +51,12 @@ public final class GameOperationProjector {
                 applyMapping(result, playerId, safePayload, false);
                 break;
             case UNMAP_USER:
-                requirePlayer(result, playerId).setUserId(null);
-                break;
             case TRANSFER_MAPPING:
-                applyTransfer(result, playerId, safePayload);
-                break;
+            case RENAME_PLAYER:
+                throw new IllegalArgumentException(
+                        "Players must remain linked to an app profile.");
             case SET_PLAYER_ORDER:
                 applyOrder(result, safePayload.playerOrder);
-                break;
-            case RENAME_PLAYER:
-                String name = clean(safePayload.name);
-                if (name == null) {
-                    throw new IllegalArgumentException("Player name is required.");
-                }
-                requirePlayer(result, playerId).setName(name);
                 break;
             case ADD_PLAYER:
                 applyAdd(result, safePayload.player);
@@ -98,6 +90,7 @@ public final class GameOperationProjector {
     }
 
     private static void applyScores(GameData data, GameOperationPayload payload) {
+        requireCompleteMappings(data);
         if (payload.round1Based == null
                 || payload.round1Based < 1
                 || payload.round1Based > 10
@@ -119,6 +112,21 @@ public final class GameOperationProjector {
                 scores.add(-1);
             }
             scores.set(payload.round1Based - 1, entry.getValue());
+        }
+    }
+
+    private static void requireCompleteMappings(GameData data) {
+        if (data.getPlayers() == null || data.getPlayers().size() < 2) {
+            throw new IllegalStateException(
+                    "Add at least two mapped players before entering scores.");
+        }
+        Set<String> userIds = new HashSet<>();
+        for (Player player : data.getPlayers()) {
+            String userId = player == null ? null : clean(player.getUserId());
+            if (userId == null || !userIds.add(userId)) {
+                throw new IllegalStateException(
+                        "Every player must have a unique app profile before entering scores.");
+            }
         }
     }
 
@@ -187,6 +195,15 @@ public final class GameOperationProjector {
             throw new IllegalArgumentException("Player is required.");
         }
         Player added = GameDataCopies.copyPlayer(player);
+        String userId = clean(added.getUserId());
+        String name = clean(added.getName());
+        if (userId == null || name == null) {
+            throw new IllegalArgumentException(
+                    "Select a player profile before adding the player.");
+        }
+        if (findPlayerIdMappedTo(data, userId, null) != null) {
+            throw new IllegalStateException("That profile is already mapped in this game.");
+        }
         if (clean(added.getPlayerId()) == null) {
             added.setPlayerId(java.util.UUID.randomUUID().toString());
         }

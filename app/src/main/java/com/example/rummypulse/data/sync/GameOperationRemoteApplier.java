@@ -67,6 +67,12 @@ final class GameOperationRemoteApplier {
             }
             GameOperationPayload payload =
                     GSON.fromJson(operation.payloadJson, GameOperationPayload.class);
+            String mappedUserId = mappedUserId(operation.operationType(), payload);
+            if (!TextUtils.isEmpty(mappedUserId)) {
+                DocumentSnapshot profileSnapshot = transaction.get(
+                        db.collection(FirestoreCollections.APP_USER).document(mappedUserId));
+                applyCanonicalProfile(operation.operationType(), payload, profileSnapshot);
+            }
             Player targetBefore = operation.playerId == null
                     ? null
                     : GameDataSchema.findPlayer(latest, operation.playerId);
@@ -119,6 +125,37 @@ final class GameOperationRemoteApplier {
         } else if (type != GameOperationType.ADD_PLAYER
                 && type != GameOperationType.DELETE_PLAYER) {
             ScoreRegressionGuard.requireMetadataPreservesScores(latest, patched);
+        }
+    }
+
+    private static String mappedUserId(
+            GameOperationType type, GameOperationPayload payload) {
+        if (payload == null) return null;
+        if (type == GameOperationType.MAP_USER) return payload.userId;
+        if (type == GameOperationType.ADD_PLAYER && payload.player != null) {
+            return payload.player.getUserId();
+        }
+        return null;
+    }
+
+    private static void applyCanonicalProfile(
+            GameOperationType type,
+            GameOperationPayload payload,
+            DocumentSnapshot profileSnapshot) {
+        String profileName = profileSnapshot == null
+                ? null : profileSnapshot.getString("profileName");
+        Boolean hidden = profileSnapshot == null
+                ? null : profileSnapshot.getBoolean("hidden");
+        if (profileSnapshot == null || !profileSnapshot.exists()
+                || TextUtils.isEmpty(profileName) || Boolean.TRUE.equals(hidden)) {
+            throw new IllegalStateException(
+                    "Select an available player profile before saving.");
+        }
+        if (type == GameOperationType.MAP_USER) {
+            payload.name = profileName;
+            payload.userDisplayName = profileName;
+        } else if (type == GameOperationType.ADD_PLAYER && payload.player != null) {
+            payload.player.setName(profileName);
         }
     }
 

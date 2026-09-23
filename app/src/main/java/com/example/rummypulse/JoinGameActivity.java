@@ -54,7 +54,6 @@ import com.example.rummypulse.data.sync.GameOperationProjector;
 import com.example.rummypulse.data.sync.GameOperationRepository;
 import com.example.rummypulse.data.sync.GameOperationType;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
-import com.example.rummypulse.ui.join.PlayerNameEditController;
 import com.example.rummypulse.ui.join.PlayerRoundStatistics;
 import com.example.rummypulse.ui.join.PlayerRoundStatisticsCalculator;
 import com.example.rummypulse.utils.DisplayNameUtils;
@@ -2393,42 +2392,11 @@ public class JoinGameActivity extends AppCompatActivity {
 
         EditText playerName = playerCardView.findViewById(R.id.text_player_name);
         View mapPlayerButton = playerCardView.findViewById(R.id.btn_map_player);
-        PlayerNameEditController nameEditController =
-                new PlayerNameEditController(stablePlayerId);
-        playerName.setTag(nameEditController);
-        nameEditController.bind(() -> playerName.setText(formatPlayerDisplayName(player)));
+        playerName.setText(formatPlayerDisplayName(player));
+        playerName.setEnabled(false);
+        playerName.setFocusable(false);
+        playerName.setCursorVisible(false);
         applyMappedPlayerNameLock(playerName, player);
-
-        playerName.addTextChangedListener(new android.text.TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-            @Override
-            public void afterTextChanged(android.text.Editable s) {
-                nameEditController.onTextChanged();
-            }
-        });
-
-        playerName.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
-                android.view.inputmethod.InputMethodManager imm =
-                        (android.view.inputmethod.InputMethodManager) getSystemService(
-                                android.content.Context.INPUT_METHOD_SERVICE);
-                imm.hideSoftInputFromWindow(playerName.getWindowToken(), 0);
-                playerName.clearFocus();
-                return true;
-            }
-            return false;
-        });
-
-        playerName.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus) {
-                finishPlayerNameEdit(playerName, nameEditController);
-            }
-        });
 
         TextView playerId = playerCardView.findViewById(R.id.text_player_id);
         if (gameData.getNumPlayers() > 2 && player.getRandomNumber() != null) {
@@ -2562,16 +2530,8 @@ public class JoinGameActivity extends AppCompatActivity {
             }
             EditText name = card.findViewById(R.id.text_player_name);
             String displayName = formatPlayerDisplayName(player);
-            if (!name.hasFocus()
-                    && !displayName.contentEquals(name.getText())) {
-                Object controller = name.getTag();
-                if (controller instanceof PlayerNameEditController) {
-                    ((PlayerNameEditController) controller).bind(
-                            () -> name.setText(displayName));
-                } else {
-                    generatePlayerCards(gameData);
-                    return;
-                }
+            if (!displayName.contentEquals(name.getText())) {
+                name.setText(displayName);
             }
             applyMappedPlayerNameLock(name, player);
             bindMapPlayerButton(card.findViewById(R.id.btn_map_player), player);
@@ -2582,33 +2542,6 @@ public class JoinGameActivity extends AppCompatActivity {
                             ? View.VISIBLE
                             : View.GONE);
         }
-    }
-
-    private void finishPlayerNameEdit(
-            EditText playerName, PlayerNameEditController nameEditController) {
-        com.example.rummypulse.data.GameData latestGameData =
-                viewModel.getGameData().getValue();
-        boolean renameEnqueued = nameEditController.commit(
-                latestGameData,
-                playerName.getText(),
-                (playerId, normalizedName) -> enqueueGameOperation(
-                        GameOperationType.RENAME_PLAYER,
-                        playerId,
-                        GameOperationPayload.rename(normalizedName),
-                        null));
-        if (renameEnqueued) {
-            return;
-        }
-        com.example.rummypulse.data.Player latestPlayer =
-                GameDataSchema.findPlayer(latestGameData, nameEditController.getPlayerId());
-        if (latestPlayer == null) {
-            return;
-        }
-        String canonicalDisplayName = formatPlayerDisplayName(latestPlayer);
-        if (!canonicalDisplayName.contentEquals(playerName.getText())) {
-            nameEditController.bind(() -> playerName.setText(canonicalDisplayName));
-        }
-        applyMappedPlayerNameLock(playerName, latestPlayer);
     }
 
     private void prefetchPlayerDirectory() {
@@ -2776,26 +2709,8 @@ public class JoinGameActivity extends AppCompatActivity {
         Button cancel = dialogView.findViewById(R.id.btn_cancel_mapping);
 
         subtitle.setText(getString(R.string.map_player_subtitle, player.getName()));
-        unlink.setVisibility(TextUtils.isEmpty(player.getUserId()) ? View.GONE : View.VISIBLE);
+        unlink.setVisibility(View.GONE);
         cancel.setOnClickListener(v -> dialog.dismiss());
-        unlink.setOnClickListener(v -> {
-            String oldName = player.getName();
-            String linkedUserId = player.getUserId();
-            if (TextUtils.isEmpty(linkedUserId)) {
-                dialog.dismiss();
-                return;
-            }
-            dialog.dismiss();
-            ModernToast.info(this, getString(
-                    R.string.map_player_unlinking_background, oldName));
-            enqueueGameOperation(
-                    GameOperationType.UNMAP_USER,
-                    playerId,
-                    new GameOperationPayload(),
-                    () -> ModernToast.success(
-                            JoinGameActivity.this,
-                            getString(R.string.map_player_unlinked, oldName)));
-        });
 
         dialog.show();
         Window window = dialog.getWindow();
@@ -2928,87 +2843,51 @@ public class JoinGameActivity extends AppCompatActivity {
             com.example.rummypulse.data.Player existing =
                     findPlayerLinkedTo(projected, selected.getUserId(), player);
             if (existing != null) {
-                showMappingTransferConfirmation(
-                        existing,
-                        playerId,
-                        selected,
-                        dialog);
+                ModernToast.warning(this, getString(R.string.map_player_duplicate_profile));
                 return;
             }
-            String gamePlayerName = player.getName();
-            String actualName = userPlayerFirstName(selected);
-            cancelPendingGameSave();
-            dialog.dismiss();
-            ModernToast.info(this, getString(
-                    R.string.map_player_linking_background,
-                    gamePlayerName,
-                    actualName));
-            enqueueGameOperation(
-                    GameOperationType.MAP_USER,
-                    playerId,
-                    GameOperationPayload.mapping(
-                            selected.getUserId(),
-                            userDisplayName(selected),
-                            actualName),
-                    () -> ModernToast.success(
-                            JoinGameActivity.this,
-                            getString(
-                                    R.string.map_player_linked,
-                                    gamePlayerName,
-                                    actualName)));
+            if (selected.getUserId().equals(player.getUserId())) {
+                dialog.dismiss();
+                return;
+            }
+            Runnable replace = () -> applySelectedPlayerMapping(
+                    dialog, playerId, player, selected);
+            if (!TextUtils.isEmpty(player.getUserId())) {
+                new AlertDialog.Builder(this, R.style.DarkDialogTheme)
+                        .setTitle(R.string.review_replace_mapping_title)
+                        .setMessage(R.string.review_replace_mapping_message)
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .setPositiveButton(R.string.review_change_mapping,
+                                (confirmation, which) -> replace.run())
+                        .show();
+            } else {
+                replace.run();
+            }
         });
     }
 
-    private void showMappingTransferConfirmation(
-            com.example.rummypulse.data.Player source,
-            String targetPlayerId,
-            AppUser selected,
-            AlertDialog mappingDialog) {
-        String actualName = userPlayerFirstName(selected);
-        View dialogView = LayoutInflater.from(this).inflate(
-                R.layout.dialog_transfer_mapping, null, false);
-        TextView message =
-                dialogView.findViewById(R.id.text_transfer_mapping_message);
-        MaterialButton cancel =
-                dialogView.findViewById(R.id.btn_transfer_mapping_cancel);
-        MaterialButton transfer =
-                dialogView.findViewById(R.id.btn_transfer_mapping_confirm);
-        message.setText(getString(
-                R.string.map_player_transfer_message,
-                userDisplayName(selected),
-                source.getName()));
-
-        AlertDialog confirmation = new AlertDialog.Builder(
-                this, R.style.DarkDialogTheme)
-                .setView(dialogView)
-                .setCancelable(true)
-                .create();
-        cancel.setOnClickListener(v -> confirmation.dismiss());
-        transfer.setOnClickListener(v -> {
-            confirmation.dismiss();
-            mappingDialog.dismiss();
-            enqueueGameOperation(
-                    GameOperationType.TRANSFER_MAPPING,
-                    targetPlayerId,
-                    GameOperationPayload.transfer(
-                            source.getPlayerId(),
-                            selected.getUserId(),
-                            userDisplayName(selected),
-                            actualName),
-                    () -> ModernToast.success(
-                            JoinGameActivity.this,
-                            "Mapping transferred locally; syncing…"));
-        });
-        confirmation.show();
-        Window window = confirmation.getWindow();
-        if (window != null) {
-            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
-                    android.graphics.Color.TRANSPARENT));
-            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
-            int maxWidth = Math.round(420 * dm.density);
-            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
-            window.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);
-        }
+    private void applySelectedPlayerMapping(
+            AlertDialog dialog,
+            String playerId,
+            com.example.rummypulse.data.Player player,
+            AppUser selected) {
+        String gamePlayerName = player.getName();
+        String profileName = userDisplayName(selected);
+        cancelPendingGameSave();
+        dialog.dismiss();
+        ModernToast.info(this, getString(
+                R.string.map_player_linking_background,
+                gamePlayerName,
+                profileName));
+        enqueueGameOperation(
+                GameOperationType.MAP_USER,
+                playerId,
+                GameOperationPayload.mapping(
+                        selected.getUserId(), profileName, profileName),
+                () -> ModernToast.success(
+                        JoinGameActivity.this,
+                        getString(R.string.map_player_linked,
+                                gamePlayerName, profileName)));
     }
 
     private int findLinkedUserIndex(List<AppUser> users, String linkedUserId) {
@@ -3060,10 +2939,6 @@ public class JoinGameActivity extends AppCompatActivity {
             return user.getDisplayName().trim();
         }
         return getString(R.string.unknown_user);
-    }
-
-    private String userPlayerFirstName(AppUser user) {
-        return DisplayNameUtils.firstNameLastInitial(userDisplayName(user));
     }
 
     private String formatPlayerDisplayName(com.example.rummypulse.data.Player player) {
@@ -3911,6 +3786,10 @@ public class JoinGameActivity extends AppCompatActivity {
             ModernToast.info(this, getString(R.string.enter_round_scores_all_done));
             return;
         }
+        if (!hasCompletePlayerMappings(gameData)) {
+            ModernToast.warning(this, getString(R.string.player_mapping_required_for_scoring));
+            return;
+        }
         if (isGameCompleted(gameData)) {
             ModernToast.info(this, getString(R.string.enter_round_scores_game_over));
             return;
@@ -3953,6 +3832,22 @@ public class JoinGameActivity extends AppCompatActivity {
 
     private void showSequentialScoreDialogForPlayer(com.example.rummypulse.data.GameData gameData, int round1Based, int playerIndex) {
         showSequentialScoreDialogForPlayer(gameData, round1Based, playerIndex, false);
+    }
+
+    private boolean hasCompletePlayerMappings(
+            com.example.rummypulse.data.GameData gameData) {
+        if (gameData == null || gameData.getPlayers() == null
+                || gameData.getPlayers().size() < 2) {
+            return false;
+        }
+        java.util.Set<String> mappedUsers = new java.util.HashSet<>();
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            if (player == null || TextUtils.isEmpty(player.getUserId())
+                    || !mappedUsers.add(player.getUserId())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void showSequentialScoreDialogForPlayer(com.example.rummypulse.data.GameData gameData, int round1Based, int playerIndex, boolean correctionMode) {
@@ -5361,48 +5256,124 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void addNewPlayerDirectly() {
-        // Get current game data
         com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
         if (gameData == null) return;
-        
-        // Check maximum player limit
         if (gameData.getPlayers().size() >= 15) {
             ModernToast.warning(this, "Cannot add more players. Maximum 15 players allowed.");
             return;
         }
-        
-        // Generate default player name
-        int playerNumber = gameData.getPlayers().size() + 1;
-        String defaultName = "Player " + playerNumber;
-        
-        // Check if name already exists and make it unique
-        java.util.Set<String> existingNames = new java.util.HashSet<>();
-        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
-            existingNames.add(player.getName().toLowerCase(Locale.getDefault()));
-        }
-        
-        int counter = playerNumber;
-        while (existingNames.contains(defaultName.toLowerCase(Locale.getDefault()))) {
-            counter++;
-            defaultName = "Player " + counter;
-        }
-        
-        addNewPlayer(defaultName);
+        showAddMappedPlayerDialog(gameData);
     }
-    
-    private void addNewPlayer(String playerName) {
+
+    private void showAddMappedPlayerDialog(
+            com.example.rummypulse.data.GameData gameData) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_map_player, null);
+        AlertDialog dialog = new AlertDialog.Builder(this, R.style.DarkDialogTheme)
+                .setView(dialogView)
+                .create();
+        ((TextView) dialogView.findViewById(R.id.text_map_player_title))
+                .setText(R.string.add_player_select_profile_title);
+        ((TextView) dialogView.findViewById(R.id.text_map_player_subtitle))
+                .setText(R.string.add_player_select_profile_subtitle);
+        dialogView.findViewById(R.id.text_current_mapping).setVisibility(View.GONE);
+        dialogView.findViewById(R.id.btn_unlink_user).setVisibility(View.GONE);
+        dialogView.findViewById(R.id.btn_cancel_mapping)
+                .setOnClickListener(v -> dialog.dismiss());
+        EditText search = dialogView.findViewById(R.id.input_user_search);
+        ListView list = dialogView.findViewById(R.id.list_users);
+        ProgressBar progress = dialogView.findViewById(R.id.progress_users);
+        TextView empty = dialogView.findViewById(R.id.text_users_empty);
+        progress.setVisibility(View.VISIBLE);
+        list.setVisibility(View.GONE);
+        empty.setVisibility(View.GONE);
+        dialog.show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
+                    android.graphics.Color.TRANSPARENT));
+            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+            int width = Math.min(Math.round(dm.widthPixels * 0.92f), Math.round(420 * dm.density));
+            window.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
+        appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
+            @Override
+            public void onSuccess(List<AppUser> users) {
+                if (!dialog.isShowing()) return;
+                List<AppUser> available = new ArrayList<>();
+                for (AppUser user : mappingDirectoryUsers(users)) {
+                    if (findPlayerLinkedTo(gameData, user.getUserId(), null) == null) {
+                        available.add(user);
+                    }
+                }
+                List<AppUser> visible = new ArrayList<>(available);
+                ArrayAdapter<AppUser> adapter = new ArrayAdapter<AppUser>(
+                        JoinGameActivity.this,
+                        R.layout.item_map_user,
+                        R.id.text_user_name,
+                        visible) {
+                    @Override
+                    public View getView(int position, View convertView,
+                            android.view.ViewGroup parent) {
+                        View row = super.getView(position, convertView, parent);
+                        AppUser user = getItem(position);
+                        ((TextView) row.findViewById(R.id.text_user_name))
+                                .setText(userDisplayName(user));
+                        ((TextView) row.findViewById(R.id.text_user_detail)).setText("");
+                        row.findViewById(R.id.icon_user_selected).setVisibility(View.GONE);
+                        return row;
+                    }
+                };
+                list.setAdapter(adapter);
+                progress.setVisibility(View.GONE);
+                updateUserListVisibility(list, empty, visible);
+                if (visible.isEmpty()) {
+                    empty.setText(R.string.add_player_contact_admin);
+                }
+                search.addTextChangedListener(new android.text.TextWatcher() {
+                    @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                    @Override public void afterTextChanged(android.text.Editable value) {
+                        String query = value.toString().trim().toLowerCase(Locale.ROOT);
+                        visible.clear();
+                        for (AppUser user : available) {
+                            if (query.isEmpty() || userDisplayName(user)
+                                    .toLowerCase(Locale.ROOT).contains(query)) {
+                                visible.add(user);
+                            }
+                        }
+                        adapter.notifyDataSetChanged();
+                        updateUserListVisibility(list, empty, visible);
+                        if (visible.isEmpty()) empty.setText(R.string.add_player_contact_admin);
+                    }
+                });
+                list.setOnItemClickListener((parent, row, position, id) -> {
+                    AppUser selected = visible.get(position);
+                    dialog.dismiss();
+                    addNewPlayer(selected);
+                });
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                progress.setVisibility(View.GONE);
+                empty.setVisibility(View.VISIBLE);
+                empty.setText(R.string.map_player_load_failed);
+            }
+        });
+    }
+
+    private void addNewPlayer(AppUser selectedUser) {
         // Get current game data
         com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
         if (gameData == null) return;
+        String playerName = userDisplayName(selectedUser);
         
         // Create new player
         com.example.rummypulse.data.Player newPlayer = new com.example.rummypulse.data.Player();
         newPlayer.setPlayerId(java.util.UUID.randomUUID().toString());
         newPlayer.setName(playerName);
         
-        // Set userId to null for manually added players (not linked to a user account)
-        newPlayer.setUserId(null);
-        // Set isCreator to false for manually added players
+        newPlayer.setUserId(selectedUser.getUserId());
         newPlayer.setIsCreator(false);
 
         java.util.List<Integer> scores;

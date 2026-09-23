@@ -108,8 +108,8 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
             }
 
             nameTextView.setText(itemView.getContext().getString(
-                    R.string.user_management_google_name,
-                    user.getGoogleDisplayName() != null ? user.getGoogleDisplayName() : "Unavailable"));
+                    R.string.user_management_actual_name_display,
+                    user.getActualName() != null ? user.getActualName() : "Unavailable"));
             profileNameTextView.setText(itemView.getContext().getString(
                     R.string.user_management_profile_name,
                     user.getProfileName() != null ? user.getProfileName() : "Not set"));

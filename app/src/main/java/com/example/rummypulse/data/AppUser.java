@@ -10,11 +10,13 @@ import java.util.Date;
 public class AppUser {
     private String userId;
     private String provider;
+    private String profileType;
     private UserRole role;
     private String email;
     private String displayName;
     private String profileName;
     private String googleDisplayName;
+    private String actualName;
     private String photoUrl;
     /** Bumped when profile fields change so other clients can refresh cached avatars/names. */
     private long profileVersion;
@@ -65,6 +67,19 @@ public class AppUser {
         this.provider = provider;
     }
 
+    public String getProfileType() {
+        return profileType;
+    }
+
+    public void setProfileType(String profileType) {
+        this.profileType = profileType;
+    }
+
+    public boolean isManagedProfile() {
+        return "managed".equalsIgnoreCase(profileType)
+                || "managed".equalsIgnoreCase(provider);
+    }
+
     public UserRole getRole() {
         return role;
     }
@@ -103,6 +118,14 @@ public class AppUser {
 
     public void setGoogleDisplayName(String googleDisplayName) {
         this.googleDisplayName = googleDisplayName;
+    }
+
+    public String getActualName() {
+        return actualName != null ? actualName : googleDisplayName;
+    }
+
+    public void setActualName(String actualName) {
+        this.actualName = actualName;
     }
 
     public String getPhotoUrl() {

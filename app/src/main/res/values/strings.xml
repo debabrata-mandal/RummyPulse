@@ -569,7 +569,7 @@
     <string name="user_management_search_hint">Search by name or email</string>
     <string name="user_management_google_name">Google name: %1$s</string>
     <string name="user_management_profile_name">Game profile: %1$s</string>
-    <string name="user_management_identity_names">Google name: %1$s\nGame profile: %2$s</string>
+    <string name="user_management_identity_names">Actual name: %1$s\nGame profile: %2$s</string>
 
     <!-- SetTextI18n / PluralsCandidate (Java) -->
     <string name="format_game_points">%1$s GP</string>
@@ -665,6 +665,31 @@
     <string name="user_management_action_promote">Promote to admin</string>
     <string name="user_management_action_demote">Demote to regular user</string>
     <string name="user_management_self_actions_note">These admin actions are not available on your own account.</string>
+    <string name="user_management_add_managed">Add player profile</string>
+    <string name="user_management_edit_managed">Edit player profile</string>
+    <string name="user_management_create_managed_title">Add player profile</string>
+    <string name="user_management_edit_managed_title">Edit player profile</string>
+    <string name="user_management_managed_help">For a player without a sign-in account. The actual name is visible only to administrators.</string>
+    <string name="user_management_actual_name">Actual name</string>
+    <string name="user_management_profile_name_label">Game profile name</string>
+    <string name="user_management_profile_name_help">3–16 letters, numbers, or underscores</string>
+    <string name="user_management_managed_saved">Player profile saved</string>
+    <string name="user_management_save_managed">Save profile</string>
+    <string name="user_management_actual_name_display">Actual name: %1$s</string>
+    <string name="player_mapping_required_for_scoring">Add at least two players and map every player before entering scores.</string>
+    <string name="map_player_duplicate_profile">That profile is already mapped to another player.</string>
+    <string name="add_player_select_profile_title">Add player</string>
+    <string name="add_player_select_profile_subtitle">Select an existing player profile. Names cannot be entered manually.</string>
+    <string name="add_player_contact_admin">Player not found? Contact an administrator to create the profile first.</string>
+    <string name="review_player_mapped">Mapped profile</string>
+    <string name="review_player_mapping_required">Mapping required</string>
+    <string name="review_change_mapping">Change mapping</string>
+    <string name="review_change_mapping_for">Select the profile for %1$s. Scores will not change.</string>
+    <string name="review_operation_mapping">Updating player mapping…</string>
+    <string name="review_mapping_saved">Player mapping updated</string>
+    <string name="review_replace_mapping_title">Replace player mapping?</string>
+    <string name="review_replace_mapping_subtitle">%1$s will use the %2$s profile</string>
+    <string name="review_replace_mapping_message">The player’s scores and position will be preserved. Only the linked profile will change.</string>
 
     <string name="player_consolidation_continue_placeholder">Continue</string>
 

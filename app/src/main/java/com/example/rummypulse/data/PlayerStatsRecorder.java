@@ -73,11 +73,12 @@ public final class PlayerStatsRecorder {
         for (int index = 0; index < players.size(); index++) {
             Player player = players.get(index);
             if (player == null || isNullOrEmpty(player.getUserId())) {
-                continue;
+                throw new IllegalStateException(
+                        "Every approved player must be linked to an app profile.");
             }
             if (deltas.containsKey(player.getUserId())) {
-                // Defensive: a user should only ever hold one player row in a game.
-                continue;
+                throw new IllegalStateException(
+                        "A profile cannot be linked to multiple players in one game.");
             }
             GamePointsCalculator.PlayerGamePoints result =
                     gamePoints.getPlayerResults().get(index);

@@ -4,7 +4,7 @@ const {initializeApp} = require("firebase-admin/app");
 const {getAuth} = require("firebase-admin/auth");
 const {getFirestore, FieldPath, FieldValue, Timestamp} =
   require("firebase-admin/firestore");
-const {createHash} = require("node:crypto");
+const {createHash, randomUUID} = require("node:crypto");
 const {defineSecret} = require("firebase-functions/params");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {logger} = require("firebase-functions");
@@ -44,6 +44,10 @@ const PROFILE_CALLABLE_OPTIONS = Object.freeze({
 });
 const PRIVATE_USER_COLLECTION = "appUserIdentity_v1";
 const PROFILE_NAME_CLAIMS = "profileNameClaims_v1";
+const PUBLIC_USER_COLLECTION = "appUser_v2";
+const GAME_COLLECTION = "games_v2";
+const GAME_DATA_COLLECTION = "gameData_v2";
+const VIEW_APPROVAL_COLLECTION = "gameViewApprovals_v2";
 const PROMPT =
   "Generate one short, catchy English name for a rummy or card game app. " +
   "Use one or two words in title case, with no numbers or punctuation. " +
@@ -148,12 +152,7 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign-in is required.");
   }
-  let requested;
-  try {
-    requested = validateProfileName(request.data?.profileName);
-  } catch (error) {
-    throw new HttpsError("invalid-argument", error.message);
-  }
+  const requested = requireProfileName(request.data?.profileName);
   const uid = request.auth.uid;
   const database = getFirestore();
   const publicRef = database.collection("appUser_v2").doc(uid);
@@ -207,6 +206,173 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
     );
   }
   return {profileName: requested.profileName, displayName};
+});
+
+exports.adminCreateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
+  const database = getFirestore();
+  await requireAdministrator(database, request);
+  const actualName = requireActualName(request.data?.actualName);
+  const requested = requireProfileName(request.data?.profileName);
+  const userRef = database.collection(PUBLIC_USER_COLLECTION).doc();
+  const privateRef = database.collection(PRIVATE_USER_COLLECTION).doc(userRef.id);
+  const claimRef = database.collection(PROFILE_NAME_CLAIMS).doc(requested.key);
+  await database.runTransaction(async (transaction) => {
+    const claim = await transaction.get(claimRef);
+    if (claim.exists) {
+      throw new HttpsError("already-exists", "That profile name is already taken.");
+    }
+    transaction.create(claimRef, {userId: userRef.id, profileName: requested.profileName});
+    transaction.create(userRef, {
+      userId: userRef.id,
+      provider: "managed",
+      profileType: "managed",
+      role: "regular_user",
+      profileName: requested.profileName,
+      displayName: requested.profileName,
+      photoUrl: null,
+      hidden: false,
+      profileVersion: Date.now(),
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    transaction.create(privateRef, {
+      userId: userRef.id,
+      actualName,
+      email: null,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+  return {userId: userRef.id, profileName: requested.profileName, displayName: requested.profileName};
+});
+
+exports.adminUpdateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
+  const database = getFirestore();
+  await requireAdministrator(database, request);
+  const userId = requireDocumentId(request.data?.userId, "A valid managed profile is required.");
+  const actualName = requireActualName(request.data?.actualName);
+  const requested = requireProfileName(request.data?.profileName);
+  const publicRef = database.collection(PUBLIC_USER_COLLECTION).doc(userId);
+  const privateRef = database.collection(PRIVATE_USER_COLLECTION).doc(userId);
+  let oldKey = null;
+  await database.runTransaction(async (transaction) => {
+    const publicSnapshot = await transaction.get(publicRef);
+    if (!publicSnapshot.exists || publicSnapshot.get("profileType") !== "managed") {
+      throw new HttpsError("failed-precondition", "Only managed profiles can be edited here.");
+    }
+    const oldName = safeText(publicSnapshot.get("profileName"), 16);
+    oldKey = oldName ? oldName.toLowerCase() : null;
+    const newClaimRef = database.collection(PROFILE_NAME_CLAIMS).doc(requested.key);
+    const oldClaimRef = oldKey && oldKey !== requested.key ?
+      database.collection(PROFILE_NAME_CLAIMS).doc(oldKey) : null;
+    const newClaim = await transaction.get(newClaimRef);
+    const oldClaim = oldClaimRef ? await transaction.get(oldClaimRef) : null;
+    if (newClaim.exists && newClaim.get("userId") !== userId) {
+      throw new HttpsError("already-exists", "That profile name is already taken.");
+    }
+    transaction.set(newClaimRef, {userId, profileName: requested.profileName});
+    if (oldClaimRef && oldClaim?.get("userId") === userId) {
+      transaction.delete(oldClaimRef);
+    }
+    transaction.update(publicRef, {
+      profileName: requested.profileName,
+      displayName: requested.profileName,
+      profileVersion: Date.now(),
+      profilePropagationPending: true,
+    });
+    transaction.set(privateRef, {
+      userId,
+      actualName,
+      email: null,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, {merge: true});
+  });
+  await propagateProfileName(database, userId, requested.profileName);
+  await publicRef.update({
+    profilePropagationPending: FieldValue.delete(),
+    profileVersion: Date.now(),
+  });
+  return {userId, profileName: requested.profileName, displayName: requested.profileName};
+});
+
+exports.adminUpdateGamePlayerMapping = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
+  const database = getFirestore();
+  await requireAdministrator(database, request);
+  const gameId = requireDocumentId(request.data?.gameId, "A valid game is required.");
+  const playerId = requireDocumentId(request.data?.playerId, "A valid player is required.");
+  const userId = requireDocumentId(request.data?.userId, "A valid profile is required.");
+  const gameRef = database.collection(GAME_COLLECTION).doc(gameId);
+  const dataRef = database.collection(GAME_DATA_COLLECTION).doc(gameId);
+  const userRef = database.collection(PUBLIC_USER_COLLECTION).doc(userId);
+  await database.runTransaction(async (transaction) => {
+    const gameSnapshot = await transaction.get(gameRef);
+    const dataSnapshot = await transaction.get(dataRef);
+    const userSnapshot = await transaction.get(userRef);
+    if (!gameSnapshot.exists || !dataSnapshot.exists) {
+      throw new HttpsError("not-found", "The active game is no longer available.");
+    }
+    if (!userSnapshot.exists || userSnapshot.get("hidden") === true) {
+      throw new HttpsError("failed-precondition", "Select an available player profile.");
+    }
+    const displayName = safeText(userSnapshot.get("profileName"), 16);
+    if (!displayName) {
+      throw new HttpsError("failed-precondition", "The selected profile needs a profile name.");
+    }
+    const wrapper = dataSnapshot.data() || {};
+    const gameData = structuredClone(wrapper.data || {});
+    const players = gameData.playersById;
+    if (!players || typeof players !== "object" || !players[playerId]) {
+      throw new HttpsError("not-found", "The selected player no longer exists.");
+    }
+    for (const [candidateId, candidate] of Object.entries(players)) {
+      if (candidateId !== playerId && candidate?.userId === userId) {
+        throw new HttpsError("already-exists", "That profile is already mapped in this game.");
+      }
+    }
+    const previousUserId = safeText(players[playerId].userId, 128);
+    players[playerId].userId = userId;
+    players[playerId].name = displayName;
+    const game = gameSnapshot.data() || {};
+    const memberUserIds = new Set();
+    for (const player of Object.values(players)) {
+      const memberId = safeText(player?.userId, 128);
+      if (memberId) memberUserIds.add(memberId);
+    }
+    const creatorId = safeText(game.creatorUserId, 128);
+    const editorId = safeText(game.activeEditorUserId, 128);
+    if (creatorId) memberUserIds.add(creatorId);
+    if (editorId) memberUserIds.add(editorId);
+    const revision = Number.isSafeInteger(wrapper.revision) ? wrapper.revision : 0;
+    transaction.update(dataRef, {
+      data: gameData,
+      revision: revision + 1,
+      lastOperationId: `admin-map-${randomUUID()}`,
+      lastUpdated: FieldValue.serverTimestamp(),
+    });
+    transaction.update(gameRef, {
+      memberUserIds: Array.from(memberUserIds),
+      dashboardNumPlayers: Object.keys(players).length,
+    });
+    if (previousUserId && previousUserId !== userId) {
+      transaction.delete(database.collection(VIEW_APPROVAL_COLLECTION)
+          .doc(`${gameId}_${previousUserId}`));
+      transaction.update(gameRef,
+          new FieldPath("pendingViewRequests", previousUserId), FieldValue.delete());
+    }
+    transaction.set(database.collection(VIEW_APPROVAL_COLLECTION).doc(`${gameId}_${userId}`), {
+      gameId,
+      userId,
+      userDisplayName: displayName,
+      status: "approved",
+      requestedAt: FieldValue.serverTimestamp(),
+      lastUpdatedAt: FieldValue.serverTimestamp(),
+    });
+    transaction.update(gameRef, new FieldPath("pendingViewRequests", userId), {
+      userDisplayName: displayName,
+      status: "approved",
+      requestedAt: FieldValue.serverTimestamp(),
+      lastUpdatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+  return {gameId, playerId, userId};
 });
 
 exports.deleteMyAccount = onCall(
@@ -325,6 +491,46 @@ async function rewriteProfileSnapshot(database, reference, uid, displayName, tra
       transaction.set(reference, result.data);
     }
   });
+}
+
+async function requireAdministrator(database, request) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign-in is required.");
+  }
+  const snapshot = await database.collection(PUBLIC_USER_COLLECTION)
+      .doc(request.auth.uid).get();
+  if (!snapshot.exists || !isAdministratorProfile(snapshot.data())) {
+    throw new HttpsError("permission-denied", "Administrator access is required.");
+  }
+}
+
+function requireProfileName(value) {
+  let requested;
+  try {
+    requested = validateProfileName(value);
+  } catch (error) {
+    throw new HttpsError("invalid-argument", error.message);
+  }
+  if (!requested.profileName) {
+    throw new HttpsError("invalid-argument", "Profile name is required.");
+  }
+  return requested;
+}
+
+function requireActualName(value) {
+  const actualName = safeText(value, 120);
+  if (!actualName) {
+    throw new HttpsError("invalid-argument", "Actual name is required.");
+  }
+  return actualName;
+}
+
+function requireDocumentId(value, message) {
+  const id = safeText(value, 128);
+  if (!id || id.includes("/")) {
+    throw new HttpsError("invalid-argument", message);
+  }
+  return id;
 }
 
 function safeText(value, maxLength) {

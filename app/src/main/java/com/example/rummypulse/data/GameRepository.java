@@ -16,6 +16,7 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.Source;
 import com.google.firebase.firestore.WriteBatch;
+import com.google.firebase.functions.FirebaseFunctions;
 import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.utils.PinUtils;
 
@@ -1846,6 +1847,31 @@ public class GameRepository {
         approveGame(gameItem, null);
     }
 
+    public void updatePlayerMappingAsAdmin(
+            String gameId,
+            String playerId,
+            String userId,
+            Runnable onSuccess,
+            Consumer<String> onFailure) {
+        Map<String, Object> request = new HashMap<>();
+        request.put("gameId", gameId);
+        request.put("playerId", playerId);
+        request.put("userId", userId);
+        FirebaseFunctions.getInstance("asia-south1")
+                .getHttpsCallable("adminUpdateGamePlayerMapping")
+                .call(request)
+                .addOnSuccessListener(result -> {
+                    loadAllGames();
+                    if (onSuccess != null) onSuccess.run();
+                })
+                .addOnFailureListener(error -> {
+                    String message = error.getMessage() == null
+                            ? "Could not update player mapping." : error.getMessage();
+                    if (onFailure != null) onFailure.accept(message);
+                    else errorLiveData.setValue(message);
+                });
+    }
+
     /**
      * @param onAfterFullSuccess optional; runs after game is written to approvedGames and removed from games/gameData
      */
@@ -1975,9 +2001,25 @@ public class GameRepository {
 
                     // Firestore requires every read before the first write.
                     Map<String, DocumentSnapshot> statsSnapshots = new LinkedHashMap<>();
+                    Map<String, DocumentSnapshot> profileSnapshots = new LinkedHashMap<>();
                     for (String userId : statsDeltas.keySet()) {
+                        profileSnapshots.put(userId, transaction.get(
+                                db.collection(FirestoreCollections.APP_USER)
+                                        .document(userId)));
                         statsSnapshots.put(userId,
                                 transaction.get(PlayerStatsRecorder.statsRef(db, userId)));
+                    }
+                    for (Map.Entry<String, DocumentSnapshot> entry
+                            : profileSnapshots.entrySet()) {
+                        DocumentSnapshot profile = entry.getValue();
+                        String profileName = profile == null
+                                ? null : profile.getString("profileName");
+                        if (profile == null || !profile.exists()
+                                || profileName == null || profileName.trim().isEmpty()) {
+                            throw new IllegalStateException(
+                                    "Player mapping is invalid for profile "
+                                            + entry.getKey() + ". Ask an admin to repair it.");
+                        }
                     }
                     for (Map.Entry<String, List<PlayerStatsRecorder.PeriodDelta>> entry
                             : statsDeltas.entrySet()) {

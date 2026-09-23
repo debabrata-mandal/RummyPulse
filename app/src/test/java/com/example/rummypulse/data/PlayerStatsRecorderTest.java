@@ -3,6 +3,7 @@ package com.example.rummypulse.data;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThrows;
 
 import org.junit.Test;
 
@@ -18,16 +19,16 @@ public class PlayerStatsRecorderTest {
     private static final Date APPROVAL_TIME = new Date(1789344000000L);
 
     @Test
-    public void approvedGameCreatesExpectedDeltasOnlyForLinkedPlayers() {
+    public void approvedGameCreatesExpectedDeltasForEveryPlayer() {
         GameData game = game(
                 player("A", "user-a", 10),
                 player("B", "user-b", 20),
-                player("Guest", null, 30));
+                player("Guest", "user-c", 30));
 
         Map<String, PlayerStatsRecorder.PeriodDelta> deltas =
                 PlayerStatsRecorder.deltasForApproval(game, APPROVAL_TIME);
 
-        assertEquals(2, deltas.size());
+        assertEquals(3, deltas.size());
         assertFalse(deltas.containsKey(null));
         assertDelta(deltas.get("user-a"), 1, 1, 54, 60, 6);
         assertDelta(deltas.get("user-b"), 1, 0, 0, 0, 0);
@@ -44,12 +45,12 @@ public class PlayerStatsRecorderTest {
                 PlayerStatsRecorder.deltasForApproval(game(
                         player("A", "user-a", 10),
                         player("B", "user-b", 20),
-                        player("Guest", null, 30)), APPROVAL_TIME));
+                        player("Guest", "user-d", 30)), APPROVAL_TIME));
         PlayerStatsRecorder.appendApprovalDeltas(batch,
                 PlayerStatsRecorder.deltasForApproval(game(
                         player("A", "user-a", 30),
                         player("C", "user-c", 20),
-                        player("Guest", null, 10)), APPROVAL_TIME));
+                        player("Guest", "user-d", 10)), APPROVAL_TIME));
 
         assertEquals(2, batch.get("user-a").size());
         Map<String, Object> document = PlayerStatsRecorder.buildStatsDocument(
@@ -74,7 +75,7 @@ public class PlayerStatsRecorderTest {
                 PlayerStatsRecorder.deltasForApproval(game(
                         player("Updated name", "user-a", 10),
                         player("B", "user-b", 20),
-                        player("Guest", null, 30)), APPROVAL_TIME).get("user-a");
+                        player("Guest", "user-c", 30)), APPROVAL_TIME).get("user-a");
         Map<String, Object> document = PlayerStatsRecorder.buildStatsDocument(
                 existing, "user-a", Arrays.asList(delta));
 
@@ -91,26 +92,24 @@ public class PlayerStatsRecorderTest {
     }
 
     @Test
-    public void duplicateMappedUserInOneGameIsCountedOnce() {
+    public void duplicateMappedUserInOneGameIsRejected() {
         GameData game = game(
                 player("A1", "user-a", 10),
                 player("A2", "user-a", 20),
                 player("B", "user-b", 30));
 
-        Map<String, PlayerStatsRecorder.PeriodDelta> deltas =
-                PlayerStatsRecorder.deltasForApproval(game, APPROVAL_TIME);
-
-        assertEquals(2, deltas.size());
-        assertEquals(1L, deltas.get("user-a").bucket.getGames());
+        assertThrows(IllegalStateException.class,
+                () -> PlayerStatsRecorder.deltasForApproval(game, APPROVAL_TIME));
     }
 
     @Test
-    public void approvedGameWithoutLinkedPlayersProducesNoStatsWrites() {
+    public void approvedGameWithoutLinkedPlayersIsRejected() {
         GameData game = game(
                 player("A", null, 10),
                 player("B", null, 20));
 
-        assertTrue(PlayerStatsRecorder.deltasForApproval(game, APPROVAL_TIME).isEmpty());
+        assertThrows(IllegalStateException.class,
+                () -> PlayerStatsRecorder.deltasForApproval(game, APPROVAL_TIME));
     }
 
     private static GameData game(Player... players) {

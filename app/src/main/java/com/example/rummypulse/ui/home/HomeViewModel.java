@@ -26,6 +26,7 @@ public class HomeViewModel extends ViewModel {
     private final MutableLiveData<Integer> mInProgressGames;
     private final MutableLiveData<Double> mTotalBoardPoints;
     private final MutableLiveData<String> mError;
+    private final MutableLiveData<List<AppUser>> mDirectoryUsers;
     
     private GameRepository gameRepository;
 
@@ -40,6 +41,7 @@ public class HomeViewModel extends ViewModel {
         mInProgressGames = new MutableLiveData<>();
         mTotalBoardPoints = new MutableLiveData<>();
         mError = new MutableLiveData<>();
+        mDirectoryUsers = new MutableLiveData<>(new ArrayList<>());
         
         // Initialize repository
         gameRepository = new GameRepository();
@@ -47,6 +49,7 @@ public class HomeViewModel extends ViewModel {
             @Override
             public void onSuccess(List<AppUser> users) {
                 gameRepository.setAccountDisplayNames(UserProfileIndex.displayNamesByUserId(users));
+                mDirectoryUsers.setValue(users);
             }
 
             @Override
@@ -89,6 +92,10 @@ public class HomeViewModel extends ViewModel {
 
     public LiveData<String> getError() {
         return mError;
+    }
+
+    public LiveData<List<AppUser>> getDirectoryUsers() {
+        return mDirectoryUsers;
     }
 
     private void loadGamesFromFirebase() {
@@ -203,6 +210,20 @@ public class HomeViewModel extends ViewModel {
             return;
         }
         gameRepository.kickOutEditor(gameId, onSuccess, onError);
+    }
+
+    public void updatePlayerMapping(
+            String gameId,
+            String playerId,
+            String userId,
+            Runnable onSuccess,
+            java.util.function.Consumer<String> onFailure) {
+        if (AppUserRoleSession.getInstance().peekRole() != AppUserRoleSession.Role.ADMIN) {
+            mError.setValue("Administrator access required to change player mappings");
+            return;
+        }
+        gameRepository.updatePlayerMappingAsAdmin(
+                gameId, playerId, userId, onSuccess, onFailure);
     }
 
     @Override

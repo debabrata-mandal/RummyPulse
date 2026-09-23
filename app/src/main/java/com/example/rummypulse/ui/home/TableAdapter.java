@@ -38,12 +38,14 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
     private OnSelectionChangedListener selectionChangedListener;
     private final ReviewSelectionModel selection = new ReviewSelectionModel();
     private boolean actionsEnabled = true;
+    private java.util.Set<String> knownProfileUserIds;
 
     public interface OnGameActionListener {
         void onApproveBoardAdjustment(GameItem game, int position);
         void onDeleteGame(GameItem game, int position);
         void onEditGameEconomics(GameItem game, int position);
         void onKickOutEditor(GameItem game, int position);
+        void onChangePlayerMapping(GameItem game, Player player);
     }
 
     public interface OnSelectionChangedListener {
@@ -96,6 +98,12 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             return;
         }
         actionsEnabled = enabled;
+        notifyDataSetChanged();
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setKnownProfileUserIds(java.util.Set<String> userIds) {
+        knownProfileUserIds = userIds == null ? null : new java.util.HashSet<>(userIds);
         notifyDataSetChanged();
     }
 
@@ -232,14 +240,17 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             // Enable/disable approve button based on game status
             String gameStatus = item.getGameStatus();
             boolean isGameCompleted = "Completed".equals(gameStatus);
+            boolean hasValidMappings = hasValidPlayerMappings(item);
             
             
-            holder.btnApproveBoardAdjustment.setEnabled(actionsEnabled && isGameCompleted);
+            holder.btnApproveBoardAdjustment.setEnabled(
+                    actionsEnabled && isGameCompleted && hasValidMappings);
             holder.btnDeleteGame.setEnabled(actionsEnabled);
 
             // Set up button click listeners
             holder.btnApproveBoardAdjustment.setOnClickListener(v -> {
-                if (actionListener != null && actionsEnabled && isGameCompleted) {
+                if (actionListener != null && actionsEnabled
+                        && isGameCompleted && hasValidMappings) {
                     actionListener.onApproveBoardAdjustment(item, position);
                 }
             });
@@ -352,6 +363,9 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         // Create dialog view
         View dialogView = LayoutInflater.from(context)
                 .inflate(R.layout.dialog_players_list, new android.widget.FrameLayout(context), false);
+        AlertDialog dialog = new AlertDialog.Builder(context, R.style.DarkDialogTheme)
+                .setView(dialogView)
+                .create();
         
         // Set game ID
         TextView gameIdText = dialogView.findViewById(R.id.text_dialog_game_id);
@@ -369,6 +383,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         
         if (players != null && !players.isEmpty()) {
             // Sort players by total score (lowest to highest)
+            players = new ArrayList<>(players);
             players.sort((p1, p2) -> Integer.compare(p1.getTotalScore(), p2.getTotalScore()));
 
             for (Player player : players) {
@@ -383,6 +398,7 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                 TextView playerNameText = playerView.findViewById(R.id.text_player_name);
                 TextView playerScoreText = playerView.findViewById(R.id.text_player_score);
                 TextView finalGamePointsText = playerView.findViewById(R.id.text_final_game_points);
+                LinearLayout identityColumn = (LinearLayout) playerNameText.getParent();
                 
                 String playerName = player.getName();
                 if (playerName == null || playerName.isEmpty()) {
@@ -412,6 +428,32 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
                     playerScoreText.setTextColor(context.getColor(R.color.text_primary));
                 }
                 playerScoreText.setText(String.valueOf(playerScore));
+
+                TextView mappingStatus = new TextView(context);
+                boolean mapped = isKnownProfile(player);
+                mappingStatus.setText(mapped
+                        ? context.getString(R.string.review_player_mapped)
+                        : context.getString(R.string.review_player_mapping_required));
+                mappingStatus.setTextColor(context.getColor(mapped
+                        ? R.color.success_green : R.color.error_red));
+                mappingStatus.setTextSize(11);
+                identityColumn.addView(mappingStatus);
+
+                com.google.android.material.button.MaterialButton changeMapping =
+                        new com.google.android.material.button.MaterialButton(
+                                context, null,
+                                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+                changeMapping.setText(R.string.review_change_mapping);
+                changeMapping.setTextSize(11);
+                changeMapping.setAllCaps(false);
+                changeMapping.setEnabled(actionsEnabled);
+                changeMapping.setOnClickListener(v -> {
+                    if (actionListener != null && actionsEnabled) {
+                        dialog.dismiss();
+                        actionListener.onChangePlayerMapping(gameItem, player);
+                    }
+                });
+                identityColumn.addView(changeMapping);
 
                 if (finalGamePoints > 0) {
                     finalGamePointsText.setText(context.getString(
@@ -444,11 +486,6 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
         totalScoreText.setText(String.valueOf(totalScore));
         
         // Create and show dialog
-        AlertDialog.Builder builder = new AlertDialog.Builder(
-                context, R.style.DarkDialogTheme);
-        builder.setView(dialogView);
-        AlertDialog dialog = builder.create();
-        
         // Set close button listener
         View closeButton = dialogView.findViewById(R.id.btn_close);
         closeButton.setOnClickListener(v -> dialog.dismiss());
@@ -465,6 +502,29 @@ public class TableAdapter extends RecyclerView.Adapter<TableAdapter.TableViewHol
             dialog.getWindow().setLayout(
                     width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
         }
+    }
+
+    private boolean hasValidPlayerMappings(GameItem item) {
+        if (item == null || item.getPlayers() == null || item.getPlayers().size() < 2) {
+            return false;
+        }
+        java.util.Set<String> userIds = new java.util.HashSet<>();
+        for (Player player : item.getPlayers()) {
+            if (!isKnownProfile(player)
+                    || !userIds.add(player.getUserId())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isKnownProfile(Player player) {
+        if (player == null || player.getUserId() == null
+                || player.getUserId().trim().isEmpty()) {
+            return false;
+        }
+        return knownProfileUserIds == null
+                || knownProfileUserIds.contains(player.getUserId());
     }
     
     private void showQrCodeDialog(Context context, GameItem gameItem) {

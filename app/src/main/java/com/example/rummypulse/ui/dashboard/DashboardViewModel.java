@@ -485,7 +485,7 @@ public class DashboardViewModel extends ViewModel {
         scheduleCreationSlowNotice(request);
 
         Map<String, Object> initialGameData = new HashMap<>();
-        initialGameData.put("numPlayers", 2);
+        initialGameData.put("numPlayers", 1);
         initialGameData.put("gamePointFactor", request.gamePointFactor);
         initialGameData.put("boardAdjustmentPercent", request.boardAdjustmentPercentage);
         Map<String, Map<String, Object>> playersById = new java.util.LinkedHashMap<>();
@@ -504,16 +504,6 @@ public class DashboardViewModel extends ViewModel {
         creatorPlayer.put("userId", request.creatorUserId);
         playersById.put(creatorPlayerId, creatorPlayer);
         playerOrder.add(creatorPlayerId);
-        Map<String, Object> player2 = new HashMap<>();
-        String player2Id = java.util.UUID.randomUUID().toString();
-        player2.put("playerId", player2Id);
-        player2.put("name", "Player 2");
-        player2.put("scores", new ArrayList<>(java.util.Collections.nCopies(10, -1)));
-        player2.put("randomNumber", null);
-        player2.put("isCreator", false);
-        player2.put("userId", null);
-        playersById.put(player2Id, player2);
-        playerOrder.add(player2Id);
         initialGameData.put("schemaVersion", GameDataSchema.CURRENT_VERSION);
         initialGameData.put("playersById", playersById);
         initialGameData.put("playerOrder", playerOrder);
@@ -530,11 +520,10 @@ public class DashboardViewModel extends ViewModel {
         authData.put("activeEditorUserId", request.creatorUserId);
         authData.put("lastEditorUserId", request.creatorUserId);
         authData.put("dashboardGamePointFactor", request.gamePointFactor);
-        authData.put("dashboardNumPlayers", 2);
+        authData.put("dashboardNumPlayers", 1);
         authData.put("dashboardBoardAdjustmentPercent", request.boardAdjustmentPercentage);
         authData.put("dashboardGameStatus", "R1");
-        // Seeds the My Games filter; Player 2 is unlinked at creation so the creator is the only
-        // member until someone is mapped to an account.
+        // Seeds the My Games filter; additional players are selected from appUser_v2 in edit mode.
         authData.put(
                 com.example.rummypulse.data.GameMembership.FIELD,
                 new ArrayList<>(java.util.Collections.singletonList(request.creatorUserId)));

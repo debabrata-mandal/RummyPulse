@@ -19,6 +19,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.rummypulse.R;
 import com.example.rummypulse.databinding.FragmentHomeBinding;
 import com.example.rummypulse.data.AppUserRoleSession;
+import com.example.rummypulse.data.AppUser;
+import com.example.rummypulse.data.AppUserDirectoryFilter;
+import com.example.rummypulse.data.AppUserRepository;
+import com.example.rummypulse.data.Player;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -111,6 +115,20 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             }
             binding.reviewBulkActions.setVisibility(
                     tableAdapter.getItemCount() > 0 ? View.VISIBLE : View.GONE);
+        });
+        homeViewModel.getDirectoryUsers().observe(getViewLifecycleOwner(), users -> {
+            if (tableAdapter == null) return;
+            java.util.Set<String> userIds = new java.util.HashSet<>();
+            if (users != null) {
+                for (AppUser user : users) {
+                    if (user != null && user.getUserId() != null
+                            && user.getProfileName() != null
+                            && !user.getProfileName().trim().isEmpty()) {
+                        userIds.add(user.getUserId());
+                    }
+                }
+            }
+            tableAdapter.setKnownProfileUserIds(userIds);
         });
 
         homeViewModel.getCompletedGames().observe(getViewLifecycleOwner(), completedGames -> {
@@ -379,6 +397,159 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                                 }
                             });
                 });
+    }
+
+    @Override
+    public void onChangePlayerMapping(GameItem game, Player player) {
+        if (!isAdded() || getContext() == null || game == null || player == null) {
+            return;
+        }
+        View dialogView = LayoutInflater.from(requireContext())
+                .inflate(R.layout.dialog_map_player, null, false);
+        AlertDialog dialog = new AlertDialog.Builder(requireContext(), R.style.DarkDialogTheme)
+                .setView(dialogView)
+                .create();
+        ((TextView) dialogView.findViewById(R.id.text_map_player_title))
+                .setText(R.string.review_change_mapping);
+        ((TextView) dialogView.findViewById(R.id.text_map_player_subtitle))
+                .setText(getString(R.string.review_change_mapping_for, player.getName()));
+        dialogView.findViewById(R.id.btn_unlink_user).setVisibility(View.GONE);
+        dialogView.findViewById(R.id.btn_cancel_mapping)
+                .setOnClickListener(v -> dialog.dismiss());
+        android.widget.EditText search = dialogView.findViewById(R.id.input_user_search);
+        android.widget.ListView list = dialogView.findViewById(R.id.list_users);
+        android.widget.ProgressBar progress = dialogView.findViewById(R.id.progress_users);
+        TextView empty = dialogView.findViewById(R.id.text_users_empty);
+        TextView current = dialogView.findViewById(R.id.text_current_mapping);
+        current.setVisibility(View.VISIBLE);
+        current.setText(player.getUserId() == null
+                ? R.string.review_player_mapping_required
+                : R.string.review_player_mapped);
+        progress.setVisibility(View.VISIBLE);
+        list.setVisibility(View.GONE);
+        empty.setVisibility(View.GONE);
+        dialog.show();
+        styleDialogWindow(dialog);
+        new AppUserRepository().getUsersCached(new AppUserRepository.UsersCallback() {
+            @Override
+            public void onSuccess(List<AppUser> users) {
+                if (!dialog.isShowing()) return;
+                List<AppUser> available = new java.util.ArrayList<>();
+                java.util.Set<String> used = new java.util.HashSet<>();
+                if (game.getPlayers() != null) {
+                    for (Player candidate : game.getPlayers()) {
+                        if (candidate != null
+                                && (candidate.getPlayerId() == null
+                                || !candidate.getPlayerId().equals(player.getPlayerId()))
+                                && candidate.getUserId() != null) {
+                            used.add(candidate.getUserId());
+                        }
+                    }
+                }
+                for (AppUser user : AppUserDirectoryFilter.forPlayerMapping(users)) {
+                    if (user.getProfileName() != null && !used.contains(user.getUserId())) {
+                        available.add(user);
+                    }
+                }
+                List<AppUser> visible = new java.util.ArrayList<>(available);
+                android.widget.ArrayAdapter<AppUser> adapter =
+                        new android.widget.ArrayAdapter<AppUser>(
+                                requireContext(), R.layout.item_map_user,
+                                R.id.text_user_name, visible) {
+                            @Override
+                            public View getView(int position, View convertView,
+                                    ViewGroup parent) {
+                                View row = super.getView(position, convertView, parent);
+                                AppUser user = getItem(position);
+                                ((TextView) row.findViewById(R.id.text_user_name))
+                                        .setText(user.getDisplayName());
+                                ((TextView) row.findViewById(R.id.text_user_detail))
+                                        .setText(user.getUserId().equals(player.getUserId())
+                                                ? getString(R.string.map_player_currently_linked)
+                                                : "");
+                                row.findViewById(R.id.icon_user_selected).setVisibility(
+                                        user.getUserId().equals(player.getUserId())
+                                                ? View.VISIBLE : View.GONE);
+                                return row;
+                            }
+                        };
+                list.setAdapter(adapter);
+                progress.setVisibility(View.GONE);
+                updateReviewMappingList(list, empty, visible);
+                search.addTextChangedListener(new android.text.TextWatcher() {
+                    @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                    @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                    @Override public void afterTextChanged(android.text.Editable value) {
+                        String query = value.toString().trim().toLowerCase(java.util.Locale.ROOT);
+                        visible.clear();
+                        for (AppUser user : available) {
+                            if (query.isEmpty() || user.getDisplayName()
+                                    .toLowerCase(java.util.Locale.ROOT).contains(query)) {
+                                visible.add(user);
+                            }
+                        }
+                        adapter.notifyDataSetChanged();
+                        updateReviewMappingList(list, empty, visible);
+                    }
+                });
+                list.setOnItemClickListener((parent, row, position, id) -> {
+                    AppUser selected = visible.get(position);
+                    dialog.dismiss();
+                    if (selected.getUserId().equals(player.getUserId())) return;
+                    showReviewActionDialog(
+                            R.drawable.ic_link_players,
+                            getString(R.string.review_replace_mapping_title),
+                            getString(R.string.review_replace_mapping_subtitle,
+                                    player.getName(), selected.getDisplayName()),
+                            getString(R.string.review_replace_mapping_message),
+                            getString(R.string.review_change_mapping),
+                            false,
+                            () -> updateReviewPlayerMapping(game, player, selected));
+                });
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                progress.setVisibility(View.GONE);
+                empty.setVisibility(View.VISIBLE);
+                empty.setText(R.string.map_player_load_failed);
+            }
+        });
+    }
+
+    private void updateReviewPlayerMapping(
+            GameItem game, Player player, AppUser selected) {
+        beginReviewOperation(getString(R.string.review_operation_mapping));
+        homeViewModel.updatePlayerMapping(
+                game.getGameId(), player.getPlayerId(), selected.getUserId(),
+                () -> {
+                    if (!isAdded()) return;
+                    endReviewOperation();
+                    com.example.rummypulse.utils.ModernToast.success(
+                            getContext(), getString(R.string.review_mapping_saved));
+                },
+                message -> {
+                    if (!isAdded()) return;
+                    endReviewOperation();
+                    com.example.rummypulse.utils.ModernToast.error(getContext(), message);
+                });
+    }
+
+    private void updateReviewMappingList(
+            android.widget.ListView list, TextView empty, List<AppUser> users) {
+        boolean populated = users != null && !users.isEmpty();
+        list.setVisibility(populated ? View.VISIBLE : View.GONE);
+        empty.setVisibility(populated ? View.GONE : View.VISIBLE);
+        if (!populated) empty.setText(R.string.add_player_contact_admin);
+    }
+
+    private void styleDialogWindow(AlertDialog dialog) {
+        if (dialog.getWindow() == null) return;
+        dialog.getWindow().setBackgroundDrawable(
+                new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        int width = Math.min(Math.round(dm.widthPixels * 0.92f), Math.round(420 * dm.density));
+        dialog.getWindow().setLayout(width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
     }
 
     private void updateSelectionControls(int selectedCount, boolean allSelected) {

@@ -188,6 +188,54 @@ public class AppUserRepository {
                 .addOnFailureListener(exception -> notifyFailure(callback, exception));
     }
 
+    public void createManagedProfile(
+            String actualName, String profileName, AppUserCallback callback) {
+        Map<String, Object> request = new HashMap<>();
+        request.put("actualName", actualName);
+        request.put("profileName", profileName);
+        callManagedProfileFunction("adminCreateManagedProfile", request, callback);
+    }
+
+    public void updateManagedProfile(
+            String userId, String actualName, String profileName, AppUserCallback callback) {
+        Map<String, Object> request = new HashMap<>();
+        request.put("userId", userId);
+        request.put("actualName", actualName);
+        request.put("profileName", profileName);
+        callManagedProfileFunction("adminUpdateManagedProfile", request, callback);
+    }
+
+    private void callManagedProfileFunction(
+            String functionName, Map<String, Object> request, AppUserCallback callback) {
+        FirebaseFunctions.getInstance("asia-south1").getHttpsCallable(functionName).call(request)
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful()) {
+                        throw task.getException() != null
+                                ? task.getException()
+                                : new IllegalStateException("Managed profile update failed");
+                    }
+                    Object raw = task.getResult().getData();
+                    if (!(raw instanceof Map)) {
+                        throw new IllegalStateException("Managed profile response is invalid");
+                    }
+                    Object userId = ((Map<?, ?>) raw).get("userId");
+                    if (!(userId instanceof String)) {
+                        throw new IllegalStateException("Managed profile id is missing");
+                    }
+                    return db.collection(FirestoreCollections.APP_USER)
+                            .document((String) userId).get();
+                })
+                .addOnSuccessListener(snapshot -> {
+                    invalidateUserDirectoryCache();
+                    try {
+                        callback.onSuccess(documentToAppUser(snapshot));
+                    } catch (Exception exception) {
+                        notifyFailure(callback, exception);
+                    }
+                })
+                .addOnFailureListener(exception -> notifyFailure(callback, exception));
+    }
+
     /** Records the signed-in user's current safe-play acknowledgment. */
     public Task<Void> acceptSafePlayPolicy(String userId, int policyVersion) {
         Map<String, Object> updates = new HashMap<>();
@@ -534,6 +582,7 @@ public class AppUserRepository {
                 DocumentSnapshot identity = (DocumentSnapshot) task.getResult();
                 users.get(index).setEmail(identity.getString("email"));
                 users.get(index).setGoogleDisplayName(identity.getString("googleDisplayName"));
+                users.get(index).setActualName(identity.getString("actualName"));
             }
             callback.onSuccess(users);
         }).addOnFailureListener(callback::onFailure);
@@ -543,6 +592,8 @@ public class AppUserRepository {
         AppUser copy = new AppUser(source.getUserId(), source.getProvider(), source.getRole(),
                 null, source.getDisplayName(), source.getPhotoUrl());
         copy.setProfileName(source.getProfileName());
+        copy.setProfileType(source.getProfileType());
+        copy.setActualName(source.getActualName());
         copy.setProfileVersion(source.getProfileVersion());
         copy.setCreatedAt(source.getCreatedAt());
         copy.setLastLoginAt(source.getLastLoginAt());
@@ -559,6 +610,7 @@ public class AppUserRepository {
             appUser.setUserId(document.getId());
         }
         appUser.setProvider(document.getString("provider"));
+        appUser.setProfileType(document.getString("profileType"));
         appUser.setRole(UserRole.fromString(document.getString("role")));
         appUser.setEmail(document.getString("email"));
         appUser.setDisplayName(document.getString("displayName"));

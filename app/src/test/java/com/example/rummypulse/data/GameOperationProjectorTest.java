@@ -1,7 +1,7 @@
 package com.example.rummypulse.data;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import com.example.rummypulse.data.sync.GameOperationPayload;
@@ -58,21 +58,12 @@ public class GameOperationProjectorTest {
     }
 
     @Test
-    public void transfer_movesMappingAtomicallyWithoutChangingScores() {
-        GameData transferred = GameOperationProjector.apply(
+    public void transferThatWouldUnmapAnotherPlayerIsRejected() {
+        assertThrows(IllegalArgumentException.class, () -> GameOperationProjector.apply(
                 game(),
                 GameOperationType.TRANSFER_MAPPING,
                 "p2",
-                GameOperationPayload.transfer("p1", "u1", "Debu", "Debu"));
-
-        assertNull(GameDataSchema.findPlayer(transferred, "p1").getUserId());
-        assertEquals("u1", GameDataSchema.findPlayer(transferred, "p2").getUserId());
-        assertEquals(
-                Integer.valueOf(10),
-                GameDataSchema.findPlayer(transferred, "p1").getScores().get(0));
-        assertEquals(
-                Integer.valueOf(20),
-                GameDataSchema.findPlayer(transferred, "p2").getScores().get(0));
+                GameOperationPayload.transfer("p1", "u1", "Debu", "Debu")));
     }
 
     @Test

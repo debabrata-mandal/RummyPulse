@@ -43,6 +43,24 @@ public final class ApprovalBatchValidator {
                     "Validation failed for game " + gameId
                             + ": " + integrity.describe());
         }
+        java.util.Set<String> userIds = new java.util.HashSet<>();
+        if (gameData.getPlayers() == null || gameData.getPlayers().size() < 2) {
+            throw new IllegalStateException(
+                    "Validation failed for game " + gameId + ": at least two players are required.");
+        }
+        for (Player player : gameData.getPlayers()) {
+            String userId = player == null ? null : player.getUserId();
+            if (userId == null || userId.trim().isEmpty()) {
+                throw new IllegalStateException(
+                        "Validation failed for game " + gameId
+                                + ": every player must be mapped to an app profile.");
+            }
+            if (!userIds.add(userId)) {
+                throw new IllegalStateException(
+                        "Validation failed for game " + gameId
+                                + ": a profile is mapped more than once.");
+            }
+        }
         return gameData;
     }
 }
