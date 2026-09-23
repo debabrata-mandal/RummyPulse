@@ -1,12 +1,18 @@
 package com.example.rummypulse.utils;
 
 import androidx.annotation.Nullable;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import com.example.rummypulse.data.AppUser;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 /** Stores the latest synced profile fields for the signed-in user. */
 public final class CurrentUserProfileSession {
 
+    private static final AtomicLong changeVersion = new AtomicLong();
+    private static final MutableLiveData<Long> changes = new MutableLiveData<>(0L);
     private static long profileVersion;
     @Nullable
     private static String photoUrl;
@@ -27,6 +33,7 @@ public final class CurrentUserProfileSession {
         photoUrl = appUser.getPhotoUrl();
         displayName = appUser.getDisplayName();
         profileName = appUser.getProfileName();
+        notifyChanged();
     }
 
     public static void applyOverrides(
@@ -34,7 +41,12 @@ public final class CurrentUserProfileSession {
             @Nullable String overridePhotoUrl) {
         if (overridePhotoUrl != null) {
             photoUrl = overridePhotoUrl;
+            notifyChanged();
         }
+    }
+
+    public static LiveData<Long> getChanges() {
+        return changes;
     }
 
     public static long getProfileVersion() {
@@ -60,6 +72,7 @@ public final class CurrentUserProfileSession {
         profileName = newProfileName;
         displayName = newDisplayName;
         profileVersion = System.currentTimeMillis();
+        notifyChanged();
     }
 
     public static void clear() {
@@ -67,5 +80,10 @@ public final class CurrentUserProfileSession {
         photoUrl = null;
         displayName = null;
         profileName = null;
+        notifyChanged();
+    }
+
+    private static void notifyChanged() {
+        changes.postValue(changeVersion.incrementAndGet());
     }
 }
