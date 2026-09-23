@@ -20,8 +20,7 @@ async function main() {
     const uid = snapshot.id;
     const profileName = clean(data.profileName);
     const googleDisplayName = clean(data.googleDisplayName) || clean(data.displayName) || "Player";
-    const displayName = profileName || googleDisplayName;
-    publicNames.set(uid, displayName);
+    if (profileName) publicNames.set(uid, profileName);
     writes += 2 + (profileName ? 1 : 0);
     if (!apply) continue;
     await database.collection("appUserIdentity_v1").doc(uid).set({
@@ -31,7 +30,7 @@ async function main() {
       migratedAt: FieldValue.serverTimestamp(),
     }, {merge: true});
     await snapshot.ref.update({
-      displayName,
+      displayName: profileName || FieldValue.delete(),
       profileName: profileName || FieldValue.delete(),
       email: FieldValue.delete(),
       googleDisplayName: FieldValue.delete(),

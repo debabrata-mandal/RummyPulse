@@ -130,7 +130,7 @@ exports.syncMyIdentity = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
       userId: uid,
       provider,
       role: existing.role || "regular_user",
-      displayName: profileName || googleDisplayName,
+      displayName: profileName || FieldValue.delete(),
       photoUrl: photoUrl || null,
       profileVersion: now,
       lastLoginAt: FieldValue.serverTimestamp(),
@@ -154,14 +154,15 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
     throw new HttpsError("unauthenticated", "Sign-in is required.");
   }
   const requested = requireProfileName(request.data?.profileName);
+  if (!requested.profileName) {
+    throw new HttpsError("invalid-argument", "A profile name is required.");
+  }
   const uid = request.auth.uid;
   const database = getFirestore();
   const publicRef = database.collection("appUser_v2").doc(uid);
-  const privateRef = database.collection(PRIVATE_USER_COLLECTION).doc(uid);
   let displayName;
   await database.runTransaction(async (transaction) => {
     const publicSnapshot = await transaction.get(publicRef);
-    const privateSnapshot = await transaction.get(privateRef);
     if (!publicSnapshot.exists) {
       throw new HttpsError("failed-precondition", "Profile is not ready yet.");
     }
@@ -177,8 +178,7 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
     if (newClaim?.exists && newClaim.get("userId") !== uid) {
       throw new HttpsError("already-exists", "That profile name is already taken.");
     }
-    displayName = requested.profileName ||
-      safeText(privateSnapshot.get("googleDisplayName"), 120) || "Player";
+    displayName = requested.profileName;
     if (newClaimRef) {
       transaction.set(newClaimRef, {userId: uid, profileName: requested.profileName});
     }

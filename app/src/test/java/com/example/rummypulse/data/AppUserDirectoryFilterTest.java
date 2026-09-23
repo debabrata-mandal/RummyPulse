@@ -14,6 +14,7 @@ public class AppUserDirectoryFilterTest {
 
     private static AppUser user(String id, boolean hidden) {
         AppUser user = new AppUser(id, "Google", UserRole.REGULAR_USER, id + "@test.com", id);
+        user.setProfileName(id);
         user.setHidden(hidden);
         return user;
     }
@@ -26,6 +27,18 @@ public class AppUserDirectoryFilterTest {
 
         assertEquals(1, filtered.size());
         assertEquals("visible", filtered.get(0).getUserId());
+    }
+
+    @Test
+    public void forPlayerMapping_omitsUsersWithoutProfileNames() {
+        AppUser incomplete = user("incomplete", false);
+        incomplete.setProfileName(null);
+
+        List<AppUser> filtered = AppUserDirectoryFilter.forPlayerMapping(Arrays.asList(
+                user("complete", false), incomplete));
+
+        assertEquals(1, filtered.size());
+        assertEquals("complete", filtered.get(0).getUserId());
     }
 
     @Test
