@@ -46,6 +46,7 @@ import com.example.rummypulse.service.GroqGameNameService;
 import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.ui.playerranking.PlayerRankingFragment;
 import com.example.rummypulse.utils.DisplayNameUtils;
+import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.example.rummypulse.utils.ProfileAvatarBinder;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -84,8 +85,7 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
 
         binding = FragmentDashboardBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
-        binding.textDashboardTitle.setText(buildWelcomeTitle());
-        loadPlayerAvatar();
+        refreshProfileHeader();
 
         setupRecyclerView();
         setupSwipeRefresh();
@@ -115,6 +115,14 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
                 binding.imagePlayerAvatar,
                 photoUrl,
                 com.example.rummypulse.utils.CurrentUserProfileSession.getProfileVersion());
+    }
+
+    private void refreshProfileHeader() {
+        if (binding == null) {
+            return;
+        }
+        binding.textDashboardTitle.setText(buildWelcomeTitle());
+        loadPlayerAvatar();
     }
 
     private void setupPeriodSelector() {
@@ -183,6 +191,9 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     private void observeViewModel() {
+        CurrentUserProfileSession.getChanges().observe(
+                getViewLifecycleOwner(), ignored -> refreshProfileHeader());
+
         binding.textActiveGamesHeader.setText(getString(R.string.dashboard_section_active_games));
         binding.textCompletedGamesHeader.setText(getString(R.string.dashboard_section_completed_games));
 
@@ -676,16 +687,9 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     private String buildWelcomeTitle() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user != null) {
-            String firstName = DisplayNameUtils.firstName(user.getDisplayName());
-            if (!firstName.isEmpty()) {
-                return "Welcome " + firstName;
-            }
-            String email = user.getEmail();
-            if (email != null && email.contains("@")) {
-                return "Welcome " + email.substring(0, email.indexOf('@'));
-            }
+        String firstName = DisplayNameUtils.firstName(CurrentUserProfileSession.getDisplayName());
+        if (!firstName.isEmpty()) {
+            return "Welcome " + firstName;
         }
         return "Welcome Player";
     }

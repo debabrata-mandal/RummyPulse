@@ -7,7 +7,6 @@ public class GameAuth {
     private String pin;
     private Timestamp createdAt;
     private String version;
-    private String creatorName;
     private String creatorUserId;
     /** AI or user-facing game title; stored only on {@code games_v2} documents. May be empty string. */
     private String displayName;
@@ -15,11 +14,8 @@ public class GameAuth {
     private Long pinGeneration;
     /** Firebase Auth UID of the user who currently holds edit access. */
     private String activeEditorUserId;
-    /** Display name of the active editor. */
-    private String activeEditorName;
     /** Most recent editor, retained while edit access is waiting to be claimed. */
     private String lastEditorUserId;
-    private String lastEditorName;
     /** Denormalized dashboard fields (readable from {@code games_v2} without {@code gameData_v2}). */
     private Double dashboardGamePointFactor;
     private Integer dashboardNumPlayers;
@@ -72,14 +68,6 @@ public class GameAuth {
         this.version = version;
     }
 
-    public String getCreatorName() {
-        return creatorName;
-    }
-
-    public void setCreatorName(String creatorName) {
-        this.creatorName = creatorName;
-    }
-
     public String getCreatorUserId() {
         return creatorUserId;
     }
@@ -120,28 +108,12 @@ public class GameAuth {
         this.activeEditorUserId = activeEditorUserId;
     }
 
-    public String getActiveEditorName() {
-        return activeEditorName;
-    }
-
-    public void setActiveEditorName(String activeEditorName) {
-        this.activeEditorName = activeEditorName;
-    }
-
     public String getLastEditorUserId() {
         return lastEditorUserId;
     }
 
     public void setLastEditorUserId(String lastEditorUserId) {
         this.lastEditorUserId = lastEditorUserId;
-    }
-
-    public String getLastEditorName() {
-        return lastEditorName;
-    }
-
-    public void setLastEditorName(String lastEditorName) {
-        this.lastEditorName = lastEditorName;
     }
 
     public String getDisplayEditorUserId() {
@@ -152,16 +124,6 @@ public class GameAuth {
             return lastEditorUserId;
         }
         return creatorUserId;
-    }
-
-    public String getDisplayEditorName() {
-        if (activeEditorName != null && !activeEditorName.trim().isEmpty()) {
-            return activeEditorName;
-        }
-        if (lastEditorName != null && !lastEditorName.trim().isEmpty()) {
-            return lastEditorName;
-        }
-        return creatorName;
     }
 
     public Double getDashboardGamePointFactor() {

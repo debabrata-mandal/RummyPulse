@@ -111,19 +111,13 @@ public class PlayerRankingViewModel extends ViewModel {
         return byUserId;
     }
 
-    /** Full profile name, falling back to the email local part when the profile has no name. */
+    /** Effective public profile name; private email is never used as a label. */
     private static String preferredName(AppUser user) {
         String displayName = user.getDisplayName();
         if (displayName != null && !displayName.trim().isEmpty()) {
             return displayName.trim();
         }
-        String email = user.getEmail();
-        if (email == null || email.trim().isEmpty()) {
-            return null;
-        }
-        String trimmed = email.trim();
-        int at = trimmed.indexOf('@');
-        return at > 0 ? trimmed.substring(0, at) : trimmed;
+        return null;
     }
 
     public LiveData<List<LeaderboardEntry>> getRanking() {
@@ -182,7 +176,7 @@ public class PlayerRankingViewModel extends ViewModel {
 
             for (RankingSort sort : RankingSort.values()) {
                 List<LeaderboardEntry> ranked = Leaderboard.rankAll(
-                        allStats, period, currentUserId, sort);
+                        allStats, period, currentUserId, sort, fullNames.getValue());
                 if (sort == RankingSort.NET_TOTAL) {
                     totalPlayers = ranked.size();
                     for (LeaderboardEntry candidate : ranked) {
@@ -264,7 +258,8 @@ public class PlayerRankingViewModel extends ViewModel {
                 repository.getAllStats().getValue(),
                 selectedPeriod.getValue(),
                 user == null ? null : user.getUid(),
-                selectedSort.getValue());
+                selectedSort.getValue(),
+                fullNames.getValue());
         ranking.setValue(pinCurrentUser(withFullNames(ranked, fullNames.getValue())));
     }
 

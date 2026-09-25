@@ -8,7 +8,6 @@ import java.util.Map;
 public final class GameOperationPayload {
     public String name;
     public String userId;
-    public String userDisplayName;
     public String fromPlayerId;
     public Integer round1Based;
     public Boolean correction;
@@ -22,19 +21,15 @@ public final class GameOperationPayload {
         return payload;
     }
 
-    public static GameOperationPayload mapping(
-            String userId, String userDisplayName, String playerName) {
+    public static GameOperationPayload mapping(String userId, String playerName) {
         GameOperationPayload payload = new GameOperationPayload();
         payload.userId = userId;
-        payload.userDisplayName = userDisplayName;
         payload.name = playerName;
         return payload;
     }
 
-    public static GameOperationPayload transfer(
-            String fromPlayerId, String userId, String userDisplayName, String playerName) {
-        GameOperationPayload payload =
-                mapping(userId, userDisplayName, playerName);
+    public static GameOperationPayload transfer(String fromPlayerId, String userId, String playerName) {
+        GameOperationPayload payload = mapping(userId, playerName);
         payload.fromPlayerId = fromPlayerId;
         return payload;
     }

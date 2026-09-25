@@ -114,6 +114,10 @@ service cloud.firestore {
       ]);
     }
 
+    function hasNoStoredGameIdentityNames(data) {
+      return !data.keys().hasAny(['creatorName', 'activeEditorName', 'lastEditorName']);
+    }
+
     function validGameDataSchema(data) {
       return data.keys().hasAll([
           'schemaVersion', 'gamePointFactor', 'boardAdjustmentPercent',
@@ -131,8 +135,10 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated()
           && request.resource.data.creatorUserId == request.auth.uid
+          && hasNoStoredGameIdentityNames(request.resource.data)
           && hasNoDeprecatedGamePointKeys(request.resource.data);
       allow update: if isAuthenticated()
+          && hasNoStoredGameIdentityNames(request.resource.data)
           && hasNoDeprecatedGamePointKeys(request.resource.data);
       allow delete: if isAuthenticated();
     }
@@ -175,6 +181,9 @@ service cloud.firestore {
         || canManageViewApprovals(resource.data.gameId)
       );
       allow create: if isAuthenticated()
+          && request.resource.data.keys().hasOnly([
+            'gameId', 'userId', 'status', 'requestedAt', 'lastUpdatedAt'
+          ])
           && approvalId == request.resource.data.gameId + '_' + request.resource.data.userId
           && (
             (
@@ -190,8 +199,17 @@ service cloud.firestore {
             )
           );
       allow update: if isAuthenticated()
-          && canManageViewApprovals(resource.data.gameId);
-      allow delete: if isAuthenticated();
+          && canManageViewApprovals(resource.data.gameId)
+          && request.resource.data.keys().hasOnly([
+            'gameId', 'userId', 'status', 'requestedAt', 'lastUpdatedAt'
+          ])
+          && request.resource.data.gameId == resource.data.gameId
+          && request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated()
+          && (
+            resource.data.userId == request.auth.uid
+            || canManageViewApprovals(resource.data.gameId)
+          );
     }
 
     match /approvedGames_v2/{gameId} {
@@ -207,11 +225,28 @@ service cloud.firestore {
 
     match /appUser_v2/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
+      // Profile/identity creation is performed by App Check-protected callable functions.
+      allow create: if false;
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['safePlayPolicyVersion', 'safePlayAcceptedAt']))
+        || (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['role', 'hidden']))
+      );
       // Account deletion must use the App Check-protected callable functions so Firebase Auth
       // and associated account data are cleaned consistently. Admin SDK writes bypass these rules.
       allow delete: if false;
+    }
+
+    match /appUserIdentity_v1/{userId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /profileNameClaims_v1/{nameKey} {
+      allow read, write: if false;
     }
 
     match /gameDefaults_v2/{docId} {
@@ -239,6 +274,9 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow create, update: if isAuthenticated()
           && request.resource.data.schemaVersion == 3
+          && request.resource.data.keys().hasOnly([
+            'schemaVersion', 'userId', 'allTime', 'months', 'weeks', 'updatedAt'
+          ])
           && hasNoDeprecatedGamePointKeys(request.resource.data)
           && hasNoDeprecatedGamePointKeys(request.resource.data.allTime);
       allow delete: if isAuthenticated();

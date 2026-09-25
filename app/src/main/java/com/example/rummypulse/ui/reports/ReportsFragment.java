@@ -1,5 +1,6 @@
 package com.example.rummypulse.ui.reports;
 
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -164,12 +165,14 @@ public class ReportsFragment extends Fragment {
         monthPicker.setMaxValue(Calendar.DECEMBER);
         monthPicker.setDisplayedValues(monthNames);
         monthPicker.setValue(defaultMonth.get(Calendar.MONTH));
+        applyNumberPickerColors(monthPicker);
 
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
         yearPicker.setMinValue(2000);
         yearPicker.setMaxValue(currentYear + 1);
         yearPicker.setWrapSelectorWheel(false);
         yearPicker.setValue(defaultMonth.get(Calendar.YEAR));
+        applyNumberPickerColors(yearPicker);
 
         AlertDialog dialog = new AlertDialog.Builder(
                 requireContext(), R.style.DarkDialogTheme)
@@ -193,6 +196,19 @@ public class ReportsFragment extends Fragment {
             int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
             dialog.getWindow().setLayout(
                     width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void applyNumberPickerColors(NumberPicker picker) {
+        int textColor = androidx.core.content.ContextCompat.getColor(requireContext(), R.color.text_primary);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            picker.setTextColor(textColor);
+        }
+        for (int index = 0; index < picker.getChildCount(); index++) {
+            View child = picker.getChildAt(index);
+            if (child instanceof TextView) {
+                ((TextView) child).setTextColor(textColor);
+            }
         }
     }
 

@@ -67,6 +67,14 @@ final class GameOperationRemoteApplier {
             }
             GameOperationPayload payload =
                     GSON.fromJson(operation.payloadJson, GameOperationPayload.class);
+            String mappedUserId = mappedUserId(operation.operationType(), payload);
+            boolean mappedUserCanSignIn = true;
+            if (!TextUtils.isEmpty(mappedUserId)) {
+                DocumentSnapshot profileSnapshot = transaction.get(
+                        db.collection(FirestoreCollections.APP_USER).document(mappedUserId));
+                applyCanonicalProfile(operation.operationType(), payload, profileSnapshot);
+                mappedUserCanSignIn = !isManagedProfile(profileSnapshot);
+            }
             Player targetBefore = operation.playerId == null
                     ? null
                     : GameDataSchema.findPlayer(latest, operation.playerId);
@@ -98,7 +106,8 @@ final class GameOperationRemoteApplier {
                     operation,
                     payload,
                     previousTargetUserId,
-                    deletedBefore);
+                    deletedBefore,
+                    mappedUserCanSignIn);
             if (affectsDashboard(operation.operationType())) {
                 transaction.update(gameRef, buildDashboardSummary(patched, auth));
             }
@@ -120,6 +129,42 @@ final class GameOperationRemoteApplier {
                 && type != GameOperationType.DELETE_PLAYER) {
             ScoreRegressionGuard.requireMetadataPreservesScores(latest, patched);
         }
+    }
+
+    private static String mappedUserId(
+            GameOperationType type, GameOperationPayload payload) {
+        if (payload == null) return null;
+        if (type == GameOperationType.MAP_USER) return payload.userId;
+        if (type == GameOperationType.ADD_PLAYER && payload.player != null) {
+            return payload.player.getUserId();
+        }
+        return null;
+    }
+
+    private static void applyCanonicalProfile(
+            GameOperationType type,
+            GameOperationPayload payload,
+            DocumentSnapshot profileSnapshot) {
+        String profileName = profileSnapshot == null
+                ? null : profileSnapshot.getString("profileName");
+        Boolean hidden = profileSnapshot == null
+                ? null : profileSnapshot.getBoolean("hidden");
+        if (profileSnapshot == null || !profileSnapshot.exists()
+                || TextUtils.isEmpty(profileName) || Boolean.TRUE.equals(hidden)) {
+            throw new IllegalStateException(
+                    "Select an available player profile before saving.");
+        }
+        if (type == GameOperationType.MAP_USER) {
+            payload.name = profileName;
+        } else if (type == GameOperationType.ADD_PLAYER && payload.player != null) {
+            payload.player.setName(profileName);
+        }
+    }
+
+    private static boolean isManagedProfile(DocumentSnapshot profileSnapshot) {
+        String profileType = profileSnapshot.getString("profileType");
+        String provider = profileSnapshot.getString("provider");
+        return "managed".equalsIgnoreCase(profileType) || "managed".equalsIgnoreCase(provider);
     }
 
     private static void writeScoreHistory(Transaction transaction, FirebaseFirestore db,
@@ -173,21 +218,23 @@ final class GameOperationRemoteApplier {
             PendingGameOperation operation,
             GameOperationPayload payload,
             String previousTargetUserId,
-            Player deletedBefore) {
+            Player deletedBefore,
+            boolean mappedUserCanSignIn) {
         GameOperationType type = operation.operationType();
-        if (type == GameOperationType.MAP_USER) {
+        if (type == GameOperationType.ADD_PLAYER
+                && payload != null
+                && payload.player != null
+                && !TextUtils.isEmpty(payload.player.getUserId())) {
+            updateApprovalForMappedUser(transaction, db, gameRef, operation.gameId,
+                    payload.player.getUserId(), mappedUserCanSignIn);
+        } else if (type == GameOperationType.MAP_USER) {
             if (!TextUtils.isEmpty(previousTargetUserId)
                     && !previousTargetUserId.equals(payload.userId)) {
                 revokeApproval(
                         transaction, db, gameRef, operation.gameId, previousTargetUserId);
             }
-            approve(
-                    transaction,
-                    db,
-                    gameRef,
-                    operation.gameId,
-                    payload.userId,
-                    payload.userDisplayName);
+            updateApprovalForMappedUser(transaction, db, gameRef, operation.gameId,
+                    payload.userId, mappedUserCanSignIn);
         } else if (type == GameOperationType.UNMAP_USER
                 && !TextUtils.isEmpty(previousTargetUserId)) {
             revokeApproval(
@@ -204,8 +251,16 @@ final class GameOperationRemoteApplier {
                     db,
                     gameRef,
                     operation.gameId,
-                    payload.userId,
-                    payload.userDisplayName);
+                    payload.userId);
+        }
+    }
+
+    private static void updateApprovalForMappedUser(Transaction transaction, FirebaseFirestore db,
+            DocumentReference gameRef, String gameId, String userId, boolean canSignIn) {
+        if (canSignIn) {
+            approve(transaction, db, gameRef, gameId, userId);
+        } else {
+            revokeApproval(transaction, db, gameRef, gameId, userId);
         }
     }
 
@@ -214,26 +269,22 @@ final class GameOperationRemoteApplier {
             FirebaseFirestore db,
             DocumentReference gameRef,
             String gameId,
-            String userId,
-            String displayName) {
+            String userId) {
         if (TextUtils.isEmpty(userId)) {
             throw new IllegalArgumentException("Mapped user is required.");
         }
         DocumentReference approvalRef =
                 db.collection(FirestoreCollections.GAME_VIEW_APPROVALS)
                         .document(GameViewApprovalRepository.documentId(gameId, userId));
-        String safeDisplay = TextUtils.isEmpty(displayName) ? userId : displayName;
         Map<String, Object> approval = new HashMap<>();
         approval.put("gameId", gameId);
         approval.put("userId", userId);
-        approval.put("userDisplayName", safeDisplay);
         approval.put("status", "approved");
         approval.put("requestedAt", FieldValue.serverTimestamp());
         approval.put("lastUpdatedAt", FieldValue.serverTimestamp());
         transaction.set(approvalRef, approval);
 
         Map<String, Object> mirrored = new HashMap<>();
-        mirrored.put("userDisplayName", safeDisplay);
         mirrored.put("status", "approved");
         mirrored.put("requestedAt", FieldValue.serverTimestamp());
         mirrored.put("lastUpdatedAt", FieldValue.serverTimestamp());

@@ -5,7 +5,6 @@ import com.google.firebase.Timestamp;
 public class GameViewApproval {
     private String gameId;
     private String userId;
-    private String userDisplayName;
     private Timestamp requestedAt;
     private Timestamp lastUpdatedAt;
     private String status;
@@ -28,14 +27,6 @@ public class GameViewApproval {
 
     public void setUserId(String userId) {
         this.userId = userId;
-    }
-
-    public String getUserDisplayName() {
-        return userDisplayName;
-    }
-
-    public void setUserDisplayName(String userDisplayName) {
-        this.userDisplayName = userDisplayName;
     }
 
     public Timestamp getRequestedAt() {

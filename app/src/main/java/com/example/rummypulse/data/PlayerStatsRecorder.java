@@ -31,14 +31,11 @@ public final class PlayerStatsRecorder {
         public final PlayerStats.Bucket bucket;
         public final String monthKey;
         public final String weekKey;
-        public final String displayName;
 
-        PeriodDelta(PlayerStats.Bucket bucket, String monthKey, String weekKey,
-                String displayName) {
+        PeriodDelta(PlayerStats.Bucket bucket, String monthKey, String weekKey) {
             this.bucket = bucket;
             this.monthKey = monthKey;
             this.weekKey = weekKey;
-            this.displayName = displayName;
         }
     }
 
@@ -76,11 +73,12 @@ public final class PlayerStatsRecorder {
         for (int index = 0; index < players.size(); index++) {
             Player player = players.get(index);
             if (player == null || isNullOrEmpty(player.getUserId())) {
-                continue;
+                throw new IllegalStateException(
+                        "Every approved player must be linked to an app profile.");
             }
             if (deltas.containsKey(player.getUserId())) {
-                // Defensive: a user should only ever hold one player row in a game.
-                continue;
+                throw new IllegalStateException(
+                        "A profile cannot be linked to multiple players in one game.");
             }
             GamePointsCalculator.PlayerGamePoints result =
                     gamePoints.getPlayerResults().get(index);
@@ -92,8 +90,7 @@ public final class PlayerStatsRecorder {
                             result.getBaseGamePoints(),
                             result.getBoardAdjustmentPoints()),
                     monthKey,
-                    weekKey,
-                    player.getName()));
+                    weekKey));
         }
         return deltas;
     }
@@ -118,8 +115,6 @@ public final class PlayerStatsRecorder {
         PlayerStats.Bucket allTime = stats.allTimeOrEmpty();
         Map<String, PlayerStats.Bucket> months = copyBuckets(stats.getMonths());
         Map<String, PlayerStats.Bucket> weeks = copyBuckets(stats.getWeeks());
-        String displayName = stats.getDisplayName();
-
         if (deltas != null) {
             for (PeriodDelta delta : deltas) {
                 if (delta == null) {
@@ -128,18 +123,12 @@ public final class PlayerStatsRecorder {
                 allTime = add(allTime, delta.bucket);
                 mergeInto(months, delta.monthKey, delta.bucket);
                 mergeInto(weeks, delta.weekKey, delta.bucket);
-                if (!isNullOrEmpty(delta.displayName)) {
-                    displayName = delta.displayName;
-                }
             }
         }
 
         Map<String, Object> document = new HashMap<>();
         document.put("schemaVersion", GameDataSchema.CURRENT_VERSION);
         document.put("userId", userId);
-        if (!isNullOrEmpty(displayName)) {
-            document.put("displayName", displayName);
-        }
         document.put("allTime", allTime.toFirestoreMap());
         document.put("months", prune(months, PlayerStats.MONTH_RETENTION));
         document.put("weeks", prune(weeks, PlayerStats.WEEK_RETENTION));

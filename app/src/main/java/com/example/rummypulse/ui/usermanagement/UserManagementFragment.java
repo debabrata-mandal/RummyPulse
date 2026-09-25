@@ -20,6 +20,7 @@ import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.UserRole;
 import com.example.rummypulse.databinding.FragmentUserManagementBinding;
 import com.example.rummypulse.utils.ProfileAvatarLoader;
+import com.example.rummypulse.utils.ProfileNameValidator;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -41,6 +42,8 @@ public class UserManagementFragment extends Fragment {
     private UserManagementAdapter adapter;
     private LinearLayoutManager layoutManager;
     private Boolean pendingHiddenToast;
+    private androidx.appcompat.app.AlertDialog activeManagedProfileDialog;
+    private MaterialButton activeManagedProfileSaveButton;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -51,6 +54,7 @@ public class UserManagementFragment extends Fragment {
 
         setupRecyclerView();
         setupSearch();
+        binding.btnAddManagedPlayer.setOnClickListener(v -> showManagedProfileDialog(null));
         setupSwipeRefresh();
         observeViewModel();
         
@@ -114,12 +118,11 @@ public class UserManagementFragment extends Fragment {
         });
 
         userManagementViewModel.getLoading().observe(getViewLifecycleOwner(), isLoading -> {
-            binding.swipeRefreshLayout.setRefreshing(isLoading);
-            if (isLoading) {
-                binding.progressBar.setVisibility(View.VISIBLE);
-            } else {
-                binding.progressBar.setVisibility(View.GONE);
-            }
+            boolean loading = Boolean.TRUE.equals(isLoading);
+            boolean pullToRefresh = binding.swipeRefreshLayout.isRefreshing();
+            binding.progressBar.setVisibility(
+                    loading && !pullToRefresh ? View.VISIBLE : View.GONE);
+            if (!loading) binding.swipeRefreshLayout.setRefreshing(false);
         });
 
         userManagementViewModel.getLoadingMore().observe(getViewLifecycleOwner(), isLoading -> {
@@ -129,7 +132,12 @@ public class UserManagementFragment extends Fragment {
 
         userManagementViewModel.getError().observe(getViewLifecycleOwner(), error -> {
             if (error != null && !error.isEmpty()) {
-                Log.e(TAG, "User management operation failed");
+                Log.e(TAG, "User management operation failed: " + error);
+                if (activeManagedProfileSaveButton != null) {
+                    activeManagedProfileSaveButton.setEnabled(true);
+                    activeManagedProfileSaveButton.setText(
+                            R.string.user_management_save_managed);
+                }
                 if (adapter.getItemCount() == 0) {
                     showError(error);
                 }
@@ -166,6 +174,18 @@ public class UserManagementFragment extends Fragment {
                 pendingHiddenToast = null;
             }
         });
+
+        userManagementViewModel.getManagedProfileSaved().observe(
+                getViewLifecycleOwner(), saved -> {
+                    if (Boolean.TRUE.equals(saved)) {
+                        if (activeManagedProfileDialog != null
+                                && activeManagedProfileDialog.isShowing()) {
+                            activeManagedProfileDialog.dismiss();
+                        }
+                        com.example.rummypulse.utils.ModernToast.success(
+                                getContext(), getString(R.string.user_management_managed_saved));
+                    }
+                });
     }
 
     private void onUserClicked(AppUser user) {
@@ -190,6 +210,8 @@ public class UserManagementFragment extends Fragment {
                 dialogView.findViewById(R.id.text_user_actions_self_note);
         MaterialButton changeRole =
                 dialogView.findViewById(R.id.btn_user_action_change_role);
+        MaterialButton editProfile =
+                dialogView.findViewById(R.id.btn_user_action_edit_profile);
         MaterialButton hideUser =
                 dialogView.findViewById(R.id.btn_user_action_hide);
         MaterialButton deleteUser =
@@ -206,8 +228,24 @@ public class UserManagementFragment extends Fragment {
             profile.setImageResource(R.drawable.ic_person);
         }
 
-        name.setText(user.getDisplayName() != null ? user.getDisplayName() : "No Name");
-        email.setText(user.getEmail() != null ? user.getEmail() : "No Email");
+        String profileName = user.getProfileName() != null
+                ? user.getProfileName() : user.getDisplayName();
+        if (profileName == null || profileName.trim().isEmpty()) {
+            profileName = getString(R.string.unknown_user);
+        }
+        String actualName = user.getActualName() == null
+                ? profileName : user.getActualName().trim();
+        if (actualName.isEmpty()) actualName = profileName;
+        name.setText(actualName + "\n" + getString(
+                R.string.user_management_profile_name, profileName));
+        String emailAddress = user.getEmail() == null ? "" : user.getEmail().trim();
+        String phoneNumber = user.getPhoneNumber() == null
+                ? "" : user.getPhoneNumber().trim();
+        String contact = emailAddress.isEmpty()
+                ? phoneNumber
+                : phoneNumber.isEmpty() ? emailAddress : emailAddress + " · " + phoneNumber;
+        email.setVisibility(contact.isEmpty() ? View.GONE : View.VISIBLE);
+        email.setText(contact);
         String provider = user.getProvider() != null ? user.getProvider() : "Unknown";
         String lastLogin;
         if (user.getLastLoginAt() != null) {
@@ -239,26 +277,30 @@ public class UserManagementFragment extends Fragment {
             changeRole.setTextColor(requireContext().getColor(R.color.text_secondary));
             hideUser.setVisibility(View.GONE);
             deleteUser.setVisibility(View.GONE);
+            editProfile.setVisibility(View.GONE);
         } else {
             selfNote.setVisibility(View.GONE);
             boolean admin = user.getRole() == UserRole.ADMIN_USER;
-            changeRole.setText(admin
-                    ? getString(R.string.user_management_action_demote)
-                    : getString(R.string.user_management_action_promote));
-            changeRole.setEnabled(true);
-            if (admin) {
-                changeRole.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                        requireContext().getColor(R.color.demote_button_color)));
+            if (user.isManagedProfile()) {
+                changeRole.setVisibility(View.GONE);
             } else {
+                changeRole.setVisibility(View.VISIBLE);
+                changeRole.setText(admin
+                        ? getString(R.string.user_management_action_demote)
+                        : getString(R.string.user_management_action_promote));
+                changeRole.setEnabled(true);
                 changeRole.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                        requireContext().getColor(R.color.promote_button_color)));
+                        requireContext().getColor(admin
+                                ? R.color.demote_button_color
+                                : R.color.promote_button_color)));
+                changeRole.setTextColor(requireContext().getColor(R.color.text_white));
             }
-            changeRole.setTextColor(requireContext().getColor(R.color.text_white));
             hideUser.setVisibility(View.VISIBLE);
             hideUser.setText(user.isHidden()
                     ? getString(R.string.user_management_unhide_user)
                     : getString(R.string.user_management_hide_user));
             deleteUser.setVisibility(View.VISIBLE);
+            editProfile.setVisibility(user.isManagedProfile() ? View.VISIBLE : View.GONE);
         }
 
         androidx.appcompat.app.AlertDialog dialog =
@@ -273,6 +315,10 @@ public class UserManagementFragment extends Fragment {
             dialog.dismiss();
             onRoleChangeClicked(user);
         });
+        editProfile.setOnClickListener(v -> {
+            dialog.dismiss();
+            showManagedProfileDialog(user);
+        });
         hideUser.setOnClickListener(v -> {
             dialog.dismiss();
             onHideClicked(user);
@@ -282,6 +328,94 @@ public class UserManagementFragment extends Fragment {
             onDeleteClicked(user);
         });
 
+        dialog.show();
+        styleDialogWindow(dialog);
+    }
+
+    private void showManagedProfileDialog(AppUser existing) {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(
+                R.layout.dialog_managed_profile, null, false);
+        android.widget.TextView title =
+                dialogView.findViewById(R.id.text_managed_profile_title);
+        com.google.android.material.textfield.TextInputLayout actualLayout =
+                dialogView.findViewById(R.id.layout_managed_actual_name);
+        com.google.android.material.textfield.TextInputLayout profileLayout =
+                dialogView.findViewById(R.id.layout_managed_profile_name);
+        com.google.android.material.textfield.TextInputLayout emailLayout =
+                dialogView.findViewById(R.id.layout_managed_email);
+        com.google.android.material.textfield.TextInputLayout phoneLayout =
+                dialogView.findViewById(R.id.layout_managed_phone);
+        com.google.android.material.textfield.TextInputEditText actualInput =
+                dialogView.findViewById(R.id.input_managed_actual_name);
+        com.google.android.material.textfield.TextInputEditText profileInput =
+                dialogView.findViewById(R.id.input_managed_profile_name);
+        com.google.android.material.textfield.TextInputEditText emailInput =
+                dialogView.findViewById(R.id.input_managed_email);
+        com.google.android.material.textfield.TextInputEditText phoneInput =
+                dialogView.findViewById(R.id.input_managed_phone);
+        MaterialButton cancel = dialogView.findViewById(R.id.btn_managed_profile_cancel);
+        MaterialButton save = dialogView.findViewById(R.id.btn_managed_profile_save);
+        title.setText(existing == null
+                ? R.string.user_management_create_managed_title
+                : R.string.user_management_edit_managed_title);
+        if (existing != null) {
+            actualInput.setText(existing.getActualName());
+            profileInput.setText(existing.getProfileName());
+            emailInput.setText(existing.getEmail());
+            phoneInput.setText(existing.getPhoneNumber());
+        }
+        androidx.appcompat.app.AlertDialog dialog =
+                new androidx.appcompat.app.AlertDialog.Builder(
+                        requireContext(), R.style.DarkDialogTheme)
+                        .setView(dialogView)
+                        .setCancelable(true)
+                        .create();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        save.setOnClickListener(v -> {
+            String actualName = actualInput.getText() == null
+                    ? "" : actualInput.getText().toString().trim();
+            String profileName = profileInput.getText() == null
+                    ? "" : profileInput.getText().toString().trim();
+            String email = emailInput.getText() == null
+                    ? "" : emailInput.getText().toString().trim();
+            String phoneNumber = phoneInput.getText() == null
+                    ? "" : phoneInput.getText().toString().trim();
+            actualLayout.setError(null);
+            profileLayout.setError(null);
+            emailLayout.setError(null);
+            phoneLayout.setError(null);
+            if (actualName.isEmpty()) {
+                actualLayout.setError(getString(R.string.user_management_actual_name));
+                return;
+            }
+            if (!ProfileNameValidator.isValid(profileName)) {
+                profileLayout.setError(getString(R.string.user_management_profile_name_help));
+                return;
+            }
+            if (!email.isEmpty()
+                    && !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                emailLayout.setError(getString(R.string.user_management_invalid_email));
+                return;
+            }
+            String phoneDigits = phoneNumber.replaceAll("\\D", "");
+            if (!phoneNumber.isEmpty()
+                    && (phoneDigits.length() < 7 || phoneDigits.length() > 15)) {
+                phoneLayout.setError(getString(R.string.user_management_invalid_phone));
+                return;
+            }
+            save.setEnabled(false);
+            save.setText(R.string.profile_name_saving);
+            userManagementViewModel.saveManagedProfile(
+                    existing, actualName, profileName, email, phoneNumber);
+        });
+        dialog.setOnDismissListener(ignored -> {
+            if (activeManagedProfileDialog == dialog) {
+                activeManagedProfileDialog = null;
+                activeManagedProfileSaveButton = null;
+            }
+        });
+        activeManagedProfileDialog = dialog;
+        activeManagedProfileSaveButton = save;
         dialog.show();
         styleDialogWindow(dialog);
     }
@@ -494,6 +628,8 @@ public class UserManagementFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        if (activeManagedProfileDialog != null) activeManagedProfileDialog.dismiss();
+        activeManagedProfileDialog = null;
         binding = null;
     }
 }

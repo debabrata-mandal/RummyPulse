@@ -16,6 +16,7 @@ import java.util.Set;
  */
 public final class GameOperationProjector {
     private static final Gson GSON = new Gson();
+    private static final String UNKNOWN_PLAYER_NAME = "Unknown";
 
     private GameOperationProjector() {
     }
@@ -51,20 +52,14 @@ public final class GameOperationProjector {
                 applyMapping(result, playerId, safePayload, false);
                 break;
             case UNMAP_USER:
-                requirePlayer(result, playerId).setUserId(null);
+                applyUnmapping(result, playerId);
                 break;
             case TRANSFER_MAPPING:
-                applyTransfer(result, playerId, safePayload);
-                break;
+            case RENAME_PLAYER:
+                throw new IllegalArgumentException(
+                        "Players must remain linked to an app profile.");
             case SET_PLAYER_ORDER:
                 applyOrder(result, safePayload.playerOrder);
-                break;
-            case RENAME_PLAYER:
-                String name = clean(safePayload.name);
-                if (name == null) {
-                    throw new IllegalArgumentException("Player name is required.");
-                }
-                requirePlayer(result, playerId).setName(name);
                 break;
             case ADD_PLAYER:
                 applyAdd(result, safePayload.player);
@@ -98,6 +93,7 @@ public final class GameOperationProjector {
     }
 
     private static void applyScores(GameData data, GameOperationPayload payload) {
+        requireCompleteMappings(data);
         if (payload.round1Based == null
                 || payload.round1Based < 1
                 || payload.round1Based > 10
@@ -122,6 +118,21 @@ public final class GameOperationProjector {
         }
     }
 
+    private static void requireCompleteMappings(GameData data) {
+        if (data.getPlayers() == null || data.getPlayers().size() < 2) {
+            throw new IllegalStateException(
+                    "Add at least two mapped players before entering scores.");
+        }
+        Set<String> userIds = new HashSet<>();
+        for (Player player : data.getPlayers()) {
+            String userId = player == null ? null : clean(player.getUserId());
+            if (userId == null || !userIds.add(userId)) {
+                throw new IllegalStateException(
+                        "Every player must have a unique app profile before entering scores.");
+            }
+        }
+    }
+
     private static void applyMapping(
             GameData data,
             String playerId,
@@ -139,6 +150,12 @@ public final class GameOperationProjector {
         Player target = requirePlayer(data, playerId);
         target.setUserId(userId);
         target.setName(name);
+    }
+
+    private static void applyUnmapping(GameData data, String playerId) {
+        Player target = requirePlayer(data, playerId);
+        target.setUserId(null);
+        target.setName(UNKNOWN_PLAYER_NAME);
     }
 
     private static void applyTransfer(
@@ -187,6 +204,20 @@ public final class GameOperationProjector {
             throw new IllegalArgumentException("Player is required.");
         }
         Player added = GameDataCopies.copyPlayer(player);
+        String userId = clean(added.getUserId());
+        String name = clean(added.getName());
+        if (userId == null) {
+            if (hasAnyEnteredScore(data)) {
+                throw new IllegalStateException(
+                        "Map the new player before adding them to a game with scores.");
+            }
+            added.setName(UNKNOWN_PLAYER_NAME);
+        } else if (name == null) {
+            throw new IllegalArgumentException(
+                    "Select a player profile before adding the player.");
+        } else if (findPlayerIdMappedTo(data, userId, null) != null) {
+            throw new IllegalStateException("That profile is already mapped in this game.");
+        }
         if (clean(added.getPlayerId()) == null) {
             added.setPlayerId(java.util.UUID.randomUUID().toString());
         }
@@ -196,6 +227,17 @@ public final class GameOperationProjector {
         List<Player> players = new ArrayList<>(data.getPlayers());
         players.add(added);
         data.setPlayers(players);
+    }
+
+    private static boolean hasAnyEnteredScore(GameData data) {
+        if (data.getPlayers() == null) return false;
+        for (Player player : data.getPlayers()) {
+            if (player == null || player.getScores() == null) continue;
+            for (Integer score : player.getScores()) {
+                if (score != null && score >= 0) return true;
+            }
+        }
+        return false;
     }
 
     private static void applyDelete(GameData data, String playerId) {

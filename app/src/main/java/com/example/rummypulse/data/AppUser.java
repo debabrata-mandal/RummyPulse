@@ -10,9 +10,15 @@ import java.util.Date;
 public class AppUser {
     private String userId;
     private String provider;
+    private String profileType;
     private UserRole role;
     private String email;
     private String displayName;
+    private String profileName;
+    private boolean profileNameNeedsConfirmation;
+    private String googleDisplayName;
+    private String actualName;
+    private String phoneNumber;
     private String photoUrl;
     /** Bumped when profile fields change so other clients can refresh cached avatars/names. */
     private long profileVersion;
@@ -63,6 +69,19 @@ public class AppUser {
         this.provider = provider;
     }
 
+    public String getProfileType() {
+        return profileType;
+    }
+
+    public void setProfileType(String profileType) {
+        this.profileType = profileType;
+    }
+
+    public boolean isManagedProfile() {
+        return "managed".equalsIgnoreCase(profileType)
+                || "managed".equalsIgnoreCase(provider);
+    }
+
     public UserRole getRole() {
         return role;
     }
@@ -85,6 +104,46 @@ public class AppUser {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+    }
+
+    public String getProfileName() {
+        return profileName;
+    }
+
+    public void setProfileName(String profileName) {
+        this.profileName = profileName;
+    }
+
+    public boolean isProfileNameNeedsConfirmation() {
+        return profileNameNeedsConfirmation;
+    }
+
+    public void setProfileNameNeedsConfirmation(boolean profileNameNeedsConfirmation) {
+        this.profileNameNeedsConfirmation = profileNameNeedsConfirmation;
+    }
+
+    public String getGoogleDisplayName() {
+        return googleDisplayName;
+    }
+
+    public void setGoogleDisplayName(String googleDisplayName) {
+        this.googleDisplayName = googleDisplayName;
+    }
+
+    public String getActualName() {
+        return actualName != null ? actualName : googleDisplayName;
+    }
+
+    public void setActualName(String actualName) {
+        this.actualName = actualName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
     public String getPhotoUrl() {
@@ -149,7 +208,6 @@ public class AppUser {
                 "userId='" + userId + '\'' +
                 ", provider='" + provider + '\'' +
                 ", role=" + role +
-                ", email='" + email + '\'' +
                 ", displayName='" + displayName + '\'' +
                 ", photoUrl='" + photoUrl + '\'' +
                 ", createdAt=" + createdAt +

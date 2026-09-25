@@ -67,7 +67,7 @@
                     android:textColor="@color/text_primary"
                     android:textSize="15sp"
                     android:textStyle="bold"
-                    tools:text="Debabrata Mandal" />
+                    tools:text="Bob Smith" />
 
                 <TextView
                     android:id="@+id/text_summary_games_subtitle"

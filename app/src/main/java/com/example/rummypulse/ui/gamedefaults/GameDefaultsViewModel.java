@@ -98,7 +98,6 @@ public class GameDefaultsViewModel extends AndroidViewModel {
         if (!isAdmin) {
             return;
         }
-        repository.setShowLiveGamePointsCached(enabled);
         repository.saveShowLiveGamePoints(enabled)
                 .addOnFailureListener(e -> error.postValue(
                         e.getMessage() != null ? e.getMessage() : "Failed to save display setting"));
@@ -127,7 +126,6 @@ public class GameDefaultsViewModel extends AndroidViewModel {
     }
 
     public void saveShowDashboardApprovalCounts(boolean enabled) {
-        repository.setShowDashboardApprovalCountsCached(enabled);
         repository.saveShowDashboardApprovalCounts(enabled)
                 .addOnFailureListener(e -> error.postValue(
                         e.getMessage() != null ? e.getMessage() : "Failed to save dashboard count setting"));

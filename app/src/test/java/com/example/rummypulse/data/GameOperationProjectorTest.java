@@ -1,7 +1,7 @@
 package com.example.rummypulse.data;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import com.example.rummypulse.data.sync.GameOperationPayload;
@@ -48,7 +48,7 @@ public class GameOperationProjectorTest {
                     game,
                     GameOperationType.MAP_USER,
                     "p2",
-                    GameOperationPayload.mapping("u1", "Debu", "Debu"));
+                    GameOperationPayload.mapping("u1", "Debu"));
             fail("Expected duplicate mapping rejection");
         } catch (IllegalStateException expected) {
             assertEquals(
@@ -58,21 +58,25 @@ public class GameOperationProjectorTest {
     }
 
     @Test
-    public void transfer_movesMappingAtomicallyWithoutChangingScores() {
-        GameData transferred = GameOperationProjector.apply(
+    public void transferThatWouldUnmapAnotherPlayerIsRejected() {
+        assertThrows(IllegalArgumentException.class, () -> GameOperationProjector.apply(
                 game(),
                 GameOperationType.TRANSFER_MAPPING,
                 "p2",
-                GameOperationPayload.transfer("p1", "u1", "Debu", "Debu"));
+                GameOperationPayload.transfer("p1", "u1", "Debu")));
+    }
 
-        assertNull(GameDataSchema.findPlayer(transferred, "p1").getUserId());
-        assertEquals("u1", GameDataSchema.findPlayer(transferred, "p2").getUserId());
-        assertEquals(
-                Integer.valueOf(10),
-                GameDataSchema.findPlayer(transferred, "p1").getScores().get(0));
-        assertEquals(
-                Integer.valueOf(20),
-                GameDataSchema.findPlayer(transferred, "p2").getScores().get(0));
+    @Test
+    public void unmap_clearsUserAndUsesUnknownPlayerName() {
+        GameData unmapped = GameOperationProjector.apply(
+                game(),
+                GameOperationType.UNMAP_USER,
+                "p1",
+                new GameOperationPayload());
+
+        Player player = GameDataSchema.findPlayer(unmapped, "p1");
+        assertEquals(null, player.getUserId());
+        assertEquals("Unknown", player.getName());
     }
 
     @Test
@@ -97,6 +101,50 @@ public class GameOperationProjectorTest {
         assertEquals(
                 Integer.valueOf(20),
                 GameDataSchema.findPlayer(scored, "p2").getScores().get(0));
+    }
+
+    @Test
+    public void unmappedPlayer_canBeAddedBeforeAnyScoreExists() {
+        GameData game = game();
+        for (Player player : game.getPlayers()) {
+            player.setScores(new ArrayList<>(Arrays.asList(-1, -1)));
+        }
+        Player added = player("p3", "Temporary", null, -1);
+
+        GameData updated = GameOperationProjector.apply(
+                game,
+                GameOperationType.ADD_PLAYER,
+                "p3",
+                GameOperationPayload.player(added));
+
+        Player stored = GameDataSchema.findPlayer(updated, "p3");
+        assertEquals("Unknown", stored.getName());
+        assertEquals(null, stored.getUserId());
+    }
+
+    @Test
+    public void unmappedPlayer_cannotBeAddedAfterScoreEntryStarts() {
+        Player added = player("p3", "Temporary", null, -1);
+
+        assertThrows(IllegalStateException.class, () -> GameOperationProjector.apply(
+                game(),
+                GameOperationType.ADD_PLAYER,
+                "p3",
+                GameOperationPayload.player(added)));
+    }
+
+    @Test
+    public void scoreEntry_rejectsAnyUnmappedPlayer() {
+        GameData game = game();
+        game.getPlayers().get(1).setUserId(null);
+        Map<String, Integer> scores = new LinkedHashMap<>();
+        scores.put("p1", 42);
+
+        assertThrows(IllegalStateException.class, () -> GameOperationProjector.apply(
+                game,
+                GameOperationType.UPDATE_SCORE,
+                null,
+                GameOperationPayload.scores(1, scores)));
     }
 
     private static GameData game() {

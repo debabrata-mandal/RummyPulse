@@ -143,6 +143,7 @@
     <string name="login_status_retry_queued">Retry ready. Waiting for the current sign-in attempt to finish…</string>
     <string name="login_status_retrying">Retrying sign-in…</string>
     <string name="login_status_failed">Sign-in failed. Please try again.</string>
+    <string name="login_status_timeout">Sign-in timed out. Please retry.</string>
     <string name="login_retry">Retry</string>
 
     <string name="update_progress_title">Updating RummyPulse</string>
@@ -260,11 +261,7 @@
     <string name="edit_player_sort_game_points_order">Game Point order</string>
     <string name="correct_past_round_none">No past rounds to correct yet.</string>
 
-    <!-- Add player confirmation when scores already exist -->
-    <string name="add_player_confirm_title">Add another player?</string>
-    <string name="add_player_confirm_message">This game already has recorded scores. The new player will receive an automatic catch-up score for completed rounds.</string>
-    <string name="add_player_confirm_preserved">Existing players and their scores will remain unchanged.</string>
-    <string name="add_player_confirm_add">Add player</string>
+    <string name="add_player_catch_up_warning">This game already has recorded scores. The selected player will receive an automatic catch-up score for completed rounds.</string>
     <string name="delete_player_dialog_title">Delete player?</string>
     <string name="delete_player_dialog_message">Remove %1$s from this game?</string>
     <string name="delete_player_dialog_warning_title">This cannot be undone</string>
@@ -391,7 +388,7 @@
     <string name="view_request_requested_at">Requested %1$s</string>
     <string name="map_player_title">Map player to user</string>
     <string name="map_player_subtitle">Choose the app user who is playing as %1$s.</string>
-    <string name="map_player_search_hint">Search by name or email</string>
+    <string name="map_player_search_hint">Search by game profile name</string>
     <string name="map_player_users_section">App users</string>
     <string name="map_player_users_hint">Tap a user to link them to this player.</string>
     <string name="map_player_no_users">No matching users found.</string>
@@ -405,10 +402,8 @@
     <string name="map_player_unlinking_background">Removing %1$s’s link and view access in the background…</string>
     <string name="map_player_load_failed">Could not load the player list. Check your connection and try again.</string>
     <string name="map_player_currently_linked">Currently linked</string>
-    <string name="map_player_email_linked">%1$s • Currently linked</string>
     <string name="map_player_selected">Selected user</string>
     <string name="map_player_current_mapping">Currently linked to %1$s</string>
-    <string name="map_player_current_mapping_with_email">Currently linked to %1$s\n%2$s</string>
     <string name="map_player_linked_user_unavailable">This player is linked, but that user is not available in the current list.</string>
     <string name="map_player_transfer_title">Transfer mapping?</string>
     <string name="map_player_transfer_subtitle">Move this app user to the selected player.</string>
@@ -544,6 +539,18 @@
     <string name="game_points_overview_title">Game Point Overview</string>
     <string name="game_points_winners_description">Positive results contribute the configured percentage to Board Points</string>
     <string name="sign_out">Sign Out</string>
+    <string name="menu_profile">Game profile</string>
+    <string name="profile_name_title">Choose your game profile name</string>
+    <string name="profile_name_message">This name replaces your Google name throughout RummyPulse. Your email is never shown to other players.</string>
+    <string name="profile_name_hint">Profile name</string>
+    <string name="profile_name_helper">3–24 letters, numbers, spaces, underscores, or a period. Names are unique.</string>
+    <string name="profile_name_skip">Not now</string>
+    <string name="profile_name_clear">Use Google name</string>
+    <string name="profile_name_save">Save name</string>
+    <string name="profile_name_saving">Saving…</string>
+    <string name="profile_name_saved">Game profile name updated</string>
+    <string name="profile_name_invalid">Use 3–24 letters, numbers, spaces, underscores, or a period.</string>
+    <string name="nav_profile_subtitle">Game profile</string>
     <string name="standings_title">Standings</string>
     <string name="tap_to_enter_name_hint">Tap to enter name</string>
     <string name="total_players_label">Total Players</string>
@@ -557,6 +564,9 @@
     <string name="user_management_no_users">No users found</string>
     <string name="user_management_no_search_results">No users match your search</string>
     <string name="user_management_search_hint">Search by name or email</string>
+    <string name="user_management_google_name">Google name: %1$s</string>
+    <string name="user_management_profile_name">Game profile: %1$s</string>
+    <string name="user_management_identity_names">Actual name: %1$s\nGame profile: %2$s</string>
 
     <!-- SetTextI18n / PluralsCandidate (Java) -->
     <string name="format_game_points">%1$s GP</string>
@@ -652,6 +662,37 @@
     <string name="user_management_action_promote">Promote to admin</string>
     <string name="user_management_action_demote">Demote to regular user</string>
     <string name="user_management_self_actions_note">These admin actions are not available on your own account.</string>
+    <string name="user_management_add_managed">Add player profile</string>
+    <string name="user_management_edit_managed">Edit player profile</string>
+    <string name="user_management_create_managed_title">Add player profile</string>
+    <string name="user_management_edit_managed_title">Edit player profile</string>
+    <string name="user_management_managed_help">For a player without a sign-in account. The actual name is visible only to administrators.</string>
+    <string name="user_management_actual_name">Actual name</string>
+    <string name="user_management_email_optional">Email address (optional)</string>
+    <string name="user_management_phone_optional">Phone number (optional)</string>
+    <string name="user_management_invalid_email">Enter a valid email address</string>
+    <string name="user_management_invalid_phone">Enter a valid phone number</string>
+    <string name="user_management_profile_name_label">Game profile name</string>
+    <string name="user_management_profile_name_help">3–24 letters, numbers, spaces, underscores, or a period</string>
+    <string name="user_management_managed_saved">Player profile saved</string>
+    <string name="user_management_save_managed">Save profile</string>
+    <string name="user_management_actual_name_display">Actual name: %1$s</string>
+    <string name="player_mapping_required_for_scoring">Add at least two players and map every player before entering scores.</string>
+    <string name="unmapped_player_added">Unknown player added. Map every player before entering scores.</string>
+    <string name="map_player_duplicate_profile">That profile is already mapped to another player.</string>
+    <string name="add_player_select_profile_title">Add player</string>
+    <string name="add_player_select_profile_subtitle">Select an existing player profile. Names cannot be entered manually.</string>
+    <string name="add_player_contact_admin">Player not found? Contact an administrator to create the profile first.</string>
+    <string name="refresh_player_profiles">Refresh player profiles</string>
+    <string name="review_player_mapped">Mapped profile</string>
+    <string name="review_player_mapping_required">Mapping required</string>
+    <string name="review_change_mapping">Change mapping</string>
+    <string name="review_change_mapping_for">Select the profile for %1$s. Scores will not change.</string>
+    <string name="review_operation_mapping">Updating player mapping…</string>
+    <string name="review_mapping_saved">Player mapping updated</string>
+    <string name="review_replace_mapping_title">Replace player mapping?</string>
+    <string name="review_replace_mapping_subtitle">%1$s will use the %2$s profile</string>
+    <string name="review_replace_mapping_message">The player’s scores and position will be preserved. Only the linked profile will change.</string>
 
     <string name="player_consolidation_continue_placeholder">Continue</string>
 
@@ -682,10 +723,6 @@
     <plurals name="standing_round_score">
         <item quantity="one">R%d Score</item>
         <item quantity="other">R%d Score</item>
-    </plurals>
-    <plurals name="add_player_confirm_count">
-        <item quantity="one">Current game · 1 player</item>
-        <item quantity="other">Current game · %d players</item>
     </plurals>
     <plurals name="player_consolidation_continue">
         <item quantity="one">Continue (1 selected)</item>

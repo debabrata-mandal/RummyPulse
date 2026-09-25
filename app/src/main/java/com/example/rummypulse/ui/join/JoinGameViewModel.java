@@ -411,7 +411,6 @@ public class JoinGameViewModel extends AndroidViewModel {
         cachedAuth.setPin(pin);
         cachedAuth.setPinGeneration(cachedGeneration);
         cachedAuth.setActiveEditorUserId(user.getUid());
-        cachedAuth.setActiveEditorName(resolveEditorDisplayName(user));
         gameAuth.setValue(cachedAuth);
         activeEditGeneration = cachedGeneration;
         gamePin.setValue(pin);
@@ -575,8 +574,6 @@ public class JoinGameViewModel extends AndroidViewModel {
         }
 
         DocumentReference gameRef = db.collection(FirestoreCollections.GAMES).document(gameId);
-        String editorName = resolveEditorDisplayName(user);
-
         db.runTransaction(transaction -> {
             DocumentSnapshot snapshot = transaction.get(gameRef);
             if (!snapshot.exists()) {
@@ -594,20 +591,13 @@ public class JoinGameViewModel extends AndroidViewModel {
             String activeEditor = auth.getActiveEditorUserId();
             String myUid = user.getUid();
             if (activeEditor != null && !activeEditor.equals(myUid)) {
-                String editorLabel = auth.getActiveEditorName();
-                if (!TextUtils.isEmpty(editorLabel)) {
-                    throw new IllegalStateException(
-                            "Someone else is editing (" + editorLabel + "). Ask them to transfer access.");
-                }
                 throw new IllegalStateException(
                         "Someone else is editing. Ask them to transfer access.");
             }
 
             Map<String, Object> updates = new HashMap<>();
             updates.put("activeEditorUserId", myUid);
-            updates.put("activeEditorName", editorName);
             updates.put("lastEditorUserId", myUid);
-            updates.put("lastEditorName", editorName);
             transaction.update(gameRef, updates);
 
             return new ClaimResult(auth.getPin(), auth.getPinGenerationOrDefault());
@@ -618,9 +608,7 @@ public class JoinGameViewModel extends AndroidViewModel {
             GameAuth currentAuth = gameAuth.getValue();
             if (currentAuth != null) {
                 currentAuth.setActiveEditorUserId(user.getUid());
-                currentAuth.setActiveEditorName(editorName);
                 currentAuth.setLastEditorUserId(user.getUid());
-                currentAuth.setLastEditorName(editorName);
                 gameAuth.setValue(currentAuth);
             }
             if (callback != null) {
@@ -667,10 +655,8 @@ public class JoinGameViewModel extends AndroidViewModel {
             updates.put("pinGeneration", newGen);
             if (auth != null && !TextUtils.isEmpty(auth.getActiveEditorUserId())) {
                 updates.put("lastEditorUserId", auth.getActiveEditorUserId());
-                updates.put("lastEditorName", auth.getActiveEditorName());
             }
             updates.put("activeEditorUserId", com.google.firebase.firestore.FieldValue.delete());
-            updates.put("activeEditorName", com.google.firebase.firestore.FieldValue.delete());
             transaction.update(gameRef, updates);
             transaction.update(gameDataRef, "editGeneration", newGen);
 
@@ -685,10 +671,8 @@ public class JoinGameViewModel extends AndroidViewModel {
                 currentAuth.setPinGeneration(result.newPinGeneration);
                 if (!TextUtils.isEmpty(currentAuth.getActiveEditorUserId())) {
                     currentAuth.setLastEditorUserId(currentAuth.getActiveEditorUserId());
-                    currentAuth.setLastEditorName(currentAuth.getActiveEditorName());
                 }
                 currentAuth.setActiveEditorUserId(null);
-                currentAuth.setActiveEditorName(null);
                 gameAuth.setValue(currentAuth);
             }
             if (callback != null) {
@@ -819,7 +803,6 @@ public class JoinGameViewModel extends AndroidViewModel {
             String playerId,
             String linkedPlayerName,
             String linkedUserId,
-            String linkedUserDisplayName,
             PlayerLinkCallback callback) {
         if (TextUtils.isEmpty(gameId) || TextUtils.isEmpty(playerId)
                 || TextUtils.isEmpty(linkedPlayerName)
@@ -900,9 +883,6 @@ public class JoinGameViewModel extends AndroidViewModel {
                             expectedGeneration,
                             revisionOf(currentDataSnapshot) + 1L);
 
-            String approvalDisplayName = TextUtils.isEmpty(linkedUserDisplayName)
-                    ? linkedUserId
-                    : linkedUserDisplayName;
             Object requestedAt = approvalSnapshot.exists()
                     ? approvalSnapshot.get("requestedAt")
                     : null;
@@ -913,14 +893,12 @@ public class JoinGameViewModel extends AndroidViewModel {
             Map<String, Object> approvalData = new HashMap<>();
             approvalData.put("gameId", gameId);
             approvalData.put("userId", linkedUserId);
-            approvalData.put("userDisplayName", approvalDisplayName);
             approvalData.put("status", "approved");
             approvalData.put("requestedAt", requestedAt);
             approvalData.put("lastUpdatedAt",
                     com.google.firebase.firestore.FieldValue.serverTimestamp());
 
             Map<String, Object> mirroredApproval = new HashMap<>();
-            mirroredApproval.put("userDisplayName", approvalDisplayName);
             mirroredApproval.put("status", "approved");
             mirroredApproval.put("requestedAt", requestedAt);
             mirroredApproval.put("lastUpdatedAt",
@@ -1371,16 +1349,6 @@ public class JoinGameViewModel extends AndroidViewModel {
             this.gameData = gameData;
             this.revision = revision;
         }
-    }
-
-    private static String resolveEditorDisplayName(FirebaseUser user) {
-        if (user.getDisplayName() != null && !user.getDisplayName().trim().isEmpty()) {
-            return user.getDisplayName().trim();
-        }
-        if (user.getEmail() != null && !user.getEmail().trim().isEmpty()) {
-            return user.getEmail().trim();
-        }
-        return "Editor";
     }
 
     private static final class ClaimResult {

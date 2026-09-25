@@ -6,6 +6,7 @@ import androidx.annotation.Nullable;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
@@ -107,13 +108,11 @@ public class GameDefaultsRepository {
 
     /** Merge only {@code showDashboardLeaderboard} to Firestore. */
     public com.google.android.gms.tasks.Task<Void> saveShowDashboardLeaderboard(boolean enabled) {
-        setShowDashboardLeaderboardCached(enabled);
         return mergeFlag("showDashboardLeaderboard", enabled);
     }
 
     /** Merge only {@code showDashboardLeaderboardGamePoints} to Firestore. */
     public com.google.android.gms.tasks.Task<Void> saveShowDashboardLeaderboardGamePoints(boolean enabled) {
-        setShowDashboardLeaderboardGamePointsCached(enabled);
         return mergeFlag("showDashboardLeaderboardGamePoints", enabled);
     }
 
@@ -122,66 +121,66 @@ public class GameDefaultsRepository {
         Map<String, Object> map = new HashMap<>();
         map.put("schemaVersion", GameDataSchema.CURRENT_VERSION);
         map.put(field, enabled);
-        return db.collection(COLLECTION).document(DOCUMENT_ID)
-                .set(map, SetOptions.merge())
-                .continueWithTask(task -> {
-                    if (!task.isSuccessful()) {
-                        Exception e = task.getException();
-                        return e != null
-                                ? Tasks.forException(e)
-                                : Tasks.forException(new IllegalStateException("set failed"));
-                    }
-                    return db.collection(COLLECTION).document(DOCUMENT_ID).get();
-                })
-                .continueWith(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        applySnapshot((DocumentSnapshot) task.getResult());
-                    }
-                    return null;
-                });
+        return saveAndReload(map);
     }
 
     /** Merge only {@code showLiveGamePoints} to Firestore. */
     public com.google.android.gms.tasks.Task<Void> saveShowLiveGamePoints(boolean enabled) {
-        setShowLiveGamePointsCached(enabled);
         Map<String, Object> map = new HashMap<>();
+        map.put("schemaVersion", GameDataSchema.CURRENT_VERSION);
         map.put("showLiveGamePoints", enabled);
-        return db.collection(COLLECTION).document(DOCUMENT_ID)
-                .set(map, SetOptions.merge())
-                .continueWithTask(task -> {
-                    if (!task.isSuccessful()) {
-                        Exception e = task.getException();
-                        return e != null ? Tasks.forException(e) : Tasks.forException(new IllegalStateException("set failed"));
-                    }
-                    return db.collection(COLLECTION).document(DOCUMENT_ID).get();
-                })
-                .continueWith(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        applySnapshot((DocumentSnapshot) task.getResult());
-                    }
-                    return null;
-                });
+        return saveAndReload(map);
     }
 
     /** Merge only {@code showDashboardApprovalCounts} to Firestore. */
     public com.google.android.gms.tasks.Task<Void> saveShowDashboardApprovalCounts(boolean enabled) {
-        setShowDashboardApprovalCountsCached(enabled);
         Map<String, Object> map = new HashMap<>();
+        map.put("schemaVersion", GameDataSchema.CURRENT_VERSION);
         map.put("showDashboardApprovalCounts", enabled);
-        return db.collection(COLLECTION).document(DOCUMENT_ID)
-                .set(map, SetOptions.merge())
-                .continueWithTask(task -> {
-                    if (!task.isSuccessful()) {
-                        Exception e = task.getException();
-                        return e != null ? Tasks.forException(e) : Tasks.forException(new IllegalStateException("set failed"));
+        return saveAndReload(map);
+    }
+
+    private com.google.android.gms.tasks.Task<Void> saveAndReload(Map<String, Object> updates) {
+        com.google.firebase.firestore.DocumentReference configRef =
+                db.collection(COLLECTION).document(DOCUMENT_ID);
+        return configRef.get()
+                .continueWithTask(readTask -> {
+                    if (!readTask.isSuccessful() || readTask.getResult() == null) {
+                        Exception error = readTask.getException() != null
+                                ? readTask.getException()
+                                : new IllegalStateException("Could not load game defaults");
+                        return Tasks.forException(error);
                     }
-                    return db.collection(COLLECTION).document(DOCUMENT_ID).get();
+                    Map<String, Object> write = new HashMap<>(updates);
+                    write.put("schemaVersion", GameDataSchema.CURRENT_VERSION);
+                    if (!readTask.getResult().exists()) {
+                        write.putIfAbsent("defaultGamePointFactor",
+                                cachedResolved.getDefaultGamePointFactor());
+                        write.putIfAbsent("defaultBoardAdjustmentPercent",
+                                cachedResolved.getDefaultBoardAdjustmentPercent());
+                        write.putIfAbsent("defaultMidGameNewPlayerScoreIncrement",
+                                cachedResolved.getDefaultMidGameNewPlayerScoreIncrement());
+                    }
+                    return configRef.set(write, SetOptions.merge());
                 })
-                .continueWith(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        applySnapshot((DocumentSnapshot) task.getResult());
+                .continueWithTask(writeTask -> {
+                    if (!writeTask.isSuccessful()) {
+                        Exception error = writeTask.getException() != null
+                                ? writeTask.getException()
+                                : new IllegalStateException("Could not save game defaults");
+                        return Tasks.forException(error);
                     }
-                    return null;
+                    return configRef.get();
+                })
+                .continueWithTask(readTask -> {
+                    if (!readTask.isSuccessful() || readTask.getResult() == null) {
+                        Exception error = readTask.getException() != null
+                                ? readTask.getException()
+                                : new IllegalStateException("Could not reload saved defaults");
+                        return Tasks.forException(error);
+                    }
+                    applySnapshot(readTask.getResult());
+                    return Tasks.forResult((Void) null);
                 });
     }
 
@@ -251,16 +250,11 @@ public class GameDefaultsRepository {
             @Nullable Double boardAdjustmentPercentOrNull) {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         final String uid = user != null ? user.getUid() : "";
-        final String updatedByName;
-        if (user != null && user.getDisplayName() != null && !user.getDisplayName().isEmpty()) {
-            updatedByName = user.getDisplayName();
-        } else if (user != null && user.getEmail() != null) {
-            updatedByName = user.getEmail();
-        } else {
-            updatedByName = "";
-        }
+        String currentPublicName = CurrentUserProfileSession.getDisplayName();
+        final String updatedByName = currentPublicName != null ? currentPublicName : "Player";
 
         Map<String, Object> map = new HashMap<>();
+        map.put("schemaVersion", GameDataSchema.CURRENT_VERSION);
         map.put("defaultGamePointFactor", gamePointFactor);
         if (boardAdjustmentPercentOrNull != null) {
             map.put("defaultBoardAdjustmentPercent", boardAdjustmentPercentOrNull);
@@ -276,42 +270,6 @@ public class GameDefaultsRepository {
         map.put("updatedByUserId", uid);
         map.put("updatedByUserName", updatedByName);
 
-        final double boardAdjustmentForFailurePatch = boardAdjustmentPercentOrNull != null
-                ? boardAdjustmentPercentOrNull
-                : cachedResolved.getDefaultBoardAdjustmentPercent();
-        final boolean displayForFailurePatch = displayIntermediateOrNull != null
-                ? displayIntermediateOrNull
-                : cachedResolved.isShowLiveGamePoints();
-        final boolean countsForFailurePatch = showDashboardApprovalCountsOrNull != null
-                ? showDashboardApprovalCountsOrNull
-                : cachedResolved.isShowDashboardApprovalCounts();
-
-        // Re-fetch after set so updatedAt (serverTimestamp) is materialized in the snapshot.
-        return db.collection(COLLECTION).document(DOCUMENT_ID)
-                .set(map, SetOptions.merge())
-                .continueWithTask(task -> {
-                    if (!task.isSuccessful()) {
-                        Exception e = task.getException();
-                        return e != null ? Tasks.forException(e) : Tasks.forException(new IllegalStateException("set failed"));
-                    }
-                    return db.collection(COLLECTION).document(DOCUMENT_ID).get();
-                })
-                .continueWith(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        applySnapshot((DocumentSnapshot) task.getResult());
-                    } else {
-                        GameDefaults patch = new GameDefaults();
-                        patch.setSchemaVersion(GameDataSchema.CURRENT_VERSION);
-                        patch.setDefaultGamePointFactor(gamePointFactor);
-                        patch.setDefaultBoardAdjustmentPercent(boardAdjustmentForFailurePatch);
-                        patch.setDefaultMidGameNewPlayerScoreIncrement(midGameIncrement);
-                        patch.setShowLiveGamePoints(displayForFailurePatch);
-                        patch.setShowDashboardApprovalCounts(countsForFailurePatch);
-                        patch.setUpdatedByUserId(uid);
-                        patch.setUpdatedByUserName(updatedByName);
-                        cachedResolved = GameDefaults.resolvedFromFirestoreBean(patch);
-                    }
-                    return null;
-                });
+        return saveAndReload(map);
     }
 }

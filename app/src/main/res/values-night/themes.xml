@@ -14,6 +14,12 @@
         <item name="colorSurface">@color/surface_color</item>
         <item name="colorOnBackground">@color/text_primary</item>
         <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+        <item name="android:colorAccent">@color/accent_blue</item>
+        <item name="android:editTextStyle">@style/RummyPulseEditText</item>
+        <item name="android:numberPickerStyle">@style/RummyPulseNumberPicker</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">@color/primary_blue_dark</item>
         <item name="android:windowLightStatusBar">false</item>

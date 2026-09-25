@@ -63,9 +63,13 @@ public class ApprovalBatchValidatorTest {
     private static GameData completedGameData() {
         GameData data = new GameData();
         data.setNumPlayers(2);
-        data.setPlayers(Arrays.asList(
-                new Player("One", Arrays.asList(0, 0, 0, 0, 0, 0, 0, 0, 0, 0), 1),
-                new Player("Two", Arrays.asList(0, 0, 0, 0, 0, 0, 0, 0, 0, 0), 2)));
+        Player first = new Player(
+                "One", Arrays.asList(0, 0, 0, 0, 0, 0, 0, 0, 0, 0), 1);
+        first.setUserId("user-one");
+        Player second = new Player(
+                "Two", Arrays.asList(0, 0, 0, 0, 0, 0, 0, 0, 0, 0), 2);
+        second.setUserId("user-two");
+        data.setPlayers(Arrays.asList(first, second));
         return data;
     }
 }

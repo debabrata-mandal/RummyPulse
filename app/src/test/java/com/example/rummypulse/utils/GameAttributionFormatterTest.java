@@ -14,9 +14,9 @@ public class GameAttributionFormatterTest {
     public void isSameCreatorAndEditor_matchesByUserId() {
         GameItem item = new GameItem();
         item.setCreatorUserId("uid-1");
-        item.setCreatorName("Asik Mandal");
+        item.setCreatorName("Alice Jones");
         item.setEditorUserId("uid-1");
-        item.setEditorName("Asik Mandal");
+        item.setEditorName("Alice Jones");
 
         assertTrue(GameAttributionFormatter.isSameCreatorAndEditor(item));
     }
@@ -25,7 +25,7 @@ public class GameAttributionFormatterTest {
     public void isSameCreatorAndEditor_differsByUserId() {
         GameItem item = new GameItem();
         item.setCreatorUserId("uid-1");
-        item.setCreatorName("Asik Mandal");
+        item.setCreatorName("Alice Jones");
         item.setEditorUserId("uid-2");
         item.setEditorName("Jane Doe");
 
@@ -35,8 +35,8 @@ public class GameAttributionFormatterTest {
     @Test
     public void isSameCreatorAndEditor_fallsBackToNameWhenUserIdsMissing() {
         GameItem item = new GameItem();
-        item.setCreatorName("Asik Mandal");
-        item.setEditorName("asik mandal");
+        item.setCreatorName("Alice Jones");
+        item.setEditorName("alice jones");
 
         assertTrue(GameAttributionFormatter.isSameCreatorAndEditor(item));
     }
@@ -45,11 +45,11 @@ public class GameAttributionFormatterTest {
     public void formatCreatorEditorPlainText_samePersonUsesFullName() {
         GameItem item = new GameItem();
         item.setCreatorUserId("uid-1");
-        item.setCreatorName("Asik Mandal");
+        item.setCreatorName("Alice Jones");
         item.setEditorUserId("uid-1");
-        item.setEditorName("Asik Mandal");
+        item.setEditorName("Alice Jones");
 
-        assertEquals("Created & Edited by Asik Mandal",
+        assertEquals("Created & Edited by Alice Jones",
                 GameAttributionFormatter.formatCreatorEditorPlainText(item));
     }
 
@@ -57,11 +57,11 @@ public class GameAttributionFormatterTest {
     public void formatCreatorEditorPlainText_differentPeopleUseFirstNames() {
         GameItem item = new GameItem();
         item.setCreatorUserId("uid-1");
-        item.setCreatorName("Asik Mandal");
+        item.setCreatorName("Alice Jones");
         item.setEditorUserId("uid-2");
-        item.setEditorName("Rounak Sarkar");
+        item.setEditorName("Jane Doe");
 
-        assertEquals("Created by Asik & Edited by Rounak",
+        assertEquals("Created by Alice & Edited by Jane",
                 GameAttributionFormatter.formatCreatorEditorPlainText(item));
     }
 }

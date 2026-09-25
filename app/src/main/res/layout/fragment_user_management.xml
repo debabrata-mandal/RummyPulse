@@ -43,6 +43,22 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_add_managed_player"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="12dp"
+        android:minHeight="48dp"
+        android:text="@string/user_management_add_managed"
+        android:textAllCaps="false"
+        app:cornerRadius="10dp"
+        app:icon="@drawable/ic_person"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layout_user_search" />
+
     <!-- SwipeRefreshLayout containing RecyclerView -->
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/swipeRefreshLayout"
@@ -52,7 +68,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/layout_user_search">
+        app:layout_constraintTop_toBottomOf="@id/btn_add_managed_player">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerViewUsers"

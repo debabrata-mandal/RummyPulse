@@ -41,12 +41,14 @@ public class UserManagementViewModel extends ViewModel {
     private final MutableLiveData<Boolean> deleteSuccess = new MutableLiveData<>();
     private final MutableLiveData<Boolean> deleteFailure = new MutableLiveData<>();
     private final MutableLiveData<Boolean> hiddenUpdateSuccess = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> managedProfileSaved = new MutableLiveData<>();
 
     private DocumentSnapshot nextCursor;
     private boolean hasMore = true;
     private boolean pageRequestInProgress;
     private boolean refreshQueued;
     private boolean fullDirectoryRequestInProgress;
+    private boolean managedProfileRequestInProgress;
 
     public UserManagementViewModel() {
         this(new AppUserRepository(), new FirebaseAccountDeletionService());
@@ -97,6 +99,51 @@ public class UserManagementViewModel extends ViewModel {
         return hiddenUpdateSuccess;
     }
 
+    public LiveData<Boolean> getManagedProfileSaved() {
+        return managedProfileSaved;
+    }
+
+    public void saveManagedProfile(
+            AppUser existing, String actualName, String profileName,
+            String email, String phoneNumber) {
+        if (managedProfileRequestInProgress) return;
+        managedProfileRequestInProgress = true;
+        loading.setValue(true);
+        error.setValue(null);
+        managedProfileSaved.setValue(false);
+        AppUserRepository.AppUserCallback callback = new AppUserRepository.AppUserCallback() {
+            @Override
+            public void onSuccess(AppUser saved) {
+                managedProfileRequestInProgress = false;
+                managedProfileSaved.setValue(true);
+                loading.setValue(false);
+                if (existing == null) {
+                    loadAllUsers();
+                } else {
+                    List<AppUser> updated = new ArrayList<>(safeUsers());
+                    mergeByUserId(updated, Collections.singletonList(saved));
+                    sortUsers(updated);
+                    users.setValue(updated);
+                }
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                managedProfileRequestInProgress = false;
+                loading.setValue(false);
+                error.setValue("Failed to save player profile: " + exception.getMessage());
+            }
+        };
+        if (existing == null) {
+            appUserRepository.createManagedProfile(
+                    actualName, profileName, email, phoneNumber, callback);
+        } else {
+            appUserRepository.updateManagedProfile(
+                    existing.getUserId(), actualName, profileName,
+                    email, phoneNumber, callback);
+        }
+    }
+
     /**
      * Explicit refresh: clears the cursor and reloads the first bounded page.
      */
@@ -139,7 +186,7 @@ public class UserManagementViewModel extends ViewModel {
             return;
         }
         fullDirectoryRequestInProgress = true;
-        appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
+        appUserRepository.getUsersCachedForAdmin(new AppUserRepository.UsersCallback() {
             @Override
             public void onSuccess(List<AppUser> allUsers) {
                 List<AppUser> merged = new ArrayList<>(allUsers);
@@ -168,7 +215,7 @@ public class UserManagementViewModel extends ViewModel {
             loadingMore.setValue(true);
         }
 
-        appUserRepository.getUsersPage(
+        appUserRepository.getAdminUsersPage(
                 replaceExisting ? null : nextCursor,
                 AppUserRepository.USER_PAGE_SIZE,
                 new AppUserRepository.UsersPageCallback() {
@@ -352,6 +399,8 @@ public class UserManagementViewModel extends ViewModel {
         }
         String haystack = (
                 safeText(user.getDisplayName()) + ' '
+                        + safeText(user.getProfileName()) + ' '
+                        + safeText(user.getGoogleDisplayName()) + ' '
                         + safeText(user.getEmail()) + ' '
                         + safeText(user.getProvider()) + ' '
                         + (user.getRole() != null ? user.getRole().getDisplayName() : ""))

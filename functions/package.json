@@ -7,7 +7,8 @@
   "main": "index.js",
   "scripts": {
     "test": "node --test",
-    "check": "node --check index.js && node --check lib/account-deletion.js && node --check lib/game-name.js && node --check lib/rate-limit.js && node --check ../tools/check-non-monetary-surfaces.js && node ../tools/check-non-monetary-surfaces.js"
+    "migrate:private-profiles": "node scripts/migrate-private-profiles.js",
+    "check": "node --check index.js && node --check lib/account-deletion.js && node --check lib/auth-identity.js && node --check lib/game-name.js && node --check lib/profile-name.js && node --check lib/rate-limit.js && node --check scripts/migrate-private-profiles.js && node --check ../tools/check-non-monetary-surfaces.js && node ../tools/check-non-monetary-surfaces.js"
   },
   "dependencies": {
     "firebase-admin": "^13.4.0",

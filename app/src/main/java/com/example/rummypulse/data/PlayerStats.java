@@ -24,7 +24,6 @@ public class PlayerStats {
 
     private Integer schemaVersion;
     private String userId;
-    private String displayName;
     private Bucket allTime;
     private Map<String, Bucket> months;
     private Map<String, Bucket> weeks;
@@ -48,14 +47,6 @@ public class PlayerStats {
 
     public void setUserId(String userId) {
         this.userId = userId;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName;
     }
 
     public Bucket getAllTime() {

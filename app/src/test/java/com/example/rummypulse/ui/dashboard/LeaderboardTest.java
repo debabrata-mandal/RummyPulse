@@ -17,12 +17,26 @@ import java.util.Map;
 
 public class LeaderboardTest {
 
+    private static final Map<String, String> DISPLAY_NAMES = new HashMap<>();
+
     private static PlayerStats player(String userId, String name, long games, double net) {
         PlayerStats stats = new PlayerStats();
         stats.setUserId(userId);
-        stats.setDisplayName(name);
+        DISPLAY_NAMES.put(userId, name);
         stats.setAllTime(new PlayerStats.Bucket(games, 0, net, 0, 0));
         return stats;
+    }
+
+    private static Leaderboard leaderboard(List<PlayerStats> stats, StatsPeriod period, String currentUserId) {
+        return Leaderboard.from(stats, period, currentUserId, DISPLAY_NAMES);
+    }
+
+    private static List<LeaderboardEntry> rankAll(List<PlayerStats> stats, StatsPeriod period, String currentUserId) {
+        return Leaderboard.rankAll(stats, period, currentUserId, RankingSort.NET_TOTAL, DISPLAY_NAMES);
+    }
+
+    private static List<LeaderboardEntry> rankAll(List<PlayerStats> stats, StatsPeriod period, String currentUserId, RankingSort sort) {
+        return Leaderboard.rankAll(stats, period, currentUserId, sort, DISPLAY_NAMES);
     }
 
     private static List<String> namesOf(List<LeaderboardEntry> entries) {
@@ -44,7 +58,7 @@ public class LeaderboardTest {
                 player("f", "Finn", 5, 120),
                 player("g", "Gus", 5, -40));
 
-        Leaderboard board = Leaderboard.from(stats, StatsPeriod.ALL_TIME, "d");
+        Leaderboard board = leaderboard(stats, StatsPeriod.ALL_TIME, "d");
 
         assertEquals(Arrays.asList("Cara", "Alice"), namesOf(board.getTop()));
         assertEquals(Arrays.asList("Bob", "Eve"), namesOf(board.getBottom()));
@@ -61,7 +75,7 @@ public class LeaderboardTest {
                 player("e", "Eve", 1, 100),
                 player("f", "Finn", 1, 0));
 
-        Leaderboard board = Leaderboard.from(stats, StatsPeriod.ALL_TIME, null);
+        Leaderboard board = leaderboard(stats, StatsPeriod.ALL_TIME, null);
 
         assertEquals(1, board.getTop().get(0).getRank());
         assertEquals(2, board.getTop().get(1).getRank());
@@ -75,7 +89,7 @@ public class LeaderboardTest {
                 player("a", "Alice", 3, 100),
                 player("b", "Bob", 0, 0));
 
-        Leaderboard board = Leaderboard.from(stats, StatsPeriod.ALL_TIME, null);
+        Leaderboard board = leaderboard(stats, StatsPeriod.ALL_TIME, null);
 
         assertEquals(Collections.singletonList("Alice"), namesOf(board.getTop()));
         assertEquals(1, board.getRankedPlayers());
@@ -89,7 +103,7 @@ public class LeaderboardTest {
                 player("b", "Bob", 1, 400),
                 player("c", "Cara", 1, 300));
 
-        Leaderboard board = Leaderboard.from(stats, StatsPeriod.ALL_TIME, null);
+        Leaderboard board = leaderboard(stats, StatsPeriod.ALL_TIME, null);
 
         assertEquals(2, board.getTop().size());
         assertEquals(1, board.getBottom().size());
@@ -106,7 +120,7 @@ public class LeaderboardTest {
                 player("a", "Alice", 1, 300),
                 player("b", "Bob", 1, 200));
 
-        Leaderboard board = Leaderboard.from(stats, StatsPeriod.ALL_TIME, null);
+        Leaderboard board = leaderboard(stats, StatsPeriod.ALL_TIME, null);
 
         assertEquals(2, board.getTop().size());
         assertTrue(board.getBottom().isEmpty());
@@ -118,7 +132,7 @@ public class LeaderboardTest {
                 player("a", "Alice", 1, 300),
                 player("b", "Bob", 1, 200));
 
-        Leaderboard board = Leaderboard.from(stats, StatsPeriod.ALL_TIME, "b");
+        Leaderboard board = leaderboard(stats, StatsPeriod.ALL_TIME, "b");
 
         assertFalse(board.getTop().get(0).isCurrentUser());
         assertTrue(board.getTop().get(1).isCurrentUser());
@@ -130,16 +144,16 @@ public class LeaderboardTest {
                 player("b", "Bob", 1, 100),
                 player("a", "Alice", 1, 100));
 
-        Leaderboard board = Leaderboard.from(stats, StatsPeriod.ALL_TIME, null);
+        Leaderboard board = leaderboard(stats, StatsPeriod.ALL_TIME, null);
 
         assertEquals(Arrays.asList("Alice", "Bob"), namesOf(board.getTop()));
     }
 
     @Test
     public void emptyInputsProduceAnEmptyBoard() {
-        assertTrue(Leaderboard.from(null, StatsPeriod.ALL_TIME, null).isEmpty());
-        assertTrue(Leaderboard.from(new ArrayList<>(), StatsPeriod.ALL_TIME, null).isEmpty());
-        assertTrue(Leaderboard.from(
+        assertTrue(leaderboard(null, StatsPeriod.ALL_TIME, null).isEmpty());
+        assertTrue(leaderboard(new ArrayList<>(), StatsPeriod.ALL_TIME, null).isEmpty());
+        assertTrue(leaderboard(
                 Collections.singletonList(player("a", "Alice", 1, 10)), null, null).isEmpty());
     }
 
@@ -148,7 +162,7 @@ public class LeaderboardTest {
         // Stats carry an all-time bucket only, so a weekly view has nothing to rank.
         List<PlayerStats> stats = Collections.singletonList(player("a", "Alice", 4, 250));
 
-        assertTrue(Leaderboard.from(stats, StatsPeriod.THIS_WEEK, null).isEmpty());
+        assertTrue(leaderboard(stats, StatsPeriod.THIS_WEEK, null).isEmpty());
     }
 
     @Test
@@ -160,7 +174,7 @@ public class LeaderboardTest {
                 player("d", "Dan", 5, 50),
                 player("e", "Eve", 5, -750));
 
-        List<LeaderboardEntry> ranked = Leaderboard.rankAll(stats, StatsPeriod.ALL_TIME, null);
+        List<LeaderboardEntry> ranked = rankAll(stats, StatsPeriod.ALL_TIME, null);
 
         assertEquals(Arrays.asList("Cara", "Alice", "Dan", "Bob", "Eve"), namesOf(ranked));
         for (int i = 0; i < ranked.size(); i++) {
@@ -175,7 +189,7 @@ public class LeaderboardTest {
                 player("b", "Bob", 0, 0));
 
         assertEquals(Collections.singletonList("Alice"),
-                namesOf(Leaderboard.rankAll(stats, StatsPeriod.ALL_TIME, null)));
+                namesOf(rankAll(stats, StatsPeriod.ALL_TIME, null)));
     }
 
     @Test
@@ -185,7 +199,7 @@ public class LeaderboardTest {
                 player("a", "Alice", 1, 100));
 
         assertEquals(Arrays.asList("Alice", "Bob"),
-                namesOf(Leaderboard.rankAll(stats, StatsPeriod.ALL_TIME, null)));
+                namesOf(rankAll(stats, StatsPeriod.ALL_TIME, null)));
     }
 
     @Test
@@ -194,7 +208,7 @@ public class LeaderboardTest {
                 player("a", "Alice", 1, 300),
                 player("b", "Bob", 1, 200));
 
-        List<LeaderboardEntry> ranked = Leaderboard.rankAll(stats, StatsPeriod.ALL_TIME, "b");
+        List<LeaderboardEntry> ranked = rankAll(stats, StatsPeriod.ALL_TIME, "b");
 
         assertFalse(ranked.get(0).isCurrentUser());
         assertTrue(ranked.get(1).isCurrentUser());
@@ -202,9 +216,9 @@ public class LeaderboardTest {
 
     @Test
     public void rankAllReturnsEmptyRatherThanNull() {
-        assertTrue(Leaderboard.rankAll(null, StatsPeriod.ALL_TIME, null).isEmpty());
-        assertTrue(Leaderboard.rankAll(new ArrayList<>(), StatsPeriod.ALL_TIME, null).isEmpty());
-        assertTrue(Leaderboard.rankAll(
+        assertTrue(rankAll(null, StatsPeriod.ALL_TIME, null).isEmpty());
+        assertTrue(rankAll(new ArrayList<>(), StatsPeriod.ALL_TIME, null).isEmpty());
+        assertTrue(rankAll(
                 Collections.singletonList(player("a", "Alice", 1, 10)), null, null).isEmpty());
     }
 
@@ -223,7 +237,7 @@ public class LeaderboardTest {
             String userId, String name, long games, long wins, double net) {
         PlayerStats stats = new PlayerStats();
         stats.setUserId(userId);
-        stats.setDisplayName(name);
+        DISPLAY_NAMES.put(userId, name);
         stats.setAllTime(new PlayerStats.Bucket(games, wins, net, 0, 0));
         return stats;
     }
@@ -232,7 +246,7 @@ public class LeaderboardTest {
     public void sortByNetTotalFavoursTheBiggestPile() {
         assertEquals(
                 Arrays.asList("Alice", "Cara", "Bob"),
-                namesOf(Leaderboard.rankAll(
+                namesOf(rankAll(
                         mixedRecords(), StatsPeriod.ALL_TIME, null, RankingSort.NET_TOTAL)));
     }
 
@@ -240,7 +254,7 @@ public class LeaderboardTest {
     public void sortByNetPerGameFavoursTheShortStrongRun() {
         assertEquals(
                 Arrays.asList("Bob", "Cara", "Alice"),
-                namesOf(Leaderboard.rankAll(
+                namesOf(rankAll(
                         mixedRecords(), StatsPeriod.ALL_TIME, null, RankingSort.NET_PER_GAME)));
     }
 
@@ -248,7 +262,7 @@ public class LeaderboardTest {
     public void sortByWinRateIsIndependentOfAmounts() {
         assertEquals(
                 Arrays.asList("Alice", "Bob", "Cara"),
-                namesOf(Leaderboard.rankAll(
+                namesOf(rankAll(
                         mixedRecords(), StatsPeriod.ALL_TIME, null, RankingSort.WIN_RATE)));
     }
 
@@ -256,13 +270,13 @@ public class LeaderboardTest {
     public void sortByGamesFavoursTheMostActive() {
         assertEquals(
                 Arrays.asList("Alice", "Cara", "Bob"),
-                namesOf(Leaderboard.rankAll(
+                namesOf(rankAll(
                         mixedRecords(), StatsPeriod.ALL_TIME, null, RankingSort.GAMES)));
     }
 
     @Test
     public void rankNumbersDescribeTheChosenOrdering() {
-        List<LeaderboardEntry> ranked = Leaderboard.rankAll(
+        List<LeaderboardEntry> ranked = rankAll(
                 mixedRecords(), StatsPeriod.ALL_TIME, null, RankingSort.NET_PER_GAME);
 
         assertEquals("Bob", ranked.get(0).getDisplayName());
@@ -276,9 +290,9 @@ public class LeaderboardTest {
         List<String> expected = Arrays.asList("Alice", "Cara", "Bob");
 
         assertEquals(expected,
-                namesOf(Leaderboard.rankAll(mixedRecords(), StatsPeriod.ALL_TIME, null)));
+                namesOf(rankAll(mixedRecords(), StatsPeriod.ALL_TIME, null)));
         assertEquals(expected,
-                namesOf(Leaderboard.rankAll(mixedRecords(), StatsPeriod.ALL_TIME, null, null)));
+                namesOf(rankAll(mixedRecords(), StatsPeriod.ALL_TIME, null, null)));
     }
 
     @Test
@@ -290,22 +304,22 @@ public class LeaderboardTest {
 
         assertEquals(
                 Arrays.asList("Bob", "Alice"),
-                namesOf(Leaderboard.rankAll(
+                namesOf(rankAll(
                         stats, StatsPeriod.ALL_TIME, null, RankingSort.WIN_RATE)));
     }
 
     @Test
     public void withShortDisplayNames_prefersAccountDirectoryName() {
-        Leaderboard board = Leaderboard.from(
-                Collections.singletonList(scored("uid-1", "Debabrata", 3, 2, 500)),
+        Leaderboard board = leaderboard(
+                Collections.singletonList(scored("uid-1", "Bob", 3, 2, 500)),
                 StatsPeriod.ALL_TIME,
                 null);
         Map<String, String> accountNames = new HashMap<>();
-        accountNames.put("uid-1", "Debabrata Mandal");
+        accountNames.put("uid-1", "Bob Smith");
 
         Leaderboard shortBoard = Leaderboard.withShortDisplayNames(board, accountNames);
 
-        assertEquals("Debabrata M", shortBoard.getTop().get(0).getDisplayName());
+        assertEquals("Bob S", shortBoard.getTop().get(0).getDisplayName());
     }
 
     @Test

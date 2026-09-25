@@ -18,11 +18,11 @@ public class PlayerConsolidationEngineTest {
     public void buildInitialGroups_combinesSameUserAcrossGames() {
         List<ConsolidatedPlayerGroup> groups =
                 PlayerConsolidationEngine.buildInitialGroups(Arrays.asList(
-                        game("game-1", player("Debabrata", "user-1")),
+                        game("game-1", player("Bob", "user-1")),
                         game("game-2", player("Deb", "user-1"))));
 
         assertEquals(1, groups.size());
-        assertEquals("Debabrata", groups.get(0).getDisplayName());
+        assertEquals("Bob", groups.get(0).getDisplayName());
         assertEquals(2, groups.get(0).getMembers().size());
         assertEquals("game-1", groups.get(0).getMembers().get(0).getGameId());
         assertEquals("game-2", groups.get(0).getMembers().get(1).getGameId());
@@ -57,23 +57,23 @@ public class PlayerConsolidationEngineTest {
     public void refreshGroups_tracksMappedUserAfterPlayerRename() {
         List<ConsolidatedPlayerGroup> initial =
                 PlayerConsolidationEngine.buildInitialGroups(Arrays.asList(
-                        game("game-1", player("Debabrata", "user-1")),
+                        game("game-1", player("Bob", "user-1")),
                         game("game-2", player("Deb", "user-1"))));
 
         PlayerConsolidationEngine.RefreshResult refreshed =
                 PlayerConsolidationEngine.refreshGroupsFromGames(
                         initial,
                         Arrays.asList(
-                                game("game-1", player("Debabrata Mandal", "user-1")),
-                                game("game-2", player("D. Mandal", "user-1"))));
+                                game("game-1", player("Bob Smith", "user-1")),
+                                game("game-2", player("R. Smith", "user-1"))));
 
         assertEquals(1, refreshed.getGroups().size());
         assertEquals(2, refreshed.getGroups().get(0).getMembers().size());
         assertEquals(
-                "Debabrata Mandal",
+                "Bob Smith",
                 refreshed.getGroups().get(0).getMembers().get(0).getPlayerName());
         assertEquals(
-                "D. Mandal",
+                "R. Smith",
                 refreshed.getGroups().get(0).getMembers().get(1).getPlayerName());
     }
 

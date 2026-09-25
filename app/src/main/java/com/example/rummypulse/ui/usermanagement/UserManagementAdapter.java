@@ -77,6 +77,7 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
     static class UserViewHolder extends RecyclerView.ViewHolder {
         private final ImageView profileImageView;
         private final TextView nameTextView;
+        private final TextView profileNameTextView;
         private final TextView emailTextView;
         private final TextView roleTextView;
         private final TextView providerTextView;
@@ -86,6 +87,7 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
             super(itemView);
             profileImageView = itemView.findViewById(R.id.imageViewUserProfile);
             nameTextView = itemView.findViewById(R.id.textViewUserName);
+            profileNameTextView = itemView.findViewById(R.id.textViewUserProfileName);
             emailTextView = itemView.findViewById(R.id.textViewUserEmail);
             roleTextView = itemView.findViewById(R.id.textViewUserRole);
             providerTextView = itemView.findViewById(R.id.textViewUserProvider);
@@ -105,8 +107,25 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
                 profileImageView.setImageResource(R.drawable.ic_person);
             }
 
-            nameTextView.setText(user.getDisplayName() != null ? user.getDisplayName() : "No Name");
-            emailTextView.setText(user.getEmail() != null ? user.getEmail() : "No Email");
+            String profileName = firstNonEmpty(user.getProfileName(), user.getDisplayName());
+            if (profileName == null) profileName = itemView.getContext().getString(
+                    R.string.unknown_user);
+            String actualName = firstNonEmpty(user.getActualName(), profileName);
+            nameTextView.setText(adminActionsEnabled ? actualName : profileName);
+            if (adminActionsEnabled && firstNonEmpty(user.getActualName(), null) != null) {
+                profileNameTextView.setVisibility(View.VISIBLE);
+                profileNameTextView.setText(itemView.getContext().getString(
+                        R.string.user_management_profile_name, profileName));
+            } else {
+                profileNameTextView.setVisibility(View.GONE);
+            }
+            if (adminActionsEnabled) {
+                String contact = contactText(user.getEmail(), user.getPhoneNumber());
+                emailTextView.setVisibility(contact.isEmpty() ? View.GONE : View.VISIBLE);
+                emailTextView.setText(contact);
+            } else {
+                emailTextView.setVisibility(View.GONE);
+            }
 
             String roleText = user.getRole().getDisplayName();
             if (user.getRole() == UserRole.ADMIN_USER) {
@@ -154,6 +173,20 @@ public class UserManagementAdapter extends RecyclerView.Adapter<UserManagementAd
                 itemView.setForeground(null);
                 itemView.setOnClickListener(null);
             }
+        }
+
+        private static String firstNonEmpty(String first, String second) {
+            if (first != null && !first.trim().isEmpty()) return first.trim();
+            if (second != null && !second.trim().isEmpty()) return second.trim();
+            return null;
+        }
+
+        private static String contactText(String email, String phone) {
+            String safeEmail = email == null ? "" : email.trim();
+            String safePhone = phone == null ? "" : phone.trim();
+            if (safeEmail.isEmpty()) return safePhone;
+            if (safePhone.isEmpty()) return safeEmail;
+            return safeEmail + " · " + safePhone;
         }
     }
 }

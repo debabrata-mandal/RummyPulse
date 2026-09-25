@@ -78,7 +78,7 @@ public class MidGameJoinScoreCalculatorTest {
     private static GameData gameWithRoundTwoTotalsOf400And600() {
         GameData game = new GameData();
         game.setPlayers(new ArrayList<>(Arrays.asList(
-                new Player("Debabrata", scores(100, 300), 1),
+                new Player("Bob", scores(100, 300), 1),
                 new Player("Player 2", scores(200, 400), 2))));
         return game;
     }

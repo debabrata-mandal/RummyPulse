@@ -6,25 +6,24 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuthProvider;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.UserInfo;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
-import com.google.firebase.firestore.Transaction;
+import com.google.firebase.functions.FirebaseFunctions;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Date;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -80,37 +79,14 @@ public class AppUserRepository {
         }
 
         String userId = firebaseUser.getUid();
-        long nowMillis = System.currentTimeMillis();
-        String email = firebaseUser.getEmail();
-        boolean providerProfileAuthoritative = overrides != null;
-        String resolvedDisplayName = providerProfileAuthoritative
-                ? overrides.displayName
-                : firebaseUser.getDisplayName();
-        String resolvedPhotoUrl = providerProfileAuthoritative
-                ? overrides.photoUrl
-                : firebaseUser.getPhotoUrl() != null
-                        ? firebaseUser.getPhotoUrl().toString()
-                        : null;
-        final String displayName = resolvedDisplayName;
-        final String photoUrl = resolvedPhotoUrl;
+        String fingerprint = syncFingerprint(firebaseUser, provider, overrides);
         synchronized (SYNC_LOCK) {
             SyncCacheEntry recent = RECENT_SYNCS.get(userId);
-            if (recent != null && !forceProfileVersionRefresh && !AppUserSyncPolicy.plan(
-                    recent.appUser,
-                    provider,
-                    email,
-                    displayName,
-                    photoUrl,
-                    nowMillis,
-                    false,
-                    providerProfileAuthoritative).hasUpdates()) {
-                Log.d(TAG, "Skipping repeated appUser initialization");
-                if (callback != null) {
-                    callback.onSuccess(recent.appUser);
-                }
+            if (!forceProfileVersionRefresh && recent != null
+                    && recent.fingerprint.equals(fingerprint)) {
+                if (callback != null) callback.onSuccess(recent.appUser);
                 return;
             }
-
             List<AppUserCallback> waiting = IN_FLIGHT_SYNCS.get(userId);
             if (waiting != null) {
                 if (callback != null) {
@@ -127,87 +103,20 @@ public class AppUserRepository {
             IN_FLIGHT_SYNCS.put(userId, waiting);
         }
 
-        DocumentReference userRef = db.collection(FirestoreCollections.APP_USER).document(userId);
-
-        db.runTransaction((Transaction transaction) -> {
-                    DocumentSnapshot snapshot = transaction.get(userRef);
-                    if (!snapshot.exists()) {
-                        Map<String, Object> userData = new HashMap<>();
-                        userData.put("userId", userId);
-                        userData.put("provider", provider);
-                        userData.put("role", UserRole.REGULAR_USER.getValue());
-                        userData.put("email", email);
-                        userData.put("displayName", displayName);
-                        userData.put("photoUrl", photoUrl);
-                        userData.put("profileVersion", nowMillis);
-                        userData.put("createdAt", FieldValue.serverTimestamp());
-                        userData.put("lastLoginAt", FieldValue.serverTimestamp());
-                        transaction.set(userRef, userData);
-
-                        AppUser created = new AppUser(
-                                userId,
-                                provider,
-                                UserRole.REGULAR_USER,
-                                email,
-                                displayName,
-                                photoUrl);
-                        created.setProfileVersion(nowMillis);
-                        created.setCreatedAt(new Date(nowMillis));
-                        created.setLastLoginAt(new Date(nowMillis));
-                        return new SyncResult(created, true, true);
-                    }
-
-                    AppUser existing = documentToAppUser(snapshot);
-                    AppUserSyncPolicy.SyncPlan plan = AppUserSyncPolicy.plan(
-                            existing,
-                            provider,
-                            email,
-                            displayName,
-                            photoUrl,
-                            nowMillis,
-                            forceProfileVersionRefresh,
-                            providerProfileAuthoritative);
-                    Map<String, Object> updates = new HashMap<>();
-                    if (plan.updateProvider) {
-                        updates.put("provider", provider);
-                        existing.setProvider(provider);
-                    }
-                    if (plan.updateEmail) {
-                        updates.put("email", email);
-                        existing.setEmail(email);
-                    }
-                    if (plan.updateDisplayName) {
-                        updates.put("displayName", displayName);
-                        existing.setDisplayName(displayName);
-                    }
-                    if (plan.updatePhotoUrl) {
-                        updates.put("photoUrl", photoUrl);
-                        existing.setPhotoUrl(photoUrl);
-                    }
-                    if (plan.updateProfileVersion) {
-                        updates.put("profileVersion", nowMillis);
-                        existing.setProfileVersion(nowMillis);
-                    }
-                    if (plan.updateLastLoginAt) {
-                        updates.put("lastLoginAt", FieldValue.serverTimestamp());
-                        existing.setLastLoginAt(new Date(nowMillis));
-                    }
-                    if (!updates.isEmpty()) {
-                        transaction.update(userRef, updates);
-                    }
-                    return new SyncResult(existing, !updates.isEmpty(), false);
-                })
+        Map<String, Object> request = new HashMap<>();
+        // Identity fields are resolved from the verified token and Firebase Auth user record.
+        request.put("forceProfileVersionRefresh", forceProfileVersionRefresh);
+        FirebaseFunctions.getInstance("asia-south1").getHttpsCallable("syncMyIdentity").call(request)
                 .addOnSuccessListener(result -> {
-                    Log.d(TAG, "appUser sync complete: reads=1 writes=" + (result.wrote ? 1 : 0)
-                            + " created=" + result.created);
-                    completeSyncSuccess(userId, result.appUser);
+                    try {
+                        AppUser appUser = appUserFromCallableResult(result.getData());
+                        completeSyncSuccess(userId, fingerprint, appUser);
+                    } catch (Exception exception) {
+                        completeSyncFailure(userId, exception);
+                    }
                 })
                 .addOnFailureListener(exception -> {
-                    Log.e(TAG, "appUser create/update failed", exception);
-                    if (exception instanceof FirebaseFirestoreException) {
-                        Log.e(TAG, "Firestore error code: "
-                                + ((FirebaseFirestoreException) exception).getCode());
-                    }
+                    Log.e(TAG, "Private profile synchronization failed", exception);
                     completeSyncFailure(userId, exception);
                 });
     }
@@ -275,6 +184,45 @@ public class AppUserRepository {
                 .addOnFailureListener(exception -> notifyFailure(callback, exception));
     }
 
+    public void createManagedProfile(
+            String actualName, String profileName, String email,
+            String phoneNumber, AppUserCallback callback) {
+        Map<String, Object> request = new HashMap<>();
+        request.put("actualName", actualName);
+        request.put("profileName", profileName);
+        request.put("email", email);
+        request.put("phoneNumber", phoneNumber);
+        callManagedProfileFunction("adminCreateManagedProfile", request, callback);
+    }
+
+    public void updateManagedProfile(
+            String userId, String actualName, String profileName, String email,
+            String phoneNumber, AppUserCallback callback) {
+        Map<String, Object> request = new HashMap<>();
+        request.put("userId", userId);
+        request.put("actualName", actualName);
+        request.put("profileName", profileName);
+        request.put("email", email);
+        request.put("phoneNumber", phoneNumber);
+        callManagedProfileFunction("adminUpdateManagedProfile", request, callback);
+    }
+
+    private void callManagedProfileFunction(
+            String functionName, Map<String, Object> request, AppUserCallback callback) {
+        FirebaseFunctions.getInstance("asia-south1").getHttpsCallable(functionName).call(request)
+                .addOnSuccessListener(result -> {
+                    try {
+                        AppUser appUser = appUserFromCallableResult(result.getData());
+                        patchUserInDirectoryCache(appUser);
+                        notifyDirectoryChangeListeners(Collections.singletonList(appUser));
+                        callback.onSuccess(appUser);
+                    } catch (Exception exception) {
+                        notifyFailure(callback, exception);
+                    }
+                })
+                .addOnFailureListener(exception -> notifyFailure(callback, exception));
+    }
+
     /** Records the signed-in user's current safe-play acknowledgment. */
     public Task<Void> acceptSafePlayPolicy(String userId, int policyVersion) {
         Map<String, Object> updates = new HashMap<>();
@@ -300,7 +248,19 @@ public class AppUserRepository {
             query = query.startAfter(after);
         }
 
-        query.get().addOnCompleteListener(task -> handleUsersPage(task, boundedSize, callback));
+        query.get().addOnCompleteListener(task -> handleUsersPage(task, boundedSize, false, callback));
+    }
+
+    /** Loads one user-management page with admin-only Google identity fields joined by UID. */
+    public void getAdminUsersPage(@Nullable DocumentSnapshot after, int pageSize,
+            UsersPageCallback callback) {
+        int boundedSize = Math.max(1, Math.min(pageSize, USER_PAGE_SIZE));
+        Query query = db.collection(FirestoreCollections.APP_USER)
+                .orderBy(FieldPath.documentId()).limit(boundedSize);
+        if (after != null) {
+            query = query.startAfter(after);
+        }
+        query.get().addOnCompleteListener(task -> handleUsersPage(task, boundedSize, true, callback));
     }
 
     /**
@@ -327,6 +287,41 @@ public class AppUserRepository {
             inFlightDirectoryCallbacks.add(callback);
         }
         loadUserDirectoryPage(null, new ArrayList<>());
+    }
+
+    /** Explicitly reloads the complete directory. Call only from a user-requested refresh action. */
+    public void refreshUsers(UsersCallback callback) {
+        if (callback == null) {
+            return;
+        }
+        synchronized (DIRECTORY_LOCK) {
+            if (inFlightDirectoryCallbacks != null) {
+                inFlightDirectoryCallbacks.add(callback);
+                return;
+            }
+            inFlightDirectoryCallbacks = new ArrayList<>();
+            inFlightDirectoryCallbacks.add(callback);
+        }
+        loadUserDirectoryPage(null, new ArrayList<>());
+    }
+
+    /** Loads the shared directory and joins admin-only Google identity fields by UID. */
+    public void getUsersCachedForAdmin(UsersCallback callback) {
+        getUsersCached(new UsersCallback() {
+            @Override
+            public void onSuccess(List<AppUser> users) {
+                List<AppUser> adminUsers = new ArrayList<>();
+                for (AppUser user : users) {
+                    adminUsers.add(copyPublicUser(user));
+                }
+                enrichWithPrivateIdentities(adminUsers, callback);
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                callback.onFailure(exception);
+            }
+        });
     }
 
     /**
@@ -432,31 +427,8 @@ public class AppUserRepository {
             if (cachedUserDirectory == null || changedUsers.isEmpty()) {
                 return;
             }
-            Map<String, AppUser> changedById = new HashMap<>();
-            for (AppUser user : changedUsers) {
-                if (user != null && user.getUserId() != null) {
-                    changedById.put(user.getUserId(), user);
-                }
-            }
-            List<AppUser> patched = new ArrayList<>(cachedUserDirectory.size());
-            boolean replaced = false;
-            for (AppUser user : cachedUserDirectory) {
-                if (user == null || user.getUserId() == null) {
-                    patched.add(user);
-                    continue;
-                }
-                AppUser changed = changedById.remove(user.getUserId());
-                if (changed != null) {
-                    patched.add(changed);
-                    replaced = true;
-                } else {
-                    patched.add(user);
-                }
-            }
-            patched.addAll(changedById.values());
-            if (replaced || !changedById.isEmpty()) {
-                cachedUserDirectory = patched;
-            }
+            cachedUserDirectory = AppUserDirectoryFilter.mergeByUserId(
+                    cachedUserDirectory, changedUsers);
         }
     }
 
@@ -530,6 +502,7 @@ public class AppUserRepository {
     private void handleUsersPage(
             Task<QuerySnapshot> task,
             int pageSize,
+            boolean includePrivateIdentity,
             UsersPageCallback callback) {
         if (!task.isSuccessful()) {
             callback.onFailure(task.getException());
@@ -547,13 +520,75 @@ public class AppUserRepository {
                 Log.e(TAG, "Error converting appUser document", exception);
             }
         }
+        List<AppUser> publicUsers = new ArrayList<>(users.size());
+        for (AppUser user : users) {
+            publicUsers.add(copyPublicUser(user));
+        }
+        patchUsersInDirectoryCache(publicUsers);
         DocumentSnapshot nextCursor = documents.isEmpty()
                 ? null
                 : documents.get(documents.size() - 1);
         boolean hasMore = documents.size() == pageSize;
         Log.d(TAG, "Loaded bounded user page: reads=" + documents.size()
                 + " hasMore=" + hasMore);
-        callback.onSuccess(new UsersPage(users, nextCursor, hasMore));
+        if (!includePrivateIdentity) {
+            callback.onSuccess(new UsersPage(users, nextCursor, hasMore));
+            return;
+        }
+        enrichWithPrivateIdentities(users, new UsersCallback() {
+            @Override
+            public void onSuccess(List<AppUser> enrichedUsers) {
+                callback.onSuccess(new UsersPage(enrichedUsers, nextCursor, hasMore));
+            }
+
+            @Override
+            public void onFailure(Exception exception) {
+                callback.onFailure(exception);
+            }
+        });
+    }
+
+    private void enrichWithPrivateIdentities(List<AppUser> users, UsersCallback callback) {
+        if (users == null || users.isEmpty()) {
+            callback.onSuccess(users == null ? new ArrayList<>() : users);
+            return;
+        }
+        List<Task<DocumentSnapshot>> reads = new ArrayList<>();
+        for (AppUser user : users) {
+            reads.add(db.collection(FirestoreCollections.APP_USER_IDENTITY)
+                    .document(user.getUserId()).get());
+        }
+        Tasks.whenAllComplete(reads).addOnSuccessListener(completed -> {
+            for (int index = 0; index < completed.size(); index++) {
+                Task<?> task = completed.get(index);
+                if (!task.isSuccessful() || !(task.getResult() instanceof DocumentSnapshot)) {
+                    continue;
+                }
+                DocumentSnapshot identity = (DocumentSnapshot) task.getResult();
+                users.get(index).setEmail(identity.getString("email"));
+                users.get(index).setGoogleDisplayName(identity.getString("googleDisplayName"));
+                users.get(index).setActualName(identity.getString("actualName"));
+                users.get(index).setPhoneNumber(identity.getString("phoneNumber"));
+            }
+            callback.onSuccess(users);
+        }).addOnFailureListener(callback::onFailure);
+    }
+
+    private static AppUser copyPublicUser(AppUser source) {
+        AppUser copy = new AppUser(source.getUserId(), source.getProvider(), source.getRole(),
+                null, source.getDisplayName(), source.getPhotoUrl());
+        copy.setProfileName(source.getProfileName());
+        copy.setProfileNameNeedsConfirmation(source.isProfileNameNeedsConfirmation());
+        copy.setProfileType(source.getProfileType());
+        copy.setActualName(source.getActualName());
+        copy.setPhoneNumber(source.getPhoneNumber());
+        copy.setProfileVersion(source.getProfileVersion());
+        copy.setCreatedAt(source.getCreatedAt());
+        copy.setLastLoginAt(source.getLastLoginAt());
+        copy.setSafePlayPolicyVersion(source.getSafePlayPolicyVersion());
+        copy.setSafePlayAcceptedAt(source.getSafePlayAcceptedAt());
+        copy.setHidden(source.isHidden());
+        return copy;
     }
 
     private AppUser documentToAppUser(DocumentSnapshot document) {
@@ -563,9 +598,14 @@ public class AppUserRepository {
             appUser.setUserId(document.getId());
         }
         appUser.setProvider(document.getString("provider"));
+        appUser.setProfileType(document.getString("profileType"));
         appUser.setRole(UserRole.fromString(document.getString("role")));
         appUser.setEmail(document.getString("email"));
         appUser.setDisplayName(document.getString("displayName"));
+        appUser.setProfileName(document.getString("profileName"));
+        Boolean profileNameNeedsConfirmation = document.getBoolean("profileNameNeedsConfirmation");
+        appUser.setProfileNameNeedsConfirmation(profileNameNeedsConfirmation != null
+                && profileNameNeedsConfirmation);
         appUser.setPhotoUrl(document.getString("photoUrl"));
         Long profileVersion = document.getLong("profileVersion");
         appUser.setProfileVersion(profileVersion != null ? profileVersion : 0L);
@@ -579,6 +619,65 @@ public class AppUserRepository {
         Boolean hidden = document.getBoolean("hidden");
         appUser.setHidden(hidden != null && hidden);
         return appUser;
+    }
+
+    private static AppUser appUserFromCallableResult(Object rawResult) {
+        if (!(rawResult instanceof Map)) {
+            throw new IllegalStateException("Profile response is invalid");
+        }
+        Object rawUser = ((Map<?, ?>) rawResult).get("user");
+        if (!(rawUser instanceof Map)) {
+            throw new IllegalStateException("Profile response does not contain a user");
+        }
+        Map<?, ?> user = (Map<?, ?>) rawUser;
+        AppUser appUser = new AppUser();
+        appUser.setUserId(asString(user.get("userId")));
+        if (appUser.getUserId() == null) {
+            throw new IllegalStateException("Profile response does not contain a user id");
+        }
+        appUser.setProvider(asString(user.get("provider")));
+        appUser.setProfileType(asString(user.get("profileType")));
+        appUser.setRole(UserRole.fromString(asString(user.get("role"))));
+        appUser.setEmail(asString(user.get("email")));
+        appUser.setDisplayName(asString(user.get("displayName")));
+        appUser.setProfileName(asString(user.get("profileName")));
+        appUser.setGoogleDisplayName(asString(user.get("googleDisplayName")));
+        appUser.setActualName(asString(user.get("actualName")));
+        appUser.setPhoneNumber(asString(user.get("phoneNumber")));
+        appUser.setPhotoUrl(asString(user.get("photoUrl")));
+        appUser.setProfileNameNeedsConfirmation(Boolean.TRUE.equals(user.get("profileNameNeedsConfirmation")));
+        appUser.setProfileVersion(asLong(user.get("profileVersion"), 0L));
+        appUser.setCreatedAt(asDate(user.get("createdAtMillis")));
+        appUser.setLastLoginAt(asDate(user.get("lastLoginAtMillis")));
+        Object safePlayVersion = user.get("safePlayPolicyVersion");
+        appUser.setSafePlayPolicyVersion(safePlayVersion instanceof Number
+                ? ((Number) safePlayVersion).intValue() : null);
+        appUser.setSafePlayAcceptedAt(asDate(user.get("safePlayAcceptedAtMillis")));
+        appUser.setHidden(Boolean.TRUE.equals(user.get("hidden")));
+        return appUser;
+    }
+
+    @Nullable
+    private static String asString(Object value) {
+        return value instanceof String ? (String) value : null;
+    }
+
+    private static long asLong(Object value, long fallback) {
+        return value instanceof Number ? ((Number) value).longValue() : fallback;
+    }
+
+    @Nullable
+    private static Date asDate(Object value) {
+        return value instanceof Number ? new Date(((Number) value).longValue()) : null;
+    }
+
+    private static String syncFingerprint(FirebaseUser user, String provider,
+            @Nullable ProfileOverrides overrides) {
+        String displayName = overrides != null ? overrides.displayName : user.getDisplayName();
+        String photoUrl = overrides != null ? overrides.photoUrl
+                : user.getPhotoUrl() == null ? null : user.getPhotoUrl().toString();
+        return String.valueOf(provider) + '\u0000' + String.valueOf(user.getEmail()) + '\u0000'
+                + String.valueOf(displayName) + '\u0000' + String.valueOf(photoUrl);
     }
 
     public static String getProviderName(FirebaseUser firebaseUser) {
@@ -612,11 +711,11 @@ public class AppUserRepository {
         return "unknown";
     }
 
-    private static void completeSyncSuccess(String userId, AppUser appUser) {
+    private static void completeSyncSuccess(String userId, String fingerprint, AppUser appUser) {
         List<AppUserCallback> callbacks;
         synchronized (SYNC_LOCK) {
-            RECENT_SYNCS.put(userId, new SyncCacheEntry(appUser));
             callbacks = IN_FLIGHT_SYNCS.remove(userId);
+            RECENT_SYNCS.put(userId, new SyncCacheEntry(fingerprint, appUser));
         }
         patchUserInDirectoryCache(appUser);
         notifyDirectoryChangeListeners(Collections.singletonList(appUser));
@@ -646,11 +745,41 @@ public class AppUserRepository {
         }
     }
 
+    public static void applyPublicProfileUpdate(String userId, String profileName, String displayName) {
+        if (userId == null || profileName == null) return;
+        AppUser changed = null;
+        synchronized (DIRECTORY_LOCK) {
+            if (cachedUserDirectory != null) {
+                for (AppUser user : cachedUserDirectory) {
+                    if (userId.equals(user.getUserId())) {
+                        user.setProfileName(profileName);
+                        user.setDisplayName(displayName != null ? displayName : profileName);
+                        user.setProfileNameNeedsConfirmation(false);
+                        user.setProfileVersion(System.currentTimeMillis());
+                        changed = user;
+                        break;
+                    }
+                }
+            }
+        }
+        synchronized (SYNC_LOCK) {
+            SyncCacheEntry recent = RECENT_SYNCS.get(userId);
+            if (recent != null) {
+                recent.appUser.setProfileName(profileName);
+                recent.appUser.setDisplayName(displayName != null ? displayName : profileName);
+                recent.appUser.setProfileNameNeedsConfirmation(false);
+                recent.appUser.setProfileVersion(System.currentTimeMillis());
+                changed = recent.appUser;
+            }
+        }
+        if (changed != null) notifyDirectoryChangeListeners(Collections.singletonList(changed));
+    }
+
     /** Clears process-wide user-directory and sync caches on sign-out. */
     public static void clearSessionCaches() {
         synchronized (SYNC_LOCK) {
-            RECENT_SYNCS.clear();
             IN_FLIGHT_SYNCS.clear();
+            RECENT_SYNCS.clear();
         }
         synchronized (DIRECTORY_LOCK) {
             cachedUserDirectory = null;
@@ -667,26 +796,6 @@ public class AppUserRepository {
         }
     }
 
-    private static final class SyncResult {
-        final AppUser appUser;
-        final boolean wrote;
-        final boolean created;
-
-        SyncResult(AppUser appUser, boolean wrote, boolean created) {
-            this.appUser = appUser;
-            this.wrote = wrote;
-            this.created = created;
-        }
-    }
-
-    private static final class SyncCacheEntry {
-        final AppUser appUser;
-
-        SyncCacheEntry(AppUser appUser) {
-            this.appUser = appUser;
-        }
-    }
-
     public static final class UsersPage {
         public final List<AppUser> users;
         @Nullable public final DocumentSnapshot nextCursor;
@@ -699,6 +808,16 @@ public class AppUserRepository {
             this.users = users;
             this.nextCursor = nextCursor;
             this.hasMore = hasMore;
+        }
+    }
+
+    private static final class SyncCacheEntry {
+        final String fingerprint;
+        final AppUser appUser;
+
+        SyncCacheEntry(String fingerprint, AppUser appUser) {
+            this.fingerprint = fingerprint;
+            this.appUser = appUser;
         }
     }
 

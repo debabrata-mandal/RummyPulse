@@ -605,6 +605,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
         accountDisplayNameLoader.load((displayNamesByUserId, photoUrlsByUserId, profileVersionsByUserId) -> {
             if (displayNamesByUserId != null) {
                 PlayerConsolidationViewModel.this.displayNameByUserId = displayNamesByUserId;
+                gameRepository.setAccountDisplayNames(displayNamesByUserId);
             }
             if (photoUrlsByUserId != null) {
                 PlayerConsolidationViewModel.this.photoUrlByUserId = photoUrlsByUserId;
@@ -649,13 +650,7 @@ public class PlayerConsolidationViewModel extends ViewModel {
         if (displayName != null && !displayName.trim().isEmpty()) {
             return displayName.trim();
         }
-        String email = user.getEmail();
-        if (email == null || email.trim().isEmpty()) {
-            return null;
-        }
-        String trimmed = email.trim();
-        int at = trimmed.indexOf('@');
-        return at > 0 ? trimmed.substring(0, at) : trimmed;
+        return null;
     }
 
     @Override
