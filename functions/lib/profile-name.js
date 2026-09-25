@@ -1,6 +1,44 @@
 "use strict";
 
-const PROFILE_NAME_PATTERN = /^[A-Za-z0-9_]{3,16}$/;
+const PROFILE_NAME_MIN_LENGTH = 3;
+const PROFILE_NAME_MAX_LENGTH = 24;
+const PROFILE_NAME_PATTERN = /^[\p{L}\p{N}_ ]+\.?(?: [0-9]+)?$/u;
+
+function normalizeProfileName(value) {
+  return typeof value === "string" ? value.normalize("NFKC").trim().replace(/\s+/gu, " ") : "";
+}
+
+function profileNameKey(value) {
+  return normalizeProfileName(value).toLocaleLowerCase("en-US");
+}
+
+function truncateCodePoints(value, maxLength) {
+  return [...value].slice(0, maxLength).join("").trimEnd();
+}
+
+function generatedProfileName(displayName, uid = "") {
+  const normalized = normalizeProfileName(displayName);
+  const tokens = normalized.split(" ").map((token) =>
+    [...token].filter((character) => /[\p{L}\p{N}_]/u.test(character)).join(""),
+  ).filter(Boolean);
+  let candidate = "";
+  if (tokens.length === 1) {
+    candidate = tokens[0];
+  } else if (tokens.length > 1) {
+    candidate = `${tokens[0]} ${[...tokens[tokens.length - 1]][0].toLocaleUpperCase("en-US")}.`;
+  }
+  if ([...candidate].length < PROFILE_NAME_MIN_LENGTH) {
+    const suffix = String(uid).replace(/[^A-Za-z0-9]/g, "").slice(-8) || "User";
+    candidate = `Player ${suffix}`;
+  }
+  return truncateCodePoints(candidate, PROFILE_NAME_MAX_LENGTH);
+}
+
+function profileNameWithSuffix(baseName, sequence) {
+  if (!Number.isInteger(sequence) || sequence <= 1) return truncateCodePoints(baseName, PROFILE_NAME_MAX_LENGTH);
+  const suffix = ` ${sequence}`;
+  return `${truncateCodePoints(baseName, PROFILE_NAME_MAX_LENGTH - suffix.length)}${suffix}`;
+}
 
 function cloneValue(value) {
   if (Array.isArray(value)) {
@@ -23,11 +61,13 @@ function validateProfileName(value) {
   if (typeof value !== "string") {
     throw new Error("Profile name must be text.");
   }
-  const profileName = value.trim();
-  if (!PROFILE_NAME_PATTERN.test(profileName)) {
-    throw new Error("Use 3–16 English letters, numbers, or underscores.");
+  const profileName = normalizeProfileName(value);
+  const length = [...profileName].length;
+  if (length < PROFILE_NAME_MIN_LENGTH || length > PROFILE_NAME_MAX_LENGTH ||
+      !PROFILE_NAME_PATTERN.test(profileName) || profileName.includes("  ")) {
+    throw new Error("Use 3–24 letters, numbers, spaces, underscores, or a period.");
   }
-  return {profileName, key: profileName.toLowerCase()};
+  return {profileName, key: profileNameKey(profileName)};
 }
 
 function replaceLinkedPlayerNames(source, uid, displayName) {
@@ -62,7 +102,13 @@ function replaceGameIdentityNames(source, uid, displayName) {
 }
 
 module.exports = {
+  generatedProfileName,
+  normalizeProfileName,
+  PROFILE_NAME_MAX_LENGTH,
+  PROFILE_NAME_MIN_LENGTH,
   PROFILE_NAME_PATTERN,
+  profileNameKey,
+  profileNameWithSuffix,
   replaceGameIdentityNames,
   replaceLinkedPlayerNames,
   validateProfileName,

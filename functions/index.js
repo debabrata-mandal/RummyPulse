@@ -11,6 +11,9 @@ const {logger} = require("firebase-functions");
 const {extractGroqName} = require("./lib/game-name");
 const {authenticationProvider} = require("./lib/auth-identity");
 const {
+  generatedProfileName,
+  profileNameKey,
+  profileNameWithSuffix,
   validateProfileName,
 } = require("./lib/profile-name");
 const {nextFixedCounter, nextRollingCounter} = require("./lib/rate-limit");
@@ -36,6 +39,7 @@ const GLOBAL_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 10;
 const MAX_GLOBAL_REQUESTS_PER_DAY = 200;
 const DELETE_PAGE_SIZE = 200;
+const LAST_LOGIN_UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const PROFILE_CALLABLE_OPTIONS = Object.freeze({
   region: "asia-south1",
   enforceAppCheck: !IS_EMULATOR,
@@ -121,32 +125,77 @@ exports.syncMyIdentity = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
   const database = getFirestore();
   const publicRef = database.collection("appUser_v2").doc(uid);
   const privateRef = database.collection(PRIVATE_USER_COLLECTION).doc(uid);
-  await database.runTransaction(async (transaction) => {
-    const publicSnapshot = await transaction.get(publicRef);
+  const user = await database.runTransaction(async (transaction) => {
+    const [publicSnapshot, privateSnapshot] = await transaction.getAll(publicRef, privateRef);
     const existing = publicSnapshot.data() || {};
-    const profileName = safeText(existing.profileName, 16);
+    const privateExisting = privateSnapshot.data() || {};
     const now = Date.now();
-    const publicData = {
-      userId: uid,
-      provider,
-      role: existing.role || "regular_user",
-      displayName: profileName || FieldValue.delete(),
-      photoUrl: photoUrl || null,
-      profileVersion: now,
-      lastLoginAt: FieldValue.serverTimestamp(),
-    };
-    if (!publicSnapshot.exists) {
-      publicData.createdAt = FieldValue.serverTimestamp();
+    const nowTimestamp = Timestamp.fromMillis(now);
+    const publicUpdates = {};
+    let profileName = safeText(existing.profileName, 24);
+    let profileNameNeedsConfirmation = existing.profileNameNeedsConfirmation === true;
+    let generatedClaim = null;
+    let publicProfileChanged = false;
+    if (!profileName) {
+      generatedClaim = await availableGeneratedProfileName(
+          transaction, database, googleDisplayName, uid);
+      profileName = generatedClaim.profileName;
+      profileNameNeedsConfirmation = true;
+      publicUpdates.profileName = profileName;
+      publicUpdates.displayName = profileName;
+      publicUpdates.profileNameNeedsConfirmation = true;
+      publicProfileChanged = true;
     }
-    transaction.set(publicRef, publicData, {merge: true});
-    transaction.set(privateRef, {
-      userId: uid,
-      googleDisplayName: googleDisplayName || null,
-      email: email || null,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, {merge: true});
+    if (!publicSnapshot.exists) {
+      Object.assign(publicUpdates, {
+        userId: uid,
+        provider,
+        role: "regular_user",
+        displayName: profileName,
+        photoUrl: photoUrl || null,
+        hidden: false,
+        createdAt: nowTimestamp,
+        lastLoginAt: nowTimestamp,
+      });
+      publicProfileChanged = true;
+    } else {
+      if (existing.userId !== uid) publicUpdates.userId = uid;
+      if (existing.provider !== provider) {
+        publicUpdates.provider = provider;
+        publicProfileChanged = true;
+      }
+      if ((existing.photoUrl || null) !== (photoUrl || null)) {
+        publicUpdates.photoUrl = photoUrl || null;
+        publicProfileChanged = true;
+      }
+      const lastLoginAt = timestampMillis(existing.lastLoginAt);
+      if (!lastLoginAt || now - lastLoginAt >= LAST_LOGIN_UPDATE_INTERVAL_MS) {
+        publicUpdates.lastLoginAt = nowTimestamp;
+      }
+    }
+    if (publicProfileChanged || request.data?.forceProfileVersionRefresh === true) {
+      publicUpdates.profileVersion = now;
+    }
+    if (Object.keys(publicUpdates).length > 0) {
+      transaction.set(publicRef, publicUpdates, {merge: true});
+    }
+    if (generatedClaim) {
+      transaction.set(generatedClaim.ref, {userId: uid, profileName});
+    }
+    const privateUpdates = {};
+    if (privateExisting.userId !== uid) privateUpdates.userId = uid;
+    if ((privateExisting.googleDisplayName || null) !== (googleDisplayName || null)) {
+      privateUpdates.googleDisplayName = googleDisplayName || null;
+    }
+    if ((privateExisting.email || null) !== (email || null)) privateUpdates.email = email || null;
+    if (Object.keys(privateUpdates).length > 0) {
+      privateUpdates.updatedAt = nowTimestamp;
+      transaction.set(privateRef, privateUpdates, {merge: true});
+    }
+    return publicUserDto({...existing, ...publicUpdates, profileName,
+      displayName: profileName, profileNameNeedsConfirmation});
   });
-  return {status: "synced"};
+  return {status: "synced", user};
 });
 
 exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
@@ -160,13 +209,13 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
   const uid = request.auth.uid;
   const database = getFirestore();
   const publicRef = database.collection("appUser_v2").doc(uid);
-  await database.runTransaction(async (transaction) => {
+  const user = await database.runTransaction(async (transaction) => {
     const publicSnapshot = await transaction.get(publicRef);
     if (!publicSnapshot.exists) {
       throw new HttpsError("failed-precondition", "Profile is not ready yet.");
     }
-    const oldName = safeText(publicSnapshot.get("profileName"), 16);
-    const oldKey = oldName ? oldName.toLowerCase() : null;
+    const oldName = safeText(publicSnapshot.get("profileName"), 24);
+    const oldKey = oldName ? profileNameKey(oldName) : null;
     const newClaimRef = requested.key ?
       database.collection(PROFILE_NAME_CLAIMS).doc(requested.key) : null;
     const oldClaimRef = oldKey ?
@@ -183,13 +232,17 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
     if (oldClaimRef && oldKey !== requested.key && oldClaim?.get("userId") === uid) {
       transaction.delete(oldClaimRef);
     }
-    transaction.update(publicRef, {
+    const profileVersion = Date.now();
+    const updates = {
       profileName: requested.profileName,
       displayName: requested.profileName,
-      profileVersion: Date.now(),
-    });
+      profileNameNeedsConfirmation: false,
+      profileVersion,
+    };
+    transaction.update(publicRef, updates);
+    return publicUserDto({...publicSnapshot.data(), ...updates, userId: uid});
   });
-  return {profileName: requested.profileName, displayName: requested.profileName};
+  return {profileName: requested.profileName, displayName: requested.profileName, user};
 });
 
 exports.adminCreateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
@@ -202,6 +255,8 @@ exports.adminCreateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
   const userRef = database.collection(PUBLIC_USER_COLLECTION).doc();
   const privateRef = database.collection(PRIVATE_USER_COLLECTION).doc(userRef.id);
   const claimRef = database.collection(PROFILE_NAME_CLAIMS).doc(requested.key);
+  const now = Date.now();
+  const createdAt = Timestamp.fromMillis(now);
   await database.runTransaction(async (transaction) => {
     const claim = await transaction.get(claimRef);
     if (claim.exists) {
@@ -215,10 +270,11 @@ exports.adminCreateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
       role: "regular_user",
       profileName: requested.profileName,
       displayName: requested.profileName,
+      profileNameNeedsConfirmation: false,
       photoUrl: null,
       hidden: false,
-      profileVersion: Date.now(),
-      createdAt: FieldValue.serverTimestamp(),
+      profileVersion: now,
+      createdAt,
     });
     transaction.create(privateRef, {
       userId: userRef.id,
@@ -228,7 +284,21 @@ exports.adminCreateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
       updatedAt: FieldValue.serverTimestamp(),
     });
   });
-  return {userId: userRef.id, profileName: requested.profileName, displayName: requested.profileName};
+  const user = publicUserDto({
+    userId: userRef.id,
+    provider: "managed",
+    profileType: "managed",
+    role: "regular_user",
+    profileName: requested.profileName,
+    displayName: requested.profileName,
+    profileNameNeedsConfirmation: false,
+    photoUrl: null,
+    hidden: false,
+    profileVersion: now,
+    createdAt,
+  }, {actualName, email, phoneNumber});
+  return {userId: userRef.id, profileName: requested.profileName,
+    displayName: requested.profileName, user};
 });
 
 exports.adminUpdateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
@@ -241,14 +311,13 @@ exports.adminUpdateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
   const phoneNumber = optionalPhoneNumber(request.data?.phoneNumber);
   const publicRef = database.collection(PUBLIC_USER_COLLECTION).doc(userId);
   const privateRef = database.collection(PRIVATE_USER_COLLECTION).doc(userId);
-  let oldKey = null;
-  await database.runTransaction(async (transaction) => {
+  const user = await database.runTransaction(async (transaction) => {
     const publicSnapshot = await transaction.get(publicRef);
     if (!publicSnapshot.exists || publicSnapshot.get("profileType") !== "managed") {
       throw new HttpsError("failed-precondition", "Only managed profiles can be edited here.");
     }
-    const oldName = safeText(publicSnapshot.get("profileName"), 16);
-    oldKey = oldName ? oldName.toLowerCase() : null;
+    const oldName = safeText(publicSnapshot.get("profileName"), 24);
+    const oldKey = oldName ? profileNameKey(oldName) : null;
     const newClaimRef = database.collection(PROFILE_NAME_CLAIMS).doc(requested.key);
     const oldClaimRef = oldKey && oldKey !== requested.key ?
       database.collection(PROFILE_NAME_CLAIMS).doc(oldKey) : null;
@@ -261,11 +330,14 @@ exports.adminUpdateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
     if (oldClaimRef && oldClaim?.get("userId") === userId) {
       transaction.delete(oldClaimRef);
     }
-    transaction.update(publicRef, {
+    const profileVersion = Date.now();
+    const updates = {
       profileName: requested.profileName,
       displayName: requested.profileName,
-      profileVersion: Date.now(),
-    });
+      profileNameNeedsConfirmation: false,
+      profileVersion,
+    };
+    transaction.update(publicRef, updates);
     transaction.set(privateRef, {
       userId,
       actualName,
@@ -273,8 +345,11 @@ exports.adminUpdateManagedProfile = onCall(PROFILE_CALLABLE_OPTIONS, async (requ
       phoneNumber,
       updatedAt: FieldValue.serverTimestamp(),
     }, {merge: true});
+    return publicUserDto({...publicSnapshot.data(), ...updates, userId},
+        {actualName, email, phoneNumber});
   });
-  return {userId, profileName: requested.profileName, displayName: requested.profileName};
+  return {userId, profileName: requested.profileName,
+    displayName: requested.profileName, user};
 });
 
 exports.adminUpdateGamePlayerMapping = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
@@ -296,7 +371,7 @@ exports.adminUpdateGamePlayerMapping = onCall(PROFILE_CALLABLE_OPTIONS, async (r
     if (!userSnapshot.exists || userSnapshot.get("hidden") === true) {
       throw new HttpsError("failed-precondition", "Select an available player profile.");
     }
-    const displayName = safeText(userSnapshot.get("profileName"), 16);
+    const displayName = safeText(userSnapshot.get("profileName"), 24);
     if (!displayName) {
       throw new HttpsError("failed-precondition", "The selected profile needs a profile name.");
     }
@@ -423,7 +498,7 @@ async function completeAccountDeletion(uid) {
   const publicRef = database.collection("appUser_v2").doc(uid);
   const publicSnapshot = await publicRef.get();
   const profileName = publicSnapshot.exists ?
-    safeText(publicSnapshot.get("profileName"), 16) : null;
+    safeText(publicSnapshot.get("profileName"), 24) : null;
   const counts = await cleanupAccountData(uid);
   await deleteAuthenticationUser(uid);
   const removals = [
@@ -432,7 +507,7 @@ async function completeAccountDeletion(uid) {
   ];
   if (profileName) {
     removals.push(database.collection(PROFILE_NAME_CLAIMS)
-        .doc(profileName.toLowerCase()).delete());
+        .doc(profileNameKey(profileName)).delete());
   }
   await Promise.all(removals);
   return counts;
@@ -447,6 +522,55 @@ async function requireAdministrator(database, request) {
   if (!snapshot.exists || !isAdministratorProfile(snapshot.data())) {
     throw new HttpsError("permission-denied", "Administrator access is required.");
   }
+}
+
+async function availableGeneratedProfileName(transaction, database, displayName, uid) {
+  const baseName = generatedProfileName(displayName, uid);
+  for (let sequence = 1; sequence <= 20; sequence++) {
+    const profileName = profileNameWithSuffix(baseName, sequence);
+    const ref = database.collection(PROFILE_NAME_CLAIMS).doc(profileNameKey(profileName));
+    const claim = await transaction.get(ref);
+    if (!claim.exists || claim.get("userId") === uid) return {profileName, ref};
+  }
+  const fallback = generatedProfileName(null, uid);
+  const profileName = profileNameWithSuffix(fallback, 1);
+  const ref = database.collection(PROFILE_NAME_CLAIMS).doc(profileNameKey(profileName));
+  const claim = await transaction.get(ref);
+  if (!claim.exists || claim.get("userId") === uid) return {profileName, ref};
+  throw new HttpsError("resource-exhausted", "Could not allocate a unique profile name.");
+}
+
+function timestampMillis(value) {
+  if (value instanceof Timestamp) return value.toMillis();
+  if (value instanceof Date) return value.getTime();
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function publicUserDto(data, privateData = null) {
+  const dto = {
+    userId: data.userId || null,
+    provider: data.provider || null,
+    profileType: data.profileType || null,
+    role: data.role || "regular_user",
+    profileName: data.profileName || null,
+    displayName: data.displayName || data.profileName || null,
+    profileNameNeedsConfirmation: data.profileNameNeedsConfirmation === true,
+    photoUrl: data.photoUrl || null,
+    profileVersion: Number.isFinite(data.profileVersion) ? data.profileVersion : 0,
+    createdAtMillis: timestampMillis(data.createdAt),
+    lastLoginAtMillis: timestampMillis(data.lastLoginAt),
+    safePlayPolicyVersion: Number.isInteger(data.safePlayPolicyVersion) ?
+      data.safePlayPolicyVersion : null,
+    safePlayAcceptedAtMillis: timestampMillis(data.safePlayAcceptedAt),
+    hidden: data.hidden === true,
+  };
+  if (privateData) {
+    dto.googleDisplayName = privateData.googleDisplayName || null;
+    dto.actualName = privateData.actualName || null;
+    dto.email = privateData.email || null;
+    dto.phoneNumber = privateData.phoneNumber || null;
+  }
+  return dto;
 }
 
 function requireProfileName(value) {

@@ -11,12 +11,15 @@ public class ProfileNameValidatorTest {
     public void acceptsConfiguredProfileNameFormat() {
         assertTrue(ProfileNameValidator.isValid("Card_King7"));
         assertTrue(ProfileNameValidator.isValid(" abc "));
+        assertTrue(ProfileNameValidator.isValid("Debabrata M."));
+        assertTrue(ProfileNameValidator.isValid("Debabrata M. 2"));
+        assertTrue(ProfileNameValidator.isValid("Élodie R."));
     }
 
     @Test
-    public void rejectsSpacesPunctuationAndInvalidLengths() {
+    public void rejectsUnsupportedPunctuationAndInvalidLengths() {
         assertFalse(ProfileNameValidator.isValid("ab"));
-        assertFalse(ProfileNameValidator.isValid("two words"));
+        assertFalse(ProfileNameValidator.isValid("two/words"));
         assertFalse(ProfileNameValidator.isValid("name!"));
         assertFalse(ProfileNameValidator.isValid(null));
     }

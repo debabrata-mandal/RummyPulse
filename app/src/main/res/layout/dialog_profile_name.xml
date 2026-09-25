@@ -44,7 +44,7 @@
             android:layout_height="wrap_content"
             android:imeOptions="actionDone"
             android:inputType="textNoSuggestions"
-            android:maxLength="16"
+            android:maxLength="24"
             android:maxLines="1"
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_secondary"

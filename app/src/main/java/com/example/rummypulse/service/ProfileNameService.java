@@ -4,6 +4,8 @@ import androidx.annotation.Nullable;
 
 import com.google.firebase.functions.FirebaseFunctions;
 import com.google.firebase.functions.FirebaseFunctionsException;
+import com.google.firebase.auth.FirebaseAuth;
+import com.example.rummypulse.data.AppUserRepository;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,8 +24,14 @@ public final class ProfileNameService {
                         return;
                     }
                     Map<?, ?> response = (Map<?, ?>) data;
-                    callback.onSuccess(asString(response.get("profileName")),
-                            asString(response.get("displayName")));
+                    String savedProfileName = asString(response.get("profileName"));
+                    String displayName = asString(response.get("displayName"));
+                    if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+                        AppUserRepository.applyPublicProfileUpdate(
+                                FirebaseAuth.getInstance().getCurrentUser().getUid(),
+                                savedProfileName, displayName);
+                    }
+                    callback.onSuccess(savedProfileName, displayName);
                 })
                 .addOnFailureListener(error -> callback.onFailure(messageFor(error)));
     }

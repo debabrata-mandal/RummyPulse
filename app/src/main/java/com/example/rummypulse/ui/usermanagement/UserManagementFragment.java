@@ -20,6 +20,7 @@ import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.UserRole;
 import com.example.rummypulse.databinding.FragmentUserManagementBinding;
 import com.example.rummypulse.utils.ProfileAvatarLoader;
+import com.example.rummypulse.utils.ProfileNameValidator;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -387,7 +388,7 @@ public class UserManagementFragment extends Fragment {
                 actualLayout.setError(getString(R.string.user_management_actual_name));
                 return;
             }
-            if (!profileName.matches("[A-Za-z0-9_]{3,16}")) {
+            if (!ProfileNameValidator.isValid(profileName)) {
                 profileLayout.setError(getString(R.string.user_management_profile_name_help));
                 return;
             }

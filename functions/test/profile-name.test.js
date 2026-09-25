@@ -3,19 +3,34 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  generatedProfileName,
+  profileNameWithSuffix,
   replaceGameIdentityNames,
   replaceLinkedPlayerNames,
   validateProfileName,
 } = require("../lib/profile-name");
 
 test("profile names are trimmed and normalized case-insensitively", () => {
-  assert.deepEqual(validateProfileName("  Card_King  "), {
-    profileName: "Card_King",
-    key: "card_king",
+  assert.deepEqual(validateProfileName("  Debabrata   M.  "), {
+    profileName: "Debabrata M.",
+    key: "debabrata m.",
   });
-  assert.throws(() => validateProfileName("two words"));
+  assert.deepEqual(validateProfileName("Élodie R."), {
+    profileName: "Élodie R.",
+    key: "élodie r.",
+  });
+  assert.throws(() => validateProfileName("two/words"));
   assert.throws(() => validateProfileName("ab"));
   assert.deepEqual(validateProfileName(""), {profileName: null, key: null});
+});
+
+test("migration names use first name, last initial, and bounded suffixes", () => {
+  assert.equal(generatedProfileName("Debabrata Mandal", "uid"), "Debabrata M.");
+  assert.equal(generatedProfileName("Prince", "uid"), "Prince");
+  assert.equal(generatedProfileName(null, "abcdef12345678"), "Player 12345678");
+  assert.equal(profileNameWithSuffix("Debabrata M.", 2), "Debabrata M. 2");
+  assert.equal(validateProfileName("Debabrata M. 2").profileName, "Debabrata M. 2");
+  assert.ok([...profileNameWithSuffix("ABCDEFGHIJKLMNOPQRSTUVWX", 12)].length <= 24);
 });
 
 test("linked snapshots are renamed without touching manual players", () => {

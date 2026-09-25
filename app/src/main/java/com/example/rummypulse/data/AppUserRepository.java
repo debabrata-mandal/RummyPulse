@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Date;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -37,6 +38,7 @@ public class AppUserRepository {
     public static final long PROFILE_DELTA_REFRESH_THROTTLE_MS = 30L * 60L * 1000L;
 
     private static final Object SYNC_LOCK = new Object();
+    private static final Map<String, SyncCacheEntry> RECENT_SYNCS = new HashMap<>();
     private static final Map<String, List<AppUserCallback>> IN_FLIGHT_SYNCS = new HashMap<>();
     private static final Object DIRECTORY_LOCK = new Object();
     private static List<AppUser> cachedUserDirectory;
@@ -77,7 +79,14 @@ public class AppUserRepository {
         }
 
         String userId = firebaseUser.getUid();
+        String fingerprint = syncFingerprint(firebaseUser, provider, overrides);
         synchronized (SYNC_LOCK) {
+            SyncCacheEntry recent = RECENT_SYNCS.get(userId);
+            if (!forceProfileVersionRefresh && recent != null
+                    && recent.fingerprint.equals(fingerprint)) {
+                if (callback != null) callback.onSuccess(recent.appUser);
+                return;
+            }
             List<AppUserCallback> waiting = IN_FLIGHT_SYNCS.get(userId);
             if (waiting != null) {
                 if (callback != null) {
@@ -98,17 +107,10 @@ public class AppUserRepository {
         // Identity fields are resolved from the verified token and Firebase Auth user record.
         request.put("forceProfileVersionRefresh", forceProfileVersionRefresh);
         FirebaseFunctions.getInstance("asia-south1").getHttpsCallable("syncMyIdentity").call(request)
-                .continueWithTask(task -> {
-                    if (!task.isSuccessful()) {
-                        throw task.getException() != null
-                                ? task.getException()
-                                : new IllegalStateException("Profile synchronization failed");
-                    }
-                    return db.collection(FirestoreCollections.APP_USER).document(userId).get();
-                })
-                .addOnSuccessListener(snapshot -> {
+                .addOnSuccessListener(result -> {
                     try {
-                        completeSyncSuccess(userId, documentToAppUser(snapshot));
+                        AppUser appUser = appUserFromCallableResult(result.getData());
+                        completeSyncSuccess(userId, fingerprint, appUser);
                     } catch (Exception exception) {
                         completeSyncFailure(userId, exception);
                     }
@@ -208,27 +210,12 @@ public class AppUserRepository {
     private void callManagedProfileFunction(
             String functionName, Map<String, Object> request, AppUserCallback callback) {
         FirebaseFunctions.getInstance("asia-south1").getHttpsCallable(functionName).call(request)
-                .continueWithTask(task -> {
-                    if (!task.isSuccessful()) {
-                        throw task.getException() != null
-                                ? task.getException()
-                                : new IllegalStateException("Managed profile update failed");
-                    }
-                    Object raw = task.getResult().getData();
-                    if (!(raw instanceof Map)) {
-                        throw new IllegalStateException("Managed profile response is invalid");
-                    }
-                    Object userId = ((Map<?, ?>) raw).get("userId");
-                    if (!(userId instanceof String)) {
-                        throw new IllegalStateException("Managed profile id is missing");
-                    }
-                    return db.collection(FirestoreCollections.APP_USER)
-                            .document((String) userId).get();
-                })
-                .addOnSuccessListener(snapshot -> {
-                    invalidateUserDirectoryCache();
+                .addOnSuccessListener(result -> {
                     try {
-                        callback.onSuccess(documentToAppUser(snapshot));
+                        AppUser appUser = appUserFromCallableResult(result.getData());
+                        patchUserInDirectoryCache(appUser);
+                        notifyDirectoryChangeListeners(Collections.singletonList(appUser));
+                        callback.onSuccess(appUser);
                     } catch (Exception exception) {
                         notifyFailure(callback, exception);
                     }
@@ -593,6 +580,7 @@ public class AppUserRepository {
         AppUser copy = new AppUser(source.getUserId(), source.getProvider(), source.getRole(),
                 null, source.getDisplayName(), source.getPhotoUrl());
         copy.setProfileName(source.getProfileName());
+        copy.setProfileNameNeedsConfirmation(source.isProfileNameNeedsConfirmation());
         copy.setProfileType(source.getProfileType());
         copy.setActualName(source.getActualName());
         copy.setPhoneNumber(source.getPhoneNumber());
@@ -617,6 +605,9 @@ public class AppUserRepository {
         appUser.setEmail(document.getString("email"));
         appUser.setDisplayName(document.getString("displayName"));
         appUser.setProfileName(document.getString("profileName"));
+        Boolean profileNameNeedsConfirmation = document.getBoolean("profileNameNeedsConfirmation");
+        appUser.setProfileNameNeedsConfirmation(profileNameNeedsConfirmation != null
+                && profileNameNeedsConfirmation);
         appUser.setPhotoUrl(document.getString("photoUrl"));
         Long profileVersion = document.getLong("profileVersion");
         appUser.setProfileVersion(profileVersion != null ? profileVersion : 0L);
@@ -630,6 +621,65 @@ public class AppUserRepository {
         Boolean hidden = document.getBoolean("hidden");
         appUser.setHidden(hidden != null && hidden);
         return appUser;
+    }
+
+    private static AppUser appUserFromCallableResult(Object rawResult) {
+        if (!(rawResult instanceof Map)) {
+            throw new IllegalStateException("Profile response is invalid");
+        }
+        Object rawUser = ((Map<?, ?>) rawResult).get("user");
+        if (!(rawUser instanceof Map)) {
+            throw new IllegalStateException("Profile response does not contain a user");
+        }
+        Map<?, ?> user = (Map<?, ?>) rawUser;
+        AppUser appUser = new AppUser();
+        appUser.setUserId(asString(user.get("userId")));
+        if (appUser.getUserId() == null) {
+            throw new IllegalStateException("Profile response does not contain a user id");
+        }
+        appUser.setProvider(asString(user.get("provider")));
+        appUser.setProfileType(asString(user.get("profileType")));
+        appUser.setRole(UserRole.fromString(asString(user.get("role"))));
+        appUser.setEmail(asString(user.get("email")));
+        appUser.setDisplayName(asString(user.get("displayName")));
+        appUser.setProfileName(asString(user.get("profileName")));
+        appUser.setGoogleDisplayName(asString(user.get("googleDisplayName")));
+        appUser.setActualName(asString(user.get("actualName")));
+        appUser.setPhoneNumber(asString(user.get("phoneNumber")));
+        appUser.setPhotoUrl(asString(user.get("photoUrl")));
+        appUser.setProfileNameNeedsConfirmation(Boolean.TRUE.equals(user.get("profileNameNeedsConfirmation")));
+        appUser.setProfileVersion(asLong(user.get("profileVersion"), 0L));
+        appUser.setCreatedAt(asDate(user.get("createdAtMillis")));
+        appUser.setLastLoginAt(asDate(user.get("lastLoginAtMillis")));
+        Object safePlayVersion = user.get("safePlayPolicyVersion");
+        appUser.setSafePlayPolicyVersion(safePlayVersion instanceof Number
+                ? ((Number) safePlayVersion).intValue() : null);
+        appUser.setSafePlayAcceptedAt(asDate(user.get("safePlayAcceptedAtMillis")));
+        appUser.setHidden(Boolean.TRUE.equals(user.get("hidden")));
+        return appUser;
+    }
+
+    @Nullable
+    private static String asString(Object value) {
+        return value instanceof String ? (String) value : null;
+    }
+
+    private static long asLong(Object value, long fallback) {
+        return value instanceof Number ? ((Number) value).longValue() : fallback;
+    }
+
+    @Nullable
+    private static Date asDate(Object value) {
+        return value instanceof Number ? new Date(((Number) value).longValue()) : null;
+    }
+
+    private static String syncFingerprint(FirebaseUser user, String provider,
+            @Nullable ProfileOverrides overrides) {
+        String displayName = overrides != null ? overrides.displayName : user.getDisplayName();
+        String photoUrl = overrides != null ? overrides.photoUrl
+                : user.getPhotoUrl() == null ? null : user.getPhotoUrl().toString();
+        return String.valueOf(provider) + '\u0000' + String.valueOf(user.getEmail()) + '\u0000'
+                + String.valueOf(displayName) + '\u0000' + String.valueOf(photoUrl);
     }
 
     public static String getProviderName(FirebaseUser firebaseUser) {
@@ -663,10 +713,11 @@ public class AppUserRepository {
         return "unknown";
     }
 
-    private static void completeSyncSuccess(String userId, AppUser appUser) {
+    private static void completeSyncSuccess(String userId, String fingerprint, AppUser appUser) {
         List<AppUserCallback> callbacks;
         synchronized (SYNC_LOCK) {
             callbacks = IN_FLIGHT_SYNCS.remove(userId);
+            RECENT_SYNCS.put(userId, new SyncCacheEntry(fingerprint, appUser));
         }
         patchUserInDirectoryCache(appUser);
         notifyDirectoryChangeListeners(Collections.singletonList(appUser));
@@ -696,10 +747,41 @@ public class AppUserRepository {
         }
     }
 
+    public static void applyPublicProfileUpdate(String userId, String profileName, String displayName) {
+        if (userId == null || profileName == null) return;
+        AppUser changed = null;
+        synchronized (DIRECTORY_LOCK) {
+            if (cachedUserDirectory != null) {
+                for (AppUser user : cachedUserDirectory) {
+                    if (userId.equals(user.getUserId())) {
+                        user.setProfileName(profileName);
+                        user.setDisplayName(displayName != null ? displayName : profileName);
+                        user.setProfileNameNeedsConfirmation(false);
+                        user.setProfileVersion(System.currentTimeMillis());
+                        changed = user;
+                        break;
+                    }
+                }
+            }
+        }
+        synchronized (SYNC_LOCK) {
+            SyncCacheEntry recent = RECENT_SYNCS.get(userId);
+            if (recent != null) {
+                recent.appUser.setProfileName(profileName);
+                recent.appUser.setDisplayName(displayName != null ? displayName : profileName);
+                recent.appUser.setProfileNameNeedsConfirmation(false);
+                recent.appUser.setProfileVersion(System.currentTimeMillis());
+                changed = recent.appUser;
+            }
+        }
+        if (changed != null) notifyDirectoryChangeListeners(Collections.singletonList(changed));
+    }
+
     /** Clears process-wide user-directory and sync caches on sign-out. */
     public static void clearSessionCaches() {
         synchronized (SYNC_LOCK) {
             IN_FLIGHT_SYNCS.clear();
+            RECENT_SYNCS.clear();
         }
         synchronized (DIRECTORY_LOCK) {
             cachedUserDirectory = null;
@@ -728,6 +810,16 @@ public class AppUserRepository {
             this.users = users;
             this.nextCursor = nextCursor;
             this.hasMore = hasMore;
+        }
+    }
+
+    private static final class SyncCacheEntry {
+        final String fingerprint;
+        final AppUser appUser;
+
+        SyncCacheEntry(String fingerprint, AppUser appUser) {
+            this.fingerprint = fingerprint;
+            this.appUser = appUser;
         }
     }
 

@@ -914,7 +914,7 @@ public class GameRepository {
 
         // Fetch game data for each game
         for (String gameId : gameIds) {
-            fetchGameData(gameId);
+            fetchGameData(gameId, false);
         }
     }
 
@@ -927,21 +927,34 @@ public class GameRepository {
         updateGameItemsList();
     }
 
-    private void fetchGameData(String gameId) {
+    private void fetchGameData(String gameId, boolean fallBackToFullReload) {
         System.out.println("Fetching game data");
         com.google.firebase.firestore.DocumentReference dataRef = db.collection(FirestoreCollections.GAME_DATA).document(gameId);
         dataRef.get(Source.SERVER)
-                .addOnSuccessListener(snapshot -> onGameDataSnapshotForReviewFetch(gameId, snapshot))
+                .addOnSuccessListener(snapshot -> onGameDataSnapshotForReviewFetch(
+                        gameId, snapshot, fallBackToFullReload))
                 .addOnFailureListener(error -> {
                     System.out.println("Game data server fetch failed; using fallback");
                     dataRef.get()
-                            .addOnSuccessListener(snapshot -> onGameDataSnapshotForReviewFetch(gameId, snapshot))
-                            .addOnFailureListener(error2 ->
-                                    System.out.println("Error fetching game data"));
+                            .addOnSuccessListener(snapshot -> onGameDataSnapshotForReviewFetch(
+                                    gameId, snapshot, fallBackToFullReload))
+                            .addOnFailureListener(error2 -> {
+                                System.out.println("Error fetching game data");
+                                if (fallBackToFullReload) loadAllGames();
+                            });
                 });
     }
 
-    private void onGameDataSnapshotForReviewFetch(String gameId, DocumentSnapshot documentSnapshot) {
+    private void refreshReviewGame(String gameId) {
+        if (gameId == null || !gameIdsOrder.contains(gameId)) {
+            loadAllGames();
+            return;
+        }
+        fetchGameData(gameId, true);
+    }
+
+    private void onGameDataSnapshotForReviewFetch(String gameId, DocumentSnapshot documentSnapshot,
+            boolean fallBackToFullReload) {
         if (!gameIdsOrder.contains(gameId)) {
             return;
         }
@@ -957,20 +970,23 @@ public class GameRepository {
                 return;
             }
             GameData gameData = gameDataWrapper.getData();
-            attachReviewGameAuthFetch(gameId, gameDataWrapper, gameData);
+            attachReviewGameAuthFetch(gameId, gameDataWrapper, gameData, fallBackToFullReload);
         } catch (Exception e) {
             System.out.println("Error deserializing game data");
         }
     }
 
-    private void attachReviewGameAuthFetch(String gameId, GameDataWrapper gameDataWrapper, GameData gameData) {
+    private void attachReviewGameAuthFetch(String gameId, GameDataWrapper gameDataWrapper,
+            GameData gameData, boolean fallBackToFullReload) {
         com.google.firebase.firestore.DocumentReference authRef = db.collection(FirestoreCollections.GAMES).document(gameId);
         authRef.get(Source.SERVER)
                 .addOnSuccessListener(authSnapshot -> onAuthSnapshotForReviewFetch(gameId, gameDataWrapper, gameData, authSnapshot))
                 .addOnFailureListener(e -> authRef.get()
                         .addOnSuccessListener(authSnapshot -> onAuthSnapshotForReviewFetch(gameId, gameDataWrapper, gameData, authSnapshot))
-                        .addOnFailureListener(e2 ->
-                                System.out.println("Error fetching game authorization")));
+                        .addOnFailureListener(e2 -> {
+                            System.out.println("Error fetching game authorization");
+                            if (fallBackToFullReload) loadAllGames();
+                        }));
     }
 
     private void onAuthSnapshotForReviewFetch(String gameId, GameDataWrapper gameDataWrapper, GameData gameData,
@@ -1861,7 +1877,7 @@ public class GameRepository {
                 .getHttpsCallable("adminUpdateGamePlayerMapping")
                 .call(request)
                 .addOnSuccessListener(result -> {
-                    loadAllGames();
+                    refreshReviewGame(gameId);
                     if (onSuccess != null) onSuccess.run();
                 })
                 .addOnFailureListener(error -> {

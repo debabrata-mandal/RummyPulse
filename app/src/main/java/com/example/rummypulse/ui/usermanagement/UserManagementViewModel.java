@@ -117,7 +117,14 @@ public class UserManagementViewModel extends ViewModel {
                 managedProfileRequestInProgress = false;
                 managedProfileSaved.setValue(true);
                 loading.setValue(false);
-                loadAllUsers();
+                if (existing == null) {
+                    loadAllUsers();
+                } else {
+                    List<AppUser> updated = new ArrayList<>(safeUsers());
+                    mergeByUserId(updated, Collections.singletonList(saved));
+                    sortUsers(updated);
+                    users.setValue(updated);
+                }
             }
 
             @Override

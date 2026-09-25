@@ -15,6 +15,7 @@ public class AppUser {
     private String email;
     private String displayName;
     private String profileName;
+    private boolean profileNameNeedsConfirmation;
     private String googleDisplayName;
     private String actualName;
     private String phoneNumber;
@@ -111,6 +112,14 @@ public class AppUser {
 
     public void setProfileName(String profileName) {
         this.profileName = profileName;
+    }
+
+    public boolean isProfileNameNeedsConfirmation() {
+        return profileNameNeedsConfirmation;
+    }
+
+    public void setProfileNameNeedsConfirmation(boolean profileNameNeedsConfirmation) {
+        this.profileNameNeedsConfirmation = profileNameNeedsConfirmation;
     }
 
     public String getGoogleDisplayName() {

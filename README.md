@@ -130,7 +130,9 @@ Create a Firebase Android app with package name `com.example.rummypulse`, then:
 | `approvedGames_v2` | Finalized games moved out of review |
 | `approvedGamesReport_v2` | Pre-aggregated monthly reports |
 | `gameDefaults_v2` | Shared game defaults |
-| `appUser_v2` | User profiles, roles, and safe-play acceptance records |
+| `appUser_v2` | Public profile names, roles, and safe-play acceptance records |
+| `appUserIdentity_v1` | Admin-only real names, email addresses, and managed-profile contact details |
+| `profileNameClaims_v1` | Private case-insensitive uniqueness claims for public profile names |
 | `playerStats_v2` | Per-player performance totals calculated from approved games |
 
 ### Remote Config

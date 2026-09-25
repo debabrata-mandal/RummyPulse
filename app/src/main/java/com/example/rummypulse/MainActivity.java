@@ -440,8 +440,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void maybePromptForProfileName(AppUser appUser) {
-        if (profilePromptShown || appUser == null
-                || (appUser.getProfileName() != null && !appUser.getProfileName().isEmpty())) {
+        if (profilePromptShown || appUser == null || !appUser.isProfileNameNeedsConfirmation()) {
             return;
         }
         profilePromptShown = true;
@@ -496,7 +495,6 @@ public class MainActivity extends AppCompatActivity {
                 if (navigationView != null && user != null) {
                     updateNavigationHeader(navigationView, user);
                 }
-                AppUserRepository.clearSessionCaches();
                 dialog.dismiss();
                 ModernToast.success(MainActivity.this, getString(R.string.profile_name_saved));
             }

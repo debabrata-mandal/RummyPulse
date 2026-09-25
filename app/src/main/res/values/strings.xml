@@ -546,13 +546,13 @@
     <string name="profile_name_title">Choose your game profile name</string>
     <string name="profile_name_message">This name replaces your Google name throughout RummyPulse. Your email is never shown to other players.</string>
     <string name="profile_name_hint">Profile name</string>
-    <string name="profile_name_helper">3–16 English letters, numbers, or underscores. Names are unique.</string>
+    <string name="profile_name_helper">3–24 letters, numbers, spaces, underscores, or a period. Names are unique.</string>
     <string name="profile_name_skip">Not now</string>
     <string name="profile_name_clear">Use Google name</string>
     <string name="profile_name_save">Save name</string>
     <string name="profile_name_saving">Saving…</string>
     <string name="profile_name_saved">Game profile name updated</string>
-    <string name="profile_name_invalid">Use 3–16 English letters, numbers, or underscores.</string>
+    <string name="profile_name_invalid">Use 3–24 letters, numbers, spaces, underscores, or a period.</string>
     <string name="nav_profile_subtitle">Game profile</string>
     <string name="standings_title">Standings</string>
     <string name="tap_to_enter_name_hint">Tap to enter name</string>
@@ -676,7 +676,7 @@
     <string name="user_management_invalid_email">Enter a valid email address</string>
     <string name="user_management_invalid_phone">Enter a valid phone number</string>
     <string name="user_management_profile_name_label">Game profile name</string>
-    <string name="user_management_profile_name_help">3–16 letters, numbers, or underscores</string>
+    <string name="user_management_profile_name_help">3–24 letters, numbers, spaces, underscores, or a period</string>
     <string name="user_management_managed_saved">Player profile saved</string>
     <string name="user_management_save_managed">Save profile</string>
     <string name="user_management_actual_name_display">Actual name: %1$s</string>

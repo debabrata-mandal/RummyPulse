@@ -3,88 +3,143 @@
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 const {
-  replaceLinkedPlayerNames,
+  generatedProfileName,
+  profileNameKey,
+  profileNameWithSuffix,
+  validateProfileName,
 } = require("../lib/profile-name");
 
 initializeApp();
 
 const apply = process.argv.includes("--apply");
 const database = getFirestore();
+const PUBLIC_USERS = "appUser_v2";
+const PRIVATE_USERS = "appUserIdentity_v1";
+const PROFILE_CLAIMS = "profileNameClaims_v1";
+const MAX_BATCH_OPERATIONS = 450;
 
 async function main() {
-  const users = await database.collection("appUser_v2").get();
-  const publicNames = new Map();
-  let writes = 0;
-  for (const snapshot of users.docs) {
-    const data = snapshot.data();
+  const [usersSnapshot, identitiesSnapshot, claimsSnapshot] = await Promise.all([
+    database.collection(PUBLIC_USERS).get(),
+    database.collection(PRIVATE_USERS).get(),
+    database.collection(PROFILE_CLAIMS).get(),
+  ]);
+  const identities = new Map(identitiesSnapshot.docs.map((snapshot) =>
+    [snapshot.id, snapshot.data()]));
+  const claims = new Map(claimsSnapshot.docs.map((snapshot) =>
+    [snapshot.id, snapshot.data()]));
+  const users = [...usersSnapshot.docs].sort((left, right) => left.id.localeCompare(right.id));
+  const assignments = assignProfileNames(users, identities);
+  const operations = [];
+  const counts = {users: users.length, generated: 0, preserved: 0, collisions: 0};
+
+  for (const snapshot of users) {
     const uid = snapshot.id;
-    const profileName = clean(data.profileName);
-    const googleDisplayName = clean(data.googleDisplayName) || clean(data.displayName) || "Player";
-    if (profileName) publicNames.set(uid, profileName);
-    writes += 2 + (profileName ? 1 : 0);
-    if (!apply) continue;
-    await database.collection("appUserIdentity_v1").doc(uid).set({
-      userId: uid,
-      googleDisplayName,
-      email: clean(data.email) || null,
-      migratedAt: FieldValue.serverTimestamp(),
-    }, {merge: true});
-    await snapshot.ref.update({
-      displayName: profileName || FieldValue.delete(),
-      profileName: profileName || FieldValue.delete(),
-      email: FieldValue.delete(),
-      googleDisplayName: FieldValue.delete(),
-      profileVersion: Date.now(),
-    });
-    if (profileName) {
-      await database.collection("profileNameClaims_v1")
-          .doc(profileName.toLowerCase()).set({userId: uid, profileName});
+    const data = snapshot.data();
+    const assignment = assignments.get(uid);
+    if (assignment.generated) counts.generated++;
+    else counts.preserved++;
+    if (assignment.collision) counts.collisions++;
+
+    const identity = identities.get(uid) || {};
+    const googleDisplayName = clean(identity.googleDisplayName) ||
+      clean(data.googleDisplayName) || clean(data.displayName) || null;
+    const email = clean(identity.email) || clean(data.email);
+    if (!sameNullable(identity.googleDisplayName, googleDisplayName) ||
+        !sameNullable(identity.email, email) || identity.userId !== uid) {
+      operations.push((batch) => batch.set(database.collection(PRIVATE_USERS).doc(uid), {
+        userId: uid,
+        googleDisplayName,
+        email,
+        migratedAt: FieldValue.serverTimestamp(),
+      }, {merge: true}));
+    }
+
+    const needsConfirmation = assignment.generated ? true : data.profileNameNeedsConfirmation === true;
+    if (data.profileName !== assignment.profileName || data.displayName !== assignment.profileName ||
+        data.profileNameNeedsConfirmation !== needsConfirmation || data.email !== undefined ||
+        data.googleDisplayName !== undefined) {
+      operations.push((batch) => batch.update(snapshot.ref, {
+        displayName: assignment.profileName,
+        profileName: assignment.profileName,
+        profileNameNeedsConfirmation: needsConfirmation,
+        email: FieldValue.delete(),
+        googleDisplayName: FieldValue.delete(),
+        profileVersion: Date.now(),
+      }));
+    }
+
+    const claim = claims.get(assignment.key);
+    if (!claim || claim.userId !== uid || claim.profileName !== assignment.profileName) {
+      operations.push((batch) => batch.set(database.collection(PROFILE_CLAIMS).doc(assignment.key), {
+        userId: uid,
+        profileName: assignment.profileName,
+      }));
     }
   }
 
-  writes += await rewriteCollection("gameData_v2", publicNames, replaceLinkedPlayerNames);
-  writes += await rewriteCollection("approvedGames_v2", publicNames, replaceLinkedPlayerNames);
-  const defaults = await database.collection("gameDefaults_v2").get();
-  for (const snapshot of defaults.docs) {
-    const uid = snapshot.get("updatedByUserId");
-    const displayName = publicNames.get(uid);
-    if (displayName && snapshot.get("updatedByUserName") !== displayName) {
-      writes++;
-      if (apply) await snapshot.ref.update("updatedByUserName", displayName);
-    }
-  }
-  const statsDocuments = await database.collection("playerStats_v2").get();
-  for (const stats of statsDocuments.docs) {
-    if (stats.exists && stats.get("displayName") !== undefined) {
-      writes++;
-      if (apply) await stats.ref.update("displayName", FieldValue.delete());
-    }
-  }
-
-  process.stdout.write(`${apply ? "Applied" : "Dry run"}: ${users.size} users, ${writes} writes\n`);
+  if (apply) await commitOperations(operations);
+  process.stdout.write(`${apply ? "Applied" : "Dry run"}: ${JSON.stringify({...counts, writes: operations.length})}\n`);
 }
 
-async function rewriteCollection(collectionName, names, transformer) {
-  const snapshots = await database.collection(collectionName).get();
-  let changedCount = 0;
-  for (const snapshot of snapshots.docs) {
-    let current = snapshot.data();
-    let changed = false;
-    for (const [uid, displayName] of names) {
-      const result = transformer(current, uid, displayName);
-      current = result.data;
-      changed = changed || result.changed;
-    }
-    if (changed) {
-      changedCount++;
-      if (apply) await snapshot.ref.set(current);
-    }
+function assignProfileNames(users, identities) {
+  const assignments = new Map();
+  const usedKeys = new Set();
+  for (const snapshot of users) {
+    const existing = validExistingName(snapshot.get("profileName"));
+    if (!existing || usedKeys.has(existing.key)) continue;
+    usedKeys.add(existing.key);
+    assignments.set(snapshot.id, {...existing, generated: false, collision: false});
   }
-  return changedCount;
+  for (const snapshot of users) {
+    if (assignments.has(snapshot.id)) continue;
+    const data = snapshot.data();
+    const identity = identities.get(snapshot.id) || {};
+    const fullName = clean(identity.googleDisplayName) ||
+      clean(data.googleDisplayName) || clean(data.displayName);
+    const baseName = generatedProfileName(fullName, snapshot.id);
+    let sequence = 1;
+    let profileName = profileNameWithSuffix(baseName, sequence);
+    let key = profileNameKey(profileName);
+    while (usedKeys.has(key)) {
+      sequence++;
+      profileName = profileNameWithSuffix(baseName, sequence);
+      key = profileNameKey(profileName);
+    }
+    usedKeys.add(key);
+    assignments.set(snapshot.id, {
+      profileName,
+      key,
+      generated: true,
+      collision: sequence > 1,
+    });
+  }
+  return assignments;
+}
+
+function validExistingName(value) {
+  try {
+    const validated = validateProfileName(value);
+    return validated.profileName ? validated : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function commitOperations(operations) {
+  for (let offset = 0; offset < operations.length; offset += MAX_BATCH_OPERATIONS) {
+    const batch = database.batch();
+    for (const operation of operations.slice(offset, offset + MAX_BATCH_OPERATIONS)) operation(batch);
+    await batch.commit();
+  }
 }
 
 function clean(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function sameNullable(left, right) {
+  return (left ?? null) === (right ?? null);
 }
 
 main().catch((error) => {
