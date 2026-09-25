@@ -2713,10 +2713,12 @@ public class JoinGameActivity extends AppCompatActivity {
         ListView list = dialogView.findViewById(R.id.list_users);
         ProgressBar progress = dialogView.findViewById(R.id.progress_users);
         TextView empty = dialogView.findViewById(R.id.text_users_empty);
+        View refresh = dialogView.findViewById(R.id.btn_refresh_users);
         Button unlink = dialogView.findViewById(R.id.btn_unlink_user);
         Button cancel = dialogView.findViewById(R.id.btn_cancel_mapping);
 
         subtitle.setText(getString(R.string.map_player_subtitle, player.getName()));
+        refresh.setVisibility(View.VISIBLE);
         unlink.setVisibility(TextUtils.isEmpty(player.getUserId()) ? View.GONE : View.VISIBLE);
         cancel.setOnClickListener(v -> dialog.dismiss());
         unlink.setOnClickListener(v -> {
@@ -2751,10 +2753,12 @@ public class JoinGameActivity extends AppCompatActivity {
         progress.setVisibility(View.VISIBLE);
         list.setVisibility(View.GONE);
         empty.setVisibility(View.GONE);
-        appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
+        AppUserRepository.UsersCallback directoryCallback = new AppUserRepository.UsersCallback() {
             @Override
             public void onSuccess(List<AppUser> users) {
-                cachedDirectoryUsers = sortDirectoryUsers(users);
+                if (!dialog.isShowing()) return;
+                applyCachedPlayerDirectory(users);
+                refresh.setEnabled(true);
                 if (dialog.isShowing()) {
                     bindUserDirectory(dialog, playerId, player, gameData,
                             mapButton, playerNameView,
@@ -2767,11 +2771,21 @@ public class JoinGameActivity extends AppCompatActivity {
             public void onFailure(Exception exception) {
                 if (dialog.isShowing()) {
                     progress.setVisibility(View.GONE);
-                    empty.setVisibility(View.VISIBLE);
-                    empty.setText(R.string.map_player_load_failed);
+                    refresh.setEnabled(true);
+                    if (list.getAdapter() == null) {
+                        empty.setVisibility(View.VISIBLE);
+                        empty.setText(R.string.map_player_load_failed);
+                    }
                 }
             }
+        };
+        refresh.setOnClickListener(v -> {
+            refresh.setEnabled(false);
+            progress.setVisibility(View.VISIBLE);
+            appUserRepository.refreshUsers(directoryCallback);
         });
+        refresh.setEnabled(false);
+        appUserRepository.getUsersCached(directoryCallback);
     }
 
     private void bindUserDirectory(
@@ -2845,7 +2859,9 @@ public class JoinGameActivity extends AppCompatActivity {
             currentMapping.setVisibility(View.GONE);
         }
 
-        search.addTextChangedListener(new android.text.TextWatcher() {
+        android.text.TextWatcher previousWatcher = (android.text.TextWatcher) search.getTag(R.id.input_user_search);
+        if (previousWatcher != null) search.removeTextChangedListener(previousWatcher);
+        android.text.TextWatcher searchWatcher = new android.text.TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
             @Override public void afterTextChanged(android.text.Editable editable) {
@@ -2860,7 +2876,10 @@ public class JoinGameActivity extends AppCompatActivity {
                 adapter.notifyDataSetChanged();
                 updateUserListVisibility(list, empty, visibleUsers);
             }
-        });
+        };
+        search.addTextChangedListener(searchWatcher);
+        search.setTag(R.id.input_user_search, searchWatcher);
+        searchWatcher.afterTextChanged(search.getText());
 
         list.setOnItemClickListener((parent, row, position, id) -> {
             AppUser selected = visibleUsers.get(position);
