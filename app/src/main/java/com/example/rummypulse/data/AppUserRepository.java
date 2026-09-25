@@ -289,6 +289,22 @@ public class AppUserRepository {
         loadUserDirectoryPage(null, new ArrayList<>());
     }
 
+    /** Explicitly reloads the complete directory. Call only from a user-requested refresh action. */
+    public void refreshUsers(UsersCallback callback) {
+        if (callback == null) {
+            return;
+        }
+        synchronized (DIRECTORY_LOCK) {
+            if (inFlightDirectoryCallbacks != null) {
+                inFlightDirectoryCallbacks.add(callback);
+                return;
+            }
+            inFlightDirectoryCallbacks = new ArrayList<>();
+            inFlightDirectoryCallbacks.add(callback);
+        }
+        loadUserDirectoryPage(null, new ArrayList<>());
+    }
+
     /** Loads the shared directory and joins admin-only Google identity fields by UID. */
     public void getUsersCachedForAdmin(UsersCallback callback) {
         getUsersCached(new UsersCallback() {
@@ -411,31 +427,8 @@ public class AppUserRepository {
             if (cachedUserDirectory == null || changedUsers.isEmpty()) {
                 return;
             }
-            Map<String, AppUser> changedById = new HashMap<>();
-            for (AppUser user : changedUsers) {
-                if (user != null && user.getUserId() != null) {
-                    changedById.put(user.getUserId(), user);
-                }
-            }
-            List<AppUser> patched = new ArrayList<>(cachedUserDirectory.size());
-            boolean replaced = false;
-            for (AppUser user : cachedUserDirectory) {
-                if (user == null || user.getUserId() == null) {
-                    patched.add(user);
-                    continue;
-                }
-                AppUser changed = changedById.remove(user.getUserId());
-                if (changed != null) {
-                    patched.add(changed);
-                    replaced = true;
-                } else {
-                    patched.add(user);
-                }
-            }
-            patched.addAll(changedById.values());
-            if (replaced || !changedById.isEmpty()) {
-                cachedUserDirectory = patched;
-            }
+            cachedUserDirectory = AppUserDirectoryFilter.mergeByUserId(
+                    cachedUserDirectory, changedUsers);
         }
     }
 
@@ -527,6 +520,11 @@ public class AppUserRepository {
                 Log.e(TAG, "Error converting appUser document", exception);
             }
         }
+        List<AppUser> publicUsers = new ArrayList<>(users.size());
+        for (AppUser user : users) {
+            publicUsers.add(copyPublicUser(user));
+        }
+        patchUsersInDirectoryCache(publicUsers);
         DocumentSnapshot nextCursor = documents.isEmpty()
                 ? null
                 : documents.get(documents.size() - 1);

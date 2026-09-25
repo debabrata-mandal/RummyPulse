@@ -143,6 +143,7 @@
     <string name="login_status_retry_queued">Retry ready. Waiting for the current sign-in attempt to finish…</string>
     <string name="login_status_retrying">Retrying sign-in…</string>
     <string name="login_status_failed">Sign-in failed. Please try again.</string>
+    <string name="login_status_timeout">Sign-in timed out. Please retry.</string>
     <string name="login_retry">Retry</string>
 
     <string name="update_progress_title">Updating RummyPulse</string>
@@ -685,6 +686,7 @@
     <string name="add_player_select_profile_title">Add player</string>
     <string name="add_player_select_profile_subtitle">Select an existing player profile. Names cannot be entered manually.</string>
     <string name="add_player_contact_admin">Player not found? Contact an administrator to create the profile first.</string>
+    <string name="refresh_player_profiles">Refresh player profiles</string>
     <string name="review_player_mapped">Mapped profile</string>
     <string name="review_player_mapping_required">Mapping required</string>
     <string name="review_change_mapping">Change mapping</string>

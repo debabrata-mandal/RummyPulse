@@ -38,6 +38,7 @@ public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
     private static final int RC_SIGN_IN = 9001;
     private static final long SIGN_IN_SLOW_NETWORK_MS = 15_000L;
+    private static final long SIGN_IN_TIMEOUT_MS = 30_000L;
     /** When true, always show the sign-in screen even if Firebase still has a cached user. */
     public static final String EXTRA_REQUIRE_LOGIN = "require_login";
 
@@ -46,6 +47,7 @@ public class LoginActivity extends AppCompatActivity {
     private GoogleSignInClient mGoogleSignInClient;
     private final Handler loginHandler = new Handler(Looper.getMainLooper());
     private Runnable slowNetworkNotice;
+    private Runnable authTimeout;
     private boolean googleSignInInProgress;
     private long startupStartedAt;
     private long googleSignInStartedAt;
@@ -56,8 +58,6 @@ public class LoginActivity extends AppCompatActivity {
         final String idToken;
         final Task<AuthResult> task;
         final long startedAt;
-        boolean retryQueued;
-
         AuthAttempt(String idToken, Task<AuthResult> task, long startedAt) {
             this.idToken = idToken;
             this.task = task;
@@ -137,6 +137,7 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
         googleSignInInProgress = true;
+        cancelAuthTimeout();
         googleSignInStartedAt = SystemClock.elapsedRealtime();
         // Show loading state
         binding.signInButton.setEnabled(false);
@@ -144,6 +145,8 @@ public class LoginActivity extends AppCompatActivity {
         binding.loginStatus.setText(R.string.login_status_choose_account);
         binding.loginStatus.setVisibility(View.VISIBLE);
         binding.retryButton.setVisibility(View.GONE);
+        binding.welcomeMessage.setVisibility(View.GONE);
+        binding.securityNotice.setVisibility(View.GONE);
         
         // Clear the cached Google account so the user can pick a different one after sign-out.
         mGoogleSignInClient.signOut().addOnCompleteListener(task -> {
@@ -199,6 +202,7 @@ public class LoginActivity extends AppCompatActivity {
     private void observeAuthAttempt(@NonNull AuthAttempt attempt) {
         showFirebaseAuthInProgress();
         scheduleSlowNetworkNotice(attempt);
+        scheduleAuthTimeout(attempt);
         attempt.task.addOnCompleteListener(this, task -> handleAuthComplete(attempt, task));
     }
 
@@ -209,6 +213,7 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
         cancelSlowNetworkNotice();
+        cancelAuthTimeout();
         Log.d(TAG, "Firebase authentication completed in "
                 + (SystemClock.elapsedRealtime() - completedAttempt.startedAt) + " ms");
         authAttempt = null;
@@ -233,12 +238,6 @@ public class LoginActivity extends AppCompatActivity {
 
         Exception exception = task.getException();
         Log.w(TAG, "signInWithCredential:failure", exception);
-        if (completedAttempt.retryQueued) {
-            binding.loginStatus.setText(R.string.login_status_retrying);
-            firebaseAuthWithGoogle(completedAttempt.idToken);
-            return;
-        }
-
         String detail = exception != null && exception.getMessage() != null
                 ? exception.getMessage()
                 : "unknown";
@@ -282,11 +281,35 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
+    private void scheduleAuthTimeout(@NonNull AuthAttempt attempt) {
+        cancelAuthTimeout();
+        authTimeout = () -> {
+            if (authAttempt != attempt || attempt.task.isComplete()) {
+                return;
+            }
+            Log.w(TAG, "Firebase authentication timed out after "
+                    + SIGN_IN_TIMEOUT_MS + " ms");
+            authAttempt = null;
+            showRetryState(R.string.login_status_timeout);
+        };
+        loginHandler.postDelayed(authTimeout, SIGN_IN_TIMEOUT_MS);
+    }
+
+    private void cancelAuthTimeout() {
+        if (authTimeout != null) {
+            loginHandler.removeCallbacks(authTimeout);
+            authTimeout = null;
+        }
+    }
+
     private void retrySignIn() {
         if (hasPendingAuthAttempt()) {
-            authAttempt.retryQueued = true;
-            binding.loginStatus.setText(R.string.login_status_retry_queued);
-            binding.retryButton.setEnabled(false);
+            String idToken = authAttempt.idToken;
+            authAttempt = null;
+            cancelSlowNetworkNotice();
+            cancelAuthTimeout();
+            binding.loginStatus.setText(R.string.login_status_retrying);
+            firebaseAuthWithGoogle(idToken);
             return;
         }
         signIn();
@@ -333,6 +356,8 @@ public class LoginActivity extends AppCompatActivity {
         binding.progressBar.setVisibility(View.GONE);
         binding.loginStatus.setVisibility(View.GONE);
         binding.retryButton.setVisibility(View.GONE);
+        binding.welcomeMessage.setVisibility(View.VISIBLE);
+        binding.securityNotice.setVisibility(View.VISIBLE);
         binding.retryButton.setEnabled(true);
     }
 
@@ -349,6 +374,7 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         cancelSlowNetworkNotice();
+        cancelAuthTimeout();
         super.onDestroy();
     }
 

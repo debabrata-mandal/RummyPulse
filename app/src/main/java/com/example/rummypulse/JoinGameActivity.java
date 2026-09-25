@@ -5314,6 +5314,8 @@ public class JoinGameActivity extends AppCompatActivity {
         ListView list = dialogView.findViewById(R.id.list_users);
         ProgressBar progress = dialogView.findViewById(R.id.progress_users);
         TextView empty = dialogView.findViewById(R.id.text_users_empty);
+        View refresh = dialogView.findViewById(R.id.btn_refresh_users);
+        refresh.setVisibility(View.VISIBLE);
         progress.setVisibility(View.VISIBLE);
         list.setVisibility(View.GONE);
         empty.setVisibility(View.GONE);
@@ -5326,82 +5328,96 @@ public class JoinGameActivity extends AppCompatActivity {
             int width = Math.min(Math.round(dm.widthPixels * 0.92f), Math.round(420 * dm.density));
             window.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);
         }
-        appUserRepository.getUsersCached(new AppUserRepository.UsersCallback() {
+        List<AppUser> available = new ArrayList<>();
+        List<AppUser> visible = new ArrayList<>();
+        ArrayAdapter<AppUser> adapter = new ArrayAdapter<AppUser>(
+                JoinGameActivity.this,
+                R.layout.item_map_user,
+                R.id.text_user_name,
+                visible) {
+            @Override
+            public View getView(int position, View convertView, android.view.ViewGroup parent) {
+                View row = super.getView(position, convertView, parent);
+                AppUser user = getItem(position);
+                String displayName = userDisplayName(user);
+                ((TextView) row.findViewById(R.id.text_user_name)).setText(displayName);
+                ((TextView) row.findViewById(R.id.text_user_detail)).setText("");
+                row.findViewById(R.id.icon_user_selected).setVisibility(View.GONE);
+                ProfileAvatarBinder.bindWithPhotoUrl(
+                        row,
+                        row.findViewById(R.id.user_avatar_image),
+                        row.findViewById(R.id.user_avatar_initial),
+                        displayName,
+                        user == null ? null : user.getPhotoUrl(),
+                        user == null ? 0L : user.getProfileVersion(),
+                        null,
+                        false,
+                        null,
+                        null);
+                return row;
+            }
+        };
+        list.setAdapter(adapter);
+        Runnable applySearch = () -> {
+            String query = search.getText() == null
+                    ? "" : search.getText().toString().trim().toLowerCase(Locale.ROOT);
+            visible.clear();
+            for (AppUser user : available) {
+                if (query.isEmpty() || userDisplayName(user)
+                        .toLowerCase(Locale.ROOT).contains(query)) {
+                    visible.add(user);
+                }
+            }
+            adapter.notifyDataSetChanged();
+            updateUserListVisibility(list, empty, visible);
+            if (visible.isEmpty()) empty.setText(R.string.add_player_contact_admin);
+        };
+        search.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(android.text.Editable value) {
+                applySearch.run();
+            }
+        });
+        list.setOnItemClickListener((parent, row, position, id) -> {
+            AppUser selected = visible.get(position);
+            dialog.dismiss();
+            addNewPlayer(selected);
+        });
+        AppUserRepository.UsersCallback directoryCallback = new AppUserRepository.UsersCallback() {
             @Override
             public void onSuccess(List<AppUser> users) {
                 if (!dialog.isShowing()) return;
-                List<AppUser> available = new ArrayList<>();
+                available.clear();
                 for (AppUser user : mappingDirectoryUsers(users)) {
                     if (findPlayerLinkedTo(gameData, user.getUserId(), null) == null) {
                         available.add(user);
                     }
                 }
-                List<AppUser> visible = new ArrayList<>(available);
-                ArrayAdapter<AppUser> adapter = new ArrayAdapter<AppUser>(
-                        JoinGameActivity.this,
-                        R.layout.item_map_user,
-                        R.id.text_user_name,
-                        visible) {
-                    @Override
-                    public View getView(int position, View convertView,
-                            android.view.ViewGroup parent) {
-                        View row = super.getView(position, convertView, parent);
-                        AppUser user = getItem(position);
-                        String displayName = userDisplayName(user);
-                        ((TextView) row.findViewById(R.id.text_user_name)).setText(displayName);
-                        ((TextView) row.findViewById(R.id.text_user_detail)).setText("");
-                        row.findViewById(R.id.icon_user_selected).setVisibility(View.GONE);
-                        ProfileAvatarBinder.bindWithPhotoUrl(
-                                row,
-                                row.findViewById(R.id.user_avatar_image),
-                                row.findViewById(R.id.user_avatar_initial),
-                                displayName,
-                                user == null ? null : user.getPhotoUrl(),
-                                user == null ? 0L : user.getProfileVersion(),
-                                null,
-                                false,
-                                null,
-                                null);
-                        return row;
-                    }
-                };
-                list.setAdapter(adapter);
                 progress.setVisibility(View.GONE);
-                updateUserListVisibility(list, empty, visible);
-                if (visible.isEmpty()) {
-                    empty.setText(R.string.add_player_contact_admin);
-                }
-                search.addTextChangedListener(new android.text.TextWatcher() {
-                    @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                    @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                    @Override public void afterTextChanged(android.text.Editable value) {
-                        String query = value.toString().trim().toLowerCase(Locale.ROOT);
-                        visible.clear();
-                        for (AppUser user : available) {
-                            if (query.isEmpty() || userDisplayName(user)
-                                    .toLowerCase(Locale.ROOT).contains(query)) {
-                                visible.add(user);
-                            }
-                        }
-                        adapter.notifyDataSetChanged();
-                        updateUserListVisibility(list, empty, visible);
-                        if (visible.isEmpty()) empty.setText(R.string.add_player_contact_admin);
-                    }
-                });
-                list.setOnItemClickListener((parent, row, position, id) -> {
-                    AppUser selected = visible.get(position);
-                    dialog.dismiss();
-                    addNewPlayer(selected);
-                });
+                refresh.setEnabled(true);
+                applySearch.run();
             }
 
             @Override
             public void onFailure(Exception exception) {
+                if (!dialog.isShowing()) return;
                 progress.setVisibility(View.GONE);
-                empty.setVisibility(View.VISIBLE);
-                empty.setText(R.string.map_player_load_failed);
+                refresh.setEnabled(true);
+                if (available.isEmpty()) {
+                    list.setVisibility(View.GONE);
+                    empty.setVisibility(View.VISIBLE);
+                    empty.setText(R.string.map_player_load_failed);
+                }
             }
+        };
+        refresh.setOnClickListener(v -> {
+            refresh.setEnabled(false);
+            progress.setVisibility(View.VISIBLE);
+            appUserRepository.refreshUsers(directoryCallback);
         });
+        refresh.setEnabled(false);
+        appUserRepository.getUsersCached(directoryCallback);
     }
 
     private void addNewPlayer(AppUser selectedUser) {

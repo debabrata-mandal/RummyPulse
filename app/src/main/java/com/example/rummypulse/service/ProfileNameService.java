@@ -1,5 +1,8 @@
 package com.example.rummypulse.service;
 
+import android.os.Handler;
+import android.os.Looper;
+
 import androidx.annotation.Nullable;
 
 import com.google.firebase.functions.FirebaseFunctions;
@@ -9,15 +12,27 @@ import com.example.rummypulse.data.AppUserRepository;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Saves unique public game-profile names through the trusted backend. */
 public final class ProfileNameService {
+    private static final long SAVE_TIMEOUT_MS = 20_000L;
 
     public void save(@Nullable String profileName, Callback callback) {
         Map<String, Object> request = new HashMap<>();
         request.put("profileName", profileName == null ? "" : profileName.trim());
+        Handler handler = new Handler(Looper.getMainLooper());
+        AtomicBoolean completed = new AtomicBoolean(false);
+        Runnable timeout = () -> {
+            if (completed.compareAndSet(false, true)) {
+                callback.onFailure("The save timed out. Please try again.");
+            }
+        };
+        handler.postDelayed(timeout, SAVE_TIMEOUT_MS);
         FirebaseFunctions.getInstance("asia-south1").getHttpsCallable("setProfileName").call(request)
                 .addOnSuccessListener(result -> {
+                    if (!completed.compareAndSet(false, true)) return;
+                    handler.removeCallbacks(timeout);
                     Object data = result.getData();
                     if (!(data instanceof Map)) {
                         callback.onFailure("The profile service returned an invalid response.");
@@ -33,7 +48,11 @@ public final class ProfileNameService {
                     }
                     callback.onSuccess(savedProfileName, displayName);
                 })
-                .addOnFailureListener(error -> callback.onFailure(messageFor(error)));
+                .addOnFailureListener(error -> {
+                    if (!completed.compareAndSet(false, true)) return;
+                    handler.removeCallbacks(timeout);
+                    callback.onFailure(messageFor(error));
+                });
     }
 
     @Nullable

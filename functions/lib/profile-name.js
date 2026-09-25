@@ -40,6 +40,13 @@ function profileNameWithSuffix(baseName, sequence) {
   return `${truncateCodePoints(baseName, PROFILE_NAME_MAX_LENGTH - suffix.length)}${suffix}`;
 }
 
+function needsProfileNameConfirmation(existingValue, generated) {
+  if (generated) return true;
+  // Legacy appUser_v2 documents have no confirmation field. They still need
+  // one prompt even when their existing name can be preserved as the default.
+  return existingValue !== false;
+}
+
 function cloneValue(value) {
   if (Array.isArray(value)) {
     return value.map(cloneValue);
@@ -104,6 +111,7 @@ function replaceGameIdentityNames(source, uid, displayName) {
 module.exports = {
   generatedProfileName,
   normalizeProfileName,
+  needsProfileNameConfirmation,
   PROFILE_NAME_MAX_LENGTH,
   PROFILE_NAME_MIN_LENGTH,
   PROFILE_NAME_PATTERN,

@@ -4,11 +4,20 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   generatedProfileName,
+  needsProfileNameConfirmation,
   profileNameWithSuffix,
   replaceGameIdentityNames,
   replaceLinkedPlayerNames,
   validateProfileName,
 } = require("../lib/profile-name");
+
+test("legacy migrated profiles require one confirmation prompt", () => {
+  assert.equal(needsProfileNameConfirmation(undefined, false), true);
+  assert.equal(needsProfileNameConfirmation(null, false), true);
+  assert.equal(needsProfileNameConfirmation(true, false), true);
+  assert.equal(needsProfileNameConfirmation(false, false), false);
+  assert.equal(needsProfileNameConfirmation(false, true), true);
+});
 
 test("profile names are trimmed and normalized case-insensitively", () => {
   assert.deepEqual(validateProfileName("  Debabrata   M.  "), {

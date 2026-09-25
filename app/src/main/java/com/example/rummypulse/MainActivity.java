@@ -429,13 +429,13 @@ public class MainActivity extends AppCompatActivity {
                         photoUrl,
                         CurrentUserProfileSession.getProfileVersion());
             } else {
-                profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo);
+                profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo_purple);
             }
         } else {
             nameTextView.setText(R.string.nav_header_title);
             subtitleTextView.setText(R.string.app_name);
             roleBadgeTextView.setText(R.string.nav_role_checking);
-            profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo);
+            profileImageView.setImageResource(R.drawable.ic_rummy_pulse_logo_purple);
         }
     }
 

@@ -46,4 +46,26 @@ public class AppUserDirectoryFilterTest {
         assertTrue(AppUserDirectoryFilter.forPlayerMapping(null).isEmpty());
         assertTrue(AppUserDirectoryFilter.forPlayerMapping(Arrays.asList()).isEmpty());
     }
+
+    @Test
+    public void mergeByUserId_addsNewlyReadUsersWithoutAnotherFetch() {
+        List<AppUser> merged = AppUserDirectoryFilter.mergeByUserId(
+                Arrays.asList(user("existing", false)),
+                Arrays.asList(user("new-user", false)));
+
+        assertEquals(2, merged.size());
+        assertEquals("new-user", merged.get(1).getUserId());
+    }
+
+    @Test
+    public void mergeByUserId_replacesExistingUserWithoutDuplicates() {
+        AppUser updated = user("existing", false);
+        updated.setProfileName("Updated Name");
+
+        List<AppUser> merged = AppUserDirectoryFilter.mergeByUserId(
+                Arrays.asList(user("existing", false)), Arrays.asList(updated));
+
+        assertEquals(1, merged.size());
+        assertEquals("Updated Name", merged.get(0).getProfileName());
+    }
 }

@@ -4,6 +4,7 @@ const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 const {
   generatedProfileName,
+  needsProfileNameConfirmation,
   profileNameKey,
   profileNameWithSuffix,
   validateProfileName,
@@ -55,7 +56,8 @@ async function main() {
       }, {merge: true}));
     }
 
-    const needsConfirmation = assignment.generated ? true : data.profileNameNeedsConfirmation === true;
+    const needsConfirmation = needsProfileNameConfirmation(
+        data.profileNameNeedsConfirmation, assignment.generated);
     if (data.profileName !== assignment.profileName || data.displayName !== assignment.profileName ||
         data.profileNameNeedsConfirmation !== needsConfirmation || data.email !== undefined ||
         data.googleDisplayName !== undefined) {
