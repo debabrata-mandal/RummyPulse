@@ -79,6 +79,8 @@ import java.util.Locale;
 import java.util.Map;
 
 public class JoinGameActivity extends AppCompatActivity {
+    private boolean initialGameJoinStarted;
+    private boolean transferInProgress;
 
     private JoinGameViewModel viewModel;
     private GameOperationRepository operationRepository;
@@ -214,7 +216,6 @@ public class JoinGameActivity extends AppCompatActivity {
         if (intent != null && intent.hasExtra("GAME_ID")) {
             String gameId = intent.getStringExtra("GAME_ID");
             String joinType = intent.getStringExtra("JOIN_TYPE");
-            boolean isCreator = intent.getBooleanExtra("IS_CREATOR", false);
             
             if (gameId != null) {
                 currentGameId = gameId; // Store the game ID
@@ -225,16 +226,7 @@ public class JoinGameActivity extends AppCompatActivity {
                     getSupportActionBar().setTitle("Game View");
                 }
                 
-                // Automatically join the game
-                if (isCreator) {
-                    ModernToast.success(this, "🎮 Welcome to your new game!");
-                    // For creator, join game and auto-grant edit access
-                    // First join to load game data and fetch PIN
-                    joinGameAsCreator(gameId);
-                } else {
-                    // Regular join without edit access
-                    joinGame(gameId);
-                }
+                // Join only after Firebase confirms the resumed session.
             }
         }
     }
@@ -284,26 +276,82 @@ public class JoinGameActivity extends AppCompatActivity {
             dialog.dismiss();
             boolean transferAccess = checkboxTransferAccess.isChecked() && currentGameId != null;
             if (transferAccess) {
-                viewModel.transferEditAccess(currentGameId, new JoinGameViewModel.TransferCallback() {
+                beginTransferWhenSynced();
+            } else {
+                finish();
+            }
+        });
+
+        dialog.show();
+        applyActionDialogWidth(dialog);
+    }
+
+    private void beginTransferWhenSynced() {
+        if (transferInProgress || currentGameId == null || operationRepository == null) return;
+        if (!com.example.rummypulse.utils.VerifiedSessionGate.isVerified(currentUserUid())) {
+            com.example.rummypulse.utils.VerifiedSessionGate.require(this, this::beginTransferWhenSynced);
+            return;
+        }
+        if (activeRoundScoreDraft != null || !loadPendingRounds().isEmpty()) {
+            retryPendingRoundSaves(null);
+            ModernToast.warning(this, "Finish or sync pending round scores before transferring access.");
+            return;
+        }
+        String gameId = currentGameId;
+        long editGeneration = viewModel.getActiveEditGeneration();
+        operationRepository.hasRoundDraft(gameId, editGeneration, hasDraft -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (hasDraft) {
+                ModernToast.warning(this, "Finish the saved round before transferring access.");
+                return;
+            }
+            transferInProgress = true;
+            ProgressBar progress = new ProgressBar(this);
+            int padding = Math.round(24 * getResources().getDisplayMetrics().density);
+            progress.setPadding(padding, padding, padding, padding);
+            AlertDialog waiting = new AlertDialog.Builder(this, R.style.DarkDialogTheme)
+                    .setTitle("Syncing before transfer")
+                    .setMessage("Waiting for all game changes to be saved…")
+                    .setView(progress)
+                    .setCancelable(false)
+                    .create();
+            waiting.show();
+            operationRepository.awaitIdle(gameId, 45_000, (ready, reason) -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (!ready || !loadPendingRounds().isEmpty() || activeRoundScoreDraft != null
+                        || !com.example.rummypulse.utils.VerifiedSessionGate.isVerified(currentUserUid())
+                        || !Boolean.TRUE.equals(viewModel.getEditAccessGranted().getValue())
+                        || editGeneration != viewModel.getActiveEditGeneration()) {
+                    waiting.dismiss();
+                    transferInProgress = false;
+                    ModernToast.warning(this, reason == null
+                            ? "Game changes are not ready to transfer. Please retry."
+                            : reason);
+                    return;
+                }
+                viewModel.transferEditAccess(gameId, new JoinGameViewModel.TransferCallback() {
                     @Override
                     public void onSuccess(String newPin, long newPinGeneration) {
-                        clearSavedPin(currentGameId);
+                        waiting.dismiss();
+                        transferInProgress = false;
+                        clearSavedPin(gameId);
                         showTransferAccessPinDialog(newPin);
                     }
 
                     @Override
                     public void onError(String message) {
+                        waiting.dismiss();
+                        transferInProgress = false;
                         ModernToast.error(JoinGameActivity.this, message);
-                        finish();
                     }
                 });
-            } else {
-                finish();
-            }
+            });
         });
-        
-        dialog.show();
-        applyActionDialogWidth(dialog);
+    }
+
+    private String currentUserUid() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        return user == null ? null : user.getUid();
     }
 
     private void observeOperationSync() {
@@ -414,6 +462,20 @@ public class JoinGameActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        com.example.rummypulse.utils.VerifiedSessionGate.require(
+                this, this::resumeVerifiedGameSession);
+    }
+
+    private void resumeVerifiedGameSession() {
+        if (!initialGameJoinStarted && currentGameId != null) {
+            initialGameJoinStarted = true;
+            if (getIntent().getBooleanExtra("IS_CREATOR", false)) {
+                ModernToast.success(this, "🎮 Welcome to your new game!");
+                joinGameAsCreator(currentGameId);
+            } else {
+                joinGame(currentGameId);
+            }
+        }
         if (operationRepository != null && currentGameId != null && isNetworkAvailable()) {
             operationRepository.resumePendingSync(currentGameId);
         }
@@ -2400,7 +2462,7 @@ public class JoinGameActivity extends AppCompatActivity {
         playerName.setEnabled(false);
         playerName.setFocusable(false);
         playerName.setCursorVisible(false);
-        applyMappedPlayerNameLock(playerName, player);
+        applyPlayerNameLock(playerName);
 
         TextView playerId = playerCardView.findViewById(R.id.text_player_id);
         if (gameData.getNumPlayers() > 2 && player.getRandomNumber() != null) {
@@ -2537,7 +2599,7 @@ public class JoinGameActivity extends AppCompatActivity {
             if (!displayName.contentEquals(name.getText())) {
                 name.setText(displayName);
             }
-            applyMappedPlayerNameLock(name, player);
+            applyPlayerNameLock(name);
             bindMapPlayerButton(card.findViewById(R.id.btn_map_player), player);
             bindMergedPlayerMetrics(card, player, gameData, standingsByPlayerId);
             TextView pending = card.findViewById(R.id.text_player_pending_sync);
@@ -2682,18 +2744,15 @@ public class JoinGameActivity extends AppCompatActivity {
         return byUserId;
     }
 
-    private void applyMappedPlayerNameLock(
-            EditText playerName,
-            com.example.rummypulse.data.Player player) {
-        if (playerName == null || player == null) {
+    private void applyPlayerNameLock(EditText playerName) {
+        if (playerName == null) {
             return;
         }
-        boolean mapped = !TextUtils.isEmpty(player.getUserId());
-        playerName.setEnabled(!mapped);
-        playerName.setFocusable(!mapped);
-        playerName.setFocusableInTouchMode(!mapped);
-        playerName.setCursorVisible(!mapped);
-        playerName.setLongClickable(!mapped);
+        playerName.setEnabled(false);
+        playerName.setFocusable(false);
+        playerName.setFocusableInTouchMode(false);
+        playerName.setCursorVisible(false);
+        playerName.setLongClickable(false);
         playerName.setAlpha(1f);
     }
 

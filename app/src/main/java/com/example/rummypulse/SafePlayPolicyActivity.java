@@ -26,6 +26,7 @@ import com.google.firebase.auth.FirebaseUser;
 
 /** Blocks access to the app until the signed-in user accepts the current safe-play policy. */
 public class SafePlayPolicyActivity extends AppCompatActivity {
+    private boolean verifiedPolicyFlowStarted;
 
     private ActivitySafePlayPolicyBinding binding;
     private final AppUserRepository appUserRepository = new AppUserRepository();
@@ -46,15 +47,9 @@ public class SafePlayPolicyActivity extends AppCompatActivity {
             returnToLogin(false);
             return;
         }
-        if (SafePlayPolicyStore.hasCurrentAcceptance(this, currentUser.getUid())) {
-            openMainActivity();
-            return;
-        }
-
         binding = ActivitySafePlayPolicyBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         configureActions();
-        loadProfileAndPolicy();
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
@@ -62,6 +57,26 @@ public class SafePlayPolicyActivity extends AppCompatActivity {
             }
         });
         VersionGate.refreshInBackground(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        com.example.rummypulse.utils.VerifiedSessionGate.require(this, () -> {
+            FirebaseUser verifiedUser = FirebaseAuth.getInstance().getCurrentUser();
+            if (verifiedUser == null) return;
+            if (currentUser == null || !verifiedUser.getUid().equals(currentUser.getUid())) {
+                currentUser = verifiedUser;
+                verifiedPolicyFlowStarted = false;
+            }
+            if (verifiedPolicyFlowStarted) return;
+            verifiedPolicyFlowStarted = true;
+            if (SafePlayPolicyStore.hasCurrentAcceptance(this, currentUser.getUid())) {
+                openMainActivity();
+            } else {
+                loadProfileAndPolicy();
+            }
+        });
     }
 
     private void configureActions() {
@@ -80,6 +95,7 @@ public class SafePlayPolicyActivity extends AppCompatActivity {
         if (requestInProgress || currentUser == null) {
             return;
         }
+        String requestedUid = currentUser.getUid();
         requestInProgress = true;
         profileReady = false;
         binding.policyContent.setVisibility(View.GONE);
@@ -104,7 +120,11 @@ public class SafePlayPolicyActivity extends AppCompatActivity {
                 new AppUserRepository.AppUserCallback() {
                     @Override
                     public void onSuccess(AppUser appUser) {
+                        FirebaseUser signedIn = FirebaseAuth.getInstance().getCurrentUser();
+                        if (signedIn == null || !requestedUid.equals(signedIn.getUid())
+                                || !requestedUid.equals(currentUser.getUid())) return;
                         CurrentUserProfileSession.update(appUser);
+                        CurrentUserProfileSession.cachePublicName(SafePlayPolicyActivity.this, appUser);
                         if (leavingActivity || isFinishing()) {
                             return;
                         }

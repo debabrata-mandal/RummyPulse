@@ -9,6 +9,21 @@ import java.util.List;
 
 @Dao
 public interface GameOperationDao {
+    @Query("SELECT * FROM queue_owner WHERE id = 1 LIMIT 1")
+    QueueOwnerEntity getQueueOwner();
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void upsertQueueOwner(QueueOwnerEntity owner);
+
+    @Query("SELECT DISTINCT gameId FROM pending_game_operations WHERE status IN ('PENDING', 'IN_FLIGHT', 'BLOCKED') UNION SELECT DISTINCT gameId FROM round_score_drafts")
+    List<String> getRecoverableGameIds();
+
+    @Query("SELECT COUNT(*) FROM pending_game_operations WHERE gameId = :gameId AND status = 'BLOCKED'")
+    int blockedOperationCount(String gameId);
+
+    @Query("DELETE FROM game_snapshots")
+    void deleteSnapshots();
+
     @Query("SELECT * FROM game_snapshots WHERE gameId = :gameId LIMIT 1")
     GameSnapshotEntity getSnapshot(String gameId);
 
