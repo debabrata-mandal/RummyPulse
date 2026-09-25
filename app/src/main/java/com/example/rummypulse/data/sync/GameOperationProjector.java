@@ -206,11 +206,16 @@ public final class GameOperationProjector {
         Player added = GameDataCopies.copyPlayer(player);
         String userId = clean(added.getUserId());
         String name = clean(added.getName());
-        if (userId == null || name == null) {
+        if (userId == null) {
+            if (hasAnyEnteredScore(data)) {
+                throw new IllegalStateException(
+                        "Map the new player before adding them to a game with scores.");
+            }
+            added.setName(UNKNOWN_PLAYER_NAME);
+        } else if (name == null) {
             throw new IllegalArgumentException(
                     "Select a player profile before adding the player.");
-        }
-        if (findPlayerIdMappedTo(data, userId, null) != null) {
+        } else if (findPlayerIdMappedTo(data, userId, null) != null) {
             throw new IllegalStateException("That profile is already mapped in this game.");
         }
         if (clean(added.getPlayerId()) == null) {
@@ -222,6 +227,17 @@ public final class GameOperationProjector {
         List<Player> players = new ArrayList<>(data.getPlayers());
         players.add(added);
         data.setPlayers(players);
+    }
+
+    private static boolean hasAnyEnteredScore(GameData data) {
+        if (data.getPlayers() == null) return false;
+        for (Player player : data.getPlayers()) {
+            if (player == null || player.getScores() == null) continue;
+            for (Integer score : player.getScores()) {
+                if (score != null && score >= 0) return true;
+            }
+        }
+        return false;
     }
 
     private static void applyDelete(GameData data, String playerId) {

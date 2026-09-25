@@ -223,7 +223,8 @@ final class GameOperationRemoteApplier {
         GameOperationType type = operation.operationType();
         if (type == GameOperationType.ADD_PLAYER
                 && payload != null
-                && payload.player != null) {
+                && payload.player != null
+                && !TextUtils.isEmpty(payload.player.getUserId())) {
             updateApprovalForMappedUser(transaction, db, gameRef, operation.gameId,
                     payload.player.getUserId(), mappedUserCanSignIn);
         } else if (type == GameOperationType.MAP_USER) {

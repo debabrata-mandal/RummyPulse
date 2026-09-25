@@ -2234,7 +2234,7 @@ public class JoinGameActivity extends AppCompatActivity {
             binding.btnEnterRoundScores.setVisibility(View.GONE);
             return;
         }
-        boolean show = !isGameCompleted(gameData);
+        boolean show = hasCompletePlayerMappings(gameData) && !isGameCompleted(gameData);
         binding.btnEnterRoundScores.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
@@ -2247,6 +2247,10 @@ public class JoinGameActivity extends AppCompatActivity {
     private void updateCorrectPastRoundButtonVisibility(com.example.rummypulse.data.GameData gameData) {
         Boolean editAccess = viewModel.getEditAccessGranted().getValue();
         if (editAccess == null || !editAccess) {
+            binding.btnCorrectPastRound.setVisibility(View.GONE);
+            return;
+        }
+        if (!hasCompletePlayerMappings(gameData)) {
             binding.btnCorrectPastRound.setVisibility(View.GONE);
             return;
         }
@@ -3198,6 +3202,9 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+        if (!hasCompletePlayerMappings(gameData)) {
+            return;
+        }
         int maxPast = getMaxCorrectablePastRound(gameData);
         if (maxPast < 1) {
             ModernToast.info(this, getString(R.string.correct_past_round_none));
@@ -5255,7 +5262,11 @@ public class JoinGameActivity extends AppCompatActivity {
             ModernToast.warning(this, "Cannot add more players. Maximum 15 players allowed.");
             return;
         }
-        showAddMappedPlayerDialog(gameData);
+        if (hasAnyEnteredScoreInGame(gameData)) {
+            showAddMappedPlayerDialog(gameData);
+        } else {
+            addUnmappedPlayer(gameData);
+        }
     }
 
     private void showAddMappedPlayerDialog(
@@ -5411,23 +5422,7 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         newPlayer.setScores(scores);
         
-        // Generate random number for player ID (if more than 2 players)
-        if (gameData.getPlayers().size() >= 2) {
-            // Generate a unique random number
-            java.util.Set<Integer> existingNumbers = new java.util.HashSet<>();
-            for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
-                if (player.getRandomNumber() != null) {
-                    existingNumbers.add(player.getRandomNumber());
-                }
-            }
-            
-            int randomNumber;
-            do {
-                randomNumber = 10 + new java.util.Random().nextInt(90); // 10-99
-            } while (existingNumbers.contains(randomNumber));
-            
-            newPlayer.setRandomNumber(randomNumber);
-        }
+        assignRandomNumberIfNeeded(gameData, newPlayer);
         
         enqueueGameOperation(
                 GameOperationType.ADD_PLAYER,
@@ -5435,6 +5430,40 @@ public class JoinGameActivity extends AppCompatActivity {
                 GameOperationPayload.player(newPlayer),
                 () -> ModernToast.success(
                         this, "Player '" + playerName + "' added locally; syncing…"));
+    }
+
+    private void addUnmappedPlayer(com.example.rummypulse.data.GameData gameData) {
+        com.example.rummypulse.data.Player newPlayer = new com.example.rummypulse.data.Player();
+        newPlayer.setPlayerId(java.util.UUID.randomUUID().toString());
+        newPlayer.setName(getString(R.string.unknown_user));
+        newPlayer.setUserId(null);
+        newPlayer.setIsCreator(false);
+        java.util.List<Integer> scores = new java.util.ArrayList<>();
+        for (int i = 0; i < 10; i++) scores.add(-1);
+        newPlayer.setScores(scores);
+        assignRandomNumberIfNeeded(gameData, newPlayer);
+
+        enqueueGameOperation(
+                GameOperationType.ADD_PLAYER,
+                newPlayer.getPlayerId(),
+                GameOperationPayload.player(newPlayer),
+                () -> ModernToast.success(
+                        this, getString(R.string.unmapped_player_added)));
+    }
+
+    private void assignRandomNumberIfNeeded(
+            com.example.rummypulse.data.GameData gameData,
+            com.example.rummypulse.data.Player newPlayer) {
+        if (gameData.getPlayers().size() < 2) return;
+        java.util.Set<Integer> existingNumbers = new java.util.HashSet<>();
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            if (player.getRandomNumber() != null) existingNumbers.add(player.getRandomNumber());
+        }
+        int randomNumber;
+        do {
+            randomNumber = 10 + new java.util.Random().nextInt(90);
+        } while (existingNumbers.contains(randomNumber));
+        newPlayer.setRandomNumber(randomNumber);
     }
     
     private void showDeletePlayerConfirmation(com.example.rummypulse.data.Player player, com.example.rummypulse.data.GameData gameData) {

@@ -103,6 +103,50 @@ public class GameOperationProjectorTest {
                 GameDataSchema.findPlayer(scored, "p2").getScores().get(0));
     }
 
+    @Test
+    public void unmappedPlayer_canBeAddedBeforeAnyScoreExists() {
+        GameData game = game();
+        for (Player player : game.getPlayers()) {
+            player.setScores(new ArrayList<>(Arrays.asList(-1, -1)));
+        }
+        Player added = player("p3", "Temporary", null, -1);
+
+        GameData updated = GameOperationProjector.apply(
+                game,
+                GameOperationType.ADD_PLAYER,
+                "p3",
+                GameOperationPayload.player(added));
+
+        Player stored = GameDataSchema.findPlayer(updated, "p3");
+        assertEquals("Unknown", stored.getName());
+        assertEquals(null, stored.getUserId());
+    }
+
+    @Test
+    public void unmappedPlayer_cannotBeAddedAfterScoreEntryStarts() {
+        Player added = player("p3", "Temporary", null, -1);
+
+        assertThrows(IllegalStateException.class, () -> GameOperationProjector.apply(
+                game(),
+                GameOperationType.ADD_PLAYER,
+                "p3",
+                GameOperationPayload.player(added)));
+    }
+
+    @Test
+    public void scoreEntry_rejectsAnyUnmappedPlayer() {
+        GameData game = game();
+        game.getPlayers().get(1).setUserId(null);
+        Map<String, Integer> scores = new LinkedHashMap<>();
+        scores.put("p1", 42);
+
+        assertThrows(IllegalStateException.class, () -> GameOperationProjector.apply(
+                game,
+                GameOperationType.UPDATE_SCORE,
+                null,
+                GameOperationPayload.scores(1, scores)));
+    }
+
     private static GameData game() {
         Player first = player("p1", "Debu", "u1", 10);
         Player second = player("p2", "Lebu", "u2", 20);

@@ -678,6 +678,7 @@
     <string name="user_management_save_managed">Save profile</string>
     <string name="user_management_actual_name_display">Actual name: %1$s</string>
     <string name="player_mapping_required_for_scoring">Add at least two players and map every player before entering scores.</string>
+    <string name="unmapped_player_added">Unknown player added. Map every player before entering scores.</string>
     <string name="map_player_duplicate_profile">That profile is already mapped to another player.</string>
     <string name="add_player_select_profile_title">Add player</string>
     <string name="add_player_select_profile_subtitle">Select an existing player profile. Names cannot be entered manually.</string>
