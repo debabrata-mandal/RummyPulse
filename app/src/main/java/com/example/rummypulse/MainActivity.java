@@ -59,6 +59,7 @@ import com.example.rummypulse.utils.SafePlayPolicyStore;
 import com.example.rummypulse.utils.ModernToast;
 import com.example.rummypulse.utils.ModernUpdateChecker;
 import com.example.rummypulse.utils.VersionGate;
+import com.example.rummypulse.utils.VerifiedSessionGate;
 
 import androidx.annotation.NonNull;
 import androidx.activity.result.ActivityResultLauncher;
@@ -90,6 +91,7 @@ public class MainActivity extends AppCompatActivity {
     private AppUserRoleSession.Role currentNavigationRole = AppUserRoleSession.Role.UNKNOWN;
     private boolean reviewNeedsAttention = false;
     private boolean initialAppUserSyncCompleted;
+    private boolean initialAppUserSyncStarted;
     private boolean hasStartedOnce;
     private boolean profilePromptShown;
     private boolean accountDeletionInProgress;
@@ -128,13 +130,8 @@ public class MainActivity extends AppCompatActivity {
                     if (accountDeletionInProgress) {
                         return;
                     }
-                    android.util.Log.d("MainActivity", "User signed out, redirecting to login");
-                    SessionCacheCleaner.clearAll(MainActivity.this);
-                    Intent loginIntent = new Intent(MainActivity.this, LoginActivity.class);
-                    loginIntent.putExtra(LoginActivity.EXTRA_REQUIRE_LOGIN, true);
-                    loginIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    startActivity(loginIntent);
-                    finish();
+                    VerifiedSessionGate.invalidate();
+                    VerifiedSessionGate.require(MainActivity.this, () -> resumeVerifiedSession());
                 }
             }
         };
@@ -170,8 +167,6 @@ public class MainActivity extends AppCompatActivity {
         }
         android.util.Log.d("MainActivity", "User authenticated");
         authStateManager.saveAuthState(currentUser);
-        AppUserRoleSession.getInstance().startForCurrentUser(false);
-        ensureAppUserDocument(currentUser);
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -294,7 +289,21 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        refreshRemoteProfileChanges();
+        VerifiedSessionGate.require(this, this::resumeVerifiedSession);
+    }
+
+    private void resumeVerifiedSession() {
+        FirebaseUser user = mAuth == null ? null : mAuth.getCurrentUser();
+        if (user == null || isFinishing()) return;
+        AppUserRoleSession.getInstance().startForCurrentUser(false);
+        if (!initialAppUserSyncStarted) {
+            initialAppUserSyncStarted = true;
+            GameRepository.getDashboardInstance().startDashboardListener();
+            com.example.rummypulse.data.GameDefaultsRepository.getInstance(this).refreshFromServer(null);
+            ensureAppUserDocument(user);
+        } else {
+            refreshRemoteProfileChanges();
+        }
     }
 
     @Override
@@ -303,7 +312,9 @@ public class MainActivity extends AppCompatActivity {
         // Add auth listener when activity starts
         if (mAuth != null && mAuthListener != null) {
             mAuth.addAuthStateListener(mAuthListener);
-            if (hasStartedOnce && initialAppUserSyncCompleted) {
+            if (hasStartedOnce && initialAppUserSyncCompleted
+                    && VerifiedSessionGate.isVerified(mAuth.getCurrentUser() == null
+                    ? null : mAuth.getCurrentUser().getUid())) {
                 AppUserRoleSession.getInstance().refreshForCurrentUser();
             }
             hasStartedOnce = true;
@@ -352,9 +363,12 @@ public class MainActivity extends AppCompatActivity {
                 new AppUserRepository.AppUserCallback() {
                     @Override
                     public void onSuccess(AppUser appUser) {
+                        FirebaseUser signedIn = mAuth.getCurrentUser();
+                        if (signedIn == null || !user.getUid().equals(signedIn.getUid())) return;
                         android.util.Log.d("MainActivity", "appUser document synced");
                         initialAppUserSyncCompleted = true;
                         CurrentUserProfileSession.update(appUser);
+                        CurrentUserProfileSession.cachePublicName(MainActivity.this, appUser);
                         if (navigationView != null) {
                             FirebaseUser currentUser = mAuth.getCurrentUser();
                             if (currentUser != null) {
@@ -369,6 +383,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(Exception exception) {
                         initialAppUserSyncCompleted = true;
+                        initialAppUserSyncStarted = false;
                         android.util.Log.w("MainActivity",
                                 "appUser sync failed — user may be missing from Users list until next successful sync",
                                 exception);
@@ -389,6 +404,7 @@ public class MainActivity extends AppCompatActivity {
                 if (changedUser != null
                         && currentUser.getUid().equals(changedUser.getUserId())) {
                     CurrentUserProfileSession.update(changedUser);
+                    CurrentUserProfileSession.cachePublicName(MainActivity.this, changedUser);
                     updateNavigationHeader(navigationView, currentUser);
                     break;
                 }
@@ -492,6 +508,9 @@ public class MainActivity extends AppCompatActivity {
             public void onSuccess(String savedProfileName, String displayName) {
                 CurrentUserProfileSession.applyPublicProfile(savedProfileName, displayName);
                 FirebaseUser user = mAuth != null ? mAuth.getCurrentUser() : null;
+                if (user != null) {
+                    CurrentUserProfileSession.cachePublicName(MainActivity.this, user.getUid(), savedProfileName);
+                }
                 if (navigationView != null && user != null) {
                     updateNavigationHeader(navigationView, user);
                 }

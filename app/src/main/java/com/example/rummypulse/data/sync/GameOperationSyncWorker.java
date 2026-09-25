@@ -40,6 +40,17 @@ public class GameOperationSyncWorker extends Worker {
         if (editor == null) {
             return Result.retry();
         }
+        if (!GameOperationRepository.getInstance(getApplicationContext())
+                .ownsQueueBlocking(editor.getUid())) {
+            Log.w(TAG, "Queue belongs to another account or needs recovery");
+            return Result.retry();
+        }
+        try {
+            Tasks.await(editor.getIdToken(false), REMOTE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (Exception authError) {
+            Log.w(TAG, "Waiting for Firebase session recovery", authError);
+            return Result.retry();
+        }
         GameOperationDatabase database =
                 GameOperationDatabase.getInstance(getApplicationContext());
         GameOperationDao dao = database.operations();
@@ -92,6 +103,16 @@ public class GameOperationSyncWorker extends Worker {
             } catch (ExecutionException failure) {
                 Throwable cause = rootCause(failure);
                 String message = message(cause);
+                if (isAuthenticationFailure(cause)) {
+                    try {
+                        Tasks.await(editor.getIdToken(true), REMOTE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                    } catch (Exception refreshError) {
+                        Log.w(TAG, "Firebase reauthentication is required", refreshError);
+                    }
+                    dao.updateOperationState(operation.operationId,
+                            GameOperationStatus.PENDING.name(), 0, message);
+                    return Result.retry();
+                }
                 if (isTransient(cause)) {
                     dao.updateOperationState(
                             operation.operationId,
@@ -120,6 +141,13 @@ public class GameOperationSyncWorker extends Worker {
                 || code == FirebaseFirestoreException.Code.ABORTED
                 || code == FirebaseFirestoreException.Code.DEADLINE_EXCEEDED
                 || code == FirebaseFirestoreException.Code.RESOURCE_EXHAUSTED;
+    }
+
+    private static boolean isAuthenticationFailure(Throwable error) {
+        if (!(error instanceof FirebaseFirestoreException)) return false;
+        FirebaseFirestoreException.Code code = ((FirebaseFirestoreException) error).getCode();
+        return code == FirebaseFirestoreException.Code.UNAUTHENTICATED
+                || code == FirebaseFirestoreException.Code.PERMISSION_DENIED;
     }
 
     private static Throwable rootCause(Throwable error) {

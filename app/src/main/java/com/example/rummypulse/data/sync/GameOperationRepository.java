@@ -5,7 +5,6 @@ import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.NonNull;
-import androidx.room.RoomDatabase;
 import androidx.work.Constraints;
 import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
@@ -16,6 +15,7 @@ import androidx.work.WorkManager;
 import com.example.rummypulse.data.GameData;
 import com.example.rummypulse.data.GameDataSchema;
 import com.google.gson.Gson;
+import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.List;
 import java.util.HashSet;
@@ -40,6 +40,14 @@ public final class GameOperationRepository {
 
     public interface PendingPlayersCallback {
         void onLoaded(Set<String> playerIds);
+    }
+
+    public interface OwnershipCallback {
+        void onChecked(boolean allowed);
+    }
+
+    public interface IdleCallback {
+        void onReady(boolean ready, String reason);
     }
 
     private static final Gson GSON = new Gson();
@@ -69,6 +77,59 @@ public final class GameOperationRepository {
         return current;
     }
 
+    /** A migrated queue is claimed only when its saved editor UID matches the signed-in user. */
+    public void verifyQueueOwner(String uid, OwnershipCallback callback) {
+        executor.execute(() -> {
+            boolean allowed;
+            try {
+                allowed = ownsQueueBlocking(uid);
+            } catch (RuntimeException error) {
+                allowed = false;
+            }
+            final boolean result = allowed;
+            mainHandler.post(() -> callback.onChecked(result));
+        });
+    }
+
+    public boolean ownsQueueBlocking(String uid) {
+        if (uid == null || uid.trim().isEmpty()) return false;
+        return database.runInTransaction((java.util.concurrent.Callable<Boolean>) () -> {
+            GameOperationDao dao = database.operations();
+            QueueOwnerEntity owner = dao.getQueueOwner();
+            Set<String> recoverableGames = new HashSet<>(dao.getRecoverableGameIds());
+            for (String key : appContext.getSharedPreferences("round_score_drafts", Context.MODE_PRIVATE)
+                    .getAll().keySet()) {
+                if (key.startsWith("game_") && key.length() > 5) {
+                    recoverableGames.add(key.substring(5));
+                }
+            }
+            for (String key : appContext.getSharedPreferences("pending_round_scores", Context.MODE_PRIVATE)
+                    .getAll().keySet()) {
+                int generation = key.indexOf("_g");
+                if (generation > 0) recoverableGames.add(key.substring(0, generation));
+            }
+            if (owner != null && uid.equals(owner.uid)) return true;
+            if (owner != null && !recoverableGames.isEmpty()) return false;
+            if (owner == null && !recoverableGames.isEmpty()) {
+                android.content.SharedPreferences editAccess = appContext.getSharedPreferences(
+                        "RummyPulse_EditAccess", Context.MODE_PRIVATE);
+                for (String gameId : recoverableGames) {
+                    if (!uid.equals(editAccess.getString("editorUid_" + gameId, null))) {
+                        return false;
+                    }
+                }
+            }
+            dao.deleteSnapshots();
+            dao.upsertQueueOwner(new QueueOwnerEntity(uid));
+            return true;
+        });
+    }
+
+    private boolean currentUserOwnsQueue() {
+        com.google.firebase.auth.FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        return user != null && ownsQueueBlocking(user.getUid());
+    }
+
     /**
      * Restarts a previously backed-off queue when the game returns to the foreground.
      * The operation records remain in Room, so replacing only the scheduler job is safe.
@@ -78,7 +139,7 @@ public final class GameOperationRepository {
             return;
         }
         executor.execute(() -> {
-            if (database.operations().getNextPending(gameId) != null) {
+            if (currentUserOwnsQueue() && database.operations().getNextPending(gameId) != null) {
                 schedule(gameId, ExistingWorkPolicy.REPLACE);
             }
         });
@@ -90,18 +151,17 @@ public final class GameOperationRepository {
             return;
         }
         GameData normalized = GameDataCopies.deepCopy(gameData);
-        executor.execute(() -> database.runInTransaction(() -> {
-            GameSnapshotEntity existing = database.operations().getSnapshot(gameId);
-            if (existing == null || revision >= existing.revision) {
-                database.operations().upsertSnapshot(
-                        new GameSnapshotEntity(
-                                gameId,
-                                GSON.toJson(normalized),
-                                revision,
-                                editGeneration,
-                                System.currentTimeMillis()));
-            }
-        }));
+        executor.execute(() -> {
+            if (!currentUserOwnsQueue()) return;
+            database.runInTransaction(() -> {
+                GameSnapshotEntity existing = database.operations().getSnapshot(gameId);
+                if (existing == null || revision >= existing.revision) {
+                    database.operations().upsertSnapshot(new GameSnapshotEntity(
+                            gameId, GSON.toJson(normalized), revision, editGeneration,
+                            System.currentTimeMillis()));
+                }
+            });
+        });
     }
 
     public void saveRoundDraft(
@@ -109,12 +169,15 @@ public final class GameOperationRepository {
         if (gameId == null || serializedDraft == null) {
             return;
         }
-        executor.execute(() -> database.operations().upsertRoundDraft(
+        executor.execute(() -> {
+            if (!currentUserOwnsQueue()) return;
+            database.operations().upsertRoundDraft(
                 new RoundScoreDraftEntity(
                         gameId,
                         editGeneration,
                         serializedDraft,
-                        System.currentTimeMillis())));
+                        System.currentTimeMillis()));
+        });
     }
 
     public void loadRoundDraft(
@@ -123,6 +186,10 @@ public final class GameOperationRepository {
             return;
         }
         executor.execute(() -> {
+            if (!currentUserOwnsQueue()) {
+                mainHandler.post(() -> callback.onLoaded(null));
+                return;
+            }
             RoundScoreDraftEntity draft =
                     database.operations().getRoundDraft(gameId, editGeneration);
             mainHandler.post(() -> callback.onLoaded(
@@ -135,7 +202,11 @@ public final class GameOperationRepository {
             return;
         }
         executor.execute(() ->
-                database.operations().deleteRoundDraft(gameId, editGeneration));
+                {
+                    if (currentUserOwnsQueue()) {
+                        database.operations().deleteRoundDraft(gameId, editGeneration);
+                    }
+                });
     }
 
     public void loadPendingPlayerIds(
@@ -145,21 +216,14 @@ public final class GameOperationRepository {
         }
         executor.execute(() -> {
             Set<String> playerIds = new HashSet<>();
-            for (PendingGameOperation operation
-                    : database.operations().getActiveOperations(gameId)) {
-                if (operation.playerId != null) {
-                    playerIds.add(operation.playerId);
-                }
-                GameOperationPayload payload =
-                        GSON.fromJson(operation.payloadJson, GameOperationPayload.class);
-                if (payload.playerOrder != null) {
-                    playerIds.addAll(payload.playerOrder);
-                }
-                if (payload.scoresByPlayerId != null) {
-                    playerIds.addAll(payload.scoresByPlayerId.keySet());
-                }
-                if (payload.fromPlayerId != null) {
-                    playerIds.add(payload.fromPlayerId);
+            if (currentUserOwnsQueue()) {
+                for (PendingGameOperation operation : database.operations().getActiveOperations(gameId)) {
+                    if (operation.playerId != null) playerIds.add(operation.playerId);
+                    GameOperationPayload payload = GSON.fromJson(
+                            operation.payloadJson, GameOperationPayload.class);
+                    if (payload.playerOrder != null) playerIds.addAll(payload.playerOrder);
+                    if (payload.scoresByPlayerId != null) playerIds.addAll(payload.scoresByPlayerId.keySet());
+                    if (payload.fromPlayerId != null) playerIds.add(payload.fromPlayerId);
                 }
             }
             mainHandler.post(() -> callback.onLoaded(playerIds));
@@ -169,6 +233,7 @@ public final class GameOperationRepository {
     public void projectPending(String gameId, GameData serverData, Callback callback) {
         executor.execute(() -> {
             try {
+                if (!currentUserOwnsQueue()) throw new IllegalStateException("Pending edits belong to another account.");
                 GameSnapshotEntity snapshot =
                         database.operations().getSnapshot(gameId);
                 GameData projected = snapshot == null
@@ -194,6 +259,7 @@ public final class GameOperationRepository {
             String gameId, long editGeneration, Callback callback) {
         executor.execute(() -> {
             try {
+                if (!currentUserOwnsQueue()) throw new IllegalStateException("Pending edits belong to another account.");
                 GameSnapshotEntity snapshot = database.operations().getSnapshot(gameId);
                 if (snapshot == null) {
                     throw new IllegalStateException(
@@ -230,6 +296,7 @@ public final class GameOperationRepository {
             Callback callback) {
         executor.execute(() -> {
             try {
+                if (!currentUserOwnsQueue()) throw new IllegalStateException("Sign in with the original editor account to recover pending edits.");
                 if (gameId == null || gameId.trim().isEmpty()
                         || acknowledgedOrProjectedState == null) {
                     throw new IllegalArgumentException("Game state is unavailable.");
@@ -288,6 +355,44 @@ public final class GameOperationRepository {
 
     public int activeOperationCountBlocking(String gameId) {
         return database.operations().activeOperationCount(gameId);
+    }
+
+    /** Waits for server acknowledgement of every queued operation before edit access can rotate. */
+    public void awaitIdle(String gameId, long timeoutMs, IdleCallback callback) {
+        long deadline = android.os.SystemClock.elapsedRealtime() + timeoutMs;
+        resumePendingSync(gameId);
+        pollIdle(gameId, deadline, callback);
+    }
+
+    private void pollIdle(String gameId, long deadline, IdleCallback callback) {
+        executor.execute(() -> {
+            if (!currentUserOwnsQueue()) {
+                mainHandler.post(() -> callback.onReady(false,
+                        "Sign in with the original editor account to recover pending edits."));
+                return;
+            }
+            GameOperationDao dao = database.operations();
+            if (dao.blockedOperationCount(gameId) > 0) {
+                mainHandler.post(() -> callback.onReady(false,
+                        "A pending game change needs recovery before transfer."));
+            } else if (dao.activeOperationCount(gameId) == 0) {
+                mainHandler.post(() -> callback.onReady(true, null));
+            } else if (android.os.SystemClock.elapsedRealtime() >= deadline) {
+                mainHandler.post(() -> callback.onReady(false,
+                        "Changes are still syncing. Keep this game open and retry transfer."));
+            } else {
+                mainHandler.postDelayed(() -> pollIdle(gameId, deadline, callback), 500);
+            }
+        });
+    }
+
+    public void hasRoundDraft(String gameId, long editGeneration,
+            java.util.function.Consumer<Boolean> callback) {
+        executor.execute(() -> {
+            boolean exists = !currentUserOwnsQueue()
+                    || database.operations().getRoundDraft(gameId, editGeneration) != null;
+            mainHandler.post(() -> callback.accept(exists));
+        });
     }
 
     private PendingGameOperation insertOrCoalesce(

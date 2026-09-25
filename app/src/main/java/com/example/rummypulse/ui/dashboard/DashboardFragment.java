@@ -687,11 +687,11 @@ public class DashboardFragment extends Fragment implements DashboardGameAdapter.
     }
 
     private String buildWelcomeTitle() {
-        String firstName = DisplayNameUtils.firstName(CurrentUserProfileSession.getDisplayName());
+        String firstName = DisplayNameUtils.firstName(CurrentUserProfileSession.getProfileName());
         if (!firstName.isEmpty()) {
             return "Welcome " + firstName;
         }
-        return "Welcome Player";
+        return "Welcome";
     }
 
     private void applySectionState(boolean animate) {

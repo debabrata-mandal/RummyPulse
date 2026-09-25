@@ -13,8 +13,7 @@ import com.google.firebase.functions.FirebaseFunctions;
 import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.utils.AuthStateManager;
-import com.example.rummypulse.utils.SessionCacheCleaner;
-import com.example.rummypulse.utils.SafePlayPolicyStore;
+import com.example.rummypulse.utils.VerifiedSessionGate;
 
 /**
  * Custom Application class to initialize Firebase and configure authentication persistence
@@ -29,6 +28,7 @@ public class RummyPulseApplication extends Application {
         
         // Initialize Firebase
         FirebaseApp.initializeApp(this);
+        VerifiedSessionGate.install(this);
         FirebaseAuth firebaseAuth = FirebaseAuth.getInstance();
         FirebaseFirestore firestore = FirebaseFirestore.getInstance();
         if (BuildConfig.USE_FIREBASE_EMULATORS) {
@@ -82,19 +82,13 @@ public class RummyPulseApplication extends Application {
                     Log.d(TAG, "Global auth state: User is signed in");
                     // Save authentication state as backup
                     authStateManager.saveAuthState(user);
-                    if (SafePlayPolicyStore.hasCurrentAcceptance(
-                            RummyPulseApplication.this, user.getUid())) {
-                        gameRepository.startDashboardListener();
-                        com.example.rummypulse.data.GameDefaultsRepository
-                                .getInstance(RummyPulseApplication.this)
-                                .refreshFromServer(null);
-                    }
+                    // Auth restoration alone does not verify a usable Firebase session.
                 } else {
                     Log.d(TAG, "Global auth state: User is signed out");
-                    SessionCacheCleaner.clearAll(RummyPulseApplication.this);
+                    VerifiedSessionGate.invalidate();
                     if (authStateManager.shouldBeAuthenticated()) {
                         Log.w(TAG, "Unexpected sign out detected - user should be authenticated");
-                        Log.w(TAG, "This might be due to force stop or other issues");
+                        Log.w(TAG, "Pending edits remain stored for same-account recovery");
                     }
                 }
             }

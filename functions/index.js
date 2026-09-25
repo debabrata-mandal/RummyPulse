@@ -357,26 +357,28 @@ exports.adminUpdateGamePlayerMapping = onCall(PROFILE_CALLABLE_OPTIONS, async (r
   await requireAdministrator(database, request);
   const gameId = requireDocumentId(request.data?.gameId, "A valid game is required.");
   const playerId = requireDocumentId(request.data?.playerId, "A valid player is required.");
-  const userId = requireDocumentId(request.data?.userId, "A valid profile is required.");
+  const unlink = request.data?.userId === null;
+  const userId = unlink ? null :
+    requireDocumentId(request.data?.userId, "A valid profile is required.");
   const gameRef = database.collection(GAME_COLLECTION).doc(gameId);
   const dataRef = database.collection(GAME_DATA_COLLECTION).doc(gameId);
-  const userRef = database.collection(PUBLIC_USER_COLLECTION).doc(userId);
+  const userRef = unlink ? null : database.collection(PUBLIC_USER_COLLECTION).doc(userId);
   await database.runTransaction(async (transaction) => {
     const gameSnapshot = await transaction.get(gameRef);
     const dataSnapshot = await transaction.get(dataRef);
-    const userSnapshot = await transaction.get(userRef);
+    const userSnapshot = userRef ? await transaction.get(userRef) : null;
     if (!gameSnapshot.exists || !dataSnapshot.exists) {
       throw new HttpsError("not-found", "The active game is no longer available.");
     }
-    if (!userSnapshot.exists || userSnapshot.get("hidden") === true) {
+    if (!unlink && (!userSnapshot.exists || userSnapshot.get("hidden") === true)) {
       throw new HttpsError("failed-precondition", "Select an available player profile.");
     }
-    const displayName = safeText(userSnapshot.get("profileName"), 24);
-    if (!displayName) {
+    const displayName = unlink ? "Unknown" : safeText(userSnapshot.get("profileName"), 24);
+    if (!unlink && !displayName) {
       throw new HttpsError("failed-precondition", "The selected profile needs a profile name.");
     }
-    const managedProfile = userSnapshot.get("profileType") === "managed" ||
-      userSnapshot.get("provider") === "managed";
+    const managedProfile = !unlink && (userSnapshot.get("profileType") === "managed" ||
+      userSnapshot.get("provider") === "managed");
     const wrapper = dataSnapshot.data() || {};
     const gameData = structuredClone(wrapper.data || {});
     const players = gameData.playersById;
@@ -418,25 +420,27 @@ exports.adminUpdateGamePlayerMapping = onCall(PROFILE_CALLABLE_OPTIONS, async (r
       transaction.update(gameRef,
           new FieldPath("pendingViewRequests", previousUserId), FieldValue.delete());
     }
-    const approvalRef = database.collection(VIEW_APPROVAL_COLLECTION)
-        .doc(`${gameId}_${userId}`);
-    if (managedProfile) {
-      transaction.delete(approvalRef);
-      transaction.update(gameRef,
-          new FieldPath("pendingViewRequests", userId), FieldValue.delete());
-    } else {
-      transaction.set(approvalRef, {
-        gameId,
-        userId,
-        status: "approved",
-        requestedAt: FieldValue.serverTimestamp(),
-        lastUpdatedAt: FieldValue.serverTimestamp(),
-      });
-      transaction.update(gameRef, new FieldPath("pendingViewRequests", userId), {
-        status: "approved",
-        requestedAt: FieldValue.serverTimestamp(),
-        lastUpdatedAt: FieldValue.serverTimestamp(),
-      });
+    if (!unlink) {
+      const approvalRef = database.collection(VIEW_APPROVAL_COLLECTION)
+          .doc(`${gameId}_${userId}`);
+      if (managedProfile) {
+        transaction.delete(approvalRef);
+        transaction.update(gameRef,
+            new FieldPath("pendingViewRequests", userId), FieldValue.delete());
+      } else {
+        transaction.set(approvalRef, {
+          gameId,
+          userId,
+          status: "approved",
+          requestedAt: FieldValue.serverTimestamp(),
+          lastUpdatedAt: FieldValue.serverTimestamp(),
+        });
+        transaction.update(gameRef, new FieldPath("pendingViewRequests", userId), {
+          status: "approved",
+          requestedAt: FieldValue.serverTimestamp(),
+          lastUpdatedAt: FieldValue.serverTimestamp(),
+        });
+      }
     }
   });
   return {gameId, playerId, userId};

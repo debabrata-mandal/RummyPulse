@@ -405,7 +405,20 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
                 .setText(R.string.review_change_mapping);
         ((TextView) dialogView.findViewById(R.id.text_map_player_subtitle))
                 .setText(getString(R.string.review_change_mapping_for, player.getName()));
-        dialogView.findViewById(R.id.btn_unlink_user).setVisibility(View.GONE);
+        View unlink = dialogView.findViewById(R.id.btn_unlink_user);
+        unlink.setVisibility(player.getUserId() == null || player.getUserId().trim().isEmpty()
+                ? View.GONE : View.VISIBLE);
+        unlink.setOnClickListener(v -> {
+            dialog.dismiss();
+            showReviewActionDialog(
+                    R.drawable.ic_link_players,
+                    getString(R.string.review_remove_mapping_title),
+                    getString(R.string.review_remove_mapping_subtitle, player.getName()),
+                    getString(R.string.review_remove_mapping_message),
+                    getString(R.string.map_player_unlink),
+                    true,
+                    () -> updateReviewPlayerMapping(game, player, null));
+        });
         dialogView.findViewById(R.id.btn_cancel_mapping)
                 .setOnClickListener(v -> dialog.dismiss());
         android.widget.EditText search = dialogView.findViewById(R.id.input_user_search);
@@ -414,7 +427,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
         TextView empty = dialogView.findViewById(R.id.text_users_empty);
         TextView current = dialogView.findViewById(R.id.text_current_mapping);
         current.setVisibility(View.VISIBLE);
-        current.setText(player.getUserId() == null
+        current.setText(player.getUserId() == null || player.getUserId().trim().isEmpty()
                 ? R.string.review_player_mapping_required
                 : R.string.review_player_mapped);
         progress.setVisibility(View.VISIBLE);
@@ -527,7 +540,7 @@ public class HomeFragment extends Fragment implements TableAdapter.OnGameActionL
             GameItem game, Player player, AppUser selected) {
         beginReviewOperation(getString(R.string.review_operation_mapping));
         homeViewModel.updatePlayerMapping(
-                game.getGameId(), player.getPlayerId(), selected.getUserId(),
+                game.getGameId(), player.getPlayerId(), selected == null ? null : selected.getUserId(),
                 () -> {
                     if (!isAdded()) return;
                     endReviewOperation();

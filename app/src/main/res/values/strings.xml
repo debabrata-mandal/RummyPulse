@@ -690,6 +690,9 @@
     <string name="review_change_mapping_for">Select the profile for %1$s. Scores will not change.</string>
     <string name="review_operation_mapping">Updating player mapping…</string>
     <string name="review_mapping_saved">Player mapping updated</string>
+    <string name="review_remove_mapping_title">Remove player link?</string>
+    <string name="review_remove_mapping_subtitle">%1$s will appear as Unknown</string>
+    <string name="review_remove_mapping_message">The player and scores will remain in the game. Map this player to a profile before approving the game.</string>
     <string name="review_replace_mapping_title">Replace player mapping?</string>
     <string name="review_replace_mapping_subtitle">%1$s will use the %2$s profile</string>
     <string name="review_replace_mapping_message">The player’s scores and position will be preserved. Only the linked profile will change.</string>

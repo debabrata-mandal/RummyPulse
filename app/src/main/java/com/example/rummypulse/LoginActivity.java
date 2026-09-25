@@ -328,7 +328,13 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void startAuthenticatedDestination() {
+        com.example.rummypulse.utils.VerifiedSessionGate.require(
+                this, this::openAuthenticatedDestination);
+    }
+
+    private void openAuthenticatedDestination() {
         FirebaseUser user = mAuth != null ? mAuth.getCurrentUser() : null;
+        if (user == null) return;
         Class<?> destination;
         if (user != null
                 && SafePlayPolicyStore.hasCurrentAcceptance(this, user.getUid())) {

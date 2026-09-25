@@ -12,21 +12,16 @@ import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameDefaultsRepository;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.PlayerLeaderboardRepository;
-import com.example.rummypulse.data.sync.GameOperationDatabase;
 import com.bumptech.glide.Glide;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 /**
- * Wipes session-scoped caches when the signed-in account changes so the next user never inherits
- * games, users, drafts, or offline Firestore data from the previous session.
+ * Wipes disposable session caches without deleting durable unsynced game edits or drafts.
  */
 public final class SessionCacheCleaner {
 
     private static final String TAG = "SessionCacheCleaner";
 
-    static final String PREFS_EDIT_ACCESS = "RummyPulse_EditAccess";
-    static final String PREFS_ROUND_DRAFTS = "round_score_drafts";
-    static final String PREFS_PENDING_ROUNDS = "pending_round_scores";
     static final String PREFS_MEMBERSHIP_BACKFILL = "rummypulse_membership_backfill";
 
     private SessionCacheCleaner() {
@@ -53,15 +48,12 @@ public final class SessionCacheCleaner {
         CurrentUserProfileSession.clear();
         PendingProfileOverrides.clear();
         clearUserScopedPreferences(appContext);
-        GameOperationDatabase.clearSessionData(appContext);
         clearFirestorePersistence();
         clearGlideCaches(appContext, onComplete);
     }
 
     private static void clearUserScopedPreferences(Context context) {
-        context.getSharedPreferences(PREFS_EDIT_ACCESS, Context.MODE_PRIVATE).edit().clear().apply();
-        context.getSharedPreferences(PREFS_ROUND_DRAFTS, Context.MODE_PRIVATE).edit().clear().apply();
-        context.getSharedPreferences(PREFS_PENDING_ROUNDS, Context.MODE_PRIVATE).edit().clear().apply();
+        // Keep unsynced edits and their edit-session credentials for same-account recovery.
         context.getSharedPreferences(PREFS_MEMBERSHIP_BACKFILL, Context.MODE_PRIVATE).edit().clear().apply();
         SafePlayPolicyStore.clearAll(context);
     }
