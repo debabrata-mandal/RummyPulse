@@ -5245,45 +5245,7 @@ public class JoinGameActivity extends AppCompatActivity {
         if (gameData == null) {
             return;
         }
-        if (hasAnyEnteredScoreInGame(gameData)) {
-            showAddPlayerConfirmation(gameData);
-        } else {
-            addNewPlayerDirectly();
-        }
-    }
-
-    private void showAddPlayerConfirmation(
-            com.example.rummypulse.data.GameData gameData) {
-        View dialogView = LayoutInflater.from(this).inflate(
-                R.layout.dialog_confirm_add_player, null, false);
-        TextView playerCount = dialogView.findViewById(R.id.text_add_player_count);
-        MaterialButton cancel = dialogView.findViewById(R.id.btn_add_player_cancel);
-        MaterialButton confirm = dialogView.findViewById(R.id.btn_add_player_confirm);
-        playerCount.setText(getResources().getQuantityString(
-                R.plurals.add_player_confirm_count,
-                gameData.getPlayers() == null ? 0 : gameData.getPlayers().size(),
-                gameData.getPlayers() == null ? 0 : gameData.getPlayers().size()));
-
-        AlertDialog dialog = new AlertDialog.Builder(this, R.style.DarkDialogTheme)
-                .setView(dialogView)
-                .setCancelable(true)
-                .create();
-        cancel.setOnClickListener(v -> dialog.dismiss());
-        confirm.setOnClickListener(v -> {
-            dialog.dismiss();
-            addNewPlayerDirectly();
-        });
-        dialog.show();
-
-        Window window = dialog.getWindow();
-        if (window != null) {
-            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(
-                    android.graphics.Color.TRANSPARENT));
-            android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
-            int maxWidth = Math.round(420 * dm.density);
-            int width = Math.min(Math.round(dm.widthPixels * 0.92f), maxWidth);
-            window.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);
-        }
+        addNewPlayerDirectly();
     }
 
     private void addNewPlayerDirectly() {
@@ -5306,6 +5268,8 @@ public class JoinGameActivity extends AppCompatActivity {
                 .setText(R.string.add_player_select_profile_title);
         ((TextView) dialogView.findViewById(R.id.text_map_player_subtitle))
                 .setText(R.string.add_player_select_profile_subtitle);
+        dialogView.findViewById(R.id.container_add_player_catch_up_warning)
+                .setVisibility(hasAnyEnteredScoreInGame(gameData) ? View.VISIBLE : View.GONE);
         dialogView.findViewById(R.id.text_current_mapping).setVisibility(View.GONE);
         dialogView.findViewById(R.id.btn_unlink_user).setVisibility(View.GONE);
         dialogView.findViewById(R.id.btn_cancel_mapping)
