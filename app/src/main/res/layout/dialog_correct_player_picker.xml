@@ -111,7 +111,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:minHeight="48dp"
-        tools:text="@android:string/cancel"
+        android:text="@string/dialog_cancel"
         android:textAllCaps="false"
         android:textColor="@color/view_text_primary"
         app:backgroundTint="#24111424"

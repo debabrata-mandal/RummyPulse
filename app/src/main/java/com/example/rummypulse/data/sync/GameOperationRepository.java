@@ -139,7 +139,11 @@ public final class GameOperationRepository {
             return;
         }
         executor.execute(() -> {
-            if (currentUserOwnsQueue() && database.operations().getNextPending(gameId) != null) {
+            if (!currentUserOwnsQueue()) return;
+            GameOperationDao dao = database.operations();
+            // Blocked operations are revived by the worker, so reopening the game has to
+            // schedule one even when nothing is PENDING; otherwise they wait forever.
+            if (dao.getNextPending(gameId) != null || dao.blockedOperationCount(gameId) > 0) {
                 schedule(gameId, ExistingWorkPolicy.REPLACE);
             }
         });

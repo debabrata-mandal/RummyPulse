@@ -40,9 +40,14 @@ const MAX_REQUESTS_PER_WINDOW = 10;
 const MAX_GLOBAL_REQUESTS_PER_DAY = 200;
 const DELETE_PAGE_SIZE = 200;
 const LAST_LOGIN_UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+// App Check is NOT enforced here. syncMyIdentity gates app startup, and Play Integrity cannot
+// issue a token on devices without a current Play Store (older devices, sideloaded installs), which
+// locked those users out of the app entirely. Firestore rules do not require App Check either, so
+// enforcing it on these callables alone bought little. These are still auth-guarded per request.
+// Enforcement is kept on suggestGameName, where abuse costs money.
 const PROFILE_CALLABLE_OPTIONS = Object.freeze({
   region: "asia-south1",
-  enforceAppCheck: !IS_EMULATOR,
+  enforceAppCheck: false,
   timeoutSeconds: 540,
   memory: "256MiB",
 });

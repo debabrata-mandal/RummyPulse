@@ -66,7 +66,11 @@
     <string name="safe_play_loading">Checking your safe-play confirmation…</string>
     <string name="safe_play_retry">Retry</string>
     <string name="safe_play_load_error">RummyPulse must verify this confirmation online before you can continue. Check your connection and retry, or sign out.</string>
+    <string name="safe_play_load_error_auth">RummyPulse could not verify this device. Update Google Play Services and the Play Store, then retry.</string>
+    <string name="safe_play_load_error_generic">RummyPulse could not load your confirmation. Retry, or sign out and try again.</string>
     <string name="safe_play_acceptance_error">Your confirmation could not be saved. Check your connection and try again.</string>
+    <string name="safe_play_acceptance_error_auth">Your confirmation could not be saved because this device could not be verified. Update Google Play Services, then try again.</string>
+    <string name="safe_play_acceptance_error_generic">Your confirmation could not be saved. Try again, or sign out and sign in again.</string>
     <string name="voice_announcements_language_section_title">Announcement language</string>
     <string name="voice_announcements_language_section_subtitle">Choose the voice language for score callouts.</string>
     <string name="voice_announcements_language_bengali">বাংলা (Bengali)</string>
@@ -806,4 +810,16 @@
     <string name="cd_drag_to_reorder">Drag to reorder</string>
     <string name="cd_user_profile_photo">User Profile Photo</string>
     <string name="cd_toast_icon">Toast icon</string>
+
+    <!-- Session verification screen -->
+    <string name="session_check_title_checking">Checking your session</string>
+    <string name="session_check_message_checking">Hang tight while we confirm your account…</string>
+    <string name="session_check_title_signed_out">Sign in to continue</string>
+    <string name="session_check_message_signed_out">Your pending game changes are kept safely on this device.</string>
+    <string name="session_check_title_failed">Couldn\'t verify your session</string>
+    <string name="session_check_message_failed">Check your internet connection and try again. Pending changes are safe on this device.</string>
+    <string name="session_check_title_wrong_account">Different account detected</string>
+    <string name="session_check_message_wrong_account">Unsynced edits belong to the original account. Sign in with that account to recover them.</string>
+    <string name="session_check_retry">Retry</string>
+    <string name="session_check_sign_in">Sign in</string>
 </resources>

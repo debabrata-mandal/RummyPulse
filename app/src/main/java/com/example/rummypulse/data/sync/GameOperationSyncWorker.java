@@ -22,6 +22,8 @@ public class GameOperationSyncWorker extends Worker {
     public static final String INPUT_GAME_ID = "gameId";
     private static final String TAG = "GameOperationSync";
     private static final long REMOTE_TIMEOUT_SECONDS = 30L;
+    /** Attempts allowed per operation before it is discarded instead of stalling the queue. */
+    private static final int MAX_ATTEMPTS = 5;
     private static final Gson GSON = new Gson();
 
     public GameOperationSyncWorker(
@@ -55,10 +57,18 @@ public class GameOperationSyncWorker extends Worker {
                 GameOperationDatabase.getInstance(getApplicationContext());
         GameOperationDao dao = database.operations();
         dao.resetInterruptedOperations(gameId);
+        // Rejections are usually ordering artefacts, so retry them against fresh server
+        // state; anything still failing after MAX_ATTEMPTS is dropped so the queue drains.
+        dao.discardExhaustedOperations(gameId, MAX_ATTEMPTS);
+        dao.reviveBlockedOperations(gameId, MAX_ATTEMPTS);
         while (!isStopped()) {
             PendingGameOperation operation = dao.getNextPending(gameId);
             if (operation == null) {
-                return Result.success();
+                // Blocked work is revived on the next pass, so ask WorkManager to come
+                // back with backoff rather than reporting the queue as drained.
+                return dao.blockedOperationCount(gameId) > 0
+                        ? Result.retry()
+                        : Result.success();
             }
             dao.updateOperationState(
                     operation.operationId,
@@ -121,11 +131,11 @@ public class GameOperationSyncWorker extends Worker {
                             message);
                     return Result.retry();
                 }
-                dao.blockActiveOperations(gameId, message);
-                return Result.failure();
+                dao.blockOperation(operation.operationId, message);
+                continue;
             } catch (RuntimeException failure) {
-                dao.blockActiveOperations(gameId, message(failure));
-                return Result.failure();
+                dao.blockOperation(operation.operationId, message(failure));
+                continue;
             }
         }
         return Result.retry();

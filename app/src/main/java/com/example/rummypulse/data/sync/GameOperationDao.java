@@ -81,6 +81,28 @@ public interface GameOperationDao {
     @Query("UPDATE pending_game_operations SET status = 'BLOCKED', lastError = :reason"
             + " WHERE gameId = :gameId AND status IN ('PENDING', 'IN_FLIGHT')")
     void blockActiveOperations(String gameId, String reason);
+    @Query("UPDATE pending_game_operations SET status = 'BLOCKED', lastError = :reason"
+            + " WHERE operationId = :operationId")
+    void blockOperation(String operationId, String reason);
+
+    /**
+     * Returns a rejected operation to the queue so the next worker pass retries it against
+     * fresh server state. Most rejections are ordering artefacts: the local projection ran
+     * ahead of Firestore, and the same write succeeds once earlier operations land.
+     */
+    @Query("UPDATE pending_game_operations SET status = 'PENDING'"
+            + " WHERE gameId = :gameId AND status = 'BLOCKED' AND attemptCount < :maxAttempts")
+    int reviveBlockedOperations(String gameId, int maxAttempts);
+
+    /** Drops operations the server keeps rejecting so the queue cannot stall forever. */
+    @Query("DELETE FROM pending_game_operations WHERE gameId = :gameId"
+            + " AND status = 'BLOCKED' AND attemptCount >= :maxAttempts")
+    int discardExhaustedOperations(String gameId, int maxAttempts);
+
+    @Query("SELECT * FROM pending_game_operations WHERE gameId = :gameId"
+            + " AND status = 'BLOCKED' ORDER BY sequence")
+    List<PendingGameOperation> getBlockedOperations(String gameId);
+
 
     @Query("SELECT COUNT(*) FROM pending_game_operations WHERE gameId = :gameId"
             + " AND status IN ('PENDING', 'IN_FLIGHT', 'BLOCKED')")

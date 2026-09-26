@@ -40,6 +40,9 @@ public class RummyPulseApplication extends Application {
         }
         AppCheckInitializer.initialize();
         AppUserRoleSession.getInstance().initialize(this);
+        // An update APK is kept until the next cold start, by which point the install has either
+        // completed or been abandoned. Deleting it earlier can abort an install in progress.
+        com.example.rummypulse.utils.ModernUpdateChecker.deleteStaleDownloadedApk(this);
 
         // Configure Firebase Auth for better persistence
         // Explicitly enable persistence (should be default, but ensuring it's set)
