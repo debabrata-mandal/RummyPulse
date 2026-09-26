@@ -633,6 +633,24 @@ public class ModernUpdateChecker {
                         dest.delete();
                         return;
                     }
+                    // read() returns -1 on a dropped connection just as it does at a clean end of
+                    // stream, so a short file is the only signal that the download was cut off.
+                    // Installing it surfaces as a bare "App not installed".
+                    if (total > 0 && done != total) {
+                        Log.e(TAG, "Truncated download: " + done + " of " + total + " bytes");
+                        showDownloadError(
+                            "Download was incomplete. Check your connection and try again.", true);
+                        //noinspection ResultOfMethodCallIgnored
+                        dest.delete();
+                        return;
+                    }
+                    if (!isInstallableApk(dest)) {
+                        showDownloadError(
+                            "The downloaded file was not a valid app package. Try again.", true);
+                        //noinspection ResultOfMethodCallIgnored
+                        dest.delete();
+                        return;
+                    }
                     final String fileUri = Uri.fromFile(dest).toString();
                     postToUi(() -> {
                         if (downloadUiCallbacks != null) {
@@ -1230,6 +1248,19 @@ public class ModernUpdateChecker {
                 return;
             }
 
+            if (apkFile != null && apkFile.exists() && !isInstallableApk(apkFile)) {
+                Log.e(TAG, "Refusing to install an unreadable APK");
+                if (useDownloadUi()) {
+                    postToUi(() -> downloadUiCallbacks.onError(
+                        "The downloaded update was incomplete. Download it again.", true));
+                } else {
+                    ModernToast.error(context, "The downloaded update was incomplete. Download it again.");
+                }
+                //noinspection ResultOfMethodCallIgnored
+                apkFile.delete();
+                return;
+            }
+
             File fileToDelete = resolveApkFileForDeletion(apkFile);
 
             // Session API (API 31+): same-app updates can complete without ACTION_VIEW. Do not require
@@ -1437,6 +1468,15 @@ public class ModernUpdateChecker {
     }
 
     private void startViewPackageInstaller(Uri apkUri, @Nullable File fileToDelete) {
+        // API 26+ refuses ACTION_VIEW installs until the user has allowed this app to install
+        // unknown apps. Send them to that setting instead of a dead-end blocked-install screen.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && !appContext.getPackageManager().canRequestPackageInstalls()) {
+            rememberApkForLaterDeletion(fileToDelete);
+            requestUnknownAppSourcesPermission();
+            return;
+        }
+
         Intent installIntent = new Intent(Intent.ACTION_VIEW);
         installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
@@ -1455,7 +1495,103 @@ public class ModernUpdateChecker {
                 "🚀 Opening installer... APK will be auto-deleted after installation");
         }
 
-        scheduleApkDeletionAfterInstall(fileToDelete);
+        // The system installer reads this file while the user is still confirming, and API
+        // levels below S give no completion callback, so deleting on a timer can abort an install
+        // in progress. Record the path and let the next cold start remove it.
+        rememberApkForLaterDeletion(fileToDelete);
+    }
+
+    /**
+     * Records the downloaded APK so a later cold start can remove it. The legacy installer keeps
+     * reading the file while the user confirms, so it must outlive this process.
+     */
+    /**
+     * Confirms a downloaded file actually parses as an APK for this package. Catches truncated
+     * downloads and error pages saved under an .apk name, which the system installer reports only
+     * as "App not installed".
+     */
+    private boolean isInstallableApk(File apk) {
+        try {
+            PackageInfo info = appContext.getPackageManager()
+                .getPackageArchiveInfo(apk.getAbsolutePath(), 0);
+            if (info == null) {
+                Log.e(TAG, "Downloaded file did not parse as an APK");
+                return false;
+            }
+            if (!appContext.getPackageName().equals(info.packageName)) {
+                Log.e(TAG, "Downloaded APK is for a different package: " + info.packageName);
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Could not read the downloaded APK", e);
+            return false;
+        }
+    }
+
+    private void rememberApkForLaterDeletion(@Nullable File file) {
+        if (file == null) {
+            return;
+        }
+        appContext.getSharedPreferences("update_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putString(PREF_LAST_APK_PATH, file.getAbsolutePath())
+            .apply();
+    }
+
+    /**
+     * Sends the user to the per-app "install unknown apps" setting. Required from API 26 before
+     * ACTION_VIEW can hand an APK to the package installer.
+     */
+    @RequiresApi(Build.VERSION_CODES.O)
+    private void requestUnknownAppSourcesPermission() {
+        Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+            .setData(Uri.parse("package:" + appContext.getPackageName()));
+        try {
+            if (context instanceof Activity) {
+                ((Activity) context).startActivityForResult(settings, REQUEST_INSTALL_PERMISSION);
+            } else {
+                settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                appContext.startActivity(settings);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Unknown-app-sources settings screen unavailable", e);
+            if (useDownloadUi()) {
+                postToUi(() -> downloadUiCallbacks.onError(
+                    "Allow RummyPulse to install apps in Settings, then try again.", true));
+            } else {
+                ModernToast.error(context, "Allow RummyPulse to install apps in Settings, then try again.");
+            }
+            return;
+        }
+        if (useDownloadUi()) {
+            postToUi(() -> downloadUiCallbacks.onError(
+                "Allow RummyPulse to install apps, then tap Update again.", true));
+        } else {
+            ModernToast.info(context, "Allow RummyPulse to install apps, then tap Update again.");
+        }
+    }
+
+    /**
+     * Deletes an APK left over from a previous update attempt. Safe only at process start: deleting
+     * while the system installer still holds the file aborts the install on API levels below S.
+     */
+    public static void deleteStaleDownloadedApk(Context context) {
+        if (context == null) {
+            return;
+        }
+        android.content.SharedPreferences prefs = context.getApplicationContext()
+            .getSharedPreferences("update_prefs", Context.MODE_PRIVATE);
+        String path = prefs.getString(PREF_LAST_APK_PATH, null);
+        if (path == null) {
+            return;
+        }
+        File stale = new File(path);
+        if (stale.exists() && !stale.delete()) {
+            Log.w(TAG, "Could not delete stale APK from a previous update");
+            return;
+        }
+        prefs.edit().remove(PREF_LAST_APK_PATH).apply();
     }
 
     private void scheduleApkDeletionAfterInstall(@Nullable File fileToDelete) {

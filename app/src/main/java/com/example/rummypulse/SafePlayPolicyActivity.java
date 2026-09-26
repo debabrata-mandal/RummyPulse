@@ -4,10 +4,12 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.rummypulse.data.AppUser;
@@ -23,9 +25,13 @@ import com.example.rummypulse.utils.SessionCacheCleaner;
 import com.example.rummypulse.utils.VersionGate;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.functions.FirebaseFunctionsException;
 
 /** Blocks access to the app until the signed-in user accepts the current safe-play policy. */
 public class SafePlayPolicyActivity extends AppCompatActivity {
+    private static final String TAG = "SafePlayPolicyActivity";
+
     private boolean verifiedPolicyFlowStarted;
 
     private ActivitySafePlayPolicyBinding binding;
@@ -147,8 +153,10 @@ public class SafePlayPolicyActivity extends AppCompatActivity {
                             return;
                         }
                         requestInProgress = false;
+                        Log.e(TAG, "Safe-play confirmation lookup failed: "
+                                + failureCode(exception), exception);
                         binding.progressBar.setVisibility(View.GONE);
-                        binding.textStatus.setText(R.string.safe_play_load_error);
+                        binding.textStatus.setText(loadErrorMessage(exception));
                         binding.btnRetry.setVisibility(View.VISIBLE);
                     }
                 });
@@ -180,12 +188,67 @@ public class SafePlayPolicyActivity extends AppCompatActivity {
                         return;
                     }
                     requestInProgress = false;
+                    Log.e(TAG, "Safe-play confirmation could not be saved: "
+                            + failureCode(exception), exception);
                     binding.acceptProgress.setVisibility(View.GONE);
-                    binding.textAcceptanceError.setText(R.string.safe_play_acceptance_error);
+                    binding.textAcceptanceError.setText(acceptanceErrorMessage(exception));
                     binding.textAcceptanceError.setVisibility(View.VISIBLE);
                     updateAcceptButton();
                 });
     }
+
+    /**
+     * Maps a failed safe-play request to the message matching its cause. Identity failures are not
+     * transient, so repeating the connectivity wording would send the user into a retry loop that
+     * App Check and the callable backend eventually rate-limit.
+     */
+    @StringRes
+    private static int loadErrorMessage(Exception exception) {
+        switch (failureKind(exception)) {
+            case IDENTITY:
+                return R.string.safe_play_load_error_auth;
+            case CONNECTIVITY:
+                return R.string.safe_play_load_error;
+            default:
+                return R.string.safe_play_load_error_generic;
+        }
+    }
+
+    @StringRes
+    private static int acceptanceErrorMessage(Exception exception) {
+        switch (failureKind(exception)) {
+            case IDENTITY:
+                return R.string.safe_play_acceptance_error_auth;
+            case CONNECTIVITY:
+                return R.string.safe_play_acceptance_error;
+            default:
+                return R.string.safe_play_acceptance_error_generic;
+        }
+    }
+
+    private static FailureKind failureKind(Exception exception) {
+        String code = failureCode(exception);
+        if ("UNAUTHENTICATED".equals(code) || "PERMISSION_DENIED".equals(code)) {
+            return FailureKind.IDENTITY;
+        }
+        if ("UNAVAILABLE".equals(code) || "DEADLINE_EXCEEDED".equals(code)) {
+            return FailureKind.CONNECTIVITY;
+        }
+        return FailureKind.OTHER;
+    }
+
+    /** Callable and Firestore status codes share these names, so compare them as text. */
+    private static String failureCode(Exception exception) {
+        if (exception instanceof FirebaseFunctionsException) {
+            return ((FirebaseFunctionsException) exception).getCode().name();
+        }
+        if (exception instanceof FirebaseFirestoreException) {
+            return ((FirebaseFirestoreException) exception).getCode().name();
+        }
+        return "UNKNOWN";
+    }
+
+    private enum FailureKind {IDENTITY, CONNECTIVITY, OTHER}
 
     private void updateAcceptButton() {
         if (binding == null) {

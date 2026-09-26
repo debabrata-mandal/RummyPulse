@@ -4,17 +4,23 @@ import android.app.Activity;
 import android.app.Application;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.view.WindowManager;
-import android.widget.LinearLayout;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+
+import androidx.core.content.ContextCompat;
+
+import com.google.android.material.button.MaterialButton;
 
 import com.example.rummypulse.LoginActivity;
 import com.example.rummypulse.R;
@@ -81,37 +87,22 @@ public final class VerifiedSessionGate {
         if (user == null || !CurrentUserProfileSession.belongsTo(user.getUid())) {
             CurrentUserProfileSession.clear();
         }
-        LinearLayout content = new LinearLayout(activity);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setGravity(Gravity.CENTER);
-        int padding = Math.round(24 * activity.getResources().getDisplayMetrics().density);
-        content.setPadding(padding, padding, padding, padding);
-        content.setBackgroundColor(Color.rgb(18, 18, 35));
-        ProgressBar progress = new ProgressBar(activity);
-        content.addView(progress);
-        TextView message = new TextView(activity);
-        message.setGravity(Gravity.CENTER);
-        message.setText("Checking your session…");
-        message.setTextColor(Color.WHITE);
-        content.addView(message);
+        View content = LayoutInflater.from(activity).inflate(R.layout.dialog_session_check, null, false);
+        Views views = new Views(content);
         AlertDialog dialog = new AlertDialog.Builder(activity, R.style.DarkDialogTheme)
                 .setView(content)
                 .setCancelable(false)
-                .setPositiveButton("Retry", null)
-                .setNegativeButton("Sign in", null)
                 .create();
         dialog.show();
         if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.rgb(18, 18, 35)));
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.MATCH_PARENT);
         }
         ACTIVE_DIALOGS.put(activity, dialog);
         dialog.setOnDismissListener(ignored -> ACTIVE_DIALOGS.remove(activity));
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setVisibility(android.view.View.GONE);
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setVisibility(android.view.View.GONE);
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> verify(activity, dialog, progress, message, onVerified));
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener(v -> {
+        views.retry.setOnClickListener(v -> verify(activity, dialog, views, onVerified));
+        views.signIn.setOnClickListener(v -> {
             dialog.dismiss();
             invalidate();
             AccountSignOut.signOut(activity).addOnCompleteListener(ignored -> {
@@ -125,24 +116,93 @@ public final class VerifiedSessionGate {
                 });
             });
         });
-        verify(activity, dialog, progress, message, onVerified);
+        verify(activity, dialog, views, onVerified);
     }
 
-    private static void verify(Activity activity, AlertDialog dialog, ProgressBar progress,
-            TextView message, Runnable onVerified) {
+    /** Holds the session screen views and applies each visual state. */
+    private static final class Views {
+        final ImageView icon;
+        final ProgressBar progress;
+        final TextView title;
+        final TextView message;
+        final MaterialButton retry;
+        final MaterialButton signIn;
+
+        Views(View root) {
+            icon = root.findViewById(R.id.image_session_icon);
+            progress = root.findViewById(R.id.progress_session);
+            title = root.findViewById(R.id.text_session_title);
+            message = root.findViewById(R.id.text_session_message);
+            retry = root.findViewById(R.id.btn_session_retry);
+            signIn = root.findViewById(R.id.btn_session_sign_in);
+        }
+
+        void showChecking() {
+            apply(R.drawable.ic_shield, R.color.accent_blue_light, true,
+                    R.string.session_check_title_checking, R.string.session_check_message_checking,
+                    false, false);
+        }
+
+        void showSignedOut() {
+            apply(R.drawable.ic_person, R.color.accent_blue_light, false,
+                    R.string.session_check_title_signed_out, R.string.session_check_message_signed_out,
+                    false, true);
+        }
+
+        void showWrongAccount() {
+            apply(R.drawable.ic_lock, R.color.warning_orange, false,
+                    R.string.session_check_title_wrong_account, R.string.session_check_message_wrong_account,
+                    false, true);
+        }
+
+        void showFailed() {
+            apply(R.drawable.ic_refresh, R.color.warning_orange, false,
+                    R.string.session_check_title_failed, R.string.session_check_message_failed,
+                    true, true);
+        }
+
+        private void apply(int iconRes, int iconTint, boolean loading, int titleRes, int messageRes,
+                boolean showRetry, boolean showSignIn) {
+            icon.setImageResource(iconRes);
+            androidx.core.widget.ImageViewCompat.setImageTintList(icon,
+                    ColorStateList.valueOf(ContextCompat.getColor(icon.getContext(), iconTint)));
+            progress.setVisibility(loading ? View.VISIBLE : View.GONE);
+            title.setText(titleRes);
+            message.setText(messageRes);
+            retry.setVisibility(showRetry ? View.VISIBLE : View.GONE);
+            signIn.setVisibility(showSignIn ? View.VISIBLE : View.GONE);
+            // When Sign in is the only action, make it the filled primary button.
+            styleSignIn(showSignIn && !showRetry);
+        }
+
+        private void styleSignIn(boolean primary) {
+            android.content.Context ctx = signIn.getContext();
+            int accent = ContextCompat.getColor(ctx, R.color.accent_blue);
+            float density = ctx.getResources().getDisplayMetrics().density;
+            if (primary) {
+                signIn.setBackgroundTintList(ColorStateList.valueOf(accent));
+                signIn.setTextColor(Color.WHITE);
+                signIn.setIconTint(ColorStateList.valueOf(Color.WHITE));
+                signIn.setStrokeWidth(0);
+            } else {
+                signIn.setBackgroundTintList(ColorStateList.valueOf(Color.TRANSPARENT));
+                signIn.setTextColor(ContextCompat.getColor(ctx, R.color.text_primary));
+                signIn.setIconTint(ColorStateList.valueOf(
+                        ContextCompat.getColor(ctx, R.color.accent_blue_light)));
+                signIn.setStrokeColor(ColorStateList.valueOf(accent));
+                signIn.setStrokeWidth(Math.round(1.5f * density));
+            }
+        }
+    }
+
+    private static void verify(Activity activity, AlertDialog dialog, Views views, Runnable onVerified) {
         if (!dialog.isShowing()) return;
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
-            progress.setVisibility(android.view.View.GONE);
-            message.setText("Sign in to continue. Your pending game changes are kept on this device.");
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setVisibility(android.view.View.GONE);
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setVisibility(android.view.View.VISIBLE);
+            views.showSignedOut();
             return;
         }
-        progress.setVisibility(android.view.View.VISIBLE);
-        message.setText("Checking your session…");
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setVisibility(android.view.View.GONE);
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setVisibility(android.view.View.GONE);
+        views.showChecking();
         user.getIdToken(true).addOnCompleteListener(task -> {
             if (!dialog.isShowing() || activity.isFinishing() || activity.isDestroyed()) return;
             FirebaseUser current = FirebaseAuth.getInstance().getCurrentUser();
@@ -155,17 +215,12 @@ public final class VerifiedSessionGate {
                         dialog.dismiss();
                         onVerified.run();
                     } else {
-                        progress.setVisibility(android.view.View.GONE);
-                        message.setText("Unsynced edits belong to the original account. Sign in with that account to recover them.");
-                        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setVisibility(android.view.View.VISIBLE);
+                        views.showWrongAccount();
                     }
                 });
                 return;
             }
-            progress.setVisibility(android.view.View.GONE);
-            message.setText("Your session could not be verified. Check your connection and retry. Pending changes are safe on this device.");
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setVisibility(android.view.View.VISIBLE);
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setVisibility(android.view.View.VISIBLE);
+            views.showFailed();
         });
     }
 }

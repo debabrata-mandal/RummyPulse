@@ -2328,7 +2328,14 @@ public class JoinGameActivity extends AppCompatActivity {
         if (isGameCompleted(gameData)) {
             return 10;
         }
+        GameIntegrityResult integrity = GameIntegrityValidator.validate(gameData);
         int active = getActiveIncompleteRound1BasedOrZero(gameData);
+        // A hole that later rounds already contradict must stay repairable. That hole is
+        // always the active round, so include it; otherwise the range stops one short of
+        // the only round needing correction and leaves no way in.
+        if (integrity.hasLaterRoundConflict()) {
+            return integrity.getFirstMissingRound();
+        }
         return active > 1 ? active - 1 : 0;
     }
     
@@ -3902,7 +3909,9 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         GameIntegrityResult integrity = GameIntegrityValidator.validate(gameData);
         if (integrity.hasLaterRoundConflict()) {
-            showIntegrityWarning(integrity);
+            // Sequential entry cannot reach the hole while later rounds hold data, so send
+            // the editor into correction mode for that round rather than dead-ending.
+            showCorrectionPlayerPicker(gameData, integrity.getFirstMissingRound());
             return;
         }
         int round1 = getActiveIncompleteRound1BasedOrZero(gameData);
@@ -4387,14 +4396,14 @@ public class JoinGameActivity extends AppCompatActivity {
         return GameIntegrityValidator.validate(gameData).isComplete();
     }
 
+    /** Viewers cannot run the repair flow, so this only reports the state. */
     private void showIntegrityWarning(GameIntegrityResult integrity) {
-        String rounds = integrity.getMissingRounds().toString();
         new AlertDialog.Builder(this)
                 .setTitle("Score data needs repair")
-                .setMessage("Score editing is paused because earlier round data is missing. "
-                        + integrity.describe() + " Missing rounds: " + rounds
-                        + "\n\nOpen that round in correction mode to repair it. "
-                        + "If cloud history is available, the app can restore only the missing values.")
+                .setMessage("Scoring is paused because round " + integrity.getFirstMissingRound()
+                        + " is incomplete. " + integrity.describe()
+                        + "\n\nAn editor of this game has to repair it. Totals shown here stay"
+                        + " incomplete until they do.")
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
     }
