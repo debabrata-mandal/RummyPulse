@@ -21,20 +21,22 @@
             android:id="@+id/round_status_pill"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/round_indicator_pill_live"
+            android:background="@drawable/round_indicator_pill_complete"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingStart="6dp"
             android:paddingTop="2dp"
             android:paddingEnd="7dp"
-            android:paddingBottom="2dp">
+            android:paddingBottom="2dp"
+            android:visibility="gone"
+            tools:visibility="visible">
 
             <View
                 android:id="@+id/round_status_dot"
                 android:layout_width="7dp"
                 android:layout_height="7dp"
                 android:layout_marginEnd="4dp"
-                android:background="@drawable/round_indicator_dot_live" />
+                android:background="@drawable/round_indicator_dot_complete" />
 
             <TextView
                 android:id="@+id/round_status_label"
@@ -42,8 +44,8 @@
                 android:layout_height="wrap_content"
                 android:letterSpacing="0.08"
                 android:maxLines="1"
-                android:text="@string/round_indicator_live"
-                android:textColor="@color/view_violet_light"
+                android:text="@string/round_indicator_complete"
+                android:textColor="@color/round_complete_green"
                 android:textSize="9sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -98,6 +100,6 @@
     <com.example.rummypulse.ui.join.RoundSegmentBar
         android:id="@+id/round_segment_bar"
         android:layout_width="match_parent"
-        android:layout_height="7dp"
+        android:layout_height="9dp"
         android:layout_marginTop="6dp" />
 </LinearLayout>

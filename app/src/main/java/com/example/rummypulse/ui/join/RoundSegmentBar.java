@@ -16,14 +16,23 @@ import androidx.core.graphics.ColorUtils;
  * Draws one rounded segment per round instead of a single continuous bar. Rounds are discrete, so
  * a player can count how many are left at a glance rather than estimating a fraction.
  *
- * <p>Segments read as solid for a finished round, half-lit for the round being played, and faint
- * for rounds still to come.</p>
+ * <p>Colour carries where the round sits in the game: the opening rounds are blue, the middle
+ * warms to yellow, and the closing rounds run to red. Brightness carries progress on top of that -
+ * solid for a round already played, dimmer for the round in play, faint for rounds still to come -
+ * so the whole ramp stays visible from the first round and simply lights up as the game runs.</p>
  */
 public class RoundSegmentBar extends View {
 
     private static final int DEFAULT_TOTAL_ROUNDS = 10;
-    /** Alpha applied to the accent for the round currently in play. */
-    private static final int ACTIVE_ALPHA = 0x66;
+    /** Alpha for the round in play, and for rounds not yet reached. */
+    private static final int ACTIVE_ALPHA = 0x99;
+    private static final int UPCOMING_ALPHA = 0x59;
+    /**
+     * Where the ramp turns. The opening 40% holds blue, then it blends to yellow by 70% and to
+     * red at the last round.
+     */
+    private static final float BLUE_HOLD = 0.4f;
+    private static final float YELLOW_STOP = 0.7f;
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF segment = new RectF();
@@ -33,8 +42,9 @@ public class RoundSegmentBar extends View {
     /** 1-based round in play, or 0 when none is. */
     private int activeRound;
 
-    private int doneColor;
-    private int trackColor;
+    private int startColor;
+    private int midColor;
+    private int endColor;
     private float gapPx;
 
     public RoundSegmentBar(Context context) {
@@ -53,10 +63,12 @@ public class RoundSegmentBar extends View {
     }
 
     private void init(Context context) {
-        doneColor = androidx.core.content.ContextCompat.getColor(
-                context, R.color.view_violet_light);
-        trackColor = androidx.core.content.ContextCompat.getColor(
-                context, R.color.round_segment_track);
+        startColor = androidx.core.content.ContextCompat.getColor(
+                context, R.color.round_progress_cyan);
+        midColor = androidx.core.content.ContextCompat.getColor(
+                context, R.color.view_gold);
+        endColor = androidx.core.content.ContextCompat.getColor(
+                context, R.color.view_coral);
         gapPx = 3f * context.getResources().getDisplayMetrics().density;
         paint.setStyle(Paint.Style.FILL);
     }
@@ -81,15 +93,6 @@ public class RoundSegmentBar extends View {
         invalidate();
     }
 
-    /** Overrides the finished-segment colour, so a completed game can read as green. */
-    public void setDoneColor(int color) {
-        if (doneColor == color) {
-            return;
-        }
-        doneColor = color;
-        invalidate();
-    }
-
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -109,12 +112,25 @@ public class RoundSegmentBar extends View {
     }
 
     private int colorFor(int index) {
+        int hue = hueFor(index);
         if (index < completedRounds) {
-            return doneColor;
+            return hue;
         }
-        if (activeRound > 0 && index == activeRound - 1) {
-            return ColorUtils.setAlphaComponent(doneColor, ACTIVE_ALPHA);
+        return ColorUtils.setAlphaComponent(
+                hue,
+                activeRound > 0 && index == activeRound - 1 ? ACTIVE_ALPHA : UPCOMING_ALPHA);
+    }
+
+    /**
+     * Which band the round at {@code index} falls in. Kept as three flat bands rather than a
+     * continuous blend: blending blue into yellow runs through green, and at the low alpha an
+     * unplayed round is drawn with, that green turns to mud and the ramp stops being readable.
+     */
+    private int hueFor(int index) {
+        float position = totalRounds <= 1 ? 0f : (float) index / (totalRounds - 1);
+        if (position <= BLUE_HOLD) {
+            return startColor;
         }
-        return trackColor;
+        return position <= YELLOW_STOP ? midColor : endColor;
     }
 }

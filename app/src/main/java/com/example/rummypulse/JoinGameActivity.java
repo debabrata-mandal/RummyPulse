@@ -1789,7 +1789,6 @@ public class JoinGameActivity extends AppCompatActivity {
         int completedRounds = completed ? TOTAL_ROUNDS : Math.max(0, currentRound - 1);
 
         View pill = indicator.findViewById(R.id.round_status_pill);
-        View dot = indicator.findViewById(R.id.round_status_dot);
         TextView statusLabel = indicator.findViewById(R.id.round_status_label);
         TextView currentNumber = indicator.findViewById(R.id.round_current_number);
         TextView totalLabel = indicator.findViewById(R.id.round_total_label);
@@ -1797,22 +1796,16 @@ public class JoinGameActivity extends AppCompatActivity {
 
         int accent = ContextCompat.getColor(this, completed
                 ? R.color.round_complete_green
-                : R.color.view_violet_light);
-        pill.setBackgroundResource(completed
-                ? R.drawable.round_indicator_pill_complete
-                : R.drawable.round_indicator_pill_live);
-        dot.setBackgroundResource(completed
-                ? R.drawable.round_indicator_dot_complete
-                : R.drawable.round_indicator_dot_live);
-        statusLabel.setText(completed
-                ? R.string.round_indicator_complete
-                : R.string.round_indicator_live);
+                : R.color.round_progress_cyan);
+        // The pill marks the exception, not the norm. A live game already says so through the
+        // round number and the lit segments, and edit mode carries its own "Online" badge for
+        // connectivity - two pills side by side read as one duplicated status.
+        pill.setVisibility(completed ? View.VISIBLE : View.GONE);
         statusLabel.setTextColor(accent);
         currentNumber.setText(String.valueOf(shownRound));
         currentNumber.setTextColor(accent);
         totalLabel.setText(getString(R.string.round_indicator_total, TOTAL_ROUNDS));
 
-        segments.setDoneColor(accent);
         segments.setRounds(TOTAL_ROUNDS, completedRounds, completed ? 0 : currentRound);
 
         // Screen readers get the sentence form; the visual split into pill and numeral would
