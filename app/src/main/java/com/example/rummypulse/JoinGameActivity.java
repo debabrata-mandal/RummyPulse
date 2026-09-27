@@ -56,6 +56,7 @@ import com.example.rummypulse.data.sync.GameOperationType;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
 import com.example.rummypulse.ui.join.PlayerRoundStatistics;
 import com.example.rummypulse.ui.join.PlayerRoundStatisticsCalculator;
+import com.example.rummypulse.ui.join.RoundSegmentBar;
 import com.example.rummypulse.utils.DisplayNameUtils;
 import com.example.rummypulse.utils.CurrentUserProfileSession;
 import com.example.rummypulse.utils.ModernToast;
@@ -132,6 +133,8 @@ public class JoinGameActivity extends AppCompatActivity {
     private static final long BULK_UPDATE_DEBOUNCE_MS = 6000; // 6 seconds for bulk updates
     private static final long GAME_COMPLETION_BUFFER_MS = 2000; // 2 seconds buffer after pending announcements
     private static final long MAX_GAME_COMPLETION_DELAY_MS = 10000; // Maximum 10 seconds delay
+    /** Every game is ten rounds; the round indicator draws one segment per round. */
+    private static final int TOTAL_ROUNDS = 10;
     private static final String ROUND_DRAFT_PREFERENCES = "round_score_drafts";
     private static final String PENDING_ROUND_PREFERENCES = "pending_round_scores";
     
@@ -1742,8 +1745,7 @@ public class JoinGameActivity extends AppCompatActivity {
         View root = binding.viewModeContent.getRoot();
         TextView title = root.findViewById(R.id.view_mode_game_title);
         TextView gameId = root.findViewById(R.id.view_mode_game_id);
-        TextView roundStatus = root.findViewById(R.id.view_mode_round_status);
-        ProgressBar progress = root.findViewById(R.id.view_mode_round_progress);
+        View roundIndicator = root.findViewById(R.id.view_mode_round_indicator);
         TextView gamePointsStatus = root.findViewById(R.id.view_mode_game_points_status);
         TextView playerPosition = root.findViewById(R.id.view_mode_player_position);
         TextView playerBalance = root.findViewById(R.id.view_mode_player_balance);
@@ -1756,15 +1758,7 @@ public class JoinGameActivity extends AppCompatActivity {
         title.setText(TextUtils.isEmpty(displayName) ? "Rummy Game" : displayName);
         gameId.setText(currentGameId == null ? "" : getString(R.string.game_id_header, currentGameId));
 
-        int currentRound = calculateCurrentRound(gameData);
-        boolean completed = isGameCompleted(gameData);
-        int completedRounds = completed ? 10 : Math.max(0, currentRound - 1);
-        roundStatus.setText(getString(
-                completed ? R.string.game_round_status_complete : R.string.game_round_status_live,
-                completed ? 10 : currentRound,
-                10));
-        progress.setMax(10);
-        progress.setProgress(completedRounds);
+        bindRoundIndicator(roundIndicator, gameData);
         totalPlayers.setText(String.valueOf(
                 gameData.getPlayers() == null ? 0 : gameData.getPlayers().size()));
         gamePointFactor.setText(getString(
@@ -1778,6 +1772,55 @@ public class JoinGameActivity extends AppCompatActivity {
                 playerPosition, balanceLabel, playerBalance);
         renderViewModeGamePointsRows(gameData);
         renderViewModeRoundRows(gameData);
+    }
+
+    /**
+     * Fills the shared round indicator. Edit mode and read-only mode include the same layout, so
+     * the round always reads identically whichever way the game was opened.
+     */
+    private void bindRoundIndicator(
+            View indicator, com.example.rummypulse.data.GameData gameData) {
+        if (indicator == null || gameData == null) {
+            return;
+        }
+        int currentRound = calculateCurrentRound(gameData);
+        boolean completed = isGameCompleted(gameData);
+        int shownRound = completed ? TOTAL_ROUNDS : currentRound;
+        int completedRounds = completed ? TOTAL_ROUNDS : Math.max(0, currentRound - 1);
+
+        View pill = indicator.findViewById(R.id.round_status_pill);
+        View dot = indicator.findViewById(R.id.round_status_dot);
+        TextView statusLabel = indicator.findViewById(R.id.round_status_label);
+        TextView currentNumber = indicator.findViewById(R.id.round_current_number);
+        TextView totalLabel = indicator.findViewById(R.id.round_total_label);
+        RoundSegmentBar segments = indicator.findViewById(R.id.round_segment_bar);
+
+        int accent = ContextCompat.getColor(this, completed
+                ? R.color.round_complete_green
+                : R.color.view_violet_light);
+        pill.setBackgroundResource(completed
+                ? R.drawable.round_indicator_pill_complete
+                : R.drawable.round_indicator_pill_live);
+        dot.setBackgroundResource(completed
+                ? R.drawable.round_indicator_dot_complete
+                : R.drawable.round_indicator_dot_live);
+        statusLabel.setText(completed
+                ? R.string.round_indicator_complete
+                : R.string.round_indicator_live);
+        statusLabel.setTextColor(accent);
+        currentNumber.setText(String.valueOf(shownRound));
+        currentNumber.setTextColor(accent);
+        totalLabel.setText(getString(R.string.round_indicator_total, TOTAL_ROUNDS));
+
+        segments.setDoneColor(accent);
+        segments.setRounds(TOTAL_ROUNDS, completedRounds, completed ? 0 : currentRound);
+
+        // Screen readers get the sentence form; the visual split into pill and numeral would
+        // otherwise be announced as disconnected fragments.
+        indicator.setContentDescription(getString(
+                completed ? R.string.game_round_status_complete : R.string.game_round_status_live,
+                shownRound,
+                TOTAL_ROUNDS));
     }
 
     private void renderCurrentPlayerPerformance(
@@ -2186,15 +2229,7 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.textHeaderPlayers.setText(String.valueOf(numberOfPlayers));
         
         // Match the read-only performance header's round presentation.
-        int currentRound = calculateCurrentRound(gameData);
-        boolean completed = isGameCompleted(gameData);
-        int completedRounds = completed ? 10 : Math.max(0, currentRound - 1);
-        binding.textHeaderCurrentRound.setText(getString(
-                completed ? R.string.game_round_status_complete : R.string.game_round_status_live,
-                completed ? 10 : currentRound,
-                10));
-        binding.editHeaderRoundProgress.setMax(10);
-        binding.editHeaderRoundProgress.setProgress(completedRounds);
+        bindRoundIndicator(binding.editHeaderRoundIndicator.getRoot(), gameData);
         
         // Update BoardAdjustment %
         binding.textHeaderBoardAdjustment.setText(String.format(

@@ -141,34 +141,11 @@
 
                             </LinearLayout>
 
-                            <LinearLayout
+                            <include
+                                android:id="@+id/view_mode_round_indicator"
+                                layout="@layout/view_round_indicator"
                                 android:layout_width="164dp"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:id="@+id/view_mode_round_status"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:gravity="end"
-                                    android:ellipsize="end"
-                                    android:maxLines="1"
-                                    tools:text="Live · Round 4 of 10"
-                                    android:textColor="@color/view_text_secondary"
-                                    android:textSize="11sp"
-                                    android:textStyle="bold" />
-
-                                <ProgressBar
-                                    android:id="@+id/view_mode_round_progress"
-                                    style="?android:attr/progressBarStyleHorizontal"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="6dp"
-                                    android:layout_marginTop="4dp"
-                                    android:max="10"
-                                    android:progress="3"
-                                    android:progressBackgroundTint="#33475A78"
-                                    android:progressTint="@color/view_violet_light" />
-                            </LinearLayout>
+                                android:layout_height="wrap_content" />
                         </LinearLayout>
 
                         <LinearLayout
