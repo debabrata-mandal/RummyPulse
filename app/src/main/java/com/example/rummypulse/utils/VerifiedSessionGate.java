@@ -103,17 +103,26 @@ public final class VerifiedSessionGate {
         dialog.setOnDismissListener(ignored -> ACTIVE_DIALOGS.remove(activity));
         views.retry.setOnClickListener(v -> verify(activity, dialog, views, onVerified));
         views.signIn.setOnClickListener(v -> {
+            // The wrong-account screen is the one state where the queue itself is what blocks
+            // sign-in, so leaving it has to release the device. Every other state keeps the
+            // pending edits, because the original account can still come back and sync them.
+            boolean releaseDevice = views.blockedByAnotherAccount;
             dialog.dismiss();
             invalidate();
+            Runnable toLogin = () -> {
+                if (activity.isFinishing() || activity.isDestroyed()) return;
+                Intent login = new Intent(activity, LoginActivity.class);
+                login.putExtra(LoginActivity.EXTRA_REQUIRE_LOGIN, true);
+                login.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                activity.startActivity(login);
+                activity.finish();
+            };
             AccountSignOut.signOut(activity).addOnCompleteListener(ignored -> {
-                SessionCacheCleaner.clearAll(activity, () -> {
-                    if (activity.isFinishing() || activity.isDestroyed()) return;
-                    Intent login = new Intent(activity, LoginActivity.class);
-                    login.putExtra(LoginActivity.EXTRA_REQUIRE_LOGIN, true);
-                    login.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    activity.startActivity(login);
-                    activity.finish();
-                });
+                if (releaseDevice) {
+                    SessionCacheCleaner.clearAllForAccountSwitch(activity, toLogin);
+                } else {
+                    SessionCacheCleaner.clearAll(activity, toLogin);
+                }
             });
         });
         verify(activity, dialog, views, onVerified);
@@ -127,6 +136,8 @@ public final class VerifiedSessionGate {
         final TextView message;
         final MaterialButton retry;
         final MaterialButton signIn;
+        /** True while the unsynced queue of another account is what is holding sign-in back. */
+        boolean blockedByAnotherAccount;
 
         Views(View root) {
             icon = root.findViewById(R.id.image_session_icon);
@@ -153,6 +164,8 @@ public final class VerifiedSessionGate {
             apply(R.drawable.ic_lock, R.color.warning_orange, false,
                     R.string.session_check_title_wrong_account, R.string.session_check_message_wrong_account,
                     false, true);
+            blockedByAnotherAccount = true;
+            signIn.setText(R.string.session_check_use_another_account);
         }
 
         void showFailed() {
@@ -163,6 +176,8 @@ public final class VerifiedSessionGate {
 
         private void apply(int iconRes, int iconTint, boolean loading, int titleRes, int messageRes,
                 boolean showRetry, boolean showSignIn) {
+            blockedByAnotherAccount = false;
+            signIn.setText(R.string.session_check_sign_in);
             icon.setImageResource(iconRes);
             androidx.core.widget.ImageViewCompat.setImageTintList(icon,
                     ColorStateList.valueOf(ContextCompat.getColor(icon.getContext(), iconTint)));

@@ -112,28 +112,12 @@
                         app:autoSizeStepGranularity="1sp"
                         app:autoSizeTextType="uniform" />
 
-                    <TextView
-                        android:id="@+id/text_header_current_round"
+                    <include
+                        android:id="@+id/edit_header_round_indicator"
+                        layout="@layout/view_round_indicator"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="5dp"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        tools:text="Live · Round 1 of 10"
-                        android:textColor="@color/view_text_secondary"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
-
-                    <ProgressBar
-                        android:id="@+id/edit_header_round_progress"
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:layout_width="match_parent"
-                        android:layout_height="6dp"
-                        android:layout_marginTop="4dp"
-                        android:max="10"
-                        android:progress="0"
-                        android:progressBackgroundTint="#33475A78"
-                        android:progressTint="@color/view_violet_light" />
+                        android:layout_marginTop="7dp" />
                 </LinearLayout>
 
                 <LinearLayout

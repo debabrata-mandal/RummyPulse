@@ -91,23 +91,79 @@ public final class GameOperationRepository {
         });
     }
 
+    /**
+     * Reports whether this device still holds edits that have not reached Firestore. Used before
+     * an explicit sign-out so the user is warned instead of losing the work silently.
+     */
+    public void hasPendingWork(java.util.function.Consumer<Boolean> callback) {
+        executor.execute(() -> {
+            boolean pending;
+            try {
+                pending = !recoverableGameIds(database.operations()).isEmpty();
+            } catch (RuntimeException error) {
+                pending = false;
+            }
+            final boolean result = pending;
+            mainHandler.post(() -> callback.accept(result));
+        });
+    }
+
+    /**
+     * Drops every durable local edit and releases queue ownership so the next account can claim
+     * this device. Only explicit account exits call this; a failed session check keeps the queue
+     * so the original editor can still recover the work.
+     */
+    public void discardAllPendingWork(Runnable onComplete) {
+        executor.execute(() -> {
+            try {
+                WorkManager.getInstance(appContext).cancelAllWorkByTag("game-operation-sync");
+                database.runInTransaction(() -> {
+                    GameOperationDao dao = database.operations();
+                    dao.deleteAllOperations();
+                    dao.deleteAllRoundDrafts();
+                    dao.deleteSnapshots();
+                    dao.deleteQueueOwner();
+                });
+                clearEditPreferences();
+            } catch (RuntimeException error) {
+                // A wipe that partially fails must still let the sign-out finish; the remaining
+                // rows are re-evaluated by the ownership check on the next sign-in.
+            } finally {
+                if (onComplete != null) mainHandler.post(onComplete);
+            }
+        });
+    }
+
+    private void clearEditPreferences() {
+        for (String name : new String[] {
+                "round_score_drafts", "pending_round_scores", "RummyPulse_EditAccess"}) {
+            appContext.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit();
+        }
+    }
+
+    /** Games whose edits are still only on this device, from both Room and the legacy prefs. */
+    private Set<String> recoverableGameIds(GameOperationDao dao) {
+        Set<String> recoverableGames = new HashSet<>(dao.getRecoverableGameIds());
+        for (String key : appContext.getSharedPreferences("round_score_drafts", Context.MODE_PRIVATE)
+                .getAll().keySet()) {
+            if (key.startsWith("game_") && key.length() > 5) {
+                recoverableGames.add(key.substring(5));
+            }
+        }
+        for (String key : appContext.getSharedPreferences("pending_round_scores", Context.MODE_PRIVATE)
+                .getAll().keySet()) {
+            int generation = key.indexOf("_g");
+            if (generation > 0) recoverableGames.add(key.substring(0, generation));
+        }
+        return recoverableGames;
+    }
+
     public boolean ownsQueueBlocking(String uid) {
         if (uid == null || uid.trim().isEmpty()) return false;
         return database.runInTransaction((java.util.concurrent.Callable<Boolean>) () -> {
             GameOperationDao dao = database.operations();
             QueueOwnerEntity owner = dao.getQueueOwner();
-            Set<String> recoverableGames = new HashSet<>(dao.getRecoverableGameIds());
-            for (String key : appContext.getSharedPreferences("round_score_drafts", Context.MODE_PRIVATE)
-                    .getAll().keySet()) {
-                if (key.startsWith("game_") && key.length() > 5) {
-                    recoverableGames.add(key.substring(5));
-                }
-            }
-            for (String key : appContext.getSharedPreferences("pending_round_scores", Context.MODE_PRIVATE)
-                    .getAll().keySet()) {
-                int generation = key.indexOf("_g");
-                if (generation > 0) recoverableGames.add(key.substring(0, generation));
-            }
+            Set<String> recoverableGames = recoverableGameIds(dao);
             if (owner != null && uid.equals(owner.uid)) return true;
             if (owner != null && !recoverableGames.isEmpty()) return false;
             if (owner == null && !recoverableGames.isEmpty()) {

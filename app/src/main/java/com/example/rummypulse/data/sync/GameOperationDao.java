@@ -24,6 +24,15 @@ public interface GameOperationDao {
     @Query("DELETE FROM game_snapshots")
     void deleteSnapshots();
 
+    @Query("DELETE FROM pending_game_operations")
+    void deleteAllOperations();
+
+    @Query("DELETE FROM round_score_drafts")
+    void deleteAllRoundDrafts();
+
+    @Query("DELETE FROM queue_owner")
+    void deleteQueueOwner();
+
     @Query("SELECT * FROM game_snapshots WHERE gameId = :gameId LIMIT 1")
     GameSnapshotEntity getSnapshot(String gameId);
 

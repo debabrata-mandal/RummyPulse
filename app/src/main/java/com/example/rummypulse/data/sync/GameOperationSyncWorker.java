@@ -113,15 +113,23 @@ public class GameOperationSyncWorker extends Worker {
             } catch (ExecutionException failure) {
                 Throwable cause = rootCause(failure);
                 String message = message(cause);
-                if (isAuthenticationFailure(cause)) {
+                if (isSessionExpired(cause) || isPermissionDenied(cause)) {
                     try {
                         Tasks.await(editor.getIdToken(true), REMOTE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
                     } catch (Exception refreshError) {
                         Log.w(TAG, "Firebase reauthentication is required", refreshError);
                     }
-                    dao.updateOperationState(operation.operationId,
-                            GameOperationStatus.PENDING.name(), 0, message);
-                    return Result.retry();
+                    if (isSessionExpired(cause)) {
+                        dao.updateOperationState(operation.operationId,
+                                GameOperationStatus.PENDING.name(), 0, message);
+                        return Result.retry();
+                    }
+                    // A denial is the rules rejecting this write, not an outage. Leaving it
+                    // PENDING retried it forever and the game never left "pending sync", so
+                    // block it: the next pass revives it with a fresh token, and once the
+                    // attempts run out it is discarded and the queue drains.
+                    dao.blockOperation(operation.operationId, message);
+                    continue;
                 }
                 if (isTransient(cause)) {
                     dao.updateOperationState(
@@ -153,11 +161,18 @@ public class GameOperationSyncWorker extends Worker {
                 || code == FirebaseFirestoreException.Code.RESOURCE_EXHAUSTED;
     }
 
-    private static boolean isAuthenticationFailure(Throwable error) {
-        if (!(error instanceof FirebaseFirestoreException)) return false;
-        FirebaseFirestoreException.Code code = ((FirebaseFirestoreException) error).getCode();
-        return code == FirebaseFirestoreException.Code.UNAUTHENTICATED
-                || code == FirebaseFirestoreException.Code.PERMISSION_DENIED;
+    private static boolean isSessionExpired(Throwable error) {
+        return code(error) == FirebaseFirestoreException.Code.UNAUTHENTICATED;
+    }
+
+    private static boolean isPermissionDenied(Throwable error) {
+        return code(error) == FirebaseFirestoreException.Code.PERMISSION_DENIED;
+    }
+
+    private static FirebaseFirestoreException.Code code(Throwable error) {
+        return error instanceof FirebaseFirestoreException
+                ? ((FirebaseFirestoreException) error).getCode()
+                : null;
     }
 
     private static Throwable rootCause(Throwable error) {
