@@ -7,7 +7,11 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
@@ -159,6 +163,9 @@ public class JoinGameActivity extends AppCompatActivity {
     private Runnable pendingRoundAfterSync;
     /** Player selected from the read-only gamePoints board for round-score details. */
     private String selectedViewRoundPlayerKey;
+    /** Baseline for the view-mode header rank delta: whose rank it was, and what it was. */
+    private String previousFocusPositionKey;
+    private int previousFocusPosition;
     /** Player whose round details are currently expanded from an edit-mode card. */
     private String selectedEditRoundPlayerId;
     private String lastIntegrityWarningKey;
@@ -1843,6 +1850,10 @@ public class JoinGameActivity extends AppCompatActivity {
         View viewRoot = binding.viewModeContent.getRoot();
         View personalMetrics = viewRoot.findViewById(R.id.view_mode_personal_metrics);
         View playerStats = viewRoot.findViewById(R.id.view_mode_player_stats);
+        TextView initials = viewRoot.findViewById(R.id.view_mode_player_initials);
+        TextView positionDelta = viewRoot.findViewById(R.id.view_mode_position_delta);
+        View rankBlock = viewRoot.findViewById(R.id.view_mode_rank_block);
+        RoundSegmentBar segments = viewRoot.findViewById(R.id.round_segment_bar);
 
         Player mappedPlayer = findMappedPlayerForViewer(gameData);
         Player focusPlayer = mappedPlayer != null
@@ -1856,6 +1867,22 @@ public class JoinGameActivity extends AppCompatActivity {
             if (playerStats != null) {
                 playerStats.setVisibility(View.GONE);
             }
+            if (initials != null) {
+                initials.setVisibility(View.GONE);
+            }
+            if (positionDelta != null) {
+                positionDelta.setVisibility(View.GONE);
+            }
+            if (rankBlock != null) {
+                rankBlock.setVisibility(View.GONE);
+            }
+            // With nobody in focus there is no score to colour the bar by, so it goes back to
+            // reading as plain progress through the game.
+            if (segments != null) {
+                segments.setRoundScores(null);
+            }
+            previousFocusPositionKey = null;
+            previousFocusPosition = 0;
             return;
         }
 
@@ -1878,35 +1905,153 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         renderViewModePlayerStatistics(gameData, focusPlayer);
 
+        String focusName = formatPlayerDisplayName(focusPlayer);
+        // The avatar carries the identity, so the heading no longer repeats the name in a
+        // possessive form that cannot be translated.
         title.setText(isViewModeSelfPlayer(gameData, focusPlayer)
                 ? getString(R.string.my_performance_title)
-                : buildPlayerPerformanceTitle(formatPlayerDisplayName(focusPlayer)));
-        balanceLabel.setText(getString(R.string.standing_balance));
-        positionView.setText(focusPosition > 0
-                ? getString(R.string.standing_position_of, focusPosition, standings.size())
-                : "—");
+                : focusName);
+        if (initials != null) {
+            initials.setVisibility(View.VISIBLE);
+            initials.setText(playerInitials(focusName));
+        }
+        if (rankBlock != null) {
+            rankBlock.setVisibility(View.VISIBLE);
+        }
+        if (segments != null) {
+            segments.setRoundScores(roundScoresOf(focusPlayer));
+        }
+        renderPositionDelta(positionDelta, viewPlayerSelectionKey(focusPlayer), focusPosition);
+        balanceLabel.setText(getString(R.string.view_header_label_balance));
+        if (focusPosition > 0) {
+            String rank = getString(
+                    R.string.view_header_rank_value, focusPosition, standings.size());
+            // "9" is the answer; "of 10" is the scale it sits on, so it recedes.
+            positionView.setText(withSubordinateTail(rank, rank.indexOf(' '), 0.62f, true));
+        } else {
+            positionView.setText(getString(R.string.game_view_amount_hidden));
+        }
         if (focusStanding == null
                 || !shouldShowStandingAmountForPlayer(gameData, focusStanding.player)) {
             balanceView.setText(getString(R.string.game_view_amount_hidden));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
         } else if (focusStanding.finalGamePoints > 0) {
-            balanceView.setText(getString(
+            balanceView.setText(withSubordinateUnit(getString(
                     R.string.format_game_points_positive,
-                    String.format(Locale.getDefault(), "%.0f", focusStanding.finalGamePoints)));
+                    String.format(Locale.getDefault(), "%.0f", focusStanding.finalGamePoints))));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
         } else if (focusStanding.finalGamePoints < 0) {
-            balanceView.setText(getString(
+            balanceView.setText(withSubordinateUnit(getString(
                     R.string.format_game_points_negative,
-                    String.format(Locale.getDefault(), "%.0f", Math.abs(focusStanding.finalGamePoints))));
+                    String.format(Locale.getDefault(), "%.0f", Math.abs(focusStanding.finalGamePoints)))));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
         } else {
-            balanceView.setText(R.string.game_points_zero);
+            balanceView.setText(withSubordinateUnit(getString(R.string.game_points_zero)));
             balanceView.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
         }
     }
 
-    private String buildPlayerPerformanceTitle(String playerName) {
-        return (TextUtils.isEmpty(playerName) ? "Player" : playerName) + "'s Performance";
+    /**
+     * Shrinks the trailing unit on the header balance so the figure itself carries the emphasis.
+     * Text without a unit suffix is returned untouched, which covers the hidden-amount dash.
+     */
+    private CharSequence withSubordinateUnit(String balanceText) {
+        return withSubordinateTail(balanceText, balanceText.lastIndexOf(' '), 0.42f, false);
+    }
+
+    /**
+     * Demotes everything from {@code splitIndex} onwards, so one string can carry a figure and the
+     * qualifier that follows it at two levels of emphasis. Returns the text unchanged when there is
+     * nothing to split on.
+     *
+     * @param mute whether the tail also drops to the muted colour, or only shrinks
+     */
+    private CharSequence withSubordinateTail(
+            String text, int splitIndex, float scale, boolean mute) {
+        if (splitIndex <= 0 || splitIndex >= text.length()) {
+            return text;
+        }
+        SpannableString spanned = new SpannableString(text);
+        spanned.setSpan(new RelativeSizeSpan(scale), splitIndex, text.length(),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        if (mute) {
+            spanned.setSpan(
+                    new ForegroundColorSpan(ContextCompat.getColor(this, R.color.view_text_muted)),
+                    splitIndex,
+                    text.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        return spanned;
+    }
+
+    /**
+     * The focused player's score per round, padded to the full round count so the segment bar can
+     * index straight into it. A null entry is a round that has not been scored yet.
+     */
+    private Integer[] roundScoresOf(Player player) {
+        Integer[] scores = new Integer[TOTAL_ROUNDS];
+        if (player == null || player.getScores() == null) {
+            return scores;
+        }
+        List<Integer> playerScores = player.getScores();
+        for (int round = 0; round < TOTAL_ROUNDS && round < playerScores.size(); round++) {
+            Integer score = playerScores.get(round);
+            scores[round] = score != null && score >= 0 ? score : null;
+        }
+        return scores;
+    }
+
+    /**
+     * Up to two initials for the header avatar. A single-word name contributes one letter rather
+     * than a truncated pair, so "Priya" reads as P and not PR.
+     */
+    private String playerInitials(String playerName) {
+        if (TextUtils.isEmpty(playerName)) {
+            return "?";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (String part : playerName.trim().split("\\s+")) {
+            if (part.isEmpty()) {
+                continue;
+            }
+            builder.append(Character.toUpperCase(part.charAt(0)));
+            if (builder.length() == 2) {
+                break;
+            }
+        }
+        return builder.length() == 0 ? "?" : builder.toString();
+    }
+
+    /**
+     * Shows how far the focused player moved since the previous snapshot. Only movement is worth a
+     * line: an unchanged position would add a row that says nothing, so it stays hidden. The
+     * baseline resets whenever the focus moves to a different player, so one player's rank is never
+     * compared against another's.
+     */
+    private void renderPositionDelta(TextView deltaView, String focusKey, int focusPosition) {
+        if (deltaView == null) {
+            return;
+        }
+        boolean sameFocus = focusKey != null && focusKey.equals(previousFocusPositionKey);
+        int movement = sameFocus && previousFocusPosition > 0 && focusPosition > 0
+                ? previousFocusPosition - focusPosition
+                : 0;
+        previousFocusPositionKey = focusKey;
+        previousFocusPosition = focusPosition;
+
+        if (movement == 0) {
+            deltaView.setVisibility(View.GONE);
+            return;
+        }
+        int places = Math.abs(movement);
+        boolean climbed = movement > 0;
+        deltaView.setVisibility(View.VISIBLE);
+        deltaView.setText(getResources().getQuantityString(
+                climbed ? R.plurals.position_delta_up : R.plurals.position_delta_down,
+                places,
+                places));
+        deltaView.setTextColor(ContextCompat.getColor(
+                this, climbed ? R.color.view_mint : R.color.view_coral));
     }
 
     private boolean isViewModeSelfPlayer(
@@ -2216,12 +2361,38 @@ public class JoinGameActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Keeps the edit-mode scroll clear of the floating header by measuring it rather than trusting
+     * a fixed inset. The header overlays the scroll, so its height has to be handed back as top
+     * padding; that height moves with the caption sizes and with the reader's font scale, so a
+     * hard-coded value drifts into either an overlap or a gap.
+     */
+    private void syncEditContentInset() {
+        View header = binding.gameInfoHeader;
+        View content = binding.gameEditContent;
+        if (header.getVisibility() != View.VISIBLE) {
+            return;
+        }
+        header.post(() -> {
+            int gap = Math.round(16f * getResources().getDisplayMetrics().density);
+            int inset = Math.max(0, header.getBottom() - content.getTop() + gap);
+            if (content.getPaddingTop() != inset) {
+                content.setPadding(
+                        content.getPaddingLeft(),
+                        inset,
+                        content.getPaddingRight(),
+                        content.getPaddingBottom());
+            }
+        });
+    }
+
     private void updateGameInfoHeader(com.example.rummypulse.data.GameData gameData) {
         // This is the legacy edit-mode header. The dedicated read-only surface has
         // its own gamePoints hero and must never render this card over it.
         boolean editMode = Boolean.TRUE.equals(viewModel.getEditAccessGranted().getValue());
         binding.gameInfoHeader.setVisibility(editMode ? View.VISIBLE : View.GONE);
-        
+        syncEditContentInset();
+
         // Setup Share button click listener (set up each time header is updated)
         binding.btnShareHeader.setOnClickListener(v -> {
             shareStandingsToWhatsApp();
@@ -2275,38 +2446,55 @@ public class JoinGameActivity extends AppCompatActivity {
             }
         }
 
+        RoundSegmentBar segments = binding.editHeaderRoundIndicator.getRoot()
+                .findViewById(R.id.round_segment_bar);
+
         if (mappedStanding == null) {
             binding.editHeaderPerformanceTitle.setText(getString(R.string.game_overview_title));
-            binding.editHeaderPlayerPosition.setText("—");
-            binding.editHeaderPlayerBalance.setText("—");
+            binding.editHeaderPlayerInitials.setVisibility(View.GONE);
+            binding.editHeaderPlayerPosition.setText(
+                    getString(R.string.game_view_amount_hidden));
+            binding.editHeaderPlayerBalance.setText(
+                    getString(R.string.game_view_amount_hidden));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_text_muted));
+            if (segments != null) {
+                segments.setRoundScores(null);
+            }
             bindEditHeaderStatistics(null, gameData);
             return;
         }
 
         binding.editHeaderPerformanceTitle.setText(getString(R.string.my_performance_title));
+        binding.editHeaderPlayerInitials.setVisibility(View.VISIBLE);
+        binding.editHeaderPlayerInitials.setText(
+                playerInitials(formatPlayerDisplayName(mappedStanding.player)));
+        String rank = getString(R.string.view_header_rank_value, position, standings.size());
         binding.editHeaderPlayerPosition.setText(
-                getString(R.string.standing_position_of, position, standings.size()));
+                withSubordinateTail(rank, rank.indexOf(' '), 0.62f, true));
+        if (segments != null) {
+            segments.setRoundScores(roundScoresOf(mappedStanding.player));
+        }
         if (!shouldShowStandingAmountForPlayer(gameData, mappedStanding.player)) {
             binding.editHeaderPlayerBalance.setText(
                     getString(R.string.game_view_amount_hidden));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_text_muted));
         } else if (mappedStanding.finalGamePoints > 0) {
-            binding.editHeaderPlayerBalance.setText(getString(
+            binding.editHeaderPlayerBalance.setText(withSubordinateUnit(getString(
                     R.string.format_game_points_positive,
-                    String.format(Locale.getDefault(), "%.0f", mappedStanding.finalGamePoints)));
+                    String.format(Locale.getDefault(), "%.0f", mappedStanding.finalGamePoints))));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_mint));
         } else if (mappedStanding.finalGamePoints < 0) {
-            binding.editHeaderPlayerBalance.setText(getString(
+            binding.editHeaderPlayerBalance.setText(withSubordinateUnit(getString(
                     R.string.format_game_points_negative,
-                    String.format(Locale.getDefault(), "%.0f", Math.abs(mappedStanding.finalGamePoints))));
+                    String.format(Locale.getDefault(), "%.0f", Math.abs(mappedStanding.finalGamePoints)))));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_coral));
         } else {
-            binding.editHeaderPlayerBalance.setText(R.string.game_points_zero);
+            binding.editHeaderPlayerBalance.setText(
+                    withSubordinateUnit(getString(R.string.game_points_zero)));
             binding.editHeaderPlayerBalance.setTextColor(
                     ContextCompat.getColor(this, R.color.view_text_secondary));
         }

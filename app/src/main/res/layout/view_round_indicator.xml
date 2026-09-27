@@ -42,12 +42,12 @@
                 android:id="@+id/round_status_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:letterSpacing="0.08"
+                android:letterSpacing="0.14"
                 android:maxLines="1"
                 android:text="@string/round_indicator_complete"
                 android:textColor="@color/round_complete_green"
-                android:textSize="9sp"
-                android:textStyle="bold" />
+                android:textSize="10sp"
+                android:textAllCaps="true" />
         </LinearLayout>
 
         <Space
@@ -66,22 +66,22 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="5dp"
-                android:letterSpacing="0.08"
+                android:letterSpacing="0.14"
                 android:maxLines="1"
                 android:text="@string/round_indicator_label"
                 android:textColor="@color/view_text_secondary"
-                android:textSize="9sp"
-                android:textStyle="bold" />
+                android:textSize="10sp"
+                android:textAllCaps="true" />
 
             <TextView
                 android:id="@+id/round_current_number"
+                android:fontFeatureSettings="tnum"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:includeFontPadding="false"
                 android:maxLines="1"
                 android:textColor="@color/view_text_primary"
-                android:textSize="22sp"
-                android:textStyle="bold"
+                android:textSize="20sp"
                 tools:text="2" />
 
             <TextView
@@ -92,7 +92,6 @@
                 android:maxLines="1"
                 android:textColor="@color/view_text_secondary"
                 android:textSize="12sp"
-                android:textStyle="bold"
                 tools:text="/10" />
         </LinearLayout>
     </LinearLayout>
@@ -100,6 +99,6 @@
     <com.example.rummypulse.ui.join.RoundSegmentBar
         android:id="@+id/round_segment_bar"
         android:layout_width="match_parent"
-        android:layout_height="9dp"
+        android:layout_height="7dp"
         android:layout_marginTop="6dp" />
 </LinearLayout>

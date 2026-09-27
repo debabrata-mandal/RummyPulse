@@ -2,8 +2,10 @@ package com.example.rummypulse.ui.join;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -33,6 +35,9 @@ public class RoundSegmentBar extends View {
      */
     private static final float BLUE_HOLD = 0.4f;
     private static final float YELLOW_STOP = 0.7f;
+    /** Score that still counts as a clean round, and the score at which the ramp bottoms out. */
+    private static final int GOOD_SCORE = 40;
+    private static final int WORST_SCORE = 80;
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF segment = new RectF();
@@ -41,8 +46,14 @@ public class RoundSegmentBar extends View {
     private int completedRounds;
     /** 1-based round in play, or 0 when none is. */
     private int activeRound;
+    /**
+     * Per-round scores for the player the bar is showing, or null to fall back to colouring by
+     * where the round sits in the game. Index 0 is round 1; a null entry is a round not yet scored.
+     */
+    private Integer[] roundScores;
 
     private int startColor;
+    private int goodColor;
     private int midColor;
     private int endColor;
     private int trackColor;
@@ -66,6 +77,8 @@ public class RoundSegmentBar extends View {
     private void init(Context context) {
         startColor = androidx.core.content.ContextCompat.getColor(
                 context, R.color.round_progress_cyan);
+        goodColor = androidx.core.content.ContextCompat.getColor(
+                context, R.color.view_mint);
         midColor = androidx.core.content.ContextCompat.getColor(
                 context, R.color.view_gold);
         endColor = androidx.core.content.ContextCompat.getColor(
@@ -96,6 +109,21 @@ public class RoundSegmentBar extends View {
         invalidate();
     }
 
+    /**
+     * Colours the bar by how the player actually scored rather than by how far the game has run.
+     * Pass null to go back to the positional ramp, which is what a header with no single player in
+     * focus wants.
+     *
+     * @param scores one entry per round, index 0 being round 1; null entries are unscored rounds
+     */
+    public void setRoundScores(@Nullable Integer[] scores) {
+        if (java.util.Arrays.equals(this.roundScores, scores)) {
+            return;
+        }
+        this.roundScores = scores == null ? null : scores.clone();
+        invalidate();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -109,12 +137,28 @@ public class RoundSegmentBar extends View {
         for (int index = 0; index < totalRounds; index++) {
             float left = index * (segmentWidth + gapPx);
             segment.set(left, 0f, left + segmentWidth, height);
-            paint.setColor(colorFor(index));
+            // Each segment runs from the colour of the round before it to its own, so the played
+            // part of the bar reads as one gradient instead of ten flat chips.
+            int color = colorFor(index);
+            int previous = index == 0 ? color : colorFor(index - 1);
+            if (color == previous) {
+                paint.setShader(null);
+                paint.setColor(color);
+            } else {
+                paint.setShader(new LinearGradient(
+                        segment.left, 0f, segment.right, 0f,
+                        ColorUtils.blendARGB(previous, color, 0.55f), color,
+                        Shader.TileMode.CLAMP));
+            }
             canvas.drawRoundRect(segment, radius, radius, paint);
         }
+        paint.setShader(null);
     }
 
     private int colorFor(int index) {
+        if (roundScores != null) {
+            return scoredColorFor(index);
+        }
         if (index < completedRounds) {
             return hueFor(index);
         }
@@ -122,6 +166,38 @@ public class RoundSegmentBar extends View {
             return ColorUtils.setAlphaComponent(hueFor(index), ACTIVE_ALPHA);
         }
         return trackColor;
+    }
+
+    /**
+     * Colour for a round when the bar is showing one player's scores. An unscored round stays on
+     * the track colour whether or not the game has passed it, because a blank round says nothing
+     * about how that player did.
+     */
+    private int scoredColorFor(int index) {
+        Integer score = index < roundScores.length ? roundScores[index] : null;
+        if (score == null) {
+            return activeRound > 0 && index == activeRound - 1
+                    ? ColorUtils.setAlphaComponent(goodColor, ACTIVE_ALPHA)
+                    : trackColor;
+        }
+        return scoreColor(score);
+    }
+
+    /**
+     * Blends the score into a continuous mint-to-gold-to-coral ramp rather than snapping it to one
+     * of three swatches, so two rounds that played out differently do not end up the same colour
+     * and the bar as a whole reads as a gradient. The stops line up with the thresholds the round
+     * score boxes already use: a clean round is mint, 40 is gold, and 80 or worse is full coral.
+     */
+    private int scoreColor(int score) {
+        int safeScore = Math.max(0, score);
+        if (safeScore <= GOOD_SCORE) {
+            return ColorUtils.blendARGB(
+                    goodColor, midColor, (float) safeScore / GOOD_SCORE);
+        }
+        float toWorst = Math.min(1f,
+                (float) (safeScore - GOOD_SCORE) / (WORST_SCORE - GOOD_SCORE));
+        return ColorUtils.blendARGB(midColor, endColor, toWorst);
     }
 
     /**

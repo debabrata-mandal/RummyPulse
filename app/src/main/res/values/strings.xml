@@ -712,6 +712,28 @@
         <item quantity="one">Round %d saved — syncing in background.</item>
         <item quantity="other">Round %d saved — syncing in background.</item>
     </plurals>
+    <!--
+      Short captions for the view-mode performance header. The long forms stay in place for the
+      edit header and the dashboard, where the row is wider and the words have room.
+    -->
+    <string name="view_header_label_balance">Net GP</string>
+    <string name="view_header_label_rank">Rank</string>
+    <string name="view_header_rank_value">%1$d of %2$d</string>
+    <string name="view_header_label_made">Made</string>
+    <string name="view_header_label_packed">Packed</string>
+    <string name="view_header_label_full_hand">Full</string>
+    <string name="view_header_label_gp_factor">GP factor</string>
+    <string name="view_header_label_board">Board</string>
+    <string name="view_header_label_players">Players</string>
+
+    <plurals name="position_delta_up">
+        <item quantity="one">Up %d place this round</item>
+        <item quantity="other">Up %d places this round</item>
+    </plurals>
+    <plurals name="position_delta_down">
+        <item quantity="one">Down %d place this round</item>
+        <item quantity="other">Down %d places this round</item>
+    </plurals>
     <plurals name="dialog_correct_player_current_score">
         <item quantity="one">Current score · %d point</item>
         <item quantity="other">Current score · %d points</item>
