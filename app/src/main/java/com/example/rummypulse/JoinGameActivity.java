@@ -5384,11 +5384,10 @@ public class JoinGameActivity extends AppCompatActivity {
             ModernToast.warning(this, "Cannot add more players. Maximum 15 players allowed.");
             return;
         }
-        if (hasAnyEnteredScoreInGame(gameData)) {
-            showAddMappedPlayerDialog(gameData);
-        } else {
-            addUnmappedPlayer(gameData);
-        }
+        // Always offer the profile picker. Adding an unknown player and mapping it afterwards
+        // costs two operations and leaves the game briefly showing a placeholder name; picking
+        // the profile up front links the player in the single ADD_PLAYER write.
+        showAddMappedPlayerDialog(gameData);
     }
 
     private void showAddMappedPlayerDialog(
@@ -5552,25 +5551,6 @@ public class JoinGameActivity extends AppCompatActivity {
                 GameOperationPayload.player(newPlayer),
                 () -> ModernToast.success(
                         this, "Player '" + playerName + "' added locally; syncing…"));
-    }
-
-    private void addUnmappedPlayer(com.example.rummypulse.data.GameData gameData) {
-        com.example.rummypulse.data.Player newPlayer = new com.example.rummypulse.data.Player();
-        newPlayer.setPlayerId(java.util.UUID.randomUUID().toString());
-        newPlayer.setName(getString(R.string.unknown_user));
-        newPlayer.setUserId(null);
-        newPlayer.setIsCreator(false);
-        java.util.List<Integer> scores = new java.util.ArrayList<>();
-        for (int i = 0; i < 10; i++) scores.add(-1);
-        newPlayer.setScores(scores);
-        assignRandomNumberIfNeeded(gameData, newPlayer);
-
-        enqueueGameOperation(
-                GameOperationType.ADD_PLAYER,
-                newPlayer.getPlayerId(),
-                GameOperationPayload.player(newPlayer),
-                () -> ModernToast.success(
-                        this, getString(R.string.unmapped_player_added)));
     }
 
     private void assignRandomNumberIfNeeded(
