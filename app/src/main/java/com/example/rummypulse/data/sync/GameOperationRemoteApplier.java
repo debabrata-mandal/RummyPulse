@@ -84,6 +84,18 @@ final class GameOperationRemoteApplier {
                     && targetBefore != null
                     ? GameDataCopies.copyPlayer(targetBefore)
                     : null;
+            // Security rules dereference `resource` when authorising an approval delete, so
+            // deleting a document that was never created is rejected outright. Mapping a managed
+            // profile always hits that case, because such a profile never earns an approval.
+            // Resolve which approvals actually exist while reads are still allowed.
+            Set<String> existingApprovals = readExistingApprovals(
+                    transaction,
+                    db,
+                    operation.gameId,
+                    previousTargetUserId,
+                    deletedBefore == null ? null : deletedBefore.getUserId(),
+                    mappedUserCanSignIn ? null : mappedUserId);
+
             GameData patched = GameOperationProjector.apply(
                     latest, operation.operationType(), operation.playerId, payload);
             long nextRevision = previousRevision + 1L;
@@ -107,7 +119,8 @@ final class GameOperationRemoteApplier {
                     payload,
                     previousTargetUserId,
                     deletedBefore,
-                    mappedUserCanSignIn);
+                    mappedUserCanSignIn,
+                    existingApprovals);
             if (affectsDashboard(operation.operationType())) {
                 transaction.update(gameRef, buildDashboardSummary(patched, auth));
             }
@@ -159,6 +172,28 @@ final class GameOperationRemoteApplier {
         } else if (type == GameOperationType.ADD_PLAYER && payload.player != null) {
             payload.player.setName(profileName);
         }
+    }
+
+    /**
+     * Reads the approval documents this operation may need to delete. Transactions must finish
+     * every read before the first write, so the lookup happens up front rather than inside
+     * {@link #revokeApproval}.
+     */
+    private static Set<String> readExistingApprovals(
+            Transaction transaction, FirebaseFirestore db, String gameId, String... userIds)
+            throws com.google.firebase.firestore.FirebaseFirestoreException {
+        Set<String> candidates = new HashSet<>();
+        for (String userId : userIds) {
+            if (!TextUtils.isEmpty(userId)) candidates.add(userId);
+        }
+        Set<String> existing = new HashSet<>();
+        for (String userId : candidates) {
+            DocumentSnapshot approval = transaction.get(
+                    db.collection(FirestoreCollections.GAME_VIEW_APPROVALS)
+                            .document(GameViewApprovalRepository.documentId(gameId, userId)));
+            if (approval.exists()) existing.add(userId);
+        }
+        return existing;
     }
 
     private static boolean isManagedProfile(DocumentSnapshot profileSnapshot) {
@@ -219,31 +254,32 @@ final class GameOperationRemoteApplier {
             GameOperationPayload payload,
             String previousTargetUserId,
             Player deletedBefore,
-            boolean mappedUserCanSignIn) {
+            boolean mappedUserCanSignIn,
+            Set<String> existingApprovals) {
         GameOperationType type = operation.operationType();
         if (type == GameOperationType.ADD_PLAYER
                 && payload != null
                 && payload.player != null
                 && !TextUtils.isEmpty(payload.player.getUserId())) {
             updateApprovalForMappedUser(transaction, db, gameRef, operation.gameId,
-                    payload.player.getUserId(), mappedUserCanSignIn);
+                    payload.player.getUserId(), mappedUserCanSignIn, existingApprovals);
         } else if (type == GameOperationType.MAP_USER) {
             if (!TextUtils.isEmpty(previousTargetUserId)
                     && !previousTargetUserId.equals(payload.userId)) {
-                revokeApproval(
-                        transaction, db, gameRef, operation.gameId, previousTargetUserId);
+                revokeApproval(transaction, db, gameRef, operation.gameId,
+                        previousTargetUserId, existingApprovals);
             }
             updateApprovalForMappedUser(transaction, db, gameRef, operation.gameId,
-                    payload.userId, mappedUserCanSignIn);
+                    payload.userId, mappedUserCanSignIn, existingApprovals);
         } else if (type == GameOperationType.UNMAP_USER
                 && !TextUtils.isEmpty(previousTargetUserId)) {
-            revokeApproval(
-                    transaction, db, gameRef, operation.gameId, previousTargetUserId);
+            revokeApproval(transaction, db, gameRef, operation.gameId,
+                    previousTargetUserId, existingApprovals);
         } else if (type == GameOperationType.DELETE_PLAYER
                 && deletedBefore != null
                 && !TextUtils.isEmpty(deletedBefore.getUserId())) {
-            revokeApproval(
-                    transaction, db, gameRef, operation.gameId, deletedBefore.getUserId());
+            revokeApproval(transaction, db, gameRef, operation.gameId,
+                    deletedBefore.getUserId(), existingApprovals);
         } else if (type == GameOperationType.TRANSFER_MAPPING) {
             // The same user keeps view approval; only the owning playerId changes.
             approve(
@@ -256,11 +292,12 @@ final class GameOperationRemoteApplier {
     }
 
     private static void updateApprovalForMappedUser(Transaction transaction, FirebaseFirestore db,
-            DocumentReference gameRef, String gameId, String userId, boolean canSignIn) {
+            DocumentReference gameRef, String gameId, String userId, boolean canSignIn,
+            Set<String> existingApprovals) {
         if (canSignIn) {
             approve(transaction, db, gameRef, gameId, userId);
         } else {
-            revokeApproval(transaction, db, gameRef, gameId, userId);
+            revokeApproval(transaction, db, gameRef, gameId, userId, existingApprovals);
         }
     }
 
@@ -299,11 +336,12 @@ final class GameOperationRemoteApplier {
             FirebaseFirestore db,
             DocumentReference gameRef,
             String gameId,
-            String userId) {
-        DocumentReference approvalRef =
-                db.collection(FirestoreCollections.GAME_VIEW_APPROVALS)
-                        .document(GameViewApprovalRepository.documentId(gameId, userId));
-        transaction.delete(approvalRef);
+            String userId,
+            Set<String> existingApprovals) {
+        if (existingApprovals.contains(userId)) {
+            transaction.delete(db.collection(FirestoreCollections.GAME_VIEW_APPROVALS)
+                    .document(GameViewApprovalRepository.documentId(gameId, userId)));
+        }
         transaction.update(
                 gameRef,
                 FieldPath.of(GameViewApprovalRepository.PENDING_VIEW_REQUESTS_FIELD, userId),

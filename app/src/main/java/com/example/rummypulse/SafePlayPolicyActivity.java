@@ -282,7 +282,7 @@ public class SafePlayPolicyActivity extends AppCompatActivity {
         leavingActivity = true;
         setActionsEnabled(false);
         AccountSignOut.signOut(this).addOnCompleteListener(task -> {
-            SessionCacheCleaner.clearAll(SafePlayPolicyActivity.this);
+            SessionCacheCleaner.clearAllForAccountSwitch(SafePlayPolicyActivity.this, null);
             returnToLogin(true);
         });
     }

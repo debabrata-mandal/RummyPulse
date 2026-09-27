@@ -43,6 +43,7 @@ import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.PlayerLeaderboardRepository;
+import com.example.rummypulse.data.sync.GameOperationRepository;
 import com.example.rummypulse.ui.home.GameItem;
 import com.example.rummypulse.service.AccountDeletionGateway;
 import com.example.rummypulse.service.FirebaseAccountDeletionService;
@@ -717,9 +718,64 @@ public class MainActivity extends AppCompatActivity {
         }, 2000);
     }
 
+    /**
+     * Signing out releases the device so any account can sign in next, which means the durable
+     * operation queue goes with it. Unsynced edits are confirmed first so the loss is never
+     * silent; without them the sign-out proceeds straight away.
+     */
     private void signOut() {
+        GameOperationRepository.getInstance(this).hasPendingWork(pending -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (pending) {
+                showSignOutPendingWorkConfirmation();
+            } else {
+                performSignOut();
+            }
+        });
+    }
+
+    private void showSignOutPendingWorkConfirmation() {
+        View dialogView = getLayoutInflater().inflate(
+                R.layout.dialog_action_confirmation, null, false);
+        ImageView icon = dialogView.findViewById(R.id.image_action_dialog_icon);
+        TextView title = dialogView.findViewById(R.id.text_action_dialog_title);
+        TextView subtitle = dialogView.findViewById(R.id.text_action_dialog_subtitle);
+        TextView message = dialogView.findViewById(R.id.text_action_dialog_message);
+        com.google.android.material.card.MaterialCardView messageCard =
+                dialogView.findViewById(R.id.card_action_dialog_message);
+        MaterialButton cancel = dialogView.findViewById(R.id.btn_action_dialog_cancel);
+        MaterialButton confirm = dialogView.findViewById(R.id.btn_action_dialog_confirm);
+
+        int orange = ContextCompat.getColor(this, R.color.warning_orange);
+        icon.setImageResource(R.drawable.ic_refresh);
+        icon.setBackgroundResource(R.drawable.view_access_icon_rejected_background);
+        icon.setImageTintList(ColorStateList.valueOf(orange));
+        title.setText(R.string.sign_out_pending_title);
+        subtitle.setText(R.string.sign_out_pending_subtitle);
+        message.setText(R.string.sign_out_pending_message);
+        androidx.core.widget.TextViewCompat.setCompoundDrawableTintList(
+                message, ColorStateList.valueOf(orange));
+        messageCard.setStrokeColor(orange);
+        cancel.setText(R.string.sign_out_pending_stay);
+        confirm.setText(R.string.sign_out_pending_confirm);
+        confirm.setBackgroundTintList(ColorStateList.valueOf(orange));
+
+        androidx.appcompat.app.AlertDialog dialog =
+                new androidx.appcompat.app.AlertDialog.Builder(this, R.style.DarkDialogTheme)
+                        .setView(dialogView)
+                        .setCancelable(true)
+                        .create();
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        confirm.setOnClickListener(v -> {
+            dialog.dismiss();
+            performSignOut();
+        });
+        dialog.show();
+    }
+
+    private void performSignOut() {
         AccountSignOut.signOut(this).addOnCompleteListener(task -> {
-            SessionCacheCleaner.clearAll(MainActivity.this, () -> {
+            SessionCacheCleaner.clearAllForAccountSwitch(MainActivity.this, () -> {
                 android.util.Log.d("MainActivity", "User signed out manually");
                 Intent intent = new Intent(MainActivity.this, LoginActivity.class);
                 intent.putExtra(LoginActivity.EXTRA_REQUIRE_LOGIN, true);
@@ -944,7 +1000,7 @@ public class MainActivity extends AppCompatActivity {
         if (mAuth != null) {
             mAuth.signOut();
         }
-        SessionCacheCleaner.clearAll(this);
+        SessionCacheCleaner.clearAllForAccountSwitch(this, null);
         ModernToast.success(this, getString(R.string.account_delete_success));
         Intent intent = new Intent(this, LoginActivity.class);
         intent.putExtra(LoginActivity.EXTRA_REQUIRE_LOGIN, true);

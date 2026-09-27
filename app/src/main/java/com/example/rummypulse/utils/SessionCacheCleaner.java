@@ -12,11 +12,14 @@ import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.GameDefaultsRepository;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.data.PlayerLeaderboardRepository;
+import com.example.rummypulse.data.sync.GameOperationRepository;
 import com.bumptech.glide.Glide;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 /**
- * Wipes disposable session caches without deleting durable unsynced game edits or drafts.
+ * Wipes disposable session caches. {@link #clearAll} keeps durable unsynced game edits and drafts
+ * so the same account can recover them; {@link #clearAllForAccountSwitch} drops those too, which is
+ * what lets a different account sign in on this device.
  */
 public final class SessionCacheCleaner {
 
@@ -29,6 +32,17 @@ public final class SessionCacheCleaner {
 
     public static void clearAll(Context context) {
         clearAll(context, null);
+    }
+
+    /**
+     * Clears session caches <em>and</em> the durable operation queue, so the next sign-in starts
+     * from a clean device whichever account is used. Reserved for deliberate account exits — a
+     * sign-out the user asked for, or a deleted account — because it discards unsynced edits.
+     */
+    public static void clearAllForAccountSwitch(Context context, @Nullable Runnable onComplete) {
+        Context appContext = context.getApplicationContext();
+        GameOperationRepository.getInstance(appContext).discardAllPendingWork(
+                () -> clearAll(appContext, onComplete));
     }
 
     /**

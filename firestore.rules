@@ -205,9 +205,13 @@ service cloud.firestore {
           ])
           && request.resource.data.gameId == resource.data.gameId
           && request.resource.data.userId == resource.data.userId;
+      // A revoke can target an approval that was never created - mapping a managed profile
+      // always does, because such a profile never earns one. `resource` is null then, so the
+      // existence check has to come first or the whole rule is rejected.
       allow delete: if isAuthenticated()
           && (
-            resource.data.userId == request.auth.uid
+            !exists(/databases/$(database)/documents/gameViewApprovals_v2/$(approvalId))
+            || resource.data.userId == request.auth.uid
             || canManageViewApprovals(resource.data.gameId)
           );
     }
