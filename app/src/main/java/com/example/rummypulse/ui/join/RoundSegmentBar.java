@@ -16,17 +16,17 @@ import androidx.core.graphics.ColorUtils;
  * Draws one rounded segment per round instead of a single continuous bar. Rounds are discrete, so
  * a player can count how many are left at a glance rather than estimating a fraction.
  *
- * <p>Colour carries where the round sits in the game: the opening rounds are blue, the middle
- * warms to yellow, and the closing rounds run to red. Brightness carries progress on top of that -
- * solid for a round already played, dimmer for the round in play, faint for rounds still to come -
- * so the whole ramp stays visible from the first round and simply lights up as the game runs.</p>
+ * <p>Colour means the round has happened. A round not yet reached stays neutral grey, the round in
+ * play takes its colour at reduced strength, and a round already played takes it in full, so on and
+ * off can never be confused for one another. Where a round sits in the game decides which colour
+ * that is - the opening rounds blue, the middle yellow, the closing rounds red - so the bar fills
+ * in from the left and warms as the game runs out.</p>
  */
 public class RoundSegmentBar extends View {
 
     private static final int DEFAULT_TOTAL_ROUNDS = 10;
-    /** Alpha for the round in play, and for rounds not yet reached. */
+    /** Alpha for the round in play: on, but not yet a round that counts as played. */
     private static final int ACTIVE_ALPHA = 0x99;
-    private static final int UPCOMING_ALPHA = 0x59;
     /**
      * Where the ramp turns. The opening 40% holds blue, then it blends to yellow by 70% and to
      * red at the last round.
@@ -45,6 +45,7 @@ public class RoundSegmentBar extends View {
     private int startColor;
     private int midColor;
     private int endColor;
+    private int trackColor;
     private float gapPx;
 
     public RoundSegmentBar(Context context) {
@@ -69,6 +70,8 @@ public class RoundSegmentBar extends View {
                 context, R.color.view_gold);
         endColor = androidx.core.content.ContextCompat.getColor(
                 context, R.color.view_coral);
+        trackColor = androidx.core.content.ContextCompat.getColor(
+                context, R.color.round_segment_track);
         gapPx = 3f * context.getResources().getDisplayMetrics().density;
         paint.setStyle(Paint.Style.FILL);
     }
@@ -112,13 +115,13 @@ public class RoundSegmentBar extends View {
     }
 
     private int colorFor(int index) {
-        int hue = hueFor(index);
         if (index < completedRounds) {
-            return hue;
+            return hueFor(index);
         }
-        return ColorUtils.setAlphaComponent(
-                hue,
-                activeRound > 0 && index == activeRound - 1 ? ACTIVE_ALPHA : UPCOMING_ALPHA);
+        if (activeRound > 0 && index == activeRound - 1) {
+            return ColorUtils.setAlphaComponent(hueFor(index), ACTIVE_ALPHA);
+        }
+        return trackColor;
     }
 
     /**

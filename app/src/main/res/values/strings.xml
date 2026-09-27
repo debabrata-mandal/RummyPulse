@@ -615,6 +615,7 @@
     <string name="game_round_status_complete">Complete · Round %1$d of %2$d</string>
     <string name="game_round_status_live">Live · Round %1$d of %2$d</string>
     <string name="round_indicator_label">ROUND</string>
+    <string name="round_indicator_live">LIVE</string>
     <!-- Short on purpose: the read-only header gives the indicator a fixed 164dp, and a longer
          word alongside "ROUND 10/10" does not fit. The green pill carries the rest of the meaning. -->
     <string name="round_indicator_complete">DONE</string>

@@ -1758,7 +1758,7 @@ public class JoinGameActivity extends AppCompatActivity {
         title.setText(TextUtils.isEmpty(displayName) ? "Rummy Game" : displayName);
         gameId.setText(currentGameId == null ? "" : getString(R.string.game_id_header, currentGameId));
 
-        bindRoundIndicator(roundIndicator, gameData);
+        bindRoundIndicator(roundIndicator, gameData, false);
         totalPlayers.setText(String.valueOf(
                 gameData.getPlayers() == null ? 0 : gameData.getPlayers().size()));
         gamePointFactor.setText(getString(
@@ -1777,9 +1777,16 @@ public class JoinGameActivity extends AppCompatActivity {
     /**
      * Fills the shared round indicator. Edit mode and read-only mode include the same layout, so
      * the round always reads identically whichever way the game was opened.
+     *
+     * @param hostHasStatusBadge whether the surrounding header already shows a status badge of its
+     *     own. The edit header carries a connectivity badge, so it suppresses the live pill and two
+     *     pills never sit side by side reading as one duplicated status; the read-only header has
+     *     no badge of its own, so the pill is what tells a viewer the game is still running.
      */
     private void bindRoundIndicator(
-            View indicator, com.example.rummypulse.data.GameData gameData) {
+            View indicator,
+            com.example.rummypulse.data.GameData gameData,
+            boolean hostHasStatusBadge) {
         if (indicator == null || gameData == null) {
             return;
         }
@@ -1789,6 +1796,7 @@ public class JoinGameActivity extends AppCompatActivity {
         int completedRounds = completed ? TOTAL_ROUNDS : Math.max(0, currentRound - 1);
 
         View pill = indicator.findViewById(R.id.round_status_pill);
+        View dot = indicator.findViewById(R.id.round_status_dot);
         TextView statusLabel = indicator.findViewById(R.id.round_status_label);
         TextView currentNumber = indicator.findViewById(R.id.round_current_number);
         TextView totalLabel = indicator.findViewById(R.id.round_total_label);
@@ -1797,10 +1805,17 @@ public class JoinGameActivity extends AppCompatActivity {
         int accent = ContextCompat.getColor(this, completed
                 ? R.color.round_complete_green
                 : R.color.round_progress_cyan);
-        // The pill marks the exception, not the norm. A live game already says so through the
-        // round number and the lit segments, and edit mode carries its own "Online" badge for
-        // connectivity - two pills side by side read as one duplicated status.
-        pill.setVisibility(completed ? View.VISIBLE : View.GONE);
+        // A finished game always says so; a running one only where nothing else already does.
+        pill.setVisibility(completed || !hostHasStatusBadge ? View.VISIBLE : View.GONE);
+        pill.setBackgroundResource(completed
+                ? R.drawable.round_indicator_pill_complete
+                : R.drawable.round_indicator_pill_live);
+        dot.setBackgroundResource(completed
+                ? R.drawable.round_indicator_dot_complete
+                : R.drawable.round_indicator_dot_live);
+        statusLabel.setText(completed
+                ? R.string.round_indicator_complete
+                : R.string.round_indicator_live);
         statusLabel.setTextColor(accent);
         currentNumber.setText(String.valueOf(shownRound));
         currentNumber.setTextColor(accent);
@@ -2221,8 +2236,8 @@ public class JoinGameActivity extends AppCompatActivity {
         int numberOfPlayers = gameData.getPlayers() != null ? gameData.getPlayers().size() : 0;
         binding.textHeaderPlayers.setText(String.valueOf(numberOfPlayers));
         
-        // Match the read-only performance header's round presentation.
-        bindRoundIndicator(binding.editHeaderRoundIndicator.getRoot(), gameData);
+        // The edit header already shows a connectivity badge, so it suppresses the live pill.
+        bindRoundIndicator(binding.editHeaderRoundIndicator.getRoot(), gameData, true);
         
         // Update BoardAdjustment %
         binding.textHeaderBoardAdjustment.setText(String.format(

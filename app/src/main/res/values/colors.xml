@@ -89,6 +89,9 @@
          connectivity, so it cannot be misread as a score. -->
     <color name="round_progress_cyan">#FF00E5FF</color>
     <color name="round_complete_green">#FF3DDC97</color>
+    <!-- Rounds not yet reached. Neutral grey rather than a dimmed band colour, so colour on this
+         bar only ever means "this round has happened" and off-rounds cannot be misread as on. -->
+    <color name="round_segment_track">#30FFFFFF</color>
     <!-- Donut slices. Four separate hues rather than shades, so neighbouring arcs never blend:
          cool colours mark winners, warm colours mark losers. -->
     <color name="leaderboard_slice_win_1">#FF00E676</color>
