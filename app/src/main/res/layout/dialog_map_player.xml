@@ -250,6 +250,7 @@
             android:layout_weight="1"
             android:minHeight="48dp"
             android:text="@android:string/cancel"
+            android:textSize="13sp"
             android:textAllCaps="false"
             android:textColor="@color/view_text_primary"
             app:backgroundTint="#24111424"
@@ -267,9 +268,35 @@
             android:minHeight="48dp"
             android:text="@string/map_player_unlink"
             android:textAllCaps="false"
-            android:textColor="@color/view_coral"
+            android:textColor="@color/view_text_secondary"
+            android:textSize="13sp"
             app:backgroundTint="#24111424"
             android:visibility="gone"
+            app:cornerRadius="10dp"
+            app:strokeColor="@color/view_stroke"
+            app:strokeWidth="1dp" />
+
+        <!--
+          Removing the player sits with linking them, because both are about who this seat is
+          rather than about the game being played. It keeps its own confirmation.
+
+          It is the only red button here: unlinking a profile is reversible in a tap, deleting a
+          player and their scores is not, and two identical red buttons side by side would invite
+          exactly the wrong one.
+        -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_remove_player_mapping"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:text="@string/map_player_remove_from_game"
+            android:textAllCaps="false"
+            android:textColor="@color/view_coral"
+            android:textSize="13sp"
+            app:backgroundTint="#24111424"
             app:cornerRadius="10dp"
             app:strokeColor="@color/view_coral"
             app:strokeWidth="1dp" />

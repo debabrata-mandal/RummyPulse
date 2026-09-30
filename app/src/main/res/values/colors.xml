@@ -82,6 +82,23 @@
     <color name="view_text_secondary">#FFAAAACC</color>
     <color name="view_text_muted">#FF555570</color>
     <color name="view_violet">#FF8C52FF</color>
+
+    <!-- Race chart. The grid is two weights: rounds played, and rounds still to come. -->
+    <color name="race_grid">#FF1C1A35</color>
+    <color name="race_grid_future">#FF14121F</color>
+    <!--
+      One colour per player line. Categorical, not semantic: these say which player, never how they
+      are doing. Picked to stay apart on a near-black surface, and reused in order by seat so a
+      player keeps the same line between updates.
+    -->
+    <color name="race_line_1">#FF8C52FF</color>
+    <color name="race_line_2">#FFC44FD4</color>
+    <color name="race_line_3">#FF5A9BD4</color>
+    <color name="race_line_4">#FF4AB58A</color>
+    <color name="race_line_5">#FFE8A33D</color>
+    <color name="race_line_6">#FFE06C8B</color>
+    <color name="race_line_7">#FF6FC3C8</color>
+    <color name="race_line_8">#FFB0A04A</color>
     <color name="view_violet_light">#FFB47EFF</color>
     <!-- Round progress ramp: the opening rounds are blue, the middle warms to yellow, the last
          run to red. Cyan rather than the card's own violet, which the segments disappeared

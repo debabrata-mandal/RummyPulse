@@ -341,10 +341,10 @@
                 android:id="@+id/players_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_view_hero"
+                android:background="@drawable/bg_view_hero_card"
                 android:orientation="vertical"
                 android:layout_marginBottom="16dp"
-                android:padding="12dp"
+                android:padding="14dp"
                 android:visibility="gone">
 
                 <!-- Collapsible Section Header -->
@@ -368,14 +368,16 @@
                         android:orientation="horizontal">
 
                             <TextView
-                                android:layout_width="wrap_content"
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:drawablePadding="8dp"
+                                android:layout_weight="1"
+                                android:drawablePadding="9dp"
+                                android:ellipsize="end"
                                 android:gravity="center_vertical"
+                                android:maxLines="1"
                                 android:text="@string/edit_players_standings_title"
                                 android:textColor="@color/view_text_primary"
-                                android:textSize="18sp"
-                                android:textStyle="bold"
+                                android:textSize="15sp"
                                 app:drawableStartCompat="@drawable/ic_gamepad"
                                 app:drawableTint="@color/view_violet_light" />
 
@@ -405,8 +407,9 @@
                                     android:layout_height="wrap_content"
                                     tools:text="Online"
                                     android:textColor="@color/view_mint"
-                                    android:textSize="10dp"
-                                    android:textStyle="bold" />
+                                    android:letterSpacing="0.1"
+                                    android:textAllCaps="true"
+                                    android:textSize="10sp" />
 
                             </LinearLayout>
 
@@ -436,8 +439,9 @@
                                     android:layout_height="wrap_content"
                                     tools:text="Offline"
                                     android:textColor="@color/view_coral"
-                                    android:textSize="10dp"
-                                    android:textStyle="bold" />
+                                    android:letterSpacing="0.1"
+                                    android:textAllCaps="true"
+                                    android:textSize="10sp" />
 
                             </LinearLayout>
 
@@ -458,6 +462,54 @@
                         app:tint="@color/view_violet_light"
                         android:visibility="gone" />
 
+                    <!--
+                      Sort: game order (drag) vs game_points order (grouped). Sits in the header
+                      rather than on a bar of its own, so the list starts a row sooner. Same widget
+                      and same ids as before, so setupPlayerListSortToggle is untouched.
+                    -->
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/player_list_sort_toggle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="6dp"
+                        app:checkedButton="@+id/btn_sort_game_order"
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_sort_game_order"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="28dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:minWidth="0dp"
+                            android:minHeight="28dp"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:text="@string/edit_player_sort_game_order"
+                            android:textAllCaps="false"
+                            android:textSize="10sp"
+                            app:strokeColor="@color/view_stroke" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_sort_game_points_order"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="28dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:minWidth="0dp"
+                            android:minHeight="28dp"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:text="@string/edit_player_sort_game_points_order"
+                            android:textAllCaps="false"
+                            android:textSize="10sp"
+                            app:strokeColor="@color/view_stroke" />
+
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
                     <!-- Collapse/Expand Icon -->
                     <ImageView
                         android:id="@+id/players_collapse_icon"
@@ -469,45 +521,86 @@
 
                 </LinearLayout>
 
-                <!-- Sort: game order (drag) vs game_points order (grouped) -->
-                <com.google.android.material.button.MaterialButtonToggleGroup
-                    android:id="@+id/player_list_sort_toggle"
+                <!--
+                  The race. The list below can only show where the game stands now; every score
+                  that got it there is already loaded, so the whole run is drawable for free.
+                -->
+                <LinearLayout
+                    android:id="@+id/race_panel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp"
-                    app:checkedButton="@+id/btn_sort_game_order"
-                    app:selectionRequired="true"
-                    app:singleSelection="true">
+                    android:layout_marginBottom="4dp"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    tools:visibility="visible">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_sort_game_order"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="0dp"
-                        android:layout_height="36dp"
-                        android:layout_weight="1"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:minHeight="36dp"
-                        android:text="@string/edit_player_sort_game_order"
-                        android:textAllCaps="false"
+                    <LinearLayout
+                        android:id="@+id/race_panel_header"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="?android:attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="6dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:letterSpacing="0.12"
+                            android:maxLines="1"
+                            android:text="@string/race_panel_title"
+                            android:textAllCaps="true"
+                            android:textColor="@color/view_text_muted"
+                            android:textSize="10sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="6dp"
+                            android:maxLines="1"
+                            android:text="@string/race_panel_axis_caption"
+                            android:textColor="@color/view_text_muted"
+                            android:textSize="9sp" />
+
+                        <ImageView
+                            android:id="@+id/race_panel_chevron"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:contentDescription="@string/race_panel_title"
+                            android:src="@drawable/ic_expand_less"
+                            app:tint="@color/view_text_muted" />
+
+                    </LinearLayout>
+
+                    <com.example.rummypulse.ui.join.GameRaceChartView
+                        android:id="@+id/race_chart"
+                        android:layout_width="match_parent"
+                        android:layout_height="128dp"
+                        android:layout_marginTop="2dp" />
+
+                    <TextView
+                        android:id="@+id/race_lead_change"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_view_metric"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:paddingStart="10dp"
+                        android:paddingTop="7dp"
+                        android:paddingEnd="10dp"
+                        android:paddingBottom="7dp"
+                        android:textColor="@color/view_text_secondary"
                         android:textSize="11sp"
-                        app:strokeColor="@color/view_stroke" />
+                        android:visibility="gone"
+                        tools:text="Round 3 — Debu took the lead"
+                        tools:visibility="visible" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_sort_game_points_order"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="0dp"
-                        android:layout_height="36dp"
-                        android:layout_weight="1"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:minHeight="36dp"
-                        android:text="@string/edit_player_sort_game_points_order"
-                        android:textAllCaps="false"
-                        android:textSize="11sp"
-                        app:strokeColor="@color/view_stroke" />
-
-                </com.google.android.material.button.MaterialButtonToggleGroup>
+                </LinearLayout>
 
                 <!-- Collapsible Players Content -->
                 <LinearLayout
@@ -564,11 +657,11 @@
                         android:padding="8dp">
 
                         <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
+                            android:layout_width="19dp"
+                            android:layout_height="19dp"
                             android:src="@drawable/ic_visibility"
                             app:tint="@color/view_gold"
-                            android:layout_marginEnd="8dp"
+                            android:layout_marginEnd="9dp"
                             android:contentDescription="@string/view_requests_section_title" />
 
                         <TextView
@@ -577,8 +670,7 @@
                             android:layout_weight="1"
                             android:text="@string/view_requests_section_title"
                             android:textColor="@color/view_text_primary"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
+                            android:textSize="15sp" />
 
                         <TextView
                             android:id="@+id/text_view_requests_badge"
@@ -586,13 +678,13 @@
                             android:layout_height="wrap_content"
                             android:layout_marginEnd="8dp"
                             android:background="@drawable/status_badge_background"
+                            android:fontFeatureSettings="tnum"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp"
                             android:paddingTop="2dp"
                             android:paddingBottom="2dp"
                             android:textColor="@color/view_gold"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
+                            android:textSize="11sp"
                             android:visibility="gone" />
 
                         <ImageView
@@ -1062,86 +1154,6 @@
         android:tint="@android:color/white"
         android:visibility="gone"
         app:tint="@android:color/white" />
-
-    <LinearLayout
-        android:id="@+id/edit_player_round_sheet"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:background="@drawable/bg_view_hero"
-        android:clickable="true"
-        android:elevation="24dp"
-        android:focusable="true"
-        android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingTop="14dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="18dp"
-        android:visibility="gone">
-
-        <View
-            android:layout_width="42dp"
-            android:layout_height="4dp"
-            android:layout_gravity="center_horizontal"
-            android:background="@drawable/bg_view_round_label" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/edit_player_round_sheet_title"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/players_round_scores_title"
-                    android:textColor="@color/view_text_primary"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/edit_player_round_sheet_total"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="3dp"
-                    tools:text="Total Score · 0"
-                    android:textColor="@color/view_violet_light"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/edit_player_round_sheet_close"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="@drawable/bg_view_action"
-                android:clickable="true"
-                android:contentDescription="@string/cd_close_round_scores"
-                android:focusable="true"
-                android:padding="9dp"
-                android:src="@drawable/ic_close"
-                app:tint="@color/view_text_secondary" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/edit_player_round_sheet_rows"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="vertical" />
-
-    </LinearLayout>
-
     <!-- Loading Spinner Overlay - Must be last to appear on top -->
     <FrameLayout
         android:id="@+id/loading_overlay"

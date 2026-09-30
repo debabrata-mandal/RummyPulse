@@ -33,6 +33,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.ColorUtils;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.rummypulse.data.AppUser;
@@ -57,6 +58,7 @@ import com.example.rummypulse.data.sync.GameOperationPayload;
 import com.example.rummypulse.data.sync.GameOperationProjector;
 import com.example.rummypulse.data.sync.GameOperationRepository;
 import com.example.rummypulse.data.sync.GameOperationType;
+import com.example.rummypulse.ui.join.GameRaceChartView;
 import com.example.rummypulse.ui.join.JoinGameViewModel;
 import com.example.rummypulse.ui.join.PlayerRoundStatistics;
 import com.example.rummypulse.ui.join.PlayerRoundStatisticsCalculator;
@@ -94,6 +96,12 @@ public class JoinGameActivity extends AppCompatActivity {
     
     // Track previous ranks for animation
     private java.util.Map<String, Integer> previousRanks = new java.util.HashMap<>();
+    /** Player row whose detail is open, or null when every row is closed. */
+    private String expandedPlayerCardId;
+    /** Whether the race chart is folded away for this session. */
+    private boolean racePanelCollapsed;
+    /** Direction of each player's last rank change: 1 for a climb, -1 for a drop. */
+    private final java.util.Map<String, Integer> rankMovementByPlayerId = new java.util.HashMap<>();
     
     // Firestore listener for real-time updates
     private com.google.firebase.firestore.ListenerRegistration gameDataListener;
@@ -166,8 +174,6 @@ public class JoinGameActivity extends AppCompatActivity {
     /** Baseline for the view-mode header rank delta: whose rank it was, and what it was. */
     private String previousFocusPositionKey;
     private int previousFocusPosition;
-    /** Player whose round details are currently expanded from an edit-mode card. */
-    private String selectedEditRoundPlayerId;
     private String lastIntegrityWarningKey;
 
     /** Global admins may manage view requests without holding game edit access. */
@@ -1228,13 +1234,41 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.btnEnterRoundScores.setOnClickListener(v -> startSequentialRoundScoreEntryFlow());
 
         binding.btnCorrectPastRound.setOnClickListener(v -> startPastRoundCorrectionFlow());
-
-        binding.getRoot().findViewById(R.id.edit_player_round_sheet_close)
-                .setOnClickListener(v -> hideEditPlayerRoundSheet());
         
         // Setup collapsible sections
         setupCollapsibleSections();
         setupPlayerListSortToggle();
+        setupRacePanelToggle();
+    }
+
+    /**
+     * The chart is worth its height while a game is in play and less so once someone is only
+     * entering the last scores, so it folds away. The choice is remembered for the session rather
+     * than stored, since it is a preference about this screen right now, not about the game.
+     */
+    private void setupRacePanelToggle() {
+        View header = binding.getRoot().findViewById(R.id.race_panel_header);
+        View chart = binding.getRoot().findViewById(R.id.race_chart);
+        View leadChange = binding.getRoot().findViewById(R.id.race_lead_change);
+        ImageView chevron = binding.getRoot().findViewById(R.id.race_panel_chevron);
+        if (header == null || chart == null || chevron == null) {
+            return;
+        }
+        header.setOnClickListener(v -> {
+            racePanelCollapsed = !racePanelCollapsed;
+            chart.setVisibility(racePanelCollapsed ? View.GONE : View.VISIBLE);
+            // The lead-change line belongs to the chart; on its own it reads as a stray sentence.
+            if (leadChange != null && racePanelCollapsed) {
+                leadChange.setVisibility(View.GONE);
+            }
+            chevron.setImageResource(racePanelCollapsed
+                    ? R.drawable.ic_expand_more
+                    : R.drawable.ic_expand_less);
+            com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+            if (gameData != null && !racePanelCollapsed) {
+                bindRacePanel(gameData);
+            }
+        });
     }
 
     private void setupPlayerListSortToggle() {
@@ -1736,9 +1770,6 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.appBar.setVisibility(editMode ? View.VISIBLE : View.GONE);
         binding.gameEditContent.setVisibility(editMode ? View.VISIBLE : View.GONE);
         binding.gameInfoHeader.setVisibility(editMode ? View.VISIBLE : View.GONE);
-        if (!editMode) {
-            hideEditPlayerRoundSheet();
-        }
         binding.btnAddPlayer.setVisibility(editMode ? View.VISIBLE : View.GONE);
         binding.btnEnterRoundScores.setVisibility(editMode
                 ? binding.btnEnterRoundScores.getVisibility() : View.GONE);
@@ -2606,6 +2637,7 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         GameDataSchema.normalize(gameData);
+        bindRacePanel(gameData);
         binding.playersContainer.removeAllViews();
         java.util.Map<String, PlayerStanding> standingsByPlayerId =
                 buildStandingsByPlayerId(gameData);
@@ -2714,31 +2746,11 @@ public class JoinGameActivity extends AppCompatActivity {
                         ? View.VISIBLE
                         : View.GONE);
 
-        ImageView deleteButton = playerCardView.findViewById(R.id.btn_delete_player);
-        deleteButton.setOnClickListener(v -> showDeletePlayerConfirmation(player, gameData));
-
+        // Linking and removing both belong to the mapping dialog the avatar opens, so the card
+        // itself carries no controls - it is something you read.
         bindMapPlayerButton(mapPlayerButton, player);
-        mapPlayerButton.setOnClickListener(v -> {
-            Boolean canEdit = viewModel.getEditAccessGranted().getValue();
-            if (!Boolean.TRUE.equals(canEdit)) {
-                ModernToast.info(this, getString(R.string.map_player_editor_only));
-                return;
-            }
-            com.example.rummypulse.data.GameData latestGameData =
-                    viewModel.getGameData().getValue();
-            com.example.rummypulse.data.Player latestPlayer =
-                    GameDataSchema.findPlayer(latestGameData, stablePlayerId);
-            if (latestGameData == null || latestPlayer == null) {
-                ModernToast.error(this, "Latest game data is unavailable. Please retry.");
-                return;
-            }
-            showMapPlayerDialog(
-                    stablePlayerId,
-                    latestPlayer,
-                    latestGameData,
-                    mapPlayerButton,
-                    playerName);
-        });
+        mapPlayerButton.setOnClickListener(v ->
+                openMapPlayerDialog(stablePlayerId, mapPlayerButton, playerName));
 
         ImageView dragHandle = playerCardView.findViewById(R.id.drag_handle);
         Boolean editAccess = viewModel.getEditAccessGranted().getValue();
@@ -2754,10 +2766,272 @@ public class JoinGameActivity extends AppCompatActivity {
 
         bindMergedPlayerMetrics(playerCardView, player, gameData, standingsByPlayerId);
 
-        playerCardView.setOnClickListener(v -> toggleEditPlayerRoundSheet(stablePlayerId));
+        playerCardView.setOnClickListener(v -> togglePlayerCardDetail(stablePlayerId));
+        bindPlayerCardExpansion(playerCardView, stablePlayerId);
         playerCardView.setTag(REAL_PLAYER_CARD_TAG);
         playerCardView.setTag(R.id.text_player_id, stablePlayerId);
         return playerCardView;
+    }
+
+    /**
+     * Opens the player-mapping dialog against the freshest game data rather than the copy the row
+     * was built from, because a row can sit on screen across several updates.
+     */
+    private void openMapPlayerDialog(String playerId, View mapButton, EditText playerNameView) {
+        Boolean canEdit = viewModel.getEditAccessGranted().getValue();
+        if (!Boolean.TRUE.equals(canEdit)) {
+            ModernToast.info(this, getString(R.string.map_player_editor_only));
+            return;
+        }
+        com.example.rummypulse.data.GameData latestGameData = viewModel.getGameData().getValue();
+        com.example.rummypulse.data.Player latestPlayer =
+                GameDataSchema.findPlayer(latestGameData, playerId);
+        if (latestGameData == null || latestPlayer == null) {
+            ModernToast.error(this, "Latest game data is unavailable. Please retry.");
+            return;
+        }
+        showMapPlayerDialog(playerId, latestPlayer, latestGameData, mapButton, playerNameView);
+    }
+
+    /**
+     * Opens one player's detail and closes whichever was open. Tapping the row is the whole
+     * control, so a second row opening while the first stays open would push the thing just tapped
+     * off screen as often as not.
+     */
+    private void togglePlayerCardDetail(String playerId) {
+        expandedPlayerCardId = TextUtils.equals(expandedPlayerCardId, playerId) ? null : playerId;
+        com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
+        if (gameData != null) {
+            renderPlayerCardsFromState(gameData);
+        }
+    }
+
+    /**
+     * Applies the open or closed state. Expansion is tracked on the activity rather than the view
+     * so it survives the list being rebuilt under it by an incoming score.
+     */
+    private void bindPlayerCardExpansion(View playerCard, String playerId) {
+        View detail = playerCard.findViewById(R.id.player_card_detail);
+        if (detail == null) {
+            return;
+        }
+        detail.setVisibility(
+                TextUtils.equals(expandedPlayerCardId, playerId) ? View.VISIBLE : View.GONE);
+    }
+
+    /**
+     * Fills the open row's hand counts. The calculator is the one both performance headers use and
+     * works entirely off in-memory scores, so opening a row costs no read.
+     */
+    private void bindPlayerCardDetail(
+            View playerCard,
+            com.example.rummypulse.data.Player player,
+            com.example.rummypulse.data.GameData gameData) {
+        TextView made = playerCard.findViewById(R.id.text_player_made_count);
+        TextView packed = playerCard.findViewById(R.id.text_player_packed_count);
+        TextView fullHand = playerCard.findViewById(R.id.text_player_full_hand_count);
+        if (made == null || packed == null || fullHand == null) {
+            return;
+        }
+        PlayerRoundStatistics statistics =
+                PlayerRoundStatisticsCalculator.calculate(player, gameData);
+        made.setText(String.valueOf(statistics.getMadeGameCount()));
+        packed.setText(String.valueOf(statistics.getPackedCount()));
+        fullHand.setText(String.valueOf(statistics.getFullHandCount()));
+        bindPlayerCardRoundTiles(playerCard, player, gameData);
+    }
+
+    /**
+     * The ten round tiles inside an open card, drawn the way the round scores are drawn everywhere
+     * else in the app. Only the open card builds them: every other row would be inflating ten
+     * views it is not showing, on every score that lands.
+     */
+    private void bindPlayerCardRoundTiles(
+            View playerCard,
+            com.example.rummypulse.data.Player player,
+            com.example.rummypulse.data.GameData gameData) {
+        LinearLayout rows = playerCard.findViewById(R.id.player_card_round_rows);
+        if (rows == null) {
+            return;
+        }
+        if (!TextUtils.equals(expandedPlayerCardId, player.getPlayerId())) {
+            rows.removeAllViews();
+            return;
+        }
+        rows.removeAllViews();
+
+        int currentRound = calculateCurrentRound(gameData);
+        boolean completed = isGameCompleted(gameData);
+        float density = getResources().getDisplayMetrics().density;
+        int margin = Math.round(3 * density);
+        for (int rowIndex = 0; rowIndex < 2; rowIndex++) {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            if (rowIndex > 0) {
+                rowParams.topMargin = margin * 2;
+            }
+            row.setLayoutParams(rowParams);
+            rows.addView(row);
+
+            for (int column = 0; column < 5; column++) {
+                int roundIndex = rowIndex * 5 + column;
+                View tile = LayoutInflater.from(this).inflate(
+                        R.layout.item_view_round_score, row, false);
+                LinearLayout.LayoutParams tileParams = new LinearLayout.LayoutParams(
+                        0, Math.round(58 * density), 1f);
+                tileParams.setMargins(margin, 0, margin, 0);
+                tile.setLayoutParams(tileParams);
+                ((TextView) tile.findViewById(R.id.view_round_number))
+                        .setText(getString(R.string.dialog_pick_round_chip, roundIndex + 1));
+                TextView scoreView = tile.findViewById(R.id.view_round_score);
+                Integer score = player.getScores() != null
+                        && roundIndex < player.getScores().size()
+                        ? player.getScores().get(roundIndex) : null;
+                if (score != null && score >= 0) {
+                    scoreView.setText(String.valueOf(score));
+                    if (score < 40) {
+                        tile.setBackgroundResource(R.drawable.bg_view_round_good);
+                        scoreView.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
+                    } else if (score <= 65) {
+                        tile.setBackgroundResource(R.drawable.bg_view_round_medium);
+                        scoreView.setTextColor(ContextCompat.getColor(this, R.color.view_gold));
+                    } else {
+                        tile.setBackgroundResource(R.drawable.bg_view_round_high);
+                        scoreView.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
+                    }
+                } else if (!completed && roundIndex + 1 == currentRound) {
+                    scoreView.setText("…");
+                    tile.setBackgroundResource(R.drawable.bg_view_round_active);
+                    scoreView.setTextColor(
+                            ContextCompat.getColor(this, R.color.view_violet_light));
+                } else {
+                    scoreView.setText("–");
+                    tile.setBackgroundResource(R.drawable.bg_view_round_cell);
+                    scoreView.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
+                }
+                row.addView(tile);
+            }
+        }
+    }
+
+    private static final int[] RACE_LINE_COLORS = {
+            R.color.race_line_1, R.color.race_line_2, R.color.race_line_3, R.color.race_line_4,
+            R.color.race_line_5, R.color.race_line_6, R.color.race_line_7, R.color.race_line_8};
+
+    /**
+     * Draws the game so far as one line per player. Every number comes from scores already held in
+     * {@code gameData}, so the panel costs no read; it is the same data the list shows, read along
+     * the round axis instead of only at its last value.
+     */
+    private void bindRacePanel(com.example.rummypulse.data.GameData gameData) {
+        View panel = binding.getRoot().findViewById(R.id.race_panel);
+        if (panel == null) {
+            return;
+        }
+        boolean editMode = Boolean.TRUE.equals(viewModel.getEditAccessGranted().getValue());
+        int playedRounds = findLastCompletedRound(gameData);
+        List<com.example.rummypulse.data.Player> players = gameData.getPlayers();
+        // Before a single round is in there is no race to draw, and an empty grid is just noise.
+        if (!editMode || players == null || players.isEmpty() || playedRounds < 1) {
+            panel.setVisibility(View.GONE);
+            return;
+        }
+        panel.setVisibility(View.VISIBLE);
+        if (racePanelCollapsed) {
+            return;
+        }
+
+        java.util.Map<String, PlayerStanding> standings = buildStandingsByPlayerId(gameData);
+        Player viewerPlayer = findMappedPlayerForViewer(gameData);
+        String viewerId = viewerPlayer == null ? null : viewerPlayer.getPlayerId();
+
+        List<GameRaceChartView.RaceLine> raceLines = new ArrayList<>(players.size());
+        for (int index = 0; index < players.size(); index++) {
+            com.example.rummypulse.data.Player player = players.get(index);
+            PlayerStanding standing = standings.get(player.getPlayerId());
+            boolean emphasised = (standing != null && standing.rank == 1)
+                    || (viewerId != null && viewerId.equals(player.getPlayerId()));
+            raceLines.add(new GameRaceChartView.RaceLine(
+                    formatPlayerDisplayName(player),
+                    ContextCompat.getColor(
+                            this, RACE_LINE_COLORS[index % RACE_LINE_COLORS.length]),
+                    cumulativeTotalsOf(player, playedRounds),
+                    emphasised));
+        }
+        ((GameRaceChartView) panel.findViewById(R.id.race_chart))
+                .setRace(raceLines, TOTAL_ROUNDS);
+
+        bindRaceLeadChange(panel, gameData, playedRounds);
+    }
+
+    /** Running total after each played round. A round nobody scored ends the run. */
+    private List<Integer> cumulativeTotalsOf(
+            com.example.rummypulse.data.Player player, int playedRounds) {
+        List<Integer> totals = new ArrayList<>(playedRounds);
+        List<Integer> scores = player.getScores();
+        if (scores == null) {
+            return totals;
+        }
+        int running = 0;
+        for (int round = 0; round < playedRounds && round < scores.size(); round++) {
+            Integer score = scores.get(round);
+            if (score == null || score < 0) {
+                break;
+            }
+            running += score;
+            totals.add(running);
+        }
+        return totals;
+    }
+
+    /**
+     * Names the round where the current leader took the lead. Hidden while the leader has held it
+     * from the first round, because "nobody has been overtaken" is not worth a line of its own.
+     */
+    private void bindRaceLeadChange(
+            View panel, com.example.rummypulse.data.GameData gameData, int playedRounds) {
+        TextView leadChange = panel.findViewById(R.id.race_lead_change);
+        List<com.example.rummypulse.data.Player> players = gameData.getPlayers();
+        String previousLeaderId = null;
+        int changedAtRound = 0;
+        com.example.rummypulse.data.Player leaderAtChange = null;
+
+        for (int round = 1; round <= playedRounds; round++) {
+            com.example.rummypulse.data.Player leader = null;
+            int bestTotal = Integer.MAX_VALUE;
+            for (com.example.rummypulse.data.Player player : players) {
+                List<Integer> totals = cumulativeTotalsOf(player, round);
+                if (totals.size() < round) {
+                    continue;
+                }
+                int total = totals.get(round - 1);
+                if (total < bestTotal) {
+                    bestTotal = total;
+                    leader = player;
+                }
+            }
+            if (leader == null) {
+                continue;
+            }
+            if (previousLeaderId != null && !previousLeaderId.equals(leader.getPlayerId())) {
+                changedAtRound = round;
+                leaderAtChange = leader;
+            }
+            previousLeaderId = leader.getPlayerId();
+        }
+
+        if (changedAtRound == 0 || leaderAtChange == null) {
+            leadChange.setVisibility(View.GONE);
+            return;
+        }
+        leadChange.setVisibility(View.VISIBLE);
+        leadChange.setText(getString(
+                R.string.race_lead_change,
+                changedAtRound,
+                formatPlayerDisplayName(leaderAtChange)));
     }
 
     private boolean shouldRegeneratePlayerCards(com.example.rummypulse.data.GameData gameData) {
@@ -2820,6 +3094,7 @@ public class JoinGameActivity extends AppCompatActivity {
         if (isDragging) {
             return;
         }
+        bindRacePanel(gameData);
         if (shouldRegeneratePlayerCards(gameData)) {
             generatePlayerCards(gameData);
             return;
@@ -2839,6 +3114,7 @@ public class JoinGameActivity extends AppCompatActivity {
             }
             applyPlayerNameLock(name);
             bindMapPlayerButton(card.findViewById(R.id.btn_map_player), player);
+            bindPlayerCardExpansion(card, player.getPlayerId());
             bindMergedPlayerMetrics(card, player, gameData, standingsByPlayerId);
             TextView pending = card.findViewById(R.id.text_player_pending_sync);
             pending.setVisibility(
@@ -2991,6 +3267,9 @@ public class JoinGameActivity extends AppCompatActivity {
         playerName.setFocusableInTouchMode(false);
         playerName.setCursorVisible(false);
         playerName.setLongClickable(false);
+        // A disabled EditText still swallows the touch because it stays clickable, which left the
+        // player's name - the most obvious thing to press - doing nothing. Let the row have it.
+        playerName.setClickable(false);
         playerName.setAlpha(1f);
     }
 
@@ -3011,6 +3290,19 @@ public class JoinGameActivity extends AppCompatActivity {
         ProgressBar progress = dialogView.findViewById(R.id.progress_users);
         TextView empty = dialogView.findViewById(R.id.text_users_empty);
         View refresh = dialogView.findViewById(R.id.btn_refresh_users);
+        dialogView.findViewById(R.id.btn_remove_player_mapping).setOnClickListener(v -> {
+            // Re-read the game rather than trusting the copy this dialog opened with: a score can
+            // land while it is up, and removal has to act on what is true now.
+            com.example.rummypulse.data.GameData latest = viewModel.getGameData().getValue();
+            com.example.rummypulse.data.Player latestPlayer =
+                    GameDataSchema.findPlayer(latest, playerId);
+            if (latest == null || latestPlayer == null) {
+                ModernToast.error(this, "Latest game data is unavailable. Please retry.");
+                return;
+            }
+            dialog.dismiss();
+            showDeletePlayerConfirmation(latestPlayer, latest);
+        });
         Button unlink = dialogView.findViewById(R.id.btn_unlink_user);
         Button cancel = dialogView.findViewById(R.id.btn_cancel_mapping);
 
@@ -3385,36 +3677,105 @@ public class JoinGameActivity extends AppCompatActivity {
         if (playerCard == null || player == null || gameData == null) {
             return;
         }
+        bindPlayerCardDetail(playerCard, player, gameData);
         PlayerStanding standing = standingsByPlayerId.get(player.getPlayerId());
         TextView position = playerCard.findViewById(R.id.text_player_position);
         TextView total = playerCard.findViewById(R.id.text_player_total_score);
-        TextView direction = playerCard.findViewById(R.id.text_net_direction);
         TextView amount = playerCard.findViewById(R.id.text_final_game_points);
         if (standing == null) {
             position.setText("—");
             total.setText("—");
-            applyStandingDirectionPlaceholder(direction);
             applyStandingFinalGamePointsPlaceholder(amount);
             applyPlayerCardRoleStyle(playerCard, null, player);
-            populateLastCompletedRound(playerCard, player, gameData);
+            bindPlayerGapBar(playerCard, null, standingsByPlayerId);
+            bindRankMovement(playerCard, null);
             return;
         }
 
         position.setText(String.valueOf(standing.rank));
         styleTotalScoreTextView(total, standing.totalScore);
-        populateLastCompletedRound(playerCard, player, gameData);
-        applyStandingDirectionDisplay(direction, standing, gameData);
         applyStandingFinalGamePointsDisplay(amount, standing, gameData);
         applyPlayerCardRoleStyle(playerCard, standing, player);
+        bindPlayerGapBar(playerCard, standing, standingsByPlayerId);
 
         String playerKey = player.getPlayerId();
         Integer previousRank = previousRanks.put(playerKey, standing.rank);
         if (previousRank != null && previousRank != standing.rank) {
+            rankMovementByPlayerId.put(
+                    playerKey, standing.rank < previousRank ? 1 : -1);
             int animation = standing.rank < previousRank
                     ? R.anim.rank_up_animation
                     : R.anim.rank_down_animation;
             playerCard.startAnimation(
                     android.view.animation.AnimationUtils.loadAnimation(this, animation));
+        }
+        bindRankMovement(playerCard, rankMovementByPlayerId.get(playerKey));
+    }
+
+    /**
+     * Marks the direction of this player's most recent rank change. The card animation that already
+     * fires on a change is gone in a moment; this keeps the same signal on screen until the rank
+     * moves again, so a player who steps away still sees which way they went. It reads no data of
+     * its own - the movement is taken from the rank comparison the animation already makes.
+     *
+     * @param movement 1 for a climb, -1 for a drop, null when the rank has not moved yet
+     */
+    private void bindRankMovement(View playerCard, Integer movement) {
+        TextView caret = playerCard.findViewById(R.id.player_rank_movement);
+        if (caret == null) {
+            return;
+        }
+        if (movement == null || movement == 0) {
+            caret.setText("");
+            return;
+        }
+        boolean climbed = movement > 0;
+        caret.setText(climbed ? "▲" : "▼");
+        caret.setTextColor(ContextCompat.getColor(
+                this, climbed ? R.color.view_mint : R.color.view_coral));
+    }
+
+    /**
+     * Sizes the bar under the player name against the highest total in the game, so the distance
+     * between players is legible without comparing the numbers one by one. Lower is better in
+     * rummy, so the leader draws the shortest bar. Every total comes from the standings already
+     * built for this bind - the bar costs no read.
+     */
+    private void bindPlayerGapBar(
+            View playerCard,
+            PlayerStanding standing,
+            java.util.Map<String, PlayerStanding> standingsByPlayerId) {
+        View track = playerCard.findViewById(R.id.player_gap_track);
+        View fill = playerCard.findViewById(R.id.player_gap_fill);
+        View remainder = playerCard.findViewById(R.id.player_gap_remainder);
+        if (track == null || fill == null || remainder == null) {
+            return;
+        }
+        if (standing == null) {
+            track.setVisibility(View.INVISIBLE);
+            return;
+        }
+        int worstTotal = 0;
+        for (PlayerStanding other : standingsByPlayerId.values()) {
+            worstTotal = Math.max(worstTotal, other.totalScore);
+        }
+        track.setVisibility(View.VISIBLE);
+        // Before anyone has scored every total is zero; a full-width bar for all would read as a
+        // result nobody has earned yet, so the track stays empty until there is a spread to show.
+        float fraction = worstTotal <= 0
+                ? 0f
+                : Math.min(1f, (float) standing.totalScore / worstTotal);
+        setHorizontalWeight(fill, fraction);
+        setHorizontalWeight(remainder, 1f - fraction);
+        fill.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this, totalScoreColor(standing.totalScore))));
+    }
+
+    private void setHorizontalWeight(View view, float weight) {
+        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) view.getLayoutParams();
+        if (params.weight != weight) {
+            params.weight = weight;
+            view.setLayoutParams(params);
         }
     }
 
@@ -3466,13 +3827,15 @@ public class JoinGameActivity extends AppCompatActivity {
     private void styleTotalScoreTextView(TextView totalScoreView, int total) {
         totalScoreView.setText(String.valueOf(total));
         totalScoreView.setTypeface(null, android.graphics.Typeface.BOLD);
+        totalScoreView.setTextColor(ContextCompat.getColor(this, totalScoreColor(total)));
+    }
+
+    /** Single source for the total-score bands, so the figure and its gap bar never disagree. */
+    private int totalScoreColor(int total) {
         if (total < 40) {
-            totalScoreView.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
-        } else if (total <= 120) {
-            totalScoreView.setTextColor(ContextCompat.getColor(this, R.color.view_gold));
-        } else {
-            totalScoreView.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
+            return R.color.view_mint;
         }
+        return total <= 120 ? R.color.view_gold : R.color.view_coral;
     }
 
     private void refreshPlayerTotalScoreOnCard(int playerIndex, com.example.rummypulse.data.GameData gameData) {
@@ -4571,33 +4934,6 @@ public class JoinGameActivity extends AppCompatActivity {
         finalGamePointsText.setBackground(null);
     }
 
-    private void applyStandingDirectionPlaceholder(TextView directionText) {
-        if (directionText == null) {
-            return;
-        }
-        directionText.setText(R.string.standing_balance);
-        directionText.setTextColor(ContextCompat.getColor(this, R.color.view_text_muted));
-    }
-
-    private void applyStandingDirectionDisplay(TextView directionText,
-                                               PlayerStanding standing,
-                                               com.example.rummypulse.data.GameData gameData) {
-        if (directionText == null || standing == null) {
-            return;
-        }
-        // Direction is safe to show even when amounts are restricted (matches view mode).
-        if (standing.finalGamePoints > 0) {
-            directionText.setText(R.string.edit_game_points_direction_receives);
-            directionText.setTextColor(ContextCompat.getColor(this, R.color.view_mint));
-        } else if (standing.finalGamePoints < 0) {
-            directionText.setText(R.string.edit_game_points_direction_pays);
-            directionText.setTextColor(ContextCompat.getColor(this, R.color.view_coral));
-        } else {
-            directionText.setText(R.string.edit_game_points_direction_even);
-            directionText.setTextColor(ContextCompat.getColor(this, R.color.view_text_secondary));
-        }
-    }
-
     private void applyStandingFinalGamePointsDisplay(TextView finalGamePointsText, PlayerStanding standing,
                                                com.example.rummypulse.data.GameData gameData) {
         if (finalGamePointsText == null) {
@@ -4725,142 +5061,7 @@ public class JoinGameActivity extends AppCompatActivity {
         binding.standingsCard.setVisibility(View.GONE);
         binding.standingsTableContainer.removeAllViews();
         refreshAllPlayerTotalScores(gameData);
-        refreshVisibleEditPlayerRoundSheet(gameData);
     }
-
-    private void toggleEditPlayerRoundSheet(String playerId) {
-        View sheet = binding.getRoot().findViewById(R.id.edit_player_round_sheet);
-        if (sheet.getVisibility() == View.VISIBLE
-                && TextUtils.equals(selectedEditRoundPlayerId, playerId)) {
-            hideEditPlayerRoundSheet();
-            return;
-        }
-        com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
-        Player player = GameDataSchema.findPlayer(gameData, playerId);
-        if (player == null) {
-            return;
-        }
-        selectedEditRoundPlayerId = playerId;
-        renderEditPlayerRoundSheet(player, gameData);
-        sheet.animate().cancel();
-        sheet.setVisibility(View.VISIBLE);
-        sheet.post(() -> {
-            sheet.setTranslationY(sheet.getHeight());
-            sheet.animate()
-                    .translationY(0f)
-                    .setDuration(180L)
-                    .start();
-        });
-    }
-
-    private void hideEditPlayerRoundSheet() {
-        if (binding == null) {
-            return;
-        }
-        View sheet = binding.getRoot().findViewById(R.id.edit_player_round_sheet);
-        selectedEditRoundPlayerId = null;
-        if (sheet.getVisibility() != View.VISIBLE) {
-            return;
-        }
-        sheet.animate().cancel();
-        sheet.animate()
-                .translationY(sheet.getHeight())
-                .setDuration(160L)
-                .withEndAction(() -> {
-                    sheet.setVisibility(View.GONE);
-                    sheet.setTranslationY(0f);
-                })
-                .start();
-    }
-
-    private void refreshVisibleEditPlayerRoundSheet(
-            com.example.rummypulse.data.GameData gameData) {
-        if (TextUtils.isEmpty(selectedEditRoundPlayerId)) {
-            return;
-        }
-        Player player = GameDataSchema.findPlayer(gameData, selectedEditRoundPlayerId);
-        if (player == null) {
-            hideEditPlayerRoundSheet();
-            return;
-        }
-        renderEditPlayerRoundSheet(player, gameData);
-    }
-
-    private void renderEditPlayerRoundSheet(
-            Player player, com.example.rummypulse.data.GameData gameData) {
-        TextView title = binding.getRoot().findViewById(
-                R.id.edit_player_round_sheet_title);
-        TextView total = binding.getRoot().findViewById(
-                R.id.edit_player_round_sheet_total);
-        LinearLayout rows = binding.getRoot().findViewById(
-                R.id.edit_player_round_sheet_rows);
-        String playerName = TextUtils.isEmpty(player.getName())
-                ? "Player" : formatPlayerDisplayName(player);
-        title.setText(getString(R.string.edit_player_round_sheet_title, playerName));
-        total.setText(getString(
-                R.string.edit_player_round_sheet_total, player.getTotalScore()));
-        rows.removeAllViews();
-
-        int currentRound = calculateCurrentRound(gameData);
-        boolean completed = isGameCompleted(gameData);
-        int margin = Math.round(3 * getResources().getDisplayMetrics().density);
-        for (int rowIndex = 0; rowIndex < 2; rowIndex++) {
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT);
-            if (rowIndex > 0) {
-                rowParams.topMargin = margin * 2;
-            }
-            row.setLayoutParams(rowParams);
-            rows.addView(row);
-
-            for (int column = 0; column < 5; column++) {
-                int roundIndex = rowIndex * 5 + column;
-                View tile = LayoutInflater.from(this).inflate(
-                        R.layout.item_view_round_score, row, false);
-                LinearLayout.LayoutParams tileParams = new LinearLayout.LayoutParams(
-                        0, Math.round(68 * getResources().getDisplayMetrics().density), 1f);
-                tileParams.setMargins(margin, 0, margin, 0);
-                tile.setLayoutParams(tileParams);
-                ((TextView) tile.findViewById(R.id.view_round_number))
-                        .setText(getString(R.string.dialog_pick_round_chip, roundIndex + 1));
-                TextView scoreView = tile.findViewById(R.id.view_round_score);
-                Integer score = player.getScores() != null
-                        && roundIndex < player.getScores().size()
-                        ? player.getScores().get(roundIndex) : null;
-                if (score != null && score >= 0) {
-                    scoreView.setText(String.valueOf(score));
-                    if (score < 40) {
-                        tile.setBackgroundResource(R.drawable.bg_view_round_good);
-                        scoreView.setTextColor(ContextCompat.getColor(
-                                this, R.color.view_mint));
-                    } else if (score <= 65) {
-                        tile.setBackgroundResource(R.drawable.bg_view_round_medium);
-                        scoreView.setTextColor(ContextCompat.getColor(
-                                this, R.color.view_gold));
-                    } else {
-                        tile.setBackgroundResource(R.drawable.bg_view_round_high);
-                        scoreView.setTextColor(ContextCompat.getColor(
-                                this, R.color.view_coral));
-                    }
-                } else if (!completed && roundIndex + 1 == currentRound) {
-                    scoreView.setText("…");
-                    tile.setBackgroundResource(R.drawable.bg_view_round_active);
-                    scoreView.setTextColor(ContextCompat.getColor(
-                            this, R.color.view_violet_light));
-                } else {
-                    scoreView.setText("–");
-                    tile.setBackgroundResource(R.drawable.bg_view_round_cell);
-                    scoreView.setTextColor(ContextCompat.getColor(
-                            this, R.color.view_text_muted));
-                }
-                row.addView(tile);
-            }
-        }
-    }
-
     @SuppressWarnings("unused")
     private void updateLegacyStandings(com.example.rummypulse.data.GameData gameData) {
         // Validate input data
@@ -5298,10 +5499,14 @@ public class JoinGameActivity extends AppCompatActivity {
             TextView userView = row.findViewById(R.id.text_view_request_user);
             TextView timeView = row.findViewById(R.id.text_view_request_time);
             TextView statusView = row.findViewById(R.id.text_view_request_status);
+            TextView avatarView = row.findViewById(R.id.view_request_avatar);
             MaterialButton approveBtn = row.findViewById(R.id.btn_view_request_approve);
             MaterialButton rejectBtn = row.findViewById(R.id.btn_view_request_reject);
 
-            userView.setText(resolveApprovalUserDisplayName(request.getUserId()));
+            // Already resolved from the cached directory, so the avatar costs no extra lookup.
+            String requesterName = resolveApprovalUserDisplayName(request.getUserId());
+            userView.setText(requesterName);
+            avatarView.setText(playerInitials(requesterName));
 
             GameViewApprovalStatus status = request.getStatusEnum();
             if (status == GameViewApprovalStatus.APPROVED) {
