@@ -51,7 +51,8 @@
                         android:layout_marginTop="2dp"
                         tools:text="GAME · FNKV66TSI"
                         android:textColor="@color/view_text_muted"
-                        android:textSize="10dp"
+                        android:letterSpacing="0.1"
+                        android:textSize="10sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
@@ -389,8 +390,7 @@
                                     android:maxLines="1"
                                     android:text="@string/players_round_scores_title"
                                     android:textColor="@color/view_text_primary"
-                                    android:textSize="17sp"
-                                    android:textStyle="bold" />
+                                    android:textSize="15sp" />
 
                                 <TextView
                                     android:id="@+id/view_mode_round_subtitle"
@@ -422,7 +422,9 @@
                                     android:layout_height="wrap_content"
                                     android:text="@string/standing_total_score"
                                     android:textColor="@color/view_text_muted"
-                                    android:textSize="9dp"
+                                    android:letterSpacing="0.14"
+                                    android:textAllCaps="true"
+                                    android:textSize="10sp"
                                     android:textStyle="bold" />
 
                                 <TextView
@@ -465,8 +467,7 @@
                     android:layout_marginTop="26dp"
                     android:text="@string/game_points_overview_title"
                     android:textColor="@color/view_text_primary"
-                    android:textSize="19sp"
-                    android:textStyle="bold" />
+                    android:textSize="15sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -482,11 +483,11 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="4dp" android:paddingBottom="7dp">
-                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/edit_game_points_direction_receives" android:textColor="@color/view_mint" android:textSize="10dp" android:textStyle="bold" />
-                            <TextView android:id="@+id/view_mode_receives_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_view_amount_receive" android:minWidth="24dp" android:gravity="center" android:paddingHorizontal="6dp" android:paddingVertical="3dp" tools:text="0" android:textColor="@color/view_mint" android:textSize="9dp" android:textStyle="bold" />
+                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:letterSpacing="0.14" android:textAllCaps="true" android:text="@string/edit_game_points_direction_receives" android:textColor="@color/view_mint" android:textSize="10sp" />
+                            <TextView android:id="@+id/view_mode_receives_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_view_amount_receive" android:minWidth="24dp" android:gravity="center" android:paddingHorizontal="6dp" android:paddingVertical="3dp" android:fontFeatureSettings="tnum" tools:text="0" android:textColor="@color/view_mint" android:textSize="10sp" android:textStyle="bold" />
                         </LinearLayout>
                         <LinearLayout android:id="@+id/view_mode_positive_rows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
-                        <TextView android:id="@+id/view_mode_positive_empty" android:layout_width="match_parent" android:layout_height="72dp" android:background="@drawable/bg_view_player_row" android:gravity="center" android:text="@string/no_positive_balances" android:textColor="@color/view_text_muted" android:textSize="10dp" />
+                        <TextView android:id="@+id/view_mode_positive_empty" android:layout_width="match_parent" android:layout_height="72dp" android:background="@drawable/bg_view_player_row" android:gravity="center" android:text="@string/no_positive_balances" android:textColor="@color/view_text_muted" android:textSize="11sp" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -496,11 +497,11 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
                         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:paddingHorizontal="4dp" android:paddingBottom="7dp">
-                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="@string/edit_game_points_direction_pays" android:textColor="@color/view_coral" android:textSize="10dp" android:textStyle="bold" />
-                            <TextView android:id="@+id/view_mode_pays_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_view_amount_pay" android:minWidth="24dp" android:gravity="center" android:paddingHorizontal="6dp" android:paddingVertical="3dp" tools:text="0" android:textColor="@color/view_coral" android:textSize="9dp" android:textStyle="bold" />
+                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:letterSpacing="0.14" android:textAllCaps="true" android:text="@string/edit_game_points_direction_pays" android:textColor="@color/view_coral" android:textSize="10sp" />
+                            <TextView android:id="@+id/view_mode_pays_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:background="@drawable/bg_view_amount_pay" android:minWidth="24dp" android:gravity="center" android:paddingHorizontal="6dp" android:paddingVertical="3dp" android:fontFeatureSettings="tnum" tools:text="0" android:textColor="@color/view_coral" android:textSize="10sp" android:textStyle="bold" />
                         </LinearLayout>
                         <LinearLayout android:id="@+id/view_mode_negative_rows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
-                        <TextView android:id="@+id/view_mode_negative_empty" android:layout_width="match_parent" android:layout_height="72dp" android:background="@drawable/bg_view_player_row" android:gravity="center" android:text="@string/no_negative_balances" android:textColor="@color/view_text_muted" android:textSize="10dp" />
+                        <TextView android:id="@+id/view_mode_negative_empty" android:layout_width="match_parent" android:layout_height="72dp" android:background="@drawable/bg_view_player_row" android:gravity="center" android:text="@string/no_negative_balances" android:textColor="@color/view_text_muted" android:textSize="11sp" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -511,7 +512,7 @@
                     android:layout_marginTop="8dp"
                     android:orientation="vertical"
                     android:visibility="gone">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="6dp" android:text="@string/amounts_hidden_label" android:textColor="@color/view_text_muted" android:textSize="9dp" android:textStyle="bold" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="6dp" android:letterSpacing="0.14" android:textAllCaps="true" android:text="@string/amounts_hidden_label" android:textColor="@color/view_text_muted" android:textSize="10sp" />
                     <LinearLayout android:id="@+id/view_mode_hidden_rows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
                 </LinearLayout>
 
@@ -552,8 +553,7 @@
                                 android:layout_weight="1"
                                 android:text="@string/view_requests_section_title"
                                 android:textColor="@color/view_text_primary"
-                                android:textSize="17sp"
-                                android:textStyle="bold" />
+                                android:textSize="15sp" />
 
                             <TextView
                                 android:id="@+id/view_mode_requests_badge"
@@ -565,7 +565,8 @@
                                 android:paddingHorizontal="7dp"
                                 android:paddingVertical="3dp"
                                 android:textColor="@color/view_coral"
-                                android:textSize="10dp"
+                                android:fontFeatureSettings="tnum"
+                                android:textSize="10sp"
                                 android:textStyle="bold"
                                 android:visibility="gone" />
 

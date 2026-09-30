@@ -239,14 +239,26 @@ public class GameRaceChartView extends View {
         order.sort((left, right) -> Float.compare(
                 endPoints.get(left)[1], endPoints.get(right)[1]));
 
-        float lastLabelY = Float.NEGATIVE_INFINITY;
-        for (int index : order) {
+        // Two passes. Pushing down alone piles every label onto the floor once the lines finish
+        // low - which is exactly what level players do - so a second pass walks back up and
+        // reclaims the gap. Clamping in one direction only was the bug: it stacked them.
+        float[] labelY = new float[order.size()];
+        float previous = Float.NEGATIVE_INFINITY;
+        for (int slot = 0; slot < order.size(); slot++) {
+            labelY[slot] = Math.max(endPoints.get(order.get(slot))[1], previous + minGap);
+            previous = labelY[slot];
+        }
+        previous = plotBottom + minGap;
+        for (int slot = order.size() - 1; slot >= 0; slot--) {
+            labelY[slot] = Math.max(plotTop, Math.min(labelY[slot], previous - minGap));
+            previous = labelY[slot];
+        }
+
+        for (int slot = 0; slot < order.size(); slot++) {
+            int index = order.get(slot);
             float[] point = endPoints.get(index);
-            float labelY = Math.max(point[1], lastLabelY + minGap);
-            labelY = Math.min(labelY, plotBottom);
-            lastLabelY = labelY;
             RaceLine line = lines.get(index);
-            float textY = labelY + labelPaint.getTextSize() / 3f;
+            float textY = labelY[slot] + labelPaint.getTextSize() / 3f;
             float textX = point[0] + 6f * density;
 
             labelPaint.setColor(line.emphasised ? line.color : labelColor);
