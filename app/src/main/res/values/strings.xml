@@ -261,8 +261,8 @@
     <string name="edit_game_points_direction_receives">Positive</string>
     <string name="edit_game_points_direction_pays">Negative</string>
     <string name="edit_game_points_direction_even">Even</string>
-    <string name="edit_player_sort_game_order">Game order</string>
-    <string name="edit_player_sort_game_points_order">Game Point order</string>
+    <string name="edit_player_sort_game_order">Order</string>
+    <string name="edit_player_sort_game_points_order">GP</string>
     <string name="correct_past_round_none">No past rounds to correct yet.</string>
 
     <string name="add_player_catch_up_warning">This game already has recorded scores. The selected player will receive an automatic catch-up score for completed rounds.</string>
@@ -285,6 +285,8 @@
     <string name="player_consolidation_confirm_mappings">Show Game Point summary</string>
     <string name="player_consolidation_complete_games_first">Complete all selected games before viewing the Game Point summary.</string>
     <string name="player_consolidation_edit_mappings">Edit player mapping</string>
+    <!-- Count first, then the games it came from. -->
+    <string name="player_consolidation_games_with_names">%1$s · %2$s</string>
     <string name="player_consolidation_tap_edit_mapping">Tap row to edit mapping</string>
     <string name="player_consolidation_table_player">PLAYER</string>
     <string name="player_consolidation_table_games">GAMES</string>
@@ -712,6 +714,28 @@
         <item quantity="one">Round %d saved — syncing in background.</item>
         <item quantity="other">Round %d saved — syncing in background.</item>
     </plurals>
+    <!--
+      Short captions for the view-mode performance header. The long forms stay in place for the
+      edit header and the dashboard, where the row is wider and the words have room.
+    -->
+    <string name="view_header_label_balance">Net GP</string>
+    <string name="view_header_label_rank">Rank</string>
+    <string name="view_header_rank_value">%1$d of %2$d</string>
+    <string name="view_header_label_made">Made</string>
+    <string name="view_header_label_packed">Packed</string>
+    <string name="view_header_label_full_hand">Full</string>
+    <string name="view_header_label_gp_factor">GP factor</string>
+    <string name="view_header_label_board">Board</string>
+    <string name="view_header_label_players">Players</string>
+
+    <plurals name="position_delta_up">
+        <item quantity="one">Up %d place this round</item>
+        <item quantity="other">Up %d places this round</item>
+    </plurals>
+    <plurals name="position_delta_down">
+        <item quantity="one">Down %d place this round</item>
+        <item quantity="other">Down %d places this round</item>
+    </plurals>
     <plurals name="dialog_correct_player_current_score">
         <item quantity="one">Current score · %d point</item>
         <item quantity="other">Current score · %d points</item>
@@ -806,6 +830,13 @@
     <string name="cd_tap_to_copy_game_id">Tap to copy Game ID</string>
     <string name="cd_toggle_active_games">Toggle active games section</string>
     <string name="cd_toggle_completed_games">Toggle completed games section</string>
+    <string name="race_panel_title">Race</string>
+    <string name="race_panel_axis_caption">higher = ahead</string>
+    <string name="race_lead_change">Round %1$d — %2$s took the lead</string>
+    <string name="player_chip_link">Link</string>
+    <string name="player_chip_remove">Remove</string>
+    <string name="map_player_remove_from_game">Remove player</string>
+    <string name="cd_toggle_player_detail">Show player detail</string>
     <string name="cd_toggle_players_section">Toggle players section</string>
     <string name="cd_toggle_standings_section">Toggle standings section</string>
     <string name="cd_toggle_game_points_section">Toggle Game Point summary section</string>

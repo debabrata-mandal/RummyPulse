@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Footer plate: one shade down, separated by a hairline rather than by vertical rules. Inset by a
+  pixel on the three outer edges so the card stroke runs unbroken behind it.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:bottom="1dp"
+        android:left="1dp"
+        android:right="1dp">
+        <shape android:shape="rectangle">
+            <corners android:bottomLeftRadius="25dp" android:bottomRightRadius="25dp" />
+            <solid android:color="#FF0C0A17" />
+        </shape>
+    </item>
+    <item
+        android:gravity="top"
+        android:height="1dp"
+        android:left="1dp"
+        android:right="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FF23204A" />
+        </shape>
+    </item>
+</layer-list>

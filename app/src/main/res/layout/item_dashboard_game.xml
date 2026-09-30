@@ -163,7 +163,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/review_game_point_factor_label"
-                    android:textSize="9dp"
+                    android:textSize="10sp"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
@@ -201,7 +201,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/review_players_label"
-                    android:textSize="9dp"
+                    android:textSize="10sp"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
@@ -238,7 +238,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/player_consolidation_board_adjustment_column"
-                    android:textSize="9dp"
+                    android:textSize="10sp"
                     android:textColor="@color/text_secondary"
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />

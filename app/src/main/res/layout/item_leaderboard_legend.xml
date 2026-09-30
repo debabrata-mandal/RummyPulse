@@ -45,6 +45,6 @@
             android:maxLines="1"
             tools:text="#1"
             android:textColor="@color/view_text_secondary"
-            android:textSize="10dp" />
+            android:textSize="10sp" />
     </LinearLayout>
 </LinearLayout>
