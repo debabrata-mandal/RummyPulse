@@ -82,14 +82,36 @@ public final class GamePointsPlayerSummaryAdapter
                 name);
         holder.name.setText(name);
         holder.games.setText(String.valueOf(gameCount));
-        holder.gamesSubtitle.setText(holder.itemView.getContext().getResources().getQuantityString(
-                R.plurals.player_consolidation_game_count_plural, gameCount, gameCount));
+        // How many games, then which ones. The count answers the question at a glance; the names
+        // are what lets the figure be checked, and this is now the only place they are listed.
+        String countText = holder.itemView.getContext().getResources().getQuantityString(
+                R.plurals.player_consolidation_game_count_plural, gameCount, gameCount);
+        String gameNames = joinGameNames(group);
+        holder.gamesSubtitle.setText(gameNames.isEmpty()
+                ? countText
+                : holder.itemView.getContext().getString(
+                        R.string.player_consolidation_games_with_names, countText, gameNames));
         bindSigned(holder.finalBalance, group.getAdjustedFinalGamePoints());
         holder.itemView.setOnClickListener(v -> {
             if (editMappingsListener != null) {
                 editMappingsListener.run();
             }
         });
+    }
+
+    /**
+     * The games behind one consolidated total, in order and without repeats. A player can appear
+     * twice in the same game after a merge, and listing that game twice would read as two games.
+     */
+    private static String joinGameNames(ConsolidatedPlayerGroup group) {
+        java.util.Set<String> names = new java.util.LinkedHashSet<>();
+        for (GamePlayerEntry member : group.getMembers()) {
+            String gameName = member.getGameName();
+            if (gameName != null && !gameName.trim().isEmpty()) {
+                names.add(gameName.trim());
+            }
+        }
+        return String.join(" · ", names);
     }
 
     private static void bindSigned(TextView view, double amount) {

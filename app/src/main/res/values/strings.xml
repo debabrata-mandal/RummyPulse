@@ -285,6 +285,8 @@
     <string name="player_consolidation_confirm_mappings">Show Game Point summary</string>
     <string name="player_consolidation_complete_games_first">Complete all selected games before viewing the Game Point summary.</string>
     <string name="player_consolidation_edit_mappings">Edit player mapping</string>
+    <!-- Count first, then the games it came from. -->
+    <string name="player_consolidation_games_with_names">%1$s · %2$s</string>
     <string name="player_consolidation_tap_edit_mapping">Tap row to edit mapping</string>
     <string name="player_consolidation_table_player">PLAYER</string>
     <string name="player_consolidation_table_games">GAMES</string>

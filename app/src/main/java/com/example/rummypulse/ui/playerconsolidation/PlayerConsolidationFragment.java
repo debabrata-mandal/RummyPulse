@@ -42,7 +42,6 @@ public class PlayerConsolidationFragment extends Fragment {
     private BalanceAdjustmentAdapter balanceAdjustmentAdapter;
     private List<GameItem> currentGames = new ArrayList<>();
     private boolean hasPlayerGroups;
-    private boolean mappingsConfirmed;
 
     @Nullable
     @Override
@@ -91,11 +90,7 @@ public class PlayerConsolidationFragment extends Fragment {
 
     private void setupMapPlayersStep() {
         consolidatedAdapter = new ConsolidatedPlayerAdapter();
-        consolidatedAdapter.setOnGroupToggleListener(group -> {
-            if (!mappingsConfirmed) {
-                viewModel.toggleGroupSelection(group);
-            }
-        });
+        consolidatedAdapter.setOnGroupToggleListener(viewModel::toggleGroupSelection);
 
         selectedGamesStatusAdapter = new SelectedGamesStatusAdapter();
         LinearLayoutManager selectedGamesLayoutManager = new LinearLayoutManager(requireContext());
@@ -157,11 +152,6 @@ public class PlayerConsolidationFragment extends Fragment {
         viewModel.getBalanceAdjustments().observe(getViewLifecycleOwner(), adjustments -> {
             balanceAdjustmentAdapter.setAdjustments(adjustments);
         });
-        viewModel.getMappingsConfirmed().observe(getViewLifecycleOwner(), confirmed -> {
-            mappingsConfirmed = Boolean.TRUE.equals(confirmed);
-            updateStageVisibility();
-            updateEntrySelectionUi(viewModel.getSelectedEntryIds().getValue());
-        });
 
         binding.btnLinkSelected.setOnClickListener(v -> showLinkDialog());
         binding.btnUnlinkSelected.setOnClickListener(v -> showUnlinkDialog());
@@ -209,38 +199,31 @@ public class PlayerConsolidationFragment extends Fragment {
 
     private void updateEntrySelectionUi(Set<String> selectedIds) {
         consolidatedAdapter.setSelectedEntryIds(selectedIds);
-        binding.btnUnlinkSelected.setVisibility(
-                !mappingsConfirmed && viewModel.canUnlinkSelected()
-                        ? View.VISIBLE : View.GONE);
-        binding.btnLinkSelected.setVisibility(
-                !mappingsConfirmed && viewModel.canLinkSelected()
-                        ? View.VISIBLE : View.GONE);
+        binding.btnUnlinkSelected.setVisibility(View.GONE);
+        binding.btnLinkSelected.setVisibility(View.GONE);
     }
 
     private void updateStageVisibility() {
         if (binding == null) {
             return;
         }
-        boolean showMappingControls = hasPlayerGroups && !mappingsConfirmed;
+        // Players arrive already linked to a user, and buildInitialGroups merges every entry that
+        // shares a userId, so the manual mapping step had nothing left to do and is gone. The
+        // selected games now lead straight to the Game Point summary.
         boolean allGamesCompleted = allSelectedGamesCompleted();
-        boolean showGamePoints = hasPlayerGroups && mappingsConfirmed && allGamesCompleted;
+        boolean showGamePoints = hasPlayerGroups && allGamesCompleted;
 
-        binding.textMapInstructions.setVisibility(
-                showMappingControls ? View.VISIBLE : View.GONE);
+        binding.textMapInstructions.setVisibility(View.GONE);
         binding.textSelectedGamesLabel.setVisibility(
-                showMappingControls ? View.VISIBLE : View.GONE);
+                hasPlayerGroups && !allGamesCompleted ? View.VISIBLE : View.GONE);
         binding.recyclerSelectedGamesStatus.setVisibility(
-                showMappingControls ? View.VISIBLE : View.GONE);
-        binding.cardMappingStep.setVisibility(
-                showMappingControls ? View.VISIBLE : View.GONE);
-        binding.textMappingPlayersTitle.setVisibility(
-                showMappingControls ? View.VISIBLE : View.GONE);
-        binding.recyclerConsolidatedPlayers.setVisibility(
-                showMappingControls ? View.VISIBLE : View.GONE);
+                hasPlayerGroups && !allGamesCompleted ? View.VISIBLE : View.GONE);
+        binding.cardMappingStep.setVisibility(View.GONE);
+        binding.textMappingPlayersTitle.setVisibility(View.GONE);
+        binding.recyclerConsolidatedPlayers.setVisibility(View.GONE);
         binding.textNoConsolidatedPlayers.setVisibility(
-                !mappingsConfirmed && !hasPlayerGroups ? View.VISIBLE : View.GONE);
-        binding.btnConfirmMappings.setVisibility(
-                showMappingControls && allGamesCompleted ? View.VISIBLE : View.GONE);
+                !hasPlayerGroups ? View.VISIBLE : View.GONE);
+        binding.btnConfirmMappings.setVisibility(View.GONE);
         binding.btnEditMappings.setVisibility(View.GONE);
         binding.cardPlayerSummaryTable.setVisibility(
                 showGamePoints ? View.VISIBLE : View.GONE);
@@ -249,14 +232,8 @@ public class PlayerConsolidationFragment extends Fragment {
         binding.cardBalanceAdjustments.setVisibility(
                 showGamePoints ? View.VISIBLE : View.GONE);
         binding.fabRefreshGameData.setVisibility(
-                showMappingControls ? View.VISIBLE : View.GONE);
+                showGamePoints ? View.VISIBLE : View.GONE);
 
-        binding.textMappingStepTitle.setText(mappingsConfirmed
-                ? R.string.player_consolidation_mapping_confirmed_title
-                : R.string.player_consolidation_mapping_step_title);
-        binding.textMappingStepSubtitle.setText(mappingsConfirmed
-                ? R.string.player_consolidation_mapping_confirmed_subtitle
-                : R.string.player_consolidation_mapping_step_subtitle);
     }
 
     private void updatePlayerTableTotals(List<ConsolidatedPlayerGroup> groups) {
