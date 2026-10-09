@@ -548,6 +548,7 @@
     <string name="menu_profile">Game profile</string>
     <string name="profile_name_title">Choose your game profile name</string>
     <string name="profile_name_message">This name replaces your Google name throughout RummyPulse. Your email is never shown to other players.</string>
+    <string name="profile_name_message_edit">This name replaces your Google name throughout RummyPulse. Your email is never shown to other players. You can change it twice a week.</string>
     <string name="profile_name_hint">Profile name</string>
     <string name="profile_name_helper">3–24 letters, numbers, spaces, underscores, or a period. Names are unique.</string>
     <string name="profile_name_skip">Not now</string>

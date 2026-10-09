@@ -26,4 +26,9 @@ function nextFixedCounter(previousStart, previousCount, currentWindowStart, maxi
   };
 }
 
-module.exports = {nextFixedCounter, nextRollingCounter};
+function rollingWindowRetryDays(windowStartedAt, now, windowSize) {
+  const remaining = windowStartedAt + windowSize - now;
+  return Math.max(1, Math.ceil(remaining / (24 * 60 * 60 * 1000)));
+}
+
+module.exports = {nextFixedCounter, nextRollingCounter, rollingWindowRetryDays};

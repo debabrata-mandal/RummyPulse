@@ -479,6 +479,8 @@ public class MainActivity extends AppCompatActivity {
             skip.setVisibility(View.GONE);
         } else {
             skip.setText(android.R.string.cancel);
+            TextView message = dialogView.findViewById(R.id.text_profile_name_message);
+            message.setText(R.string.profile_name_message_edit);
         }
 
         androidx.appcompat.app.AlertDialog dialog =

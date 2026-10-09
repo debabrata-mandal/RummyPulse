@@ -16,7 +16,11 @@ const {
   profileNameWithSuffix,
   validateProfileName,
 } = require("./lib/profile-name");
-const {nextFixedCounter, nextRollingCounter} = require("./lib/rate-limit");
+const {
+  nextFixedCounter,
+  nextRollingCounter,
+  rollingWindowRetryDays,
+} = require("./lib/rate-limit");
 const {
   ACCOUNT_DELETION_CALLABLE_OPTIONS,
   anonymizeApprovedGame,
@@ -38,6 +42,8 @@ const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const GLOBAL_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 10;
 const MAX_GLOBAL_REQUESTS_PER_DAY = 200;
+const PROFILE_NAME_CHANGE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_PROFILE_NAME_CHANGES_PER_WINDOW = 2;
 const DELETE_PAGE_SIZE = 200;
 const LAST_LOGIN_UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 // App Check is NOT enforced here. syncMyIdentity gates app startup, and Play Integrity cannot
@@ -214,6 +220,7 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
   const uid = request.auth.uid;
   const database = getFirestore();
   const publicRef = database.collection("appUser_v2").doc(uid);
+  const quotaRef = profileNameChangeQuotaRef(database, uid);
   const user = await database.runTransaction(async (transaction) => {
     const publicSnapshot = await transaction.get(publicRef);
     if (!publicSnapshot.exists) {
@@ -221,6 +228,30 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
     }
     const oldName = safeText(publicSnapshot.get("profileName"), 24);
     const oldKey = oldName ? profileNameKey(oldName) : null;
+    const countsTowardLimit =
+      publicSnapshot.get("profileNameNeedsConfirmation") !== true &&
+      oldName !== requested.profileName;
+    let quotaCounter = null;
+    if (countsTowardLimit) {
+      const quotaSnapshot = await transaction.get(quotaRef);
+      const now = Date.now();
+      quotaCounter = nextRollingCounter(
+          timestampMillis(quotaSnapshot.get("windowStartedAt")),
+          quotaSnapshot.get("count"),
+          now,
+          PROFILE_NAME_CHANGE_WINDOW_MS,
+          MAX_PROFILE_NAME_CHANGES_PER_WINDOW,
+      );
+      if (!quotaCounter.allowed) {
+        const days = rollingWindowRetryDays(
+            quotaCounter.windowStartedAt, now, PROFILE_NAME_CHANGE_WINDOW_MS);
+        throw new HttpsError(
+            "resource-exhausted",
+            "You can change your profile name only twice a week. " +
+            `Try again in ${days} ${days === 1 ? "day" : "days"}.`,
+        );
+      }
+    }
     const newClaimRef = requested.key ?
       database.collection(PROFILE_NAME_CLAIMS).doc(requested.key) : null;
     const oldClaimRef = oldKey ?
@@ -236,6 +267,13 @@ exports.setProfileName = onCall(PROFILE_CALLABLE_OPTIONS, async (request) => {
     }
     if (oldClaimRef && oldKey !== requested.key && oldClaim?.get("userId") === uid) {
       transaction.delete(oldClaimRef);
+    }
+    if (quotaCounter) {
+      transaction.set(quotaRef, {
+        count: quotaCounter.count,
+        windowStartedAt: Timestamp.fromMillis(quotaCounter.windowStartedAt),
+        updatedAt: Timestamp.now(),
+      });
     }
     const profileVersion = Date.now();
     const updates = {
@@ -706,6 +744,7 @@ async function cleanupAccountData(uid) {
     database.collection("playerStats_v2").doc(uid).delete(),
     database.collection(FUNCTION_QUOTAS_COLLECTION).doc("groqGameNames")
         .collection("users").doc(rateLimitKey).delete(),
+    profileNameChangeQuotaRef(database, uid).delete(),
   ]);
   return counts;
 }
@@ -823,6 +862,12 @@ async function enforceRequestQuotas(uid) {
       updatedAt: Timestamp.fromMillis(now),
     });
   });
+}
+
+function profileNameChangeQuotaRef(database, uid) {
+  const userKey = createHash("sha256").update(uid).digest("hex");
+  return database.collection(FUNCTION_QUOTAS_COLLECTION).doc("profileNameChanges")
+      .collection("users").doc(userKey);
 }
 
 function timestampMillis(value) {
