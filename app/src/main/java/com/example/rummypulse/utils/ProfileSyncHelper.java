@@ -25,6 +25,17 @@ public final class ProfileSyncHelper {
             @Nullable AppUserRepository.ProfileOverrides overrides,
             boolean forceProfileVersionRefresh,
             @Nullable AppUserRepository.AppUserCallback callback) {
+        reloadAndSync(user, provider, overrides, forceProfileVersionRefresh, false, callback);
+    }
+
+    /** {@code reuseRecentSync} applies only without overrides, which exist only after sign-in. */
+    public static void reloadAndSync(
+            FirebaseUser user,
+            String provider,
+            @Nullable AppUserRepository.ProfileOverrides overrides,
+            boolean forceProfileVersionRefresh,
+            boolean reuseRecentSync,
+            @Nullable AppUserRepository.AppUserCallback callback) {
         if (user == null) {
             if (callback != null) {
                 callback.onFailure(new IllegalArgumentException("FirebaseUser cannot be null"));
@@ -37,6 +48,7 @@ public final class ProfileSyncHelper {
                     provider,
                     null,
                     forceProfileVersionRefresh,
+                    reuseRecentSync,
                     callback);
             return;
         }

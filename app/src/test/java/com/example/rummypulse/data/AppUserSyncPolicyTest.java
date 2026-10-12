@@ -123,6 +123,31 @@ public class AppUserSyncPolicyTest {
         assertFalse(plan.hasUpdates());
     }
 
+    @Test
+    public void syncWithinReuseWindowCanBeReused() {
+        assertTrue(AppUserSyncPolicy.canReuseRecentSync(NOW - 60_000L, NOW));
+        assertTrue(AppUserSyncPolicy.canReuseRecentSync(
+                NOW - AppUserSyncPolicy.RECENT_SYNC_REUSE_MS + 1L, NOW));
+    }
+
+    @Test
+    public void syncAtOrPastReuseWindowRequiresCallable() {
+        assertFalse(AppUserSyncPolicy.canReuseRecentSync(
+                NOW - AppUserSyncPolicy.RECENT_SYNC_REUSE_MS, NOW));
+        assertFalse(AppUserSyncPolicy.canReuseRecentSync(
+                NOW - 3L * AppUserSyncPolicy.RECENT_SYNC_REUSE_MS, NOW));
+    }
+
+    @Test
+    public void missingSyncTimeRequiresCallable() {
+        assertFalse(AppUserSyncPolicy.canReuseRecentSync(0L, NOW));
+    }
+
+    @Test
+    public void futureSyncTimeFromClockChangeRequiresCallable() {
+        assertFalse(AppUserSyncPolicy.canReuseRecentSync(NOW + 60_000L, NOW));
+    }
+
     private static AppUser userWithLastLogin(Long timestamp) {
         AppUser user = new AppUser(
                 "uid",

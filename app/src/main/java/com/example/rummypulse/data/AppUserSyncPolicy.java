@@ -4,13 +4,25 @@ import java.util.Date;
 import java.util.Objects;
 
 /**
- * Pure policy for deciding whether an existing appUser document needs a profile/login write.
+ * Pure policy for deciding whether an existing appUser document needs a profile/login write, and
+ * whether app startup can skip the syncMyIdentity callable.
  */
 public final class AppUserSyncPolicy {
 
     public static final long LAST_LOGIN_WRITE_INTERVAL_MS = 24L * 60L * 60L * 1000L;
+    public static final long RECENT_SYNC_REUSE_MS = 24L * 60L * 60L * 1000L;
 
     private AppUserSyncPolicy() {}
+
+    /**
+     * A sync time later than {@code nowMillis} means the device clock moved backwards, so it never
+     * counts as recent.
+     */
+    public static boolean canReuseRecentSync(long syncedAtMillis, long nowMillis) {
+        return syncedAtMillis > 0L
+                && nowMillis >= syncedAtMillis
+                && nowMillis - syncedAtMillis < RECENT_SYNC_REUSE_MS;
+    }
 
     public static SyncPlan plan(
             AppUser stored,

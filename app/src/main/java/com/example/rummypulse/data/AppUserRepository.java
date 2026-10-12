@@ -16,6 +16,7 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.Source;
 import com.google.firebase.functions.FirebaseFunctions;
 
 import java.util.ArrayList;
@@ -73,6 +74,24 @@ public class AppUserRepository {
             @Nullable ProfileOverrides overrides,
             boolean forceProfileVersionRefresh,
             @Nullable AppUserCallback callback) {
+        createOrUpdateUser(firebaseUser, provider, overrides, forceProfileVersionRefresh, false,
+                callback);
+    }
+
+    /**
+     * With {@code reuseRecentSync}, an account that completed syncMyIdentity within
+     * {@link AppUserSyncPolicy#RECENT_SYNC_REUSE_MS} with the same identity and app version reads its
+     * public profile from the server instead. That document holds every field the callable returns,
+     * so role, profile name, photo and safe-play state stay current. A missing document or profile
+     * name, or a failed read, still runs the callable so it can create or repair the profile.
+     */
+    public void createOrUpdateUser(
+            FirebaseUser firebaseUser,
+            String provider,
+            @Nullable ProfileOverrides overrides,
+            boolean forceProfileVersionRefresh,
+            boolean reuseRecentSync,
+            @Nullable AppUserCallback callback) {
         if (firebaseUser == null) {
             notifyFailure(callback, new IllegalArgumentException("FirebaseUser cannot be null"));
             return;
@@ -103,6 +122,21 @@ public class AppUserRepository {
             IN_FLIGHT_SYNCS.put(userId, waiting);
         }
 
+        String storedFingerprint = syncFingerprint(firebaseUser, provider, null);
+        if (reuseRecentSync && !forceProfileVersionRefresh && overrides == null
+                && AppUserSyncStore.hasRecentSync(
+                        userId, storedFingerprint, System.currentTimeMillis())) {
+            readRecentlySyncedUser(userId, fingerprint, storedFingerprint);
+            return;
+        }
+        callSyncMyIdentity(userId, fingerprint, storedFingerprint, forceProfileVersionRefresh);
+    }
+
+    private void callSyncMyIdentity(
+            String userId,
+            String fingerprint,
+            String storedFingerprint,
+            boolean forceProfileVersionRefresh) {
         Map<String, Object> request = new HashMap<>();
         // Identity fields are resolved from the verified token and Firebase Auth user record.
         request.put("forceProfileVersionRefresh", forceProfileVersionRefresh);
@@ -110,7 +144,7 @@ public class AppUserRepository {
                 .addOnSuccessListener(result -> {
                     try {
                         AppUser appUser = appUserFromCallableResult(result.getData());
-                        completeSyncSuccess(userId, fingerprint, appUser);
+                        completeSyncSuccess(userId, fingerprint, appUser, storedFingerprint);
                     } catch (Exception exception) {
                         completeSyncFailure(userId, exception);
                     }
@@ -118,6 +152,35 @@ public class AppUserRepository {
                 .addOnFailureListener(exception -> {
                     Log.e(TAG, "Private profile synchronization failed", exception);
                     completeSyncFailure(userId, exception);
+                });
+    }
+
+    private void readRecentlySyncedUser(
+            String userId,
+            String fingerprint,
+            String storedFingerprint) {
+        db.collection(FirestoreCollections.APP_USER).document(userId)
+                .get(Source.SERVER)
+                .addOnSuccessListener(document -> {
+                    AppUser appUser = null;
+                    if (document != null && document.exists()) {
+                        try {
+                            appUser = documentToAppUser(document);
+                        } catch (Exception exception) {
+                            Log.w(TAG, "Recently synced appUser document is unreadable", exception);
+                        }
+                    }
+                    if (appUser == null || appUser.getProfileName() == null
+                            || appUser.getProfileName().trim().isEmpty()) {
+                        callSyncMyIdentity(userId, fingerprint, storedFingerprint, false);
+                        return;
+                    }
+                    Log.d(TAG, "Reused recent appUser synchronization: reads=1 callable=0");
+                    completeSyncSuccess(userId, fingerprint, appUser, null);
+                })
+                .addOnFailureListener(exception -> {
+                    Log.w(TAG, "Recent-sync profile read failed; calling syncMyIdentity", exception);
+                    callSyncMyIdentity(userId, fingerprint, storedFingerprint, false);
                 });
     }
 
@@ -711,11 +774,22 @@ public class AppUserRepository {
         return "unknown";
     }
 
-    private static void completeSyncSuccess(String userId, String fingerprint, AppUser appUser) {
+    /**
+     * {@code storedFingerprint} is non-null only for a completed syncMyIdentity call. It is not
+     * recorded when sign-out cleared the in-flight entry while the call was running.
+     */
+    private static void completeSyncSuccess(
+            String userId,
+            String fingerprint,
+            AppUser appUser,
+            @Nullable String storedFingerprint) {
         List<AppUserCallback> callbacks;
         synchronized (SYNC_LOCK) {
             callbacks = IN_FLIGHT_SYNCS.remove(userId);
             RECENT_SYNCS.put(userId, new SyncCacheEntry(fingerprint, appUser));
+        }
+        if (storedFingerprint != null && callbacks != null) {
+            AppUserSyncStore.recordSync(userId, storedFingerprint, System.currentTimeMillis());
         }
         patchUserInDirectoryCache(appUser);
         notifyDirectoryChangeListeners(Collections.singletonList(appUser));
@@ -781,6 +855,7 @@ public class AppUserRepository {
             IN_FLIGHT_SYNCS.clear();
             RECENT_SYNCS.clear();
         }
+        AppUserSyncStore.clear();
         synchronized (DIRECTORY_LOCK) {
             cachedUserDirectory = null;
             cachedUserDirectoryAt = 0;

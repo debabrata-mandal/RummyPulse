@@ -361,6 +361,7 @@ public class MainActivity extends AppCompatActivity {
                 provider,
                 overrides,
                 forceProfileVersionRefresh,
+                true,
                 new AppUserRepository.AppUserCallback() {
                     @Override
                     public void onSuccess(AppUser appUser) {

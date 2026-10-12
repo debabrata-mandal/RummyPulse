@@ -11,6 +11,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreSettings;
 import com.google.firebase.functions.FirebaseFunctions;
 import com.example.rummypulse.data.AppUserRoleSession;
+import com.example.rummypulse.data.AppUserSyncStore;
 import com.example.rummypulse.data.GameRepository;
 import com.example.rummypulse.utils.AuthStateManager;
 import com.example.rummypulse.utils.VerifiedSessionGate;
@@ -40,6 +41,7 @@ public class RummyPulseApplication extends Application {
         }
         AppCheckInitializer.initialize();
         AppUserRoleSession.getInstance().initialize(this);
+        AppUserSyncStore.initialize(this);
         // An update APK is kept until the next cold start, by which point the install has either
         // completed or been abandoned. Deleting it earlier can abort an install in progress.
         com.example.rummypulse.utils.ModernUpdateChecker.deleteStaleDownloadedApk(this);
