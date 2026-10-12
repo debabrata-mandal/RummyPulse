@@ -17,6 +17,14 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/appUser_v2/$(request.auth.uid)).data.role == 'admin_user';
     }
 
+    // Clients load the user directory with "profileVersion > newest cached version" queries, so a
+    // client-written version must track server time; a far-future value would hide later changes.
+    function isPlausibleProfileVersionUpdate() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileVersion'])
+          || (request.resource.data.profileVersion is int
+              && math.abs(request.resource.data.profileVersion - request.time.toMillis()) < 300000);
+    }
+
     function isActiveEditor(gameId) {
       return isAuthenticated()
           && get(/databases/$(database)/documents/games_v2/$(gameId)).data.activeEditorUserId == request.auth.uid;
@@ -237,7 +245,8 @@ service cloud.firestore {
               .hasOnly(['safePlayPolicyVersion', 'safePlayAcceptedAt']))
         || (isAdmin()
           && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['role', 'hidden']))
+              .hasOnly(['role', 'hidden', 'profileVersion'])
+          && isPlausibleProfileVersionUpdate())
       );
       // Account deletion must use the App Check-protected callable functions so Firebase Auth
       // and associated account data are cleaned consistently. Admin SDK writes bypass these rules.

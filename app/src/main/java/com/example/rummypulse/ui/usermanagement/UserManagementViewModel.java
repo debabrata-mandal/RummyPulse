@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel;
 
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserRepository;
+import com.example.rummypulse.data.PlayerLeaderboardRepository;
 import com.example.rummypulse.data.UserRole;
 import com.example.rummypulse.service.AccountDeletionGateway;
 import com.example.rummypulse.service.FirebaseAccountDeletionService;
@@ -31,6 +32,8 @@ public class UserManagementViewModel extends ViewModel {
 
     private final AppUserRepository appUserRepository;
     private final AccountDeletionGateway accountDeletionGateway;
+    /** The leaderboard's change-only listener cannot see the deleted account's stats document. */
+    private final Runnable reloadLeaderboardAfterDeletion;
     private final MutableLiveData<List<AppUser>> users = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<String> searchQuery = new MutableLiveData<>("");
     private final MediatorLiveData<List<AppUser>> displayedUsers = new MediatorLiveData<>();
@@ -51,14 +54,17 @@ public class UserManagementViewModel extends ViewModel {
     private boolean managedProfileRequestInProgress;
 
     public UserManagementViewModel() {
-        this(new AppUserRepository(), new FirebaseAccountDeletionService());
+        this(new AppUserRepository(), new FirebaseAccountDeletionService(),
+                () -> PlayerLeaderboardRepository.getInstance().requireFullReload());
     }
 
     UserManagementViewModel(
             AppUserRepository appUserRepository,
-            AccountDeletionGateway accountDeletionGateway) {
+            AccountDeletionGateway accountDeletionGateway,
+            Runnable reloadLeaderboardAfterDeletion) {
         this.appUserRepository = appUserRepository;
         this.accountDeletionGateway = accountDeletionGateway;
+        this.reloadLeaderboardAfterDeletion = reloadLeaderboardAfterDeletion;
         displayedUsers.addSource(users, ignored -> publishDisplayedUsers());
         displayedUsers.addSource(searchQuery, ignored -> publishDisplayedUsers());
     }
@@ -307,6 +313,7 @@ public class UserManagementViewModel extends ViewModel {
                 updatedList.removeIf(user -> userId.equals(user.getUserId()));
                 users.setValue(updatedList);
                 AppUserRepository.clearSessionCaches();
+                reloadLeaderboardAfterDeletion.run();
                 loading.setValue(false);
                 deleteSuccess.setValue(true);
             }

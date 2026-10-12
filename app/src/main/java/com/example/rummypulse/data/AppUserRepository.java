@@ -213,7 +213,8 @@ public class AppUserRepository {
      */
     public void updateUserRole(String userId, UserRole newRole, AppUserCallback callback) {
         db.collection(FirestoreCollections.APP_USER).document(userId)
-                .update("role", newRole.getValue())
+                .update("role", newRole.getValue(),
+                        "profileVersion", System.currentTimeMillis())
                 .addOnSuccessListener(unused -> {
                     Log.d(TAG, "User role updated with operations: reads=0 writes=1");
                     AppUser updated = new AppUser();
@@ -232,7 +233,7 @@ public class AppUserRepository {
      */
     public void updateUserHidden(String userId, boolean hidden, AppUserCallback callback) {
         db.collection(FirestoreCollections.APP_USER).document(userId)
-                .update("hidden", hidden)
+                .update("hidden", hidden, "profileVersion", System.currentTimeMillis())
                 .addOnSuccessListener(unused -> {
                     invalidateUserDirectoryCache();
                     Log.d(TAG, "User hidden flag updated with operations: reads=0 writes=1"
@@ -349,7 +350,61 @@ public class AppUserRepository {
             inFlightDirectoryCallbacks = new ArrayList<>();
             inFlightDirectoryCallbacks.add(callback);
         }
-        loadUserDirectoryPage(null, new ArrayList<>());
+        loadUserDirectory();
+    }
+
+    /**
+     * Starts from Firestore's on-device copy of the directory and reads only profiles whose
+     * {@code profileVersion} changed since, so a cold start costs about one read instead of one per
+     * user. Falls back to a full paginated reload when that copy cannot be trusted.
+     */
+    private void loadUserDirectory() {
+        if (!DeviceCacheReloadStore.canSeedFromDeviceCache(
+                DeviceCacheReloadStore.USER_DIRECTORY, System.currentTimeMillis())) {
+            loadUserDirectoryPage(null, new ArrayList<>());
+            return;
+        }
+        db.collection(FirestoreCollections.APP_USER).get(Source.CACHE)
+                .addOnCompleteListener(cacheTask -> {
+                    List<AppUser> cachedUsers = cacheTask.isSuccessful()
+                            ? documentsToAppUsers(cacheTask.getResult())
+                            : new ArrayList<>();
+                    if (cachedUsers.isEmpty()) {
+                        loadUserDirectoryPage(null, new ArrayList<>());
+                        return;
+                    }
+                    long sinceVersion = AppUserDirectoryPolicy.deltaSinceVersion(cachedUsers);
+                    db.collection(FirestoreCollections.APP_USER)
+                            .whereGreaterThan("profileVersion", sinceVersion)
+                            .get()
+                            .addOnSuccessListener(snapshot -> {
+                                List<AppUser> changedUsers = documentsToAppUsers(snapshot);
+                                Log.d(TAG, "Directory from device cache: cached="
+                                        + cachedUsers.size() + " reads=" + changedUsers.size());
+                                completeDirectorySuccess(AppUserDirectoryFilter.mergeByUserId(
+                                        cachedUsers, changedUsers));
+                            })
+                            .addOnFailureListener(exception -> {
+                                Log.w(TAG, "Directory change query failed; using device cache",
+                                        exception);
+                                completeDirectorySuccess(cachedUsers);
+                            });
+                });
+    }
+
+    private List<AppUser> documentsToAppUsers(@Nullable QuerySnapshot snapshot) {
+        List<AppUser> users = new ArrayList<>();
+        if (snapshot == null) {
+            return users;
+        }
+        for (DocumentSnapshot document : snapshot.getDocuments()) {
+            try {
+                users.add(documentToAppUser(document));
+            } catch (Exception exception) {
+                Log.e(TAG, "Error converting appUser document", exception);
+            }
+        }
+        return users;
     }
 
     /** Explicitly reloads the complete directory. Call only from a user-requested refresh action. */
@@ -392,13 +447,27 @@ public class AppUserRepository {
      * resume-time refresh without reloading the full directory.
      */
     public void refreshProfileChangesSince(@Nullable ProfileChangesCallback callback) {
+        refreshProfileChanges(callback, false);
+    }
+
+    /**
+     * Same as {@link #refreshProfileChangesSince} without the resume throttle, for screens that
+     * just found a mapped account missing from the cached directory.
+     */
+    public void refreshProfileChangesNow(@Nullable ProfileChangesCallback callback) {
+        refreshProfileChanges(callback, true);
+    }
+
+    private void refreshProfileChanges(
+            @Nullable ProfileChangesCallback callback, boolean ignoreThrottle) {
         long now = System.currentTimeMillis();
         synchronized (DIRECTORY_LOCK) {
             if (cachedUserDirectory == null) {
                 notifyProfileChanges(callback, Collections.emptyList());
                 return;
             }
-            if (now - lastProfileDeltaRefreshAt < PROFILE_DELTA_REFRESH_THROTTLE_MS) {
+            if (!ignoreThrottle
+                    && now - lastProfileDeltaRefreshAt < PROFILE_DELTA_REFRESH_THROTTLE_MS) {
                 notifyProfileChanges(callback, Collections.emptyList());
                 return;
             }
@@ -409,20 +478,15 @@ public class AppUserRepository {
             lastProfileDeltaRefreshAt = now;
         }
 
-        long sinceVersion = getCachedMaxProfileVersion();
+        long sinceVersion = getCachedDeltaSinceVersion();
         db.collection(FirestoreCollections.APP_USER)
                 .whereGreaterThan("profileVersion", sinceVersion)
                 .get()
                 .addOnSuccessListener(snapshot -> {
-                    List<AppUser> changedUsers = new ArrayList<>();
-                    if (snapshot != null) {
-                        for (DocumentSnapshot document : snapshot.getDocuments()) {
-                            try {
-                                changedUsers.add(documentToAppUser(document));
-                            } catch (Exception exception) {
-                                Log.e(TAG, "Error converting profile delta document", exception);
-                            }
-                        }
+                    List<AppUser> changedUsers;
+                    synchronized (DIRECTORY_LOCK) {
+                        changedUsers = AppUserDirectoryPolicy.changedUsers(
+                                cachedUserDirectory, documentsToAppUsers(snapshot));
                     }
                     if (!changedUsers.isEmpty()) {
                         patchUsersInDirectoryCache(changedUsers);
@@ -470,18 +534,9 @@ public class AppUserRepository {
         }
     }
 
-    private static long getCachedMaxProfileVersion() {
+    private static long getCachedDeltaSinceVersion() {
         synchronized (DIRECTORY_LOCK) {
-            if (cachedUserDirectory == null || cachedUserDirectory.isEmpty()) {
-                return 0L;
-            }
-            long maxVersion = 0L;
-            for (AppUser user : cachedUserDirectory) {
-                if (user != null) {
-                    maxVersion = Math.max(maxVersion, user.getProfileVersion());
-                }
-            }
-            return maxVersion;
+            return AppUserDirectoryPolicy.deltaSinceVersion(cachedUserDirectory);
         }
     }
 
@@ -513,6 +568,8 @@ public class AppUserRepository {
                     loadUserDirectoryPage(page.nextCursor, accumulated);
                     return;
                 }
+                DeviceCacheReloadStore.recordFullReload(
+                        DeviceCacheReloadStore.USER_DIRECTORY, System.currentTimeMillis());
                 completeDirectorySuccess(accumulated);
             }
 
@@ -856,6 +913,7 @@ public class AppUserRepository {
             RECENT_SYNCS.clear();
         }
         AppUserSyncStore.clear();
+        DeviceCacheReloadStore.clear(DeviceCacheReloadStore.USER_DIRECTORY);
         synchronized (DIRECTORY_LOCK) {
             cachedUserDirectory = null;
             cachedUserDirectoryAt = 0;

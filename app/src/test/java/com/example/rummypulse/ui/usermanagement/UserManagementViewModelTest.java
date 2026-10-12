@@ -188,17 +188,20 @@ public class UserManagementViewModelTest {
     @Test
     public void deleteUser_usesProtectedGatewayAndPublishesSuccess() {
         FakeDeletionGateway gateway = new FakeDeletionGateway();
+        int[] leaderboardReloads = {0};
         UserManagementViewModel viewModel = new UserManagementViewModel(
-                mock(AppUserRepository.class), gateway);
+                mock(AppUserRepository.class), gateway, () -> leaderboardReloads[0]++);
 
         viewModel.deleteUser("target-user");
 
         assertEquals("target-user", gateway.requestedUserId);
         assertTrue(Boolean.TRUE.equals(viewModel.getLoading().getValue()));
+        assertEquals(0, leaderboardReloads[0]);
         gateway.callback.onSuccess();
         assertFalse(Boolean.TRUE.equals(viewModel.getLoading().getValue()));
         assertTrue(Boolean.TRUE.equals(viewModel.getDeleteSuccess().getValue()));
         assertFalse(Boolean.TRUE.equals(viewModel.getDeleteFailure().getValue()));
+        assertEquals(1, leaderboardReloads[0]);
     }
 
     private static final class FakeDeletionGateway implements AccountDeletionGateway {

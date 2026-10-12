@@ -180,6 +180,14 @@ public class JoinGameActivity extends AppCompatActivity {
     private boolean isAppAdmin;
     private final AppUserRepository appUserRepository = new AppUserRepository();
     private List<AppUser> cachedDirectoryUsers;
+    /** Mapped user IDs already looked up once, so an unreadable account cannot repeat the query. */
+    private final java.util.Set<String> requestedDirectoryUserIds = new java.util.HashSet<>();
+    private final AppUserRepository.DirectoryChangeListener directoryChangeListener =
+            changedUsers -> runOnUiThread(() -> {
+                if (!isFinishing() && cachedDirectoryUsers != null) {
+                    prefetchPlayerDirectory();
+                }
+            });
     private final java.util.Set<String> pendingPlayerIds =
             new java.util.HashSet<>();
     private final java.util.Map<java.util.UUID, androidx.work.WorkInfo.State>
@@ -203,6 +211,7 @@ public class JoinGameActivity extends AppCompatActivity {
         // Initialize ViewModel
         viewModel = new ViewModelProvider(this).get(JoinGameViewModel.class);
         operationRepository = GameOperationRepository.getInstance(getApplicationContext());
+        AppUserRepository.addDirectoryChangeListener(directoryChangeListener);
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -940,6 +949,7 @@ public class JoinGameActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        AppUserRepository.removeDirectoryChangeListener(directoryChangeListener);
         
         // Clean up Firestore listener to prevent memory leaks
         if (gameDataListener != null) {
@@ -1331,6 +1341,7 @@ public class JoinGameActivity extends AppCompatActivity {
             if (gameData != null) {
                 Boolean editAccess = viewModel.getEditAccessGranted().getValue();
                 GameDataSchema.normalize(gameData);
+                requestMissingDirectoryUsers(gameData);
                 if (Boolean.TRUE.equals(editAccess)
                         && currentGameId != null
                         && !applyingProjectedGameState
@@ -3144,6 +3155,7 @@ public class JoinGameActivity extends AppCompatActivity {
         }
         cachedDirectoryUsers = sortDirectoryUsers(users);
         refreshPlayerAvatars();
+        requestMissingDirectoryUsers(viewModel.getGameData().getValue());
         List<GameViewApproval> requests = viewModel.getPendingViewRequests().getValue();
         if (requests != null) {
             renderViewRequests(requests);
@@ -3157,6 +3169,33 @@ public class JoinGameActivity extends AppCompatActivity {
             renderPlayerCardsFromState(gameData);
         } else {
             updateViewMode(gameData);
+        }
+    }
+
+    /**
+     * A player mapped to an account this device has not loaded yet (for example a profile created
+     * after the directory was cached) shows its stored name but no photo; fetch profile changes once.
+     */
+    private void requestMissingDirectoryUsers(com.example.rummypulse.data.GameData gameData) {
+        if (cachedDirectoryUsers == null || gameData == null || gameData.getPlayers() == null) {
+            return;
+        }
+        java.util.Set<String> knownUserIds = new java.util.HashSet<>();
+        for (AppUser user : cachedDirectoryUsers) {
+            if (user != null && user.getUserId() != null) {
+                knownUserIds.add(user.getUserId());
+            }
+        }
+        boolean missing = false;
+        for (com.example.rummypulse.data.Player player : gameData.getPlayers()) {
+            String userId = player != null ? player.getUserId() : null;
+            if (!TextUtils.isEmpty(userId) && !knownUserIds.contains(userId)
+                    && requestedDirectoryUserIds.add(userId)) {
+                missing = true;
+            }
+        }
+        if (missing) {
+            appUserRepository.refreshProfileChangesNow(null);
         }
     }
 

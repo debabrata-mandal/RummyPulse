@@ -9,6 +9,8 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.AggregateField;
+import com.google.firebase.firestore.AggregateSource;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -54,7 +56,6 @@ public class GameRepository {
     
     // Firestore listeners for real-time updates (used by Dashboard)
     private com.google.firebase.firestore.ListenerRegistration gamesListener;
-    private com.google.firebase.firestore.ListenerRegistration approvedGamesListener;
     private java.util.Map<String, com.google.firebase.firestore.ListenerRegistration> gameDataListeners = new java.util.HashMap<>();
     
     // Store game items and game IDs order for maintaining consistency
@@ -69,6 +70,16 @@ public class GameRepository {
             new HashMap<>();
     /** Invalidates slow auth/photo callbacks when newer game data has already arrived. */
     private final Map<String, Long> dashboardUpdateTokens = new HashMap<>();
+    /**
+     * Latest {@code games_v2} document per dashboard game, kept current by {@link #gamesListener},
+     * so {@code gameData_v2} updates do not each pay for a second read of the same document.
+     */
+    private final Map<String, DocumentSnapshot> latestAuthSnapshots = new HashMap<>();
+    /**
+     * Creator photo fallback per user. Dashboard cards prefer the live user directory, so this is
+     * fetched at most once per creator instead of on every game update.
+     */
+    private final Map<String, CreatorProfile> creatorProfilesByUserId = new HashMap<>();
     private Map<String, String> accountDisplayNamesByUserId = new HashMap<>();
     
     // Track seen games
@@ -279,10 +290,6 @@ public class GameRepository {
             gamesListener.remove();
             gamesListener = null;
         }
-        if (approvedGamesListener != null) {
-            approvedGamesListener.remove();
-            approvedGamesListener = null;
-        }
         if (myViewApprovalsListener != null) {
             myViewApprovalsListener.remove();
             myViewApprovalsListener = null;
@@ -292,6 +299,7 @@ public class GameRepository {
             listener.remove();
         }
         gameDataListeners.clear();
+        latestAuthSnapshots.clear();
     }
 
     /** Drops listeners and every in-memory dashboard row so the next account starts clean. */
@@ -306,6 +314,7 @@ public class GameRepository {
         localDashboardUpdatedAtMs.clear();
         latestDashboardVersions.clear();
         dashboardUpdateTokens.clear();
+        creatorProfilesByUserId.clear();
         seenGameIds.clear();
         showAllGames = false;
         gameItemsLiveData.postValue(new ArrayList<>());
@@ -340,6 +349,7 @@ public class GameRepository {
             listener.remove();
         }
         gameDataListeners.clear();
+        latestAuthSnapshots.clear();
         gameItemsMap.clear();
         gameIdsOrder.clear();
         latestDashboardVersions.clear();
@@ -356,12 +366,14 @@ public class GameRepository {
             if (GameCreationPolicy.isReady(
                     document.getString("initializationStatus"))) {
                 gameIds.add(document.getId());
+                latestAuthSnapshots.put(document.getId(), document);
             }
         }
 
         gameIdsOrder = new ArrayList<>(gameIds);
 
         java.util.Set<String> currentGameIds = new java.util.HashSet<>(gameIds);
+        latestAuthSnapshots.keySet().retainAll(currentGameIds);
         java.util.Iterator<java.util.Map.Entry<String, com.google.firebase.firestore.ListenerRegistration>> iterator =
             gameDataListeners.entrySet().iterator();
         while (iterator.hasNext()) {
@@ -382,12 +394,90 @@ public class GameRepository {
         for (DocumentSnapshot document : gamesSnapshot.getDocuments()) {
             if (GameCreationPolicy.isReady(
                     document.getString("initializationStatus"))) {
-                applyViewApprovalCountsFromGameSnapshot(
-                        document, gameItemsMap.get(document.getId()));
+                applyAuthSnapshotToRow(document);
             }
         }
 
         updateGameItemsList();
+    }
+
+    /**
+     * Refreshes the {@code games_v2}-derived fields of an existing row in place (PIN, title, editor,
+     * view-request counts). Score fields stay owned by the {@code gameData_v2} listener, except on
+     * restricted placeholders, which can only read the summary on the game document.
+     */
+    private void applyAuthSnapshotToRow(@NonNull DocumentSnapshot authSnapshot) {
+        GameItem item = gameItemsMap.get(authSnapshot.getId());
+        if (item == null) {
+            return;
+        }
+        GameAuth auth = authSnapshot.toObject(GameAuth.class);
+        if (auth != null) {
+            if (auth.getPin() != null) {
+                item.setGamePin(auth.getPin());
+            }
+            item.setGameDisplayName(gameDisplayNameFromAuth(auth));
+            applyEditorIdentity(item, auth);
+            if (item.getPlayers() == null
+                    && !authSnapshot.getMetadata().isFromCache()
+                    && !wasRecentlyUpdatedLocally(authSnapshot.getId())) {
+                applyDashboardSummaryFromAuth(item, auth);
+            }
+        }
+        applyViewApprovalCountsFromGameSnapshot(authSnapshot, item);
+    }
+
+    /** Runs {@code action} with the cached game document, reading it once only if not yet cached. */
+    private void withAuthSnapshot(@NonNull String gameId, @NonNull Consumer<DocumentSnapshot> action) {
+        DocumentSnapshot cached = latestAuthSnapshots.get(gameId);
+        if (cached != null) {
+            action.accept(cached);
+            return;
+        }
+        db.collection(FirestoreCollections.GAMES).document(gameId).get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot.exists() && gameIdsOrder.contains(gameId)) {
+                        latestAuthSnapshots.putIfAbsent(gameId, snapshot);
+                    }
+                    action.accept(snapshot);
+                })
+                .addOnFailureListener(e ->
+                        System.out.println("Could not load game authorization for dashboard row"));
+    }
+
+    /** Runs {@code action} with the creator's photo, reading the user document once per creator. */
+    private void withCreatorProfile(@Nullable String creatorUserId,
+                                    @NonNull Consumer<CreatorProfile> action) {
+        if (creatorUserId == null || creatorUserId.isEmpty()) {
+            action.accept(CreatorProfile.EMPTY);
+            return;
+        }
+        CreatorProfile cached = creatorProfilesByUserId.get(creatorUserId);
+        if (cached != null) {
+            action.accept(cached);
+            return;
+        }
+        db.collection(FirestoreCollections.APP_USER).document(creatorUserId).get()
+                .addOnSuccessListener(userDoc -> {
+                    CreatorProfile profile = new CreatorProfile(
+                            userDoc.exists() ? userDoc.getString("photoUrl") : null,
+                            readProfileVersion(userDoc));
+                    creatorProfilesByUserId.put(creatorUserId, profile);
+                    action.accept(profile);
+                })
+                .addOnFailureListener(e -> action.accept(CreatorProfile.EMPTY));
+    }
+
+    private static final class CreatorProfile {
+        static final CreatorProfile EMPTY = new CreatorProfile(null, 0L);
+
+        @Nullable final String photoUrl;
+        final long profileVersion;
+
+        CreatorProfile(@Nullable String photoUrl, long profileVersion) {
+            this.photoUrl = photoUrl;
+            this.profileVersion = profileVersion;
+        }
     }
 
     private boolean hasGameDataAccess(@Nullable GameAuth auth, @NonNull String gameId) {
@@ -1063,16 +1153,13 @@ public class GameRepository {
                 .addSnapshotListener((documentSnapshot, error) -> {
                     if (error != null) {
                         System.out.println("Error listening to game data");
-                        db.collection(FirestoreCollections.GAMES)
-                                .document(gameId)
-                                .get()
-                                .addOnSuccessListener(authSnapshot -> {
-                                    if (hasGameDataAccess(authSnapshot.toObject(GameAuth.class), gameId)) {
-                                        refreshDashboardRowFromGameData(gameId);
-                                    } else {
-                                        ensurePlaceholderForRestrictedUser(authSnapshot);
-                                    }
-                                });
+                        withAuthSnapshot(gameId, authSnapshot -> {
+                            if (hasGameDataAccess(authSnapshot.toObject(GameAuth.class), gameId)) {
+                                refreshDashboardRowFromGameData(gameId);
+                            } else {
+                                ensurePlaceholderForRestrictedUser(authSnapshot);
+                            }
+                        });
                         return;
                     }
                     
@@ -1088,82 +1175,12 @@ public class GameRepository {
                                     System.out.println("Skipping stale dashboard listener snapshot");
                                     return;
                                 }
-                                // Also get the auth data for PIN
-                                db.collection(FirestoreCollections.GAMES)
-                                        .document(gameId)
-                                        .get()
-                                        .addOnSuccessListener(authSnapshot -> {
-                                            if (!isDashboardUpdateCurrent(gameId, updateToken)) {
-                                                return;
-                                            }
-                                            GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
-                                            String pin = gameAuth != null ? gameAuth.getPin() : "0000";
-                                            String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
-                                            String creatorName = accountDisplayName(creatorUserId);
-                                            String gameDisplayName = gameDisplayNameFromAuth(gameAuth);
-                                            repairDashboardSummaryIfStale(
-                                                    gameId, gameAuth, gameData);
-                                            
-                                            // Use createdAt from games collection instead of lastUpdated from gameData collection
-                                            com.google.firebase.Timestamp createdAt = gameAuth != null ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
-                                            
-                                            // Fetch creator's photo URL from appUser collection
-                                            if (creatorUserId != null && !creatorUserId.isEmpty()) {
-                                                db.collection(FirestoreCollections.APP_USER)
-                                                        .document(creatorUserId)
-                                                        .get()
-                                                        .addOnSuccessListener(userSnapshot -> {
-                                                            if (!isDashboardUpdateCurrent(gameId, updateToken)) {
-                                                                return;
-                                                            }
-                                                            String creatorPhotoUrl = null;
-                                                            long creatorProfileVersion = 0L;
-                                                            if (userSnapshot.exists()) {
-                                                                creatorPhotoUrl = userSnapshot.getString("photoUrl");
-                                                                creatorProfileVersion = readProfileVersion(userSnapshot);
-                                                            }
-                                                            GameItem gameItem = applyEditorIdentity(
-                                                                    convertToGameItem(gameId, pin, gameData, createdAt,
-                                                                            creatorName, creatorPhotoUrl,
-                                                                            creatorUserId, gameDisplayName,
-                                                                            creatorProfileVersion),
-                                                                    gameAuth);
-                                                            
-                                                            if (gameItem != null && isDashboardUpdateCurrent(gameId, updateToken)) {
-                                                                applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
-                                                                gameItemsMap.put(gameId, gameItem);
-                                                                checkAndNotifyNewGame(gameItem);
-                                                                updateGameItemsList();
-                                                            }
-                                                        })
-                                                        .addOnFailureListener(e -> {
-                                                            // If fetching photo fails, create game item without photo
-                                                            GameItem gameItem = applyEditorIdentity(
-                                                                    convertToGameItem(gameId, pin, gameData, createdAt,
-                                                                            creatorName, null, creatorUserId,
-                                                                            gameDisplayName),
-                                                                    gameAuth);
-                                                            if (gameItem != null && isDashboardUpdateCurrent(gameId, updateToken)) {
-                                                                applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
-                                                                gameItemsMap.put(gameId, gameItem);
-                                                                checkAndNotifyNewGame(gameItem);
-                                                                updateGameItemsList();
-                                                            }
-                                                        });
-                                            } else {
-                                                // No creator user ID, create game item without photo
-                                                GameItem gameItem = applyEditorIdentity(
-                                                        convertToGameItem(gameId, pin, gameData, createdAt,
-                                                                creatorName, null, null, gameDisplayName),
-                                                        gameAuth);
-                                                if (gameItem != null && isDashboardUpdateCurrent(gameId, updateToken)) {
-                                                    applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
-                                                    gameItemsMap.put(gameId, gameItem);
-                                                    checkAndNotifyNewGame(gameItem);
-                                                    updateGameItemsList();
-                                                }
-                                            }
-                                        });
+                                withAuthSnapshot(gameId, authSnapshot -> {
+                                    if (isDashboardUpdateCurrent(gameId, updateToken)) {
+                                        publishListenerRow(gameId, updateToken, gameDataWrapper,
+                                                authSnapshot);
+                                    }
+                                });
                             }
                         } catch (Exception e) {
                             System.out.println("Error deserializing game data");
@@ -1174,6 +1191,38 @@ public class GameRepository {
                 });
         
         gameDataListeners.put(gameId, listener);
+    }
+
+    private void publishListenerRow(String gameId, long updateToken,
+                                    GameDataWrapper gameDataWrapper, DocumentSnapshot authSnapshot) {
+        GameData gameData = gameDataWrapper.getData();
+        GameAuth gameAuth = authSnapshot.toObject(GameAuth.class);
+        String pin = gameAuth != null ? gameAuth.getPin() : "0000";
+        String creatorUserId = gameAuth != null ? gameAuth.getCreatorUserId() : null;
+        String creatorName = accountDisplayName(creatorUserId);
+        String gameDisplayName = gameDisplayNameFromAuth(gameAuth);
+        repairDashboardSummaryIfStale(gameId, gameAuth, gameData);
+
+        // Use createdAt from games collection instead of lastUpdated from gameData collection
+        com.google.firebase.Timestamp createdAt = gameAuth != null
+                ? gameAuth.getCreatedAt() : gameDataWrapper.getLastUpdated();
+
+        withCreatorProfile(creatorUserId, profile -> {
+            if (!isDashboardUpdateCurrent(gameId, updateToken)) {
+                return;
+            }
+            GameItem gameItem = applyEditorIdentity(
+                    convertToGameItem(gameId, pin, gameData, createdAt, creatorName,
+                            profile.photoUrl, creatorUserId, gameDisplayName,
+                            profile.profileVersion),
+                    gameAuth);
+            if (gameItem != null) {
+                applyViewApprovalCountsFromGameSnapshot(authSnapshot, gameItem);
+                gameItemsMap.put(gameId, gameItem);
+                checkAndNotifyNewGame(gameItem);
+                updateGameItemsList();
+            }
+        });
     }
 
     /** Ignores late one-shot fetch callbacks after {@link #gameIdsOrder} no longer includes the id. */
@@ -2145,56 +2194,27 @@ public class GameRepository {
     }
 
     /**
-     * Load approved games with real-time listener (for Dashboard)
-     */
-    public void loadApprovedGamesWithRealtimeListener() {
-        System.out.println("GameRepository: Setting up real-time listener for approved games collection");
-        
-        // Remove existing listener if any
-        if (approvedGamesListener != null) {
-            approvedGamesListener.remove();
-        }
-        
-        // Set up real-time listener for approved games collection
-        approvedGamesListener = db.collection(FirestoreCollections.APPROVED_GAMES)
-                .addSnapshotListener((querySnapshot, error) -> {
-                    if (error != null) {
-                        System.out.println("GameRepository: Error listening to approved games");
-                        errorLiveData.setValue("Failed to load approved games: " + error.getMessage());
-                        totalApprovedBoardAdjustmentLiveData.setValue(0.0);
-                        approvedGamesCountLiveData.setValue(0);
-                        return;
-                    }
-                    
-                    if (querySnapshot != null) {
-                        double totalBoardAdjustment = 0.0;
-                        int approvedCount = 0;
-                        for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-                            try {
-                                ApprovedGameData approvedGame = document.toObject(ApprovedGameData.class);
-                                if (approvedGame != null) {
-                                    totalBoardAdjustment += approvedGame.getBoardPointsAsDouble();
-                                    approvedCount++;
-                                }
-                            } catch (Exception e) {
-                                System.out.println("Error parsing approved game");
-                            }
-                        }
-                        totalApprovedBoardAdjustmentLiveData.setValue(totalBoardAdjustment);
-                        approvedGamesCountLiveData.setValue(approvedCount);
-                        System.out.println("Calculated total approved boardAdjustment amount");
-                        System.out.println("Total approved games count: " + approvedCount);
-                    }
-                });
-    }
-    
-    /**
-     * Load approved games with one-time fetch (for Review screen - manual refresh only)
+     * Loads the approved games count and total board points for the Review screen.
+     * A server-side count+sum aggregation is billed about one read per 1,000 documents; aggregations
+     * need the network, so a failure (e.g. offline) falls back to reading every document.
      */
     public void loadApprovedGames() {
-        System.out.println("GameRepository: Fetching approved games collection (manual refresh)");
-        
-        // One-time fetch for approved games collection
+        AggregateField boardPointsSum = AggregateField.sum("boardPoints");
+        db.collection(FirestoreCollections.APPROVED_GAMES)
+                .aggregate(AggregateField.count(), boardPointsSum)
+                .get(AggregateSource.SERVER)
+                .addOnSuccessListener(snapshot -> {
+                    Double total = snapshot.getDouble(boardPointsSum);
+                    totalApprovedBoardAdjustmentLiveData.setValue(total != null ? total : 0.0);
+                    approvedGamesCountLiveData.setValue((int) snapshot.getCount());
+                })
+                .addOnFailureListener(error -> {
+                    System.out.println("GameRepository: Approved games aggregation failed; reading documents");
+                    loadApprovedGamesFromDocuments();
+                });
+    }
+
+    private void loadApprovedGamesFromDocuments() {
         db.collection(FirestoreCollections.APPROVED_GAMES)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
