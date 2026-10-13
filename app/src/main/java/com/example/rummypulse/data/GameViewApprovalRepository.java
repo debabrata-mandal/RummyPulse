@@ -201,9 +201,15 @@ public class GameViewApprovalRepository {
         final List<GameViewApproval>[] fromCollection = new List[]{new ArrayList<>()};
         final boolean[] gameDocFailed = {false};
         final boolean[] collectionFailed = {false};
+        final boolean[] gameDocLoaded = {false};
+        final boolean[] collectionLoaded = {false};
         final String[] creatorUserId = {null};
 
         Runnable emit = () -> {
+            // The creator filter needs the game doc, so a partial first result could list the creator.
+            if (!gameDocLoaded[0] || !collectionLoaded[0]) {
+                return;
+            }
             List<GameViewApproval> merged = mergeViewRequests(fromGameDoc[0], fromCollection[0]);
             merged = excludeCreatorViewRequest(merged, creatorUserId[0]);
             if (!merged.isEmpty() || (!gameDocFailed[0] || !collectionFailed[0])) {
@@ -217,6 +223,7 @@ public class GameViewApprovalRepository {
         ListenerRegistration gameListener = db.collection(FirestoreCollections.GAMES)
                 .document(gameId)
                 .addSnapshotListener((snapshot, error) -> {
+                    gameDocLoaded[0] = true;
                     if (error != null) {
                         android.util.Log.e("GameViewApproval", "Game doc pending listener failed");
                         gameDocFailed[0] = true;
@@ -232,6 +239,7 @@ public class GameViewApprovalRepository {
         ListenerRegistration collectionListener = db.collection(FirestoreCollections.GAME_VIEW_APPROVALS)
                 .whereEqualTo("gameId", gameId)
                 .addSnapshotListener((snapshots, error) -> {
+                    collectionLoaded[0] = true;
                     if (error != null) {
                         android.util.Log.w("GameViewApproval",
                                 "Collection pending listener failed");
@@ -251,68 +259,6 @@ public class GameViewApprovalRepository {
             gameListener.remove();
             collectionListener.remove();
         };
-    }
-
-    /**
-     * One-shot load; merges {@code games_v2.pendingViewRequests} with collection query when permitted.
-     */
-    public void fetchPendingRequestsForGame(@NonNull String gameId,
-                                            @NonNull PendingRequestsCallback callback) {
-        final List<GameViewApproval>[] fromGameDoc = new List[]{new ArrayList<>()};
-        final List<GameViewApproval>[] fromCollection = new List[]{new ArrayList<>()};
-        final boolean[] gameDocFailed = {false};
-        final boolean[] collectionFailed = {false};
-        final String[] creatorUserId = {null};
-        final int[] pending = {2};
-
-        Runnable finish = () -> {
-            if (pending[0] > 0) {
-                return;
-            }
-            List<GameViewApproval> merged = mergeViewRequests(fromGameDoc[0], fromCollection[0]);
-            merged = excludeCreatorViewRequest(merged, creatorUserId[0]);
-            if (!merged.isEmpty() || (!gameDocFailed[0] || !collectionFailed[0])) {
-                callback.onRequests(merged);
-                return;
-            }
-            callback.onError("Failed to load view requests. Check Firestore rules for gameViewApprovals_v2.");
-            callback.onRequests(new ArrayList<>());
-        };
-
-        db.collection(FirestoreCollections.GAMES)
-                .document(gameId)
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    gameDocFailed[0] = false;
-                    creatorUserId[0] = snapshot != null ? snapshot.getString("creatorUserId") : null;
-                    fromGameDoc[0] = parseViewRequestsFromGameSnapshot(gameId, snapshot);
-                    pending[0]--;
-                    finish.run();
-                })
-                .addOnFailureListener(e -> {
-                    android.util.Log.e("GameViewApproval", "Game doc pending fetch failed");
-                    gameDocFailed[0] = true;
-                    pending[0]--;
-                    finish.run();
-                });
-
-        db.collection(FirestoreCollections.GAME_VIEW_APPROVALS)
-                .whereEqualTo("gameId", gameId)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    collectionFailed[0] = false;
-                    fromCollection[0] = filterViewRequestsFromCollection(
-                            querySnapshot.getDocuments(), creatorUserId[0]);
-                    pending[0]--;
-                    finish.run();
-                })
-                .addOnFailureListener(e -> {
-                    android.util.Log.w("GameViewApproval", "Collection pending fetch failed");
-                    collectionFailed[0] = true;
-                    fromCollection[0] = new ArrayList<>();
-                    pending[0]--;
-                    finish.run();
-                });
     }
 
     private void addPendingRequestToGameDoc(@NonNull String gameId, @NonNull String userId) {

@@ -41,7 +41,7 @@ public class GameRepository {
     /** Shared instance used by Dashboard and Join game so in-memory rows stay in sync. */
     public static synchronized GameRepository getDashboardInstance() {
         if (dashboardInstance == null) {
-            dashboardInstance = new GameRepository();
+            dashboardInstance = new GameRepository(true);
         }
         return dashboardInstance;
     }
@@ -87,8 +87,19 @@ public class GameRepository {
     private Context appContext;
     /** False (the default) scopes the dashboard listener to games the user participates in. */
     private boolean showAllGames = false;
+    /**
+     * Builds rows from the {@code games_v2} dashboard summary alone. Every round save rewrites
+     * that summary, so a {@code gameData_v2} listener per game would bill each device a second
+     * document, plus its security-rule lookups, on every round without changing the card.
+     */
+    private final boolean summaryOnly;
 
     public GameRepository() {
+        this(false);
+    }
+
+    private GameRepository(boolean summaryOnly) {
+        this.summaryOnly = summaryOnly;
         db = FirebaseFirestore.getInstance();
         viewApprovalRepository = new GameViewApprovalRepository();
         gameItemsLiveData = new MutableLiveData<>();
@@ -374,6 +385,22 @@ public class GameRepository {
 
         java.util.Set<String> currentGameIds = new java.util.HashSet<>(gameIds);
         latestAuthSnapshots.keySet().retainAll(currentGameIds);
+        if (summaryOnly) {
+            for (String staleGameId : new ArrayList<>(gameItemsMap.keySet())) {
+                if (!currentGameIds.contains(staleGameId)) {
+                    gameItemsMap.remove(staleGameId);
+                    invalidateDashboardUpdates(staleGameId);
+                }
+            }
+            for (DocumentSnapshot document : gamesSnapshot.getDocuments()) {
+                if (GameCreationPolicy.isReady(
+                        document.getString("initializationStatus"))) {
+                    applySummarySnapshotToRow(document);
+                }
+            }
+            updateGameItemsList();
+            return;
+        }
         java.util.Iterator<java.util.Map.Entry<String, com.google.firebase.firestore.ListenerRegistration>> iterator =
             gameDataListeners.entrySet().iterator();
         while (iterator.hasNext()) {
@@ -425,6 +452,55 @@ public class GameRepository {
             }
         }
         applyViewApprovalCountsFromGameSnapshot(authSnapshot, item);
+    }
+
+    /**
+     * Creates or refreshes a row from {@code games_v2} only. The creator photo is left to the
+     * adapter, which resolves it from the shared user directory without a per-game read.
+     */
+    private void applySummarySnapshotToRow(@NonNull DocumentSnapshot authSnapshot) {
+        GameAuth auth = authSnapshot.toObject(GameAuth.class);
+        if (auth == null) {
+            return;
+        }
+        String gameId = authSnapshot.getId();
+        GameItem item = gameItemsMap.get(gameId);
+        if (item == null) {
+            item = convertToPlaceholderGameItem(gameId, auth, null);
+            gameItemsMap.put(gameId, item);
+        } else {
+            if (auth.getPin() != null) {
+                item.setGamePin(auth.getPin());
+            }
+            item.setGameDisplayName(gameDisplayNameFromAuth(auth));
+            if (auth.getCreatorUserId() != null) {
+                item.setCreatorUserId(auth.getCreatorUserId());
+            }
+            if (auth.getCreatedAt() != null) {
+                item.setCreationDateTime(formatTimestamp(auth.getCreatedAt()));
+            }
+            applyEditorIdentity(item, auth);
+            if (DashboardFreshnessPolicy.shouldApplyRemoteSummary(
+                    item.getGameStatus(),
+                    parsePlayerCount(item.getNumberOfPlayers()),
+                    dashboardStatusForDisplay(auth.getDashboardGameStatus()),
+                    auth.getDashboardNumPlayers(),
+                    wasRecentlyUpdatedLocally(gameId))) {
+                applyDashboardSummaryFromAuth(item, auth);
+            }
+        }
+        applyViewApprovalCountsFromGameSnapshot(authSnapshot, item);
+    }
+
+    private static int parsePlayerCount(@Nullable String numberOfPlayers) {
+        if (numberOfPlayers == null) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(numberOfPlayers.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /** Runs {@code action} with the cached game document, reading it once only if not yet cached. */
@@ -798,7 +874,8 @@ public class GameRepository {
 
     /** Refreshes dashboard rows from {@code gameData_v2} when the user can read it (e.g. after Join). */
     public void refreshCreatorDashboardRows() {
-        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+        // Restarting the games_v2 listener already brings summary rows up to date.
+        if (summaryOnly || FirebaseAuth.getInstance().getCurrentUser() == null) {
             return;
         }
         for (String gameId : new ArrayList<>(gameIdsOrder)) {
@@ -1140,6 +1217,9 @@ public class GameRepository {
      * Setup real-time listener for a specific game (for Dashboard)
      */
     private void setupGameDataListener(String gameId) {
+        if (summaryOnly) {
+            return;
+        }
         // If listener already exists, don't create duplicate
         if (gameDataListeners.containsKey(gameId)) {
             System.out.println("Game data listener already exists");
@@ -1343,7 +1423,7 @@ public class GameRepository {
                     Map<String, String> previous = myViewApprovalStatusByGame;
                     myViewApprovalStatusByGame = statusByGameId != null
                             ? new HashMap<>(statusByGameId) : new HashMap<>();
-                    if (statusByGameId != null) {
+                    if (statusByGameId != null && !summaryOnly) {
                         for (Map.Entry<String, String> entry : statusByGameId.entrySet()) {
                             String gameId = entry.getKey();
                             if (!"approved".equalsIgnoreCase(entry.getValue())) {

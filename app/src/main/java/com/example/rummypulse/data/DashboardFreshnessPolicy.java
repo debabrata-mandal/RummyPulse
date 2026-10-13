@@ -17,6 +17,25 @@ public final class DashboardFreshnessPolicy {
         return current >= 0 && incoming >= 0 && incoming < current;
     }
 
+    /**
+     * Whether a {@code games_v2} dashboard summary may replace a row's values. Right after this
+     * device saved, a summary that is behind on round or players is an older snapshot.
+     */
+    public static boolean shouldApplyRemoteSummary(
+            @Nullable String currentStatus,
+            int currentPlayers,
+            @Nullable String incomingStatus,
+            @Nullable Integer incomingPlayers,
+            boolean recentlyUpdatedLocally) {
+        if (!recentlyUpdatedLocally) {
+            return true;
+        }
+        if (incomingPlayers != null && incomingPlayers < currentPlayers) {
+            return false;
+        }
+        return !isProgressRegression(currentStatus, incomingStatus);
+    }
+
     public static int progressRank(@Nullable String status) {
         if (status == null) {
             return -1;

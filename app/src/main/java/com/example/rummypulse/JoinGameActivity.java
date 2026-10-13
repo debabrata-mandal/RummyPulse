@@ -38,7 +38,6 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.rummypulse.data.AppUser;
 import com.example.rummypulse.data.AppUserDirectoryFilter;
-import com.example.rummypulse.data.AppUserManager;
 import com.example.rummypulse.data.AppUserRepository;
 import com.example.rummypulse.data.AppUserRoleSession;
 import com.example.rummypulse.data.FirestoreCollections;
@@ -492,6 +491,7 @@ public class JoinGameActivity extends AppCompatActivity {
     }
 
     private void resumeVerifiedGameSession() {
+        boolean returningToGame = initialGameJoinStarted;
         if (!initialGameJoinStarted && currentGameId != null) {
             initialGameJoinStarted = true;
             if (getIntent().getBooleanExtra("IS_CREATOR", false)) {
@@ -504,9 +504,11 @@ public class JoinGameActivity extends AppCompatActivity {
         if (operationRepository != null && currentGameId != null && isNetworkAvailable()) {
             operationRepository.resumePendingSync(currentGameId);
         }
-        refreshGameDefaultsAndStandings();
+        setupGameDefaultsListener();
         checkEditSessionIfNeeded(() -> retryPendingRoundSaves(null));
-        refreshAppAdminFlag();
+        if (returningToGame) {
+            AppUserRoleSession.getInstance().refreshForCurrentUser();
+        }
     }
 
     private void setupAdminRoleObserver() {
@@ -514,19 +516,11 @@ public class JoinGameActivity extends AppCompatActivity {
             isAppAdmin = role == AppUserRoleSession.Role.ADMIN;
             refreshViewRequestsSection();
         });
-        refreshAppAdminFlag();
-    }
-
-    private void refreshAppAdminFlag() {
-        AppUserManager.getInstance().isCurrentUserAdmin(isAdmin -> runOnUiThread(() -> {
-            isAppAdmin = isAdmin;
-            refreshViewRequestsSection();
-        }));
     }
 
     private void refreshViewRequestsSection() {
         if (viewModel != null) {
-            updateViewRequestsSectionVisibility(viewModel.getGameAuth().getValue());
+            updateViewRequestsSectionVisibility();
         }
     }
 
@@ -543,16 +537,6 @@ public class JoinGameActivity extends AppCompatActivity {
             localGen = getSavedPinGeneration(currentGameId);
         }
         viewModel.validateEditSessionOnReconnect(currentGameId, localGen, onStillValid);
-    }
-
-    private void refreshGameDefaultsAndStandings() {
-        com.example.rummypulse.data.GameDefaultsRepository.getInstance(getApplicationContext())
-                .refreshFromServer(() -> {
-                    com.example.rummypulse.data.GameData data = viewModel.getGameData().getValue();
-                    if (data != null && !isFinishing()) {
-                        runOnUiThread(() -> refreshStandingsUi(data));
-                    }
-                });
     }
 
     private void refreshStandingsUi(com.example.rummypulse.data.GameData gameData) {
@@ -960,7 +944,6 @@ public class JoinGameActivity extends AppCompatActivity {
             gameDefaultsListener.remove();
             gameDefaultsListener = null;
         }
-        viewModel.stopPendingViewRequestsListener();
         viewModel.stopEditGuardListener();
 
         // Unregister network callback
@@ -1320,7 +1303,7 @@ public class JoinGameActivity extends AppCompatActivity {
         });
 
         viewModel.getGameAuth().observe(this, auth -> {
-            updateViewRequestsSectionVisibility(auth);
+            updateViewRequestsSectionVisibility();
             com.example.rummypulse.data.GameData gameData = viewModel.getGameData().getValue();
             Boolean editAccess = viewModel.getEditAccessGranted().getValue();
             if (gameData != null && (editAccess == null || !editAccess)) {
@@ -5429,37 +5412,17 @@ public class JoinGameActivity extends AppCompatActivity {
         parent.addView(binding.viewRequestsCard, standingsIndex + 1, layoutParams);
     }
 
-    private void updateViewRequestsSectionVisibility(GameAuth auth) {
-        if (binding == null) {
+    private void updateViewRequestsSectionVisibility() {
+        if (binding == null || isFinishing() || isDestroyed()) {
             return;
         }
-        boolean canManage = canManageViewRequests(auth);
+        boolean isAdmin = isAppAdmin
+                || AppUserRoleSession.getInstance().peekRole() == AppUserRoleSession.Role.ADMIN;
+        boolean canManage = viewModel.updatePendingViewRequestsListener(currentGameId, isAdmin);
         binding.viewRequestsCard.setVisibility(canManage ? View.VISIBLE : View.GONE);
         View viewModeCard = binding.viewModeContent.getRoot()
                 .findViewById(R.id.view_mode_requests_card);
         viewModeCard.setVisibility(canManage ? View.VISIBLE : View.GONE);
-        if (canManage && currentGameId != null) {
-            viewModel.startPendingViewRequestsListener(currentGameId);
-        } else {
-            viewModel.stopPendingViewRequestsListener();
-        }
-    }
-
-    private boolean canManageViewRequests(GameAuth auth) {
-        if (isAppAdmin
-                || AppUserRoleSession.getInstance().peekRole()
-                == AppUserRoleSession.Role.ADMIN) {
-            return true;
-        }
-        boolean hasLocalEditAccess =
-                Boolean.TRUE.equals(viewModel.getEditAccessGranted().getValue());
-        if (!hasLocalEditAccess || auth == null) {
-            return false;
-        }
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        String uid = user != null ? user.getUid() : null;
-        String activeEditorId = auth.getActiveEditorUserId();
-        return uid != null && uid.equals(activeEditorId);
     }
 
     private void renderViewRequests(List<GameViewApproval> requests) {
@@ -6424,19 +6387,29 @@ public class JoinGameActivity extends AppCompatActivity {
             return;
         }
         
+        final android.net.Network networkAtRegistration = connectivityManager.getActiveNetwork();
         networkCallback = new android.net.ConnectivityManager.NetworkCallback() {
+            private boolean firstCallbackHandled;
+
             @Override
             public void onAvailable(android.net.Network network) {
+                // Registration reports the current network at once; the initial join already
+                // loads fresh data, so only a later network counts as a reconnect.
+                boolean alreadyConnected = !firstCallbackHandled
+                        && network.equals(networkAtRegistration);
+                firstCallbackHandled = true;
                 runOnUiThread(() -> {
                     isConnected = true;
                     updateNetworkStatus(true);
-                    // Attempt to reconnect listener if it was disconnected
-                    attemptReconnect();
+                    if (!alreadyConnected) {
+                        attemptReconnect();
+                    }
                 });
             }
 
             @Override
             public void onLost(android.net.Network network) {
+                firstCallbackHandled = true;
                 runOnUiThread(() -> {
                     isConnected = false;
                     updateNetworkStatus(false);

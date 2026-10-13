@@ -123,6 +123,11 @@ public class JoinGameViewModel extends AndroidViewModel {
     private final MutableLiveData<String> pendingViewRequestsError = new MutableLiveData<>();
 
     private ListenerRegistration pendingViewRequestsListener;
+    private String pendingViewRequestsGameId;
+    private PendingViewRequestsPolicy.Access pendingViewRequestsAccess =
+            PendingViewRequestsPolicy.Access.NONE;
+    private int pendingViewRequestsGeneration;
+    private boolean cleared;
     private ListenerRegistration editGuardListener;
 
     /** {@code pinGeneration} held when edit access was last claimed on this device. */
@@ -474,36 +479,75 @@ public class JoinGameViewModel extends AndroidViewModel {
         return true;
     }
 
-    public void startPendingViewRequestsListener(String gameId) {
-        stopPendingViewRequestsListener();
-        if (TextUtils.isEmpty(gameId)) {
-            return;
+    /**
+     * Keeps the pending view-request listener in step with the caller's current access. The
+     * listener is replaced only when the game or access level changes, and never after
+     * {@link #onCleared()}.
+     *
+     * @return whether this user may manage view requests for the game
+     */
+    public boolean updatePendingViewRequestsListener(String gameId, boolean isAppAdmin) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        PendingViewRequestsPolicy.Access access = cleared
+                ? PendingViewRequestsPolicy.Access.NONE
+                : PendingViewRequestsPolicy.accessFor(
+                        isAppAdmin,
+                        editAccessGranted.getValue(),
+                        gameAuth.getValue(),
+                        user != null ? user.getUid() : null);
+        boolean canManage = access != PendingViewRequestsPolicy.Access.NONE;
+        String requestedGameId = TextUtils.isEmpty(gameId) ? null : gameId;
+        if (!canManage || requestedGameId == null) {
+            stopPendingViewRequestsListener();
+            return canManage;
         }
+        if (!PendingViewRequestsPolicy.shouldRestartListener(
+                pendingViewRequestsGameId, pendingViewRequestsAccess, requestedGameId, access)) {
+            return true;
+        }
+        stopPendingViewRequestsListener();
+        final int generation = pendingViewRequestsGeneration;
         GameViewApprovalRepository.PendingRequestsCallback callback =
                 new GameViewApprovalRepository.PendingRequestsCallback() {
                     @Override
                     public void onRequests(@NonNull List<GameViewApproval> requests) {
+                        if (generation != pendingViewRequestsGeneration) {
+                            return;
+                        }
                         pendingViewRequestsError.postValue(null);
                         pendingViewRequests.postValue(requests);
                     }
 
                     @Override
                     public void onError(@NonNull String message) {
+                        if (generation != pendingViewRequestsGeneration) {
+                            return;
+                        }
                         pendingViewRequestsError.postValue(message);
                     }
                 };
-        viewApprovalRepository.fetchPendingRequestsForGame(gameId, callback);
+        pendingViewRequestsGameId = requestedGameId;
+        pendingViewRequestsAccess = access;
         pendingViewRequestsListener =
-                viewApprovalRepository.listenPendingRequestsForGame(gameId, callback);
+                viewApprovalRepository.listenPendingRequestsForGame(requestedGameId, callback);
+        return true;
     }
 
     public void stopPendingViewRequestsListener() {
+        pendingViewRequestsGeneration++;
+        pendingViewRequestsGameId = null;
+        pendingViewRequestsAccess = PendingViewRequestsPolicy.Access.NONE;
         if (pendingViewRequestsListener != null) {
             pendingViewRequestsListener.remove();
             pendingViewRequestsListener = null;
         }
-        pendingViewRequests.setValue(new ArrayList<>());
-        pendingViewRequestsError.setValue(null);
+        List<GameViewApproval> current = pendingViewRequests.getValue();
+        if (current == null || !current.isEmpty()) {
+            pendingViewRequests.setValue(new ArrayList<>());
+        }
+        if (pendingViewRequestsError.getValue() != null) {
+            pendingViewRequestsError.setValue(null);
+        }
     }
 
     public void approveViewRequest(String gameId, String userId) {
@@ -537,6 +581,7 @@ public class JoinGameViewModel extends AndroidViewModel {
     @Override
     protected void onCleared() {
         super.onCleared();
+        cleared = true;
         stopPendingViewRequestsListener();
         stopEditGuardListener();
     }
@@ -598,6 +643,8 @@ public class JoinGameViewModel extends AndroidViewModel {
             Map<String, Object> updates = new HashMap<>();
             updates.put("activeEditorUserId", myUid);
             updates.put("lastEditorUserId", myUid);
+            updates.put(com.example.rummypulse.data.GameMembership.FIELD,
+                    com.google.firebase.firestore.FieldValue.arrayUnion(myUid));
             transaction.update(gameRef, updates);
 
             return new ClaimResult(auth.getPin(), auth.getPinGenerationOrDefault());

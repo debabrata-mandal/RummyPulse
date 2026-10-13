@@ -386,10 +386,13 @@ final class GameOperationRemoteApplier {
         return document;
     }
 
+    /** Mapping changes alter {@code memberUserIds}, which decides who sees the game in My Games. */
     private static boolean affectsDashboard(GameOperationType type) {
         return type == GameOperationType.UPDATE_SCORE
                 || type == GameOperationType.ADD_PLAYER
-                || type == GameOperationType.DELETE_PLAYER;
+                || type == GameOperationType.DELETE_PLAYER
+                || type == GameOperationType.MAP_USER
+                || type == GameOperationType.UNMAP_USER;
     }
 
     private static Map<String, Object> buildDashboardSummary(GameData gameData, GameAuth auth) {

@@ -32,4 +32,20 @@ public class DashboardFreshnessPolicyTest {
     public void administrativeStatusesAreNotComparedAsProgress() {
         assertFalse(DashboardFreshnessPolicy.isProgressRegression("Approved", "R1"));
     }
+
+    @Test
+    public void summaryAdvancesRoundAfterLocalSave() {
+        assertTrue(DashboardFreshnessPolicy.shouldApplyRemoteSummary("R4", 5, "R5", 5, true));
+    }
+
+    @Test
+    public void olderSummaryCannotUndoLocalSave() {
+        assertFalse(DashboardFreshnessPolicy.shouldApplyRemoteSummary("R5", 5, "R4", 5, true));
+        assertFalse(DashboardFreshnessPolicy.shouldApplyRemoteSummary("R5", 6, "R5", 5, true));
+    }
+
+    @Test
+    public void summaryAlwaysAppliesWithoutRecentLocalSave() {
+        assertTrue(DashboardFreshnessPolicy.shouldApplyRemoteSummary("R5", 6, "R4", 5, false));
+    }
 }
